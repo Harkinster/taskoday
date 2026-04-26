@@ -29,5 +29,7 @@ class SeedDatabaseCallback
             database.tagDao().insertAll(SeedData.tags())
             database.routineDao().insertAll(SeedData.routines(nowMillis = now))
             database.taskDao().insertAll(SeedData.tasks(projectIds = projectIds, nowMillis = now))
+            database.questDao().insertAll(SeedData.quests(nowMillis = now))
+            database.rewardDao().insertAll(SeedData.rewards(nowMillis = now))
         }
     }

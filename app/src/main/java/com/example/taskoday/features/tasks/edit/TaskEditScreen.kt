@@ -1,5 +1,6 @@
 package com.example.taskoday.features.tasks.edit
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,7 +11,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material3.AssistChip
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -33,8 +36,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.taskoday.core.ui.testing.TaskodayTestTags
 import com.example.taskoday.core.ui.theme.spacing
 import com.example.taskoday.core.util.DateTimeUtils
-import com.example.taskoday.domain.model.TaskPriority
-import com.example.taskoday.domain.model.TaskStatus
+import com.example.taskoday.domain.model.DayPart
 import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -58,7 +60,9 @@ fun TaskEditScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(text = if (uiState.taskId == null) "Créer une tâche" else "Modifier la tâche")
+                    Text(
+                        text = if (uiState.taskId == null) "Nouvelle mission" else "Modifier mission",
+                    )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -71,7 +75,7 @@ fun TaskEditScreen(
                         enabled = !uiState.isSaving,
                         modifier = Modifier.testTag(TaskodayTestTags.TaskEditSaveButton),
                     ) {
-                        Text(text = if (uiState.isSaving) "Enregistrement..." else "Enregistrer")
+                        Text(text = if (uiState.isSaving) "..." else "Enregistrer")
                     }
                 },
             )
@@ -97,10 +101,26 @@ fun TaskEditScreen(
                     .padding(spacing.medium),
             verticalArrangement = Arrangement.spacedBy(spacing.medium),
         ) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    ),
+            ) {
+                Text(
+                    text = "Titre + rubrique + routine: simple et rapide.",
+                    modifier = Modifier.padding(spacing.medium),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+            }
+
             OutlinedTextField(
                 value = uiState.title,
                 onValueChange = viewModel::onTitleChanged,
                 label = { Text(text = "Titre") },
+                placeholder = { Text(text = "Ex: Se brosser les dents") },
                 modifier = Modifier.fillMaxWidth().testTag(TaskodayTestTags.TaskEditTitleField),
                 singleLine = true,
                 supportingText = {
@@ -109,85 +129,189 @@ fun TaskEditScreen(
                     }
                 },
             )
+
             OutlinedTextField(
                 value = uiState.description,
                 onValueChange = viewModel::onDescriptionChanged,
-                label = { Text(text = "Description") },
+                label = { Text(text = "Détail (optionnel)") },
                 modifier = Modifier.fillMaxWidth().testTag(TaskodayTestTags.TaskEditDescriptionField),
-                minLines = 3,
+                maxLines = 2,
             )
 
-            Text(text = "Priorité", style = MaterialTheme.typography.titleMedium)
-            Row(horizontalArrangement = Arrangement.spacedBy(spacing.small)) {
-                TaskPriority.entries.forEach { priority ->
-                    FilterChip(
-                        selected = uiState.priority == priority,
-                        onClick = { viewModel.onPriorityChanged(priority) },
-                        label = { Text(text = priority.label()) },
-                    )
-                }
-            }
+            Text(text = "Icône", style = MaterialTheme.typography.titleMedium)
+            EmojiPickerRow(
+                selected = uiState.emoji,
+                onSelected = viewModel::onEmojiChanged,
+            )
 
-            Text(text = "Statut", style = MaterialTheme.typography.titleMedium)
-            Row(horizontalArrangement = Arrangement.spacedBy(spacing.small)) {
-                TaskStatus.entries.forEach { status ->
-                    FilterChip(
-                        selected = uiState.status == status,
-                        onClick = { viewModel.onStatusChanged(status) },
-                        label = { Text(text = status.label()) },
-                    )
-                }
-            }
-
-            Text(text = "Projet", style = MaterialTheme.typography.titleMedium)
-            Row(horizontalArrangement = Arrangement.spacedBy(spacing.small)) {
-                uiState.projects.forEach { project ->
-                    AssistChip(
-                        onClick = { viewModel.onProjectChanged(project.id) },
-                        label = { Text(text = project.name) },
-                    )
-                }
-            }
-
-            Text(text = "Date d’échéance", style = MaterialTheme.typography.titleMedium)
-            Row(horizontalArrangement = Arrangement.spacedBy(spacing.small)) {
-                AssistChip(
-                    onClick = { viewModel.onDueDateChanged(null) },
-                    label = { Text(text = "Aucune") },
-                )
-                AssistChip(
-                    onClick = {
-                        viewModel.onDueDateChanged(
-                            DateTimeUtils.epochMillisAtHour(LocalDate.now(), 18),
-                        )
-                    },
-                    label = { Text(text = "Aujourd’hui 18:00") },
-                )
-                AssistChip(
-                    onClick = {
-                        viewModel.onDueDateChanged(
-                            DateTimeUtils.epochMillisAtHour(LocalDate.now().plusDays(1), 10),
-                        )
-                    },
-                    label = { Text(text = "Demain 10:00") },
-                )
-            }
-            Text(
-                text = "Sélectionnée : ${DateTimeUtils.formatDateTime(uiState.dueDate)}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            Text(text = "Rubrique de la journée", style = MaterialTheme.typography.titleMedium)
+            DayPartPickerRow(
+                selected = uiState.dayPart,
+                onSelected = viewModel::onDayPartChanged,
             )
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(text = "Tâche de routine", style = MaterialTheme.typography.bodyLarge)
+                Text(text = "Routine récurrente", style = MaterialTheme.typography.titleMedium)
                 Switch(
                     checked = uiState.isRoutine,
                     onCheckedChange = viewModel::onRoutineChanged,
                 )
             }
+
+            if (uiState.isRoutine) {
+                Text(text = "Fréquence", style = MaterialTheme.typography.titleMedium)
+                RoutineDaysPickerRow(
+                    selectedDays = uiState.routineDays,
+                    onEveryDay = viewModel::onEveryDayRoutineSelected,
+                    onToggleDay = viewModel::onRoutineDayToggled,
+                )
+            } else {
+                Text(text = "Jour exceptionnel", style = MaterialTheme.typography.titleMedium)
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(spacing.small),
+                ) {
+                    QuickDateChip(
+                        text = "Aujourd'hui",
+                        selected = isSelectedDay(uiState.scheduledDate, LocalDate.now()),
+                        onClick = { viewModel.onScheduledDateChanged(DateTimeUtils.startOfDayMillis(LocalDate.now())) },
+                    )
+                    QuickDateChip(
+                        text = "Demain",
+                        selected = isSelectedDay(uiState.scheduledDate, LocalDate.now().plusDays(1)),
+                        onClick = { viewModel.onScheduledDateChanged(DateTimeUtils.startOfDayMillis(LocalDate.now().plusDays(1))) },
+                    )
+                    QuickDateChip(
+                        text = "Hier",
+                        selected = isSelectedDay(uiState.scheduledDate, LocalDate.now().minusDays(1)),
+                        onClick = { viewModel.onScheduledDateChanged(DateTimeUtils.startOfDayMillis(LocalDate.now().minusDays(1))) },
+                    )
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(spacing.small),
+                ) {
+                    Icon(imageVector = Icons.Outlined.CalendarMonth, contentDescription = null)
+                    Text(
+                        text = DateTimeUtils.formatDayLabel(uiState.scheduledDate),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                }
+            }
         }
     }
 }
+
+@Composable
+private fun EmojiPickerRow(
+    selected: String,
+    onSelected: (String) -> Unit,
+) {
+    val spacing = MaterialTheme.spacing
+    Row(
+        modifier = Modifier.horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(spacing.small),
+    ) {
+        CHILD_TASK_EMOJIS.forEach { emoji ->
+            FilterChip(
+                selected = selected == emoji,
+                onClick = { onSelected(emoji) },
+                label = { Text(text = emoji) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun DayPartPickerRow(
+    selected: DayPart,
+    onSelected: (DayPart) -> Unit,
+) {
+    val spacing = MaterialTheme.spacing
+    Row(
+        modifier = Modifier.horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(spacing.small),
+    ) {
+        DayPart.entries.forEach { dayPart ->
+            FilterChip(
+                selected = selected == dayPart,
+                onClick = { onSelected(dayPart) },
+                label = { Text(text = "${dayPart.emoji()} ${dayPart.label()}") },
+            )
+        }
+    }
+}
+
+@Composable
+private fun RoutineDaysPickerRow(
+    selectedDays: Set<Int>,
+    onEveryDay: () -> Unit,
+    onToggleDay: (Int) -> Unit,
+) {
+    val spacing = MaterialTheme.spacing
+    Row(
+        modifier = Modifier.horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(spacing.small),
+    ) {
+        FilterChip(
+            selected = selectedDays.isEmpty(),
+            onClick = onEveryDay,
+            label = { Text(text = "Tous les jours") },
+        )
+        WEEKDAY_LABELS.forEach { (iso, label) ->
+            FilterChip(
+                selected = selectedDays.contains(iso),
+                onClick = { onToggleDay(iso) },
+                label = { Text(text = label) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun QuickDateChip(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(text = text) },
+    )
+}
+
+private fun isSelectedDay(
+    selectedDayStartMillis: Long,
+    date: LocalDate,
+): Boolean = selectedDayStartMillis == DateTimeUtils.startOfDayMillis(date)
+
+private val WEEKDAY_LABELS: List<Pair<Int, String>> =
+    listOf(
+        1 to "Lun",
+        2 to "Mar",
+        3 to "Mer",
+        4 to "Jeu",
+        5 to "Ven",
+        6 to "Sam",
+        7 to "Dim",
+    )
+
+private val CHILD_TASK_EMOJIS: List<String> =
+    listOf(
+        "\uD83E\uDE65",
+        "\uD83C\uDF92",
+        "\uD83D\uDCDA",
+        "\uD83C\uDF7D\uFE0F",
+        "\uD83C\uDFC3",
+        "\uD83E\uDDE9",
+        "\uD83C\uDFA8",
+        "\uD83E\uDDF8",
+        "\uD83C\uDF1F",
+        "\uD83C\uDFB5",
+        "\uD83C\uDF19",
+    )

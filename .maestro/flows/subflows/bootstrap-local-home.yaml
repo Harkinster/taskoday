@@ -1,0 +1,16 @@
+appId: com.example.taskoday
+---
+- launchApp:
+    clearState: true
+
+- extendedWaitUntil:
+    visible: "Continuer en mode local"
+    timeout: 30000
+
+- tapOn: "Continuer en mode local"
+
+- extendedWaitUntil:
+    visible: "Accueil"
+    timeout: 30000
+
+- assertVisible: "Accueil"

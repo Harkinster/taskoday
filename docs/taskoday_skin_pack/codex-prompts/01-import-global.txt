@@ -1,0 +1,61 @@
+Tu vas intégrer le skin Taskoday Neon RPG dans le projet Android actuel.
+
+J’ai ajouté un pack de référence contenant :
+- `references/screens/` : écrans complets de référence
+- `references/slices/` : découpes visuelles par composants
+- `assets/logo/` : logo, mascotte et wordmark préparés
+- `design/TASKODAY_UI_GUIDE.md` : guide visuel
+- `design/taskoday_palette.json` : palette
+- `android-compose/theme/` et `android-compose/components/` : base de design system Compose
+
+Objectif :
+Adapter l’application actuelle pour qu’elle reprenne fidèlement ce skin.
+
+Contraintes importantes :
+- Ne jamais utiliser les captures complètes comme fonds statiques.
+- Recréer le design en composants natifs Jetpack Compose.
+- Conserver autant que possible la navigation, les ViewModels, les états et la logique métier actuelle.
+- Modifier en priorité le thème, les composants UI et la composition des écrans.
+- Ne pas refaire toute l’application inutilement.
+
+Travail demandé :
+1. Analyse le guide `design/TASKODAY_UI_GUIDE.md`.
+2. Lis la palette `design/taskoday_palette.json`.
+3. Importe/adapte les fichiers Compose du pack.
+4. Remplace le style Material classique par le skin Neon RPG.
+5. Crée ou adapte les composants :
+   - TaskodayHeader
+   - FantasyBottomNavigation
+   - NeonCard
+   - ProgressHeroCard
+   - RoutineSectionCard
+   - RoutineItemRow
+   - MissionCard
+   - QuestCard
+   - ProfileHeroCard
+   - StatsCard
+   - RewardsCard
+   - NeonButton
+   - XpProgressBar
+6. Applique le skin aux écrans :
+   - Accueil
+   - Missions
+   - Quêtes
+   - Profil
+   - Splash / Screenbot
+
+Priorités visuelles :
+- fond bleu nuit / indigo
+- contours lumineux violet/cyan
+- cartes RPG/fantasy
+- progression XP visible
+- avatar rond lumineux
+- logo Taskoday dans le header
+- bottom navigation néon
+- lisibilité avant tout
+
+Avant de modifier massivement le code, fais d’abord un mapping :
+- composants existants
+- composants à remplacer
+- fichiers à modifier
+- assets à copier

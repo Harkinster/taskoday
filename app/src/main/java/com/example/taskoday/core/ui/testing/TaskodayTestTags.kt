@@ -3,6 +3,8 @@ package com.example.taskoday.core.ui.testing
 object TaskodayTestTags {
     const val NavHome: String = "nav_home"
     const val NavTasks: String = "nav_tasks"
+    const val NavQuests: String = "nav_quests"
+    const val NavShop: String = "nav_shop"
     const val NavProjects: String = "nav_projects"
     const val NavRoutines: String = "nav_routines"
     const val NavSettings: String = "nav_settings"

@@ -2,6 +2,7 @@ package com.example.taskoday.features.tasks.detail
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -50,7 +51,7 @@ fun TaskDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(text = "Détail de la tâche") },
+                title = { Text(text = "Detail de la mission") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Retour")
@@ -58,11 +59,13 @@ fun TaskDetailScreen(
                 },
                 actions = {
                     uiState.task?.let { task ->
-                        IconButton(
-                            onClick = { onEditTask(task.id) },
-                            modifier = Modifier.testTag(TaskodayTestTags.TaskDetailEditButton),
-                        ) {
-                            Icon(imageVector = Icons.Outlined.Edit, contentDescription = "Modifier la tâche")
+                        if (uiState.canManageMission) {
+                            IconButton(
+                                onClick = { onEditTask(task.id) },
+                                modifier = Modifier.testTag(TaskodayTestTags.TaskDetailEditButton),
+                            ) {
+                                Icon(imageVector = Icons.Outlined.Edit, contentDescription = "Modifier")
+                            }
                         }
                     }
                 },
@@ -71,7 +74,10 @@ fun TaskDetailScreen(
     ) { innerPadding ->
         if (uiState.isLoading) {
             Column(
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
@@ -83,8 +89,8 @@ fun TaskDetailScreen(
         val task = uiState.task
         if (task == null) {
             PlaceholderScreen(
-                title = "Tâche indisponible",
-                description = uiState.errorMessage ?: "Cette tâche n’existe plus.",
+                title = "Mission indisponible",
+                description = uiState.errorMessage ?: "Cette mission n existe plus.",
                 modifier = Modifier.padding(innerPadding),
             )
             return@Scaffold
@@ -98,7 +104,13 @@ fun TaskDetailScreen(
                     .padding(spacing.medium),
             verticalArrangement = Arrangement.spacedBy(spacing.small),
         ) {
-            Text(text = task.title, style = MaterialTheme.typography.titleLarge)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(spacing.small),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(text = task.emoji, style = MaterialTheme.typography.headlineLarge)
+                Text(text = task.title, style = MaterialTheme.typography.titleLarge)
+            }
             if (!task.description.isNullOrBlank()) {
                 Text(
                     text = task.description,
@@ -106,17 +118,26 @@ fun TaskDetailScreen(
                 )
             }
             Text(
-                text = "Échéance : ${DateTimeUtils.formatDate(task.dueDate)}",
+                text = "Rubrique: ${task.dayPart.emoji()} ${task.dayPart.label()}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                text = "Priorité : ${task.priority.label()}",
+                text =
+                    if (task.isDaily) {
+                        if (task.routineDays.isEmpty()) {
+                            "Routine tous les jours"
+                        } else {
+                            "Routine jours: ${task.routineDays.sorted().joinToString(",")}"
+                        }
+                    } else {
+                        "Mission ponctuelle: ${DateTimeUtils.formatDate(task.scheduledDate)}"
+                    },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                text = "Statut : ${task.status.label()}",
+                text = "Statut: ${task.status.label()}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.testTag(TaskodayTestTags.TaskDetailStatusText),
@@ -127,7 +148,7 @@ fun TaskDetailScreen(
                     onClick = { viewModel.updateStatus(TaskStatus.IN_PROGRESS) },
                     modifier = Modifier.padding(top = spacing.medium),
                 ) {
-                    Text(text = "Démarrer la tâche")
+                    Text(text = "Demarrer")
                 }
             }
 
@@ -145,19 +166,21 @@ fun TaskDetailScreen(
                         .fillMaxWidth()
                         .testTag(TaskodayTestTags.TaskDetailMarkDoneButton),
             ) {
-                Text(text = if (task.status == TaskStatus.DONE) "Rouvrir la tâche" else "Marquer comme terminée")
+                Text(text = if (task.status == TaskStatus.DONE) "Rouvrir la tache" else "Marquer comme terminee")
             }
 
-            OutlinedButton(
-                onClick = viewModel::deleteTask,
-                modifier = Modifier.fillMaxWidth().testTag(TaskodayTestTags.TaskDetailDeleteButton),
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Delete,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = spacing.small),
-                )
-                Text(text = "Supprimer la tâche")
+            if (uiState.canManageMission) {
+                OutlinedButton(
+                    onClick = viewModel::deleteTask,
+                    modifier = Modifier.fillMaxWidth().testTag(TaskodayTestTags.TaskDetailDeleteButton),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Delete,
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = spacing.small),
+                    )
+                    Text(text = "Supprimer la tache")
+                }
             }
         }
     }

@@ -4,8 +4,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import com.example.taskoday.core.ui.theme.TaskodayTheme
 import com.example.taskoday.navigation.TaskodayApp
+import com.taskoday.ui.theme.TaskodayTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint

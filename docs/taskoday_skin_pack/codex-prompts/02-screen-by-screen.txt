@@ -1,0 +1,20 @@
+Travaille écran par écran avec le skin Taskoday.
+
+Pour chaque écran :
+1. Ouvre la référence complète dans `references/screens/`.
+2. Ouvre les découpes utiles dans `references/slices/<screen>/`.
+3. Identifie les composants existants dans le projet.
+4. Remplace seulement la couche UI.
+5. Conserve la logique métier et les données.
+6. Vérifie avec une capture Maestro.
+
+Ne cherche pas à faire un Material Design propre.
+Je veux un rendu proche de la référence fantasy/RPG néon.
+
+Ordre conseillé :
+1. Header + bottom navigation
+2. Accueil
+3. Missions
+4. Quêtes
+5. Profil
+6. Splash

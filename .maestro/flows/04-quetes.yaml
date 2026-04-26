@@ -1,0 +1,11 @@
+appId: com.example.taskoday
+---
+- runFlow: subflows/bootstrap-local-home.yaml
+- tapOn:
+    point: 675,2060
+- extendedWaitUntil:
+    visible: "Accomplis des actions, gagne de l XP et deviens legendaire."
+    timeout: 10000
+- assertVisible: "Accomplis des actions, gagne de l XP et deviens legendaire."
+- assertNotVisible: "Bonjour, Alex !"
+- takeScreenshot: "04-quetes"

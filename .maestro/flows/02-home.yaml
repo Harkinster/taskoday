@@ -1,0 +1,4 @@
+appId: com.example.taskoday
+---
+- runFlow: subflows/bootstrap-local-home.yaml
+- takeScreenshot: "02-home"

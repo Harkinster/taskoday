@@ -1,0 +1,29 @@
+{
+  "pack_name": "Taskoday Skin Pack",
+  "version": "1.0",
+  "source_images": [
+    "accueil.png",
+    "missions.png",
+    "quetes.png",
+    "profil.png",
+    "screenbot-logo.png"
+  ],
+  "created_assets": [
+    "assets/logo/taskoday_logo_full_transparent.png",
+    "assets/logo/taskoday_logo_full_white_bg_cropped.png",
+    "assets/logo/taskoday_mascot_transparent.png",
+    "assets/logo/taskoday_wordmark_transparent.png"
+  ],
+  "references": [
+    "references/screens",
+    "references/slices"
+  ],
+  "compose": [
+    "android-compose/theme",
+    "android-compose/components"
+  ],
+  "prompts": [
+    "codex-prompts/01-import-global.txt",
+    "codex-prompts/02-screen-by-screen.txt"
+  ]
+}

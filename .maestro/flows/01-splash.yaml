@@ -1,0 +1,10 @@
+appId: com.example.taskoday
+---
+- launchApp:
+    clearState: true
+
+- extendedWaitUntil:
+    visible: "Continuer en mode local"
+    timeout: 30000
+
+- takeScreenshot: "01-splash"

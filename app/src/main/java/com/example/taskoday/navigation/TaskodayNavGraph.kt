@@ -1,16 +1,14 @@
 package com.example.taskoday.navigation
 
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
@@ -19,15 +17,21 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.taskoday.core.ui.testing.TaskodayTestTags
+import com.example.taskoday.core.ui.component.fantasy.TaskodayBottomBar
+import com.example.taskoday.features.auth.AuthViewModel
+import com.example.taskoday.features.auth.LoginScreen
+import com.example.taskoday.features.auth.RegisterParentScreen
+import com.example.taskoday.features.auth.SessionEventsViewModel
 import com.example.taskoday.features.home.HomeScreen
 import com.example.taskoday.features.home.HomeViewModel
-import com.example.taskoday.features.projects.ProjectsScreen
-import com.example.taskoday.features.projects.ProjectsViewModel
-import com.example.taskoday.features.routines.RoutinesScreen
-import com.example.taskoday.features.routines.RoutinesViewModel
+import com.example.taskoday.features.parent.ParentPlanningScreen
+import com.example.taskoday.features.parent.ParentPlanningViewModel
+import com.example.taskoday.features.quests.QuestsScreen
+import com.example.taskoday.features.quests.QuestsViewModel
 import com.example.taskoday.features.settings.SettingsScreen
 import com.example.taskoday.features.settings.SettingsViewModel
+import com.example.taskoday.features.shop.ShopScreen
+import com.example.taskoday.features.shop.ShopViewModel
 import com.example.taskoday.features.splash.SplashScreen
 import com.example.taskoday.features.tasks.TasksScreen
 import com.example.taskoday.features.tasks.TasksViewModel
@@ -40,8 +44,20 @@ import com.example.taskoday.features.week.WeekScreen
 @Composable
 fun TaskodayApp() {
     val navController = rememberNavController()
+    val sessionEventsViewModel: SessionEventsViewModel = hiltViewModel()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
+
+    LaunchedEffect(sessionEventsViewModel, navController) {
+        sessionEventsViewModel.unauthorizedEvents.collect {
+            navController.navigate(TaskodayDestination.Login.route) {
+                popUpTo(navController.graph.id) {
+                    inclusive = true
+                }
+                launchSingleTop = true
+            }
+        }
+    }
 
     val showBottomBar =
         TopLevelDestinations.any { destination ->
@@ -49,45 +65,22 @@ fun TaskodayApp() {
         }
 
     Scaffold(
+        containerColor = Color.Transparent,
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar {
-                    TopLevelDestinations.forEach { destination ->
-                        val selected =
-                            currentDestination?.hierarchy?.any { it.route == destination.route } == true
-                        val itemTestTag =
-                            when (destination) {
-                                TaskodayDestination.Home -> TaskodayTestTags.NavHome
-                                TaskodayDestination.Tasks -> TaskodayTestTags.NavTasks
-                                TaskodayDestination.Projects -> TaskodayTestTags.NavProjects
-                                TaskodayDestination.Routines -> TaskodayTestTags.NavRoutines
-                                TaskodayDestination.Settings -> TaskodayTestTags.NavSettings
-                                else -> ""
+                TaskodayBottomBar(
+                    destinations = TopLevelDestinations,
+                    currentDestination = currentDestination,
+                    onNavigate = { destination ->
+                        navController.navigate(destination.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
                             }
-                        NavigationBarItem(
-                            modifier = Modifier.testTag(itemTestTag),
-                            selected = selected,
-                            onClick = {
-                                navController.navigate(destination.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            icon = {
-                                destination.icon?.let {
-                                    Icon(
-                                        imageVector = it,
-                                        contentDescription = destination.label,
-                                    )
-                                }
-                            },
-                            label = { Text(text = destination.label) },
-                        )
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
-                }
+                )
             }
         },
     ) { innerPadding ->
@@ -97,10 +90,63 @@ fun TaskodayApp() {
             modifier = Modifier.padding(innerPadding),
         ) {
             composable(TaskodayDestination.Splash.route) {
+                val viewModel: AuthViewModel = hiltViewModel()
+                val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
                 SplashScreen(
-                    onFinished = {
+                    message =
+                        if (uiState.isCheckingSession) {
+                            "Verification de la session..."
+                        } else {
+                            "Preparation de l'application..."
+                        },
+                )
+
+                LaunchedEffect(uiState.isCheckingSession, uiState.isAuthenticated, uiState.isLocalMode) {
+                    if (!uiState.isCheckingSession) {
+                        if (uiState.isAuthenticated || uiState.isLocalMode) {
+                            navController.navigate(TaskodayDestination.Home.route) {
+                                popUpTo(TaskodayDestination.Splash.route) {
+                                    inclusive = true
+                                }
+                                launchSingleTop = true
+                            }
+                        } else {
+                            navController.navigate(TaskodayDestination.Login.route) {
+                                popUpTo(TaskodayDestination.Splash.route) {
+                                    inclusive = true
+                                }
+                                launchSingleTop = true
+                            }
+                        }
+                    }
+                }
+            }
+
+            composable(TaskodayDestination.Login.route) {
+                val viewModel: AuthViewModel = hiltViewModel()
+                LoginScreen(
+                    viewModel = viewModel,
+                    onOpenRegisterParent = { navController.navigate(TaskodayDestination.RegisterParent.route) },
+                    onOpenApp = {
                         navController.navigate(TaskodayDestination.Home.route) {
-                            popUpTo(TaskodayDestination.Splash.route) {
+                            popUpTo(TaskodayDestination.Login.route) {
+                                inclusive = true
+                            }
+                            launchSingleTop = true
+                        }
+                    },
+                )
+            }
+
+            composable(TaskodayDestination.RegisterParent.route) {
+                val viewModel: AuthViewModel = hiltViewModel()
+                RegisterParentScreen(
+                    viewModel = viewModel,
+                    onBackToLogin = { navController.popBackStack() },
+                    onOpenApp = {
+                        navController.navigate(TaskodayDestination.Home.route) {
+                            popUpTo(TaskodayDestination.Login.route) {
                                 inclusive = true
                             }
                             launchSingleTop = true
@@ -127,6 +173,16 @@ fun TaskodayApp() {
                     onCreateTask = { navController.navigate(TaskodayDestination.TaskEdit.createRoute(null)) },
                     onEditTask = { taskId -> navController.navigate(TaskodayDestination.TaskEdit.createRoute(taskId)) },
                 )
+            }
+
+            composable(TaskodayDestination.Quests.route) {
+                val viewModel: QuestsViewModel = hiltViewModel()
+                QuestsScreen(viewModel = viewModel)
+            }
+
+            composable(TaskodayDestination.Shop.route) {
+                val viewModel: ShopViewModel = hiltViewModel()
+                ShopScreen(viewModel = viewModel)
             }
 
             composable(
@@ -159,19 +215,20 @@ fun TaskodayApp() {
                 )
             }
 
-            composable(TaskodayDestination.Projects.route) {
-                val viewModel: ProjectsViewModel = hiltViewModel()
-                ProjectsScreen(viewModel = viewModel)
-            }
-
-            composable(TaskodayDestination.Routines.route) {
-                val viewModel: RoutinesViewModel = hiltViewModel()
-                RoutinesScreen(viewModel = viewModel)
-            }
-
             composable(TaskodayDestination.Settings.route) {
                 val viewModel: SettingsViewModel = hiltViewModel()
-                SettingsScreen(viewModel = viewModel)
+                SettingsScreen(
+                    viewModel = viewModel,
+                    onOpenParentMode = { navController.navigate(TaskodayDestination.ParentPlanning.route) },
+                )
+            }
+
+            composable(TaskodayDestination.ParentPlanning.route) {
+                val viewModel: ParentPlanningViewModel = hiltViewModel()
+                ParentPlanningScreen(
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() },
+                )
             }
 
             composable(TaskodayDestination.Week.route) {

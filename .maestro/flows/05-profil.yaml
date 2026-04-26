@@ -1,0 +1,11 @@
+appId: com.example.taskoday
+---
+- runFlow: subflows/bootstrap-local-home.yaml
+- tapOn:
+    point: 930,2060
+- extendedWaitUntil:
+    visible: "Gere ton profil et suis ta progression."
+    timeout: 10000
+- assertVisible: "Gere ton profil et suis ta progression."
+- assertNotVisible: "Bonjour, Alex !"
+- takeScreenshot: "05-profil"

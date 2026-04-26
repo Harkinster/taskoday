@@ -8,8 +8,8 @@ enum class TaskStatus {
 
     fun label(): String =
         when (this) {
-            TODO -> "À faire"
+            TODO -> "\u00C0 faire"
             IN_PROGRESS -> "En cours"
-            DONE -> "Terminée"
+            DONE -> "Termin\u00E9e"
         }
 }
