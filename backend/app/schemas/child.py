@@ -1,26 +1,18 @@
-from datetime import date, datetime
-from typing import Optional
+from datetime import datetime
 
 from pydantic import BaseModel, EmailStr, Field
 
-from app.models.enums import UserRole
 
-
-class ChildCreateRequest(BaseModel):
-    email: EmailStr
-    password: str = Field(min_length=8, max_length=128)
-    display_name: str = Field(min_length=1, max_length=120)
-    birth_date: Optional[date] = None
-
-
-class ChildResponse(BaseModel):
+class ChildOut(BaseModel):
     id: int
-    family_id: int
-    user_id: Optional[int]
-    email: str
+    email: EmailStr
     display_name: str
-    birth_date: Optional[date]
-    role: UserRole
+    avatar_url: str | None
+    xp: int
+    level: int
     created_at: datetime
-    updated_at: datetime
 
+
+class ChildUpdateRequest(BaseModel):
+    display_name: str | None = Field(default=None, min_length=1, max_length=120)
+    avatar_url: str | None = Field(default=None, max_length=500)

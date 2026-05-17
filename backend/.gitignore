@@ -1,7 +1,29 @@
+# Env files (keep template)
+.env
+.env.*
+!.env.example
+
+# Virtual envs
 .venv/
+venv/
+
+# Python cache/artifacts
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
 .pytest_cache/
 .mypy_cache/
-.env
-*.pyc
+.ruff_cache/
+alembic/versions/__pycache__/
 
+# Local logs
+logs/
+*.log
+
+# Local databases and backups
+*.db
+*.db-*
+*.db.bak-*
+*.sqlite
+*.sqlite3

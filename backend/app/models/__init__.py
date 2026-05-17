@@ -1,25 +1,23 @@
-from app.models.child_profile import ChildProfile
-from app.models.family import Family
-from app.models.family_member import FamilyMember
-from app.models.mission import Mission
-from app.models.points_transaction import PointsTransaction
-from app.models.quest import Quest
-from app.models.reward import Reward
-from app.models.reward_purchase import RewardPurchase
-from app.models.routine import Routine
-from app.models.task_completion import TaskCompletion
-from app.models.user import User
+from app.models.child import ChildProfile
+from app.models.family import Family, FamilyMember, FamilyMemberRole
+from app.models.pairing import PairingCode
+from app.models.task import Mission, Quest, Routine, TaskCompletion, TaskStatus, TaskType
+from app.models.user import User, UserRole
+from app.models.xp import XpHistory
 
 __all__ = [
-    "User",
-    "Family",
     "ChildProfile",
+    "Family",
     "FamilyMember",
-    "Routine",
+    "FamilyMemberRole",
     "Mission",
+    "PairingCode",
     "Quest",
+    "Routine",
     "TaskCompletion",
-    "PointsTransaction",
-    "Reward",
-    "RewardPurchase",
+    "TaskStatus",
+    "TaskType",
+    "User",
+    "UserRole",
+    "XpHistory",
 ]
