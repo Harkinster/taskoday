@@ -229,6 +229,13 @@ fun NeonCard(
                 radius = size.minDimension * 0.60f,
                 center = Offset(size.width * 0.95f, size.height * 0.05f),
             )
+            drawLine(
+                color = borderTone.copy(alpha = 0.40f),
+                start = Offset(size.width * 0.08f, size.height * 0.04f),
+                end = Offset(size.width * 0.92f, size.height * 0.04f),
+                strokeWidth = 2f,
+                cap = StrokeCap.Round,
+            )
         }
         Column(
             modifier =
@@ -971,12 +978,12 @@ fun FantasyBottomNavigation(
                 .background(
                     brush =
                         Brush.verticalGradient(
-                            listOf(SurfaceGlass.copy(alpha = 0.98f), NightBlue900.copy(alpha = 0.98f)),
+                            listOf(NightBlue850, NightBlue900),
                         ),
                     shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
                 )
                 .border(
-                    width = 1.dp,
+                    width = 1.2.dp,
                     brush = taskodayNeonBorderBrush(),
                     shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
                 )
@@ -988,7 +995,7 @@ fun FantasyBottomNavigation(
         ) {
             destinations.forEach { destination ->
                 val selected = currentDestination?.hierarchy?.any { it.route == destination.route } == true
-                val itemColor = if (selected) NeonCyan else TextMuted
+                val itemColor = if (selected) NeonCyan else TextMuted.copy(alpha = 0.86f)
 
                 Column(
                     modifier =
@@ -997,25 +1004,29 @@ fun FantasyBottomNavigation(
                             .clip(RoundedCornerShape(12.dp))
                             .background(
                                 if (selected) {
-                                    NeonBlue.copy(alpha = 0.20f)
+                                    Brush.horizontalGradient(
+                                        colors = listOf(NeonBlue.copy(alpha = 0.32f), ArcaneViolet.copy(alpha = 0.26f)),
+                                    )
                                 } else {
-                                    Color.Transparent
+                                    Brush.horizontalGradient(
+                                        colors = listOf(Color.Transparent, Color.Transparent),
+                                    )
                                 },
                             )
                             .border(
-                                width = 1.dp,
+                                width = if (selected) 1.2.dp else 1.dp,
                                 color =
                                     if (selected) {
-                                        NeonCyan.copy(alpha = 0.7f)
+                                        NeonCyan.copy(alpha = 0.82f)
                                     } else {
                                         Color.Transparent
                                     },
                                 shape = RoundedCornerShape(12.dp),
                             )
                             .clickable { onNavigate(destination) }
-                            .padding(vertical = 6.dp),
+                            .padding(vertical = 7.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                    verticalArrangement = Arrangement.spacedBy(3.dp),
                 ) {
                     destination.icon?.let { icon ->
                         Icon(

@@ -11,6 +11,19 @@ data class RegisterParentRequestDto(
     val password: String,
     @SerializedName("family_name")
     val familyName: String,
+    @SerializedName("birth_date")
+    val birthDate: String,
+)
+
+data class RegisterChildRequestDto(
+    @SerializedName("email")
+    val email: String,
+    @SerializedName("password")
+    val password: String,
+    @SerializedName("display_name")
+    val displayName: String,
+    @SerializedName("birth_date")
+    val birthDate: String? = null,
 )
 
 data class LoginRequestDto(

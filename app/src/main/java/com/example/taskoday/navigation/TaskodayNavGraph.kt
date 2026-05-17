@@ -1,12 +1,18 @@
 package com.example.taskoday.navigation
 
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -18,6 +24,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.taskoday.core.ui.component.fantasy.TaskodayBottomBar
+import com.example.taskoday.core.ui.theme.NightBlue900
+import com.example.taskoday.core.ui.theme.NightBlue950
 import com.example.taskoday.features.auth.AuthViewModel
 import com.example.taskoday.features.auth.LoginScreen
 import com.example.taskoday.features.auth.RegisterParentScreen
@@ -47,6 +55,20 @@ fun TaskodayApp() {
     val sessionEventsViewModel: SessionEventsViewModel = hiltViewModel()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
+    val currentTopLevelIndex =
+        TopLevelDestinations.indexOfFirst { destination ->
+            currentDestination?.hierarchy?.any { it.route == destination.route } == true
+        }
+
+    val navigateToTopLevel: (TaskodayDestination) -> Unit = { destination ->
+        navController.navigate(destination.route) {
+            popUpTo(navController.graph.findStartDestination().id) {
+                saveState = true
+            }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
 
     LaunchedEffect(sessionEventsViewModel, navController) {
         sessionEventsViewModel.unauthorizedEvents.collect {
@@ -59,36 +81,63 @@ fun TaskodayApp() {
         }
     }
 
-    val showBottomBar =
-        TopLevelDestinations.any { destination ->
-            currentDestination?.hierarchy?.any { it.route == destination.route } == true
-        }
+    val showBottomBar = currentTopLevelIndex >= 0
+    val swipeModifier =
+        if (showBottomBar) {
+            Modifier.pointerInput(currentTopLevelIndex) {
+                val swipeThresholdPx = MENU_SWIPE_THRESHOLD_DP.toPx()
+                var accumulatedDrag = 0f
 
-    Scaffold(
-        containerColor = Color.Transparent,
-        bottomBar = {
-            if (showBottomBar) {
-                TaskodayBottomBar(
-                    destinations = TopLevelDestinations,
-                    currentDestination = currentDestination,
-                    onNavigate = { destination ->
-                        navController.navigate(destination.route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
+                detectHorizontalDragGestures(
+                    onHorizontalDrag = { _, dragAmount ->
+                        accumulatedDrag += dragAmount
+                    },
+                    onDragEnd = {
+                        val targetIndex =
+                            when {
+                                accumulatedDrag > swipeThresholdPx -> currentTopLevelIndex - 1
+                                accumulatedDrag < -swipeThresholdPx -> currentTopLevelIndex + 1
+                                else -> -1
                             }
-                            launchSingleTop = true
-                            restoreState = true
+                        if (targetIndex in TopLevelDestinations.indices) {
+                            navigateToTopLevel(TopLevelDestinations[targetIndex])
                         }
-                    }
+                        accumulatedDrag = 0f
+                    },
+                    onDragCancel = {
+                        accumulatedDrag = 0f
+                    },
                 )
             }
-        },
-    ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = TaskodayDestination.Splash.route,
-            modifier = Modifier.padding(innerPadding),
+        } else {
+            Modifier
+        }
+
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(
+                    brush = Brush.verticalGradient(listOf(NightBlue900, NightBlue950)),
+                ),
+    ) {
+        Scaffold(
+            containerColor = Color.Transparent,
+            bottomBar = {
+                if (showBottomBar) {
+                    TaskodayBottomBar(
+                        destinations = TopLevelDestinations,
+                        currentDestination = currentDestination,
+                        onNavigate = navigateToTopLevel,
+                    )
+                }
+            },
         ) {
+            NavHost(
+                navController = navController,
+                startDestination = TaskodayDestination.Splash.route,
+                modifier = swipeModifier,
+            ) {
             composable(TaskodayDestination.Splash.route) {
                 val viewModel: AuthViewModel = hiltViewModel()
                 val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -234,6 +283,9 @@ fun TaskodayApp() {
             composable(TaskodayDestination.Week.route) {
                 WeekScreen(onBack = { navController.popBackStack() })
             }
+            }
         }
     }
 }
+
+private val MENU_SWIPE_THRESHOLD_DP = 90.dp

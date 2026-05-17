@@ -4,7 +4,19 @@ import com.example.taskoday.domain.model.AuthSession
 import com.example.taskoday.domain.model.AuthenticatedUser
 
 interface AuthRepository {
-    suspend fun registerParent(email: String, password: String, familyName: String): AuthSession
+    suspend fun registerParent(
+        email: String,
+        password: String,
+        familyName: String,
+        birthDate: String,
+    ): AuthSession
+
+    suspend fun registerChild(
+        email: String,
+        password: String,
+        displayName: String,
+        birthDate: String? = null,
+    ): AuthSession
 
     suspend fun login(email: String, password: String): AuthSession
 

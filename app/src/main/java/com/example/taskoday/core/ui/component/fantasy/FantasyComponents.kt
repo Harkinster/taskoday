@@ -116,20 +116,34 @@ fun TaskodayBrand(
     modifier: Modifier = Modifier,
     compact: Boolean = false,
 ) {
-    val iconSize = if (compact) 30.dp else 38.dp
-    val wordmarkWidth = if (compact) 112.dp else 150.dp
+    val iconSize = if (compact) 30.dp else 36.dp
+    val wordmarkWidth = if (compact) 114.dp else 146.dp
 
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Image(
-            painter = painterResource(id = R.drawable.taskoday_screenbot_logo_icon),
-            contentDescription = "Screenbot logo",
-            modifier = Modifier.size(iconSize),
-            contentScale = ContentScale.Fit,
-        )
+        Box(
+            modifier =
+                Modifier
+                    .size(iconSize)
+                    .clip(CircleShape)
+                    .background(NeonBlue.copy(alpha = 0.18f))
+                    .border(
+                        width = 1.dp,
+                        color = NeonCyanSoft.copy(alpha = 0.62f),
+                        shape = CircleShape,
+                    )
+                    .padding(4.dp),
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.taskoday_screenbot_logo_icon),
+                contentDescription = "Taskoday mascot",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Fit,
+            )
+        }
         Image(
             painter = painterResource(id = R.drawable.taskoday_screenbot_wordmark),
             contentDescription = "Taskoday",
@@ -153,12 +167,12 @@ fun UserAvatarBadge(
             .background(
                 brush =
                     Brush.radialGradient(
-                        colors = listOf(NeonBlue.copy(alpha = 0.80f), NightBlue850),
+                        colors = listOf(NeonBlue.copy(alpha = 0.88f), NightBlue850),
                     ),
             )
             .border(
-                width = 1.2.dp,
-                color = NeonCyanSoft.copy(alpha = 0.9f),
+                width = 1.6.dp,
+                color = NeonCyanSoft.copy(alpha = 0.98f),
                 shape = CircleShape,
             )
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)

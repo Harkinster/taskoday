@@ -4,6 +4,7 @@ import com.example.taskoday.data.remote.auth.AuthApi
 import com.example.taskoday.data.remote.auth.TokenStorage
 import com.example.taskoday.data.remote.children.ChildrenApi
 import com.example.taskoday.data.remote.dto.LoginRequestDto
+import com.example.taskoday.data.remote.dto.RegisterChildRequestDto
 import com.example.taskoday.data.remote.dto.RegisterParentRequestDto
 import com.example.taskoday.data.remote.dto.toDomain
 import com.example.taskoday.domain.model.AuthSession
@@ -20,13 +21,41 @@ class AuthRepositoryImpl
         private val childrenApi: ChildrenApi,
         private val tokenStorage: TokenStorage,
     ) : AuthRepository {
-        override suspend fun registerParent(email: String, password: String, familyName: String): AuthSession {
+        override suspend fun registerParent(
+            email: String,
+            password: String,
+            familyName: String,
+            birthDate: String,
+        ): AuthSession {
             val response =
                 authApi.registerParent(
                     RegisterParentRequestDto(
                         email = email.trim(),
                         password = password,
                         familyName = familyName.trim(),
+                        birthDate = birthDate.trim(),
+                    ),
+                )
+            return response.toDomain().also { session ->
+                tokenStorage.saveAccessToken(session.accessToken)
+                tokenStorage.clearActiveChildId()
+            }
+        }
+
+        override suspend fun registerChild(
+            email: String,
+            password: String,
+            displayName: String,
+            birthDate: String?,
+        ): AuthSession {
+            val normalizedBirthDate = birthDate?.trim()?.takeIf { it.isNotEmpty() }
+            val response =
+                authApi.registerChild(
+                    RegisterChildRequestDto(
+                        email = email.trim(),
+                        password = password,
+                        displayName = displayName.trim(),
+                        birthDate = normalizedBirthDate,
                     ),
                 )
             return response.toDomain().also { session ->

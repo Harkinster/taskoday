@@ -123,7 +123,7 @@ fun LoginScreen(
                 enabled = !uiState.isLoading,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Creer un compte parent")
+                Text("Creer un compte parent ou enfant")
             }
 
             TextButton(

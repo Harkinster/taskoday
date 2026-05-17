@@ -17,7 +17,7 @@ sealed class TaskodayDestination(
 
     data object Login : TaskodayDestination(route = "auth/login", label = "Connexion")
 
-    data object RegisterParent : TaskodayDestination(route = "auth/register-parent", label = "Inscription parent")
+    data object RegisterParent : TaskodayDestination(route = "auth/register", label = "Inscription")
 
     data object Home : TaskodayDestination(route = "home", label = "Accueil", icon = Icons.Outlined.Home)
 

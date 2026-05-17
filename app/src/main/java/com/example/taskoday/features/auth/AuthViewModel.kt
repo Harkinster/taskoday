@@ -92,9 +92,17 @@ class AuthViewModel
             }
         }
 
-        fun registerParent(email: String, password: String, familyName: String) {
-            if (email.isBlank() || password.isBlank() || familyName.isBlank()) {
-                _uiState.update { it.copy(errorMessage = "Email, mot de passe et nom de famille sont requis.") }
+        fun registerParent(email: String, password: String, familyName: String, birthDate: String) {
+            if (email.isBlank() || password.isBlank() || familyName.isBlank() || birthDate.isBlank()) {
+                _uiState.update {
+                    it.copy(errorMessage = "Email, mot de passe, nom de famille et date de naissance sont requis.")
+                }
+                return
+            }
+
+            val normalizedBirthDate = birthDate.trim()
+            if (!BIRTH_DATE_REGEX.matches(normalizedBirthDate)) {
+                _uiState.update { it.copy(errorMessage = "Date de naissance invalide (format YYYY-MM-DD).") }
                 return
             }
 
@@ -105,6 +113,45 @@ class AuthViewModel
                         email = email,
                         password = password,
                         familyName = familyName,
+                        birthDate = normalizedBirthDate,
+                    )
+                    authRepository.fetchMe()
+                }.onSuccess { me ->
+                    setAuthenticated(me)
+                }.onFailure { throwable ->
+                    authRepository.clearSession()
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            isAuthenticated = false,
+                            currentUser = null,
+                            errorMessage = throwable.toMessage(),
+                        )
+                    }
+                }
+            }
+        }
+
+        fun registerChild(email: String, password: String, displayName: String, birthDate: String?) {
+            if (email.isBlank() || password.isBlank() || displayName.isBlank()) {
+                _uiState.update { it.copy(errorMessage = "Email, mot de passe et prenom sont requis.") }
+                return
+            }
+
+            val normalizedBirthDate = birthDate?.trim().orEmpty().ifBlank { null }
+            if (!normalizedBirthDate.isNullOrBlank() && !BIRTH_DATE_REGEX.matches(normalizedBirthDate)) {
+                _uiState.update { it.copy(errorMessage = "Date de naissance invalide (format YYYY-MM-DD).") }
+                return
+            }
+
+            _uiState.update { it.copy(isLoading = true, errorMessage = null, isLocalMode = false) }
+            viewModelScope.launch {
+                runCatching {
+                    authRepository.registerChild(
+                        email = email,
+                        password = password,
+                        displayName = displayName,
+                        birthDate = normalizedBirthDate,
                     )
                     authRepository.fetchMe()
                 }.onSuccess { me ->
@@ -150,6 +197,10 @@ class AuthViewModel
                     errorMessage = null,
                 )
             }
+        }
+
+        private companion object {
+            val BIRTH_DATE_REGEX = Regex("""\d{4}-\d{2}-\d{2}""")
         }
     }
 
