@@ -203,8 +203,8 @@ fun FantasyHeader(
     subtitle: String,
     modifier: Modifier = Modifier,
     avatarInitials: String = "AB",
-    assetResId: Int = NestAssets.NestBackground.resId,
-    assetDescription: String = "Le Nid",
+    assetResId: Int = NestAssets.interfaceAsset("nid"),
+    assetDescription: String? = "Le Nid",
     onAvatarClick: () -> Unit = {},
 ) {
     Column(
@@ -275,7 +275,8 @@ fun NestStatCard(
     label: String,
     value: String,
     modifier: Modifier = Modifier,
-    assetResId: Int = NestAssets.Flameche.resId,
+    assetResId: Int = NestAssets.interfaceAsset("flammeche"),
+    contentDescription: String = label,
     tone: FantasyTone = FantasyTone.Gold,
 ) {
     FantasyCard(modifier = modifier, tone = tone, contentPadding = PaddingValues(12.dp)) {
@@ -284,7 +285,7 @@ fun NestStatCard(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            FantasyAssetBubble(assetResId = assetResId, contentDescription = label, size = 42.dp)
+            FantasyAssetBubble(assetResId = assetResId, contentDescription = contentDescription, size = 42.dp)
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     text = value,
@@ -312,11 +313,13 @@ fun EggProgressCard(
     requirements: String,
     progress: Float,
     modifier: Modifier = Modifier,
-    assetResId: Int = NestAssets.EggSolarSleeping.resId,
+    assetResId: Int = NestAssets.eggAsset("pyron", "sleeping"),
+    contentDescription: String = title,
+    locked: Boolean = false,
 ) {
-    FantasyCard(modifier = modifier.fillMaxWidth(), tone = FantasyTone.Gold) {
+    FantasyCard(modifier = modifier.fillMaxWidth(), tone = if (locked) FantasyTone.Night else FantasyTone.Gold) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            FantasyAssetBubble(assetResId = assetResId, contentDescription = title, size = 58.dp)
+            FantasyAssetBubble(assetResId = assetResId, contentDescription = contentDescription, size = 58.dp)
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text(
                     text = title,
@@ -345,11 +348,13 @@ fun DragonCard(
     stage: String,
     nextStep: String,
     modifier: Modifier = Modifier,
-    assetResId: Int = NestAssets.DragonEmberBaby.resId,
+    assetResId: Int = NestAssets.dragonAsset("pyron", "baby"),
+    contentDescription: String = title,
+    locked: Boolean = false,
 ) {
-    FantasyCard(modifier = modifier.fillMaxWidth(), tone = FantasyTone.Ember) {
+    FantasyCard(modifier = modifier.fillMaxWidth(), tone = if (locked) FantasyTone.Night else FantasyTone.Ember) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            FantasyAssetBubble(assetResId = assetResId, contentDescription = title, size = 64.dp)
+            FantasyAssetBubble(assetResId = assetResId, contentDescription = contentDescription, size = 64.dp)
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = title,
@@ -379,12 +384,13 @@ fun WishCard(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     supportingText: String? = null,
-    assetResId: Int = NestAssets.Flameche.resId,
+    assetResId: Int = NestAssets.interfaceAsset("flammeche"),
+    contentDescription: String = "Flammèche",
     onMakeWish: (() -> Unit)? = null,
 ) {
     FantasyCard(modifier = modifier.fillMaxWidth(), tone = FantasyTone.Violet) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            FantasyAssetBubble(assetResId = assetResId, contentDescription = "Flammèche", size = 48.dp)
+            FantasyAssetBubble(assetResId = assetResId, contentDescription = contentDescription, size = 48.dp)
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text(
                     text = title,
@@ -423,12 +429,13 @@ fun ScrollCard(
     code: String,
     status: String,
     modifier: Modifier = Modifier,
-    assetResId: Int = NestAssets.ScrollApproved.resId,
+    assetResId: Int = NestAssets.scrollAsset("approved"),
+    contentDescription: String = "Parchemin",
     onUse: (() -> Unit)? = null,
 ) {
     FantasyCard(modifier = modifier.fillMaxWidth(), tone = FantasyTone.Wood) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            FantasyAssetBubble(assetResId = assetResId, contentDescription = "Parchemin", size = 54.dp)
+            FantasyAssetBubble(assetResId = assetResId, contentDescription = contentDescription, size = 54.dp)
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = title,
@@ -459,12 +466,20 @@ fun ChestCard(
     pointsRequired: Int,
     unopenedChests: Int,
     modifier: Modifier = Modifier,
-    assetResId: Int = NestAssets.ChestCommon.resId,
+    assetResId: Int = NestAssets.chestAsset("common"),
+    contentDescription: String = "Coffre",
+    rarity: String = "common",
 ) {
     val progress = if (pointsRequired <= 0) 0f else points.toFloat() / pointsRequired.toFloat()
-    FantasyCard(modifier = modifier.fillMaxWidth(), tone = FantasyTone.Wood) {
+    val tone =
+        when (rarity) {
+            "rare" -> FantasyTone.Violet
+            "epic" -> FantasyTone.Gold
+            else -> FantasyTone.Wood
+        }
+    FantasyCard(modifier = modifier.fillMaxWidth(), tone = tone) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            FantasyAssetBubble(assetResId = assetResId, contentDescription = "Coffre", size = 58.dp)
+            FantasyAssetBubble(assetResId = assetResId, contentDescription = contentDescription, size = 58.dp)
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text(text = "Coffre du Gardien", style = MaterialTheme.typography.titleMedium, color = WoodBrownDark)
                 Text(text = "$points/$pointsRequired points coffre", style = MaterialTheme.typography.bodyMedium, color = InkMuted)
@@ -498,7 +513,7 @@ fun FantasyStateCard(
     message: String,
     modifier: Modifier = Modifier,
     tone: FantasyTone = FantasyTone.Gold,
-    assetResId: Int = NestAssets.NestBackground.resId,
+    assetResId: Int = NestAssets.interfaceAsset("nid"),
     assetDescription: String? = null,
     loading: Boolean = false,
 ) {
@@ -561,7 +576,8 @@ fun InventoryLootCard(
     rarity: String,
     quantity: Int,
     modifier: Modifier = Modifier,
-    assetResId: Int = NestAssets.Crystal.resId,
+    assetResId: Int = NestAssets.interfaceAsset("crystal"),
+    contentDescription: String = title,
 ) {
     FantasyCard(modifier = modifier.fillMaxWidth(), tone = if (rarity == "rare") FantasyTone.Violet else FantasyTone.Moss) {
         Row(
@@ -569,7 +585,7 @@ fun InventoryLootCard(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            FantasyAssetBubble(assetResId = assetResId, contentDescription = title, size = 50.dp)
+            FantasyAssetBubble(assetResId = assetResId, contentDescription = contentDescription, size = 50.dp)
             Column(verticalArrangement = Arrangement.spacedBy(3.dp), modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,

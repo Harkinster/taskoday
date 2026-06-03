@@ -114,8 +114,8 @@ fun ShopScreen(
                             } else {
                                 "Transforme tes Flammèches en moments magiques."
                             },
-                        assetResId = NestAssets.Flameche.resId,
-                        assetDescription = "Flammèche",
+                        assetResId = NestAssets.interfaceAsset("wish_cave"),
+                        assetDescription = "Caverne aux Souhaits",
                         onAvatarClick = onOpenProfile,
                     )
                 }
@@ -124,7 +124,7 @@ fun ShopScreen(
                     NestStatCard(
                         label = if (uiState.isParent) "Souhaits parent" else "Solde du Gardien",
                         value = "${uiState.scalesBalance} Flammèches",
-                        assetResId = NestAssets.Flameche.resId,
+                        assetResId = NestAssets.interfaceAsset("flammeche"),
                         tone = FantasyTone.Ember,
                     )
                 }
@@ -290,6 +290,7 @@ private fun RewardRow(
         costLabel = "${reward.cost} Flammèches",
         enabled = canRequest && !isSubmitting,
         supportingText = supportingText,
+        contentDescription = "Flammèche",
         onMakeWish = if (isParent) null else onRequest,
     )
 }
@@ -309,6 +310,8 @@ private fun RewardRequestRow(
             title = request.rewardTitle,
             code = coupon.code,
             status = request.status.displayLabel(),
+            assetResId = request.status.toScrollAssetRes(),
+            contentDescription = "Parchemin ${request.status.displayLabel()}",
             onUse =
                 if (isParent && request.status == RewardRequestStatus.APPROVED) {
                     { onUseCoupon(coupon.id) }
@@ -450,6 +453,9 @@ private fun RewardRequestStatus.toColor(): Color =
         RewardRequestStatus.USED -> WoodBrownDark
         RewardRequestStatus.EXPIRED -> DangerGlow
     }
+
+private fun RewardRequestStatus.toScrollAssetRes(): Int =
+    NestAssets.scrollAsset(name.lowercase())
 
 private fun RewardRequestStatus.displayLabel(): String =
     when (this) {

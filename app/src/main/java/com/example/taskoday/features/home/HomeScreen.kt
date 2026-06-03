@@ -140,8 +140,8 @@ fun HomeScreen(
                     FantasyHeader(
                         title = "Journée",
                         subtitle = "Le Gardien avance pas à pas, routine après routine.",
-                        assetResId = NestAssets.NestBackground.resId,
-                        assetDescription = "Le Nid",
+                        assetResId = NestAssets.interfaceAsset("nid"),
+                        assetDescription = null,
                         onAvatarClick = onOpenProfile,
                     )
                 }

@@ -1,6 +1,7 @@
 package com.example.taskoday.features.gamification
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -15,11 +16,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import com.example.taskoday.core.ui.component.fantasy.ChestCard
 import com.example.taskoday.core.ui.component.fantasy.DragonCard
 import com.example.taskoday.core.ui.component.fantasy.EggProgressCard
+import com.example.taskoday.core.ui.component.fantasy.FantasyAssetBubble
 import com.example.taskoday.core.ui.component.fantasy.FantasyButton
 import com.example.taskoday.core.ui.component.fantasy.FantasyButtonStyle
 import com.example.taskoday.core.ui.component.fantasy.FantasyCard
@@ -54,8 +58,8 @@ fun NestScreen(
             FantasyHeader(
                 title = "Le Nid",
                 subtitle = "Le Gardien fait grandir son refuge avec ses routines, missions et quêtes.",
-                assetResId = NestAssets.NestBackground.resId,
-                assetDescription = "Le Nid",
+                assetResId = NestAssets.interfaceAsset("nid"),
+                assetDescription = null,
                 onAvatarClick = onOpenProfile,
             )
         }
@@ -75,21 +79,49 @@ fun NestScreen(
                 NestStatCard(
                     label = "Flammèches",
                     value = "20",
-                    assetResId = NestAssets.Flameche.resId,
+                    assetResId = NestAssets.interfaceAsset("flammeche"),
                     tone = FantasyTone.Ember,
                     modifier = Modifier.weight(1f),
                 )
                 NestStatCard(
                     label = "Cristaux",
                     value = "6",
-                    assetResId = NestAssets.Crystal.resId,
+                    assetResId = NestAssets.interfaceAsset("crystal"),
                     tone = FantasyTone.Violet,
                     modifier = Modifier.weight(1f),
                 )
             }
         }
         item {
-            ChestCard(points = 4, pointsRequired = 5, unopenedChests = 1)
+            DragonCard(
+                title = "Pyron",
+                stage = "Bébé dragon braise",
+                nextStep = "Prochaine évolution : jeune dragon",
+                assetResId = NestAssets.dragonAsset("pyron", "baby"),
+                contentDescription = "Dragon Pyron, stade bébé",
+            )
+        }
+        item {
+            EggProgressCard(
+                title = "Œuf Pyron",
+                status = "Chaleur douce",
+                requirements = "Continue les routines simples pour nourrir sa flamme.",
+                progress = 0.72f,
+                assetResId = NestAssets.eggAsset("pyron", "glowing"),
+                contentDescription = "Œuf Pyron lumineux",
+            )
+        }
+        item {
+            PerchOverviewCard(level = 1)
+        }
+        item {
+            ChestCard(
+                points = 4,
+                pointsRequired = 5,
+                unopenedChests = 1,
+                assetResId = NestAssets.chestAsset("common"),
+                contentDescription = "Coffre du Gardien",
+            )
         }
         item {
             NavigationButtons(
@@ -126,8 +158,8 @@ fun InventoryScreen(
     GamificationListScreen(
         title = "Inventaire",
         subtitle = "Les petits trésors trouvés dans les coffres du Gardien.",
-        assetResId = NestAssets.ChestCommon.resId,
-        assetDescription = "Coffre",
+        assetResId = NestAssets.interfaceAsset("inventory_empty"),
+        assetDescription = "Inventaire",
         onOpenProfile = onOpenProfile,
     ) {
         if (sampleLoot.isEmpty()) {
@@ -135,8 +167,8 @@ fun InventoryScreen(
                 FantasyStateCard(
                     title = "Inventaire vide",
                     message = "Continue tes quêtes pour attirer de nouveaux trésors.",
-                    assetResId = NestAssets.ChestCommon.resId,
-                    assetDescription = "Coffre",
+                    assetResId = NestAssets.interfaceAsset("inventory_empty"),
+                    assetDescription = "Inventaire vide",
                 )
             }
         } else {
@@ -146,6 +178,7 @@ fun InventoryScreen(
                     rarity = item.rarityLabel,
                     quantity = item.quantity,
                     assetResId = item.assetResId,
+                    contentDescription = "${item.title}, ${item.rarityLabel}",
                 )
             }
         }
@@ -159,8 +192,8 @@ fun EggsScreen(
     GamificationListScreen(
         title = "Œufs",
         subtitle = "Chaque œuf attend les bons objets pour éclore doucement.",
-        assetResId = NestAssets.EggSolarSleeping.resId,
-        assetDescription = "Œuf lumineux",
+        assetResId = NestAssets.eggAsset("pyron", "sleeping"),
+        assetDescription = "Œuf Pyron endormi",
         onOpenProfile = onOpenProfile,
     ) {
         if (sampleEggs.isEmpty()) {
@@ -168,8 +201,8 @@ fun EggsScreen(
                 FantasyStateCard(
                     title = "Aucun œuf découvert",
                     message = "Ton Nid attend sa prochaine étincelle.",
-                    assetResId = NestAssets.EggSolarSleeping.resId,
-                    assetDescription = "Œuf lumineux",
+                    assetResId = NestAssets.interfaceAsset("egg_locked"),
+                    assetDescription = "Œuf inconnu verrouillé",
                 )
             }
         } else {
@@ -180,6 +213,8 @@ fun EggsScreen(
                     requirements = egg.requirements,
                     progress = egg.progress,
                     assetResId = egg.assetResId,
+                    contentDescription = egg.contentDescription,
+                    locked = egg.locked,
                 )
             }
         }
@@ -193,8 +228,8 @@ fun DragonsScreen(
     GamificationListScreen(
         title = "Dragons",
         subtitle = "Les compagnons braise débloqués dans Le Nid.",
-        assetResId = NestAssets.DragonEmberBaby.resId,
-        assetDescription = "Bébé dragon braise",
+        assetResId = NestAssets.dragonAsset("pyron", "baby"),
+        assetDescription = "Dragon Pyron bébé",
         onOpenProfile = onOpenProfile,
     ) {
         if (sampleDragons.isEmpty()) {
@@ -202,8 +237,8 @@ fun DragonsScreen(
                 FantasyStateCard(
                     title = "Aucun dragon débloqué",
                     message = "Ton dragon t'attend pour la prochaine aventure.",
-                    assetResId = NestAssets.DragonEmberBaby.resId,
-                    assetDescription = "Bébé dragon braise",
+                    assetResId = NestAssets.dragonAsset("pyron", "baby"),
+                    assetDescription = "Dragon Pyron bébé",
                 )
             }
         } else {
@@ -213,6 +248,7 @@ fun DragonsScreen(
                     stage = dragon.stage,
                     nextStep = dragon.nextStep,
                     assetResId = dragon.assetResId,
+                    contentDescription = dragon.contentDescription,
                 )
             }
         }
@@ -226,15 +262,15 @@ fun WishesCaveScreen(
     GamificationListScreen(
         title = "Caverne aux Souhaits",
         subtitle = "Les Flammèches servent uniquement aux Souhaits créés par les parents.",
-        assetResId = NestAssets.Flameche.resId,
-        assetDescription = "Flammèche",
+        assetResId = NestAssets.interfaceAsset("wish_cave"),
+        assetDescription = "Caverne aux Souhaits",
         onOpenProfile = onOpenProfile,
     ) {
         item {
             NestStatCard(
                 label = "Flammèches disponibles",
                 value = "20",
-                assetResId = NestAssets.Flameche.resId,
+                assetResId = NestAssets.interfaceAsset("flammeche"),
                 tone = FantasyTone.Ember,
             )
         }
@@ -243,8 +279,8 @@ fun WishesCaveScreen(
                 FantasyStateCard(
                     title = "Aucun Souhait pour le moment",
                     message = "La Caverne aux Souhaits attend une nouvelle idée de parent.",
-                    assetResId = NestAssets.Flameche.resId,
-                    assetDescription = "Flammèche",
+                    assetResId = NestAssets.interfaceAsset("wish_cave"),
+                    assetDescription = "Caverne aux Souhaits",
                 )
             }
         } else {
@@ -253,6 +289,7 @@ fun WishesCaveScreen(
                     title = wish.title,
                     description = wish.description,
                     costLabel = "${wish.cost} Flammèches",
+                    contentDescription = "Flammèche",
                     onMakeWish = {},
                 )
             }
@@ -267,7 +304,7 @@ fun ScrollsScreen(
     GamificationListScreen(
         title = "Parchemins",
         subtitle = "Les Souhaits validés deviennent des Parchemins à utiliser en famille.",
-        assetResId = NestAssets.ScrollApproved.resId,
+        assetResId = NestAssets.scrollAsset("approved"),
         assetDescription = "Parchemin",
         onOpenProfile = onOpenProfile,
     ) {
@@ -276,7 +313,7 @@ fun ScrollsScreen(
                 FantasyStateCard(
                     title = "Aucun Parchemin pour le moment",
                     message = "Les Souhaits validés apparaîtront ici tranquillement.",
-                    assetResId = NestAssets.ScrollApproved.resId,
+                    assetResId = NestAssets.scrollAsset("pending"),
                     assetDescription = "Parchemin",
                 )
             }
@@ -286,6 +323,8 @@ fun ScrollsScreen(
                     title = scroll.title,
                     code = scroll.code,
                     status = scroll.status,
+                    assetResId = NestAssets.scrollAsset(scroll.statusKey),
+                    contentDescription = "Parchemin ${scroll.status}",
                 )
             }
         }
@@ -299,7 +338,7 @@ fun ParentRewardsScreen(
     GamificationListScreen(
         title = "Souhaits parent",
         subtitle = "Valider, refuser ou suivre les demandes du Gardien.",
-        assetResId = NestAssets.ScrollApproved.resId,
+        assetResId = NestAssets.scrollAsset("pending"),
         assetDescription = "Parchemin",
         onOpenProfile = onOpenProfile,
     ) {
@@ -308,7 +347,7 @@ fun ParentRewardsScreen(
                 FantasyStateCard(
                     title = "Aucune demande en attente",
                     message = "Les Souhaits du Gardien apparaîtront ici quand ils seront prêts.",
-                    assetResId = NestAssets.ScrollApproved.resId,
+                    assetResId = NestAssets.scrollAsset("pending"),
                     assetDescription = "Parchemin",
                 )
             }
@@ -336,6 +375,28 @@ private fun GuardianProgressCard(
             style = MaterialTheme.typography.bodyMedium,
             color = InkMuted,
         )
+    }
+}
+
+@Composable
+private fun PerchOverviewCard(level: Int) {
+    FantasyCard(tone = FantasyTone.Moss) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            FantasyAssetBubble(
+                assetResId = NestAssets.perchAsset(level),
+                contentDescription = "Perchoir niveau $level",
+                size = 62.dp,
+            )
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(text = "Perchoir du Nid", style = MaterialTheme.typography.titleMedium, color = WoodBrownDark)
+                Text(text = "Niveau $level", style = MaterialTheme.typography.bodyMedium, color = MossGreen)
+                Text(
+                    text = "Le dragon actif garde sa place au chaud.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = InkMuted,
+                )
+            }
+        }
     }
 }
 
@@ -429,6 +490,8 @@ data class EggUiItem(
     val requirements: String,
     val progress: Float,
     val assetResId: Int,
+    val locked: Boolean = false,
+    val contentDescription: String = title,
 )
 
 data class DragonUiItem(
@@ -437,6 +500,7 @@ data class DragonUiItem(
     val stage: String,
     val nextStep: String,
     val assetResId: Int,
+    val contentDescription: String = title,
 )
 
 data class WishUiItem(
@@ -449,6 +513,7 @@ data class ScrollUiItem(
     val title: String,
     val code: String,
     val status: String,
+    val statusKey: String,
 )
 
 data class ParentRequestUiItem(
@@ -459,23 +524,37 @@ data class ParentRequestUiItem(
 
 private val sampleLoot =
     listOf(
-        LootUiItem("pomme_dragon", "Pomme dragon", "commun", 8, NestAssets.Flameche.resId),
-        LootUiItem("petit_cristal", "Petit cristal", "commun", 6, NestAssets.Crystal.resId),
-        LootUiItem("pierre_chaude", "Pierre chaude", "commun", 1, NestAssets.ChestCommon.resId),
-        LootUiItem("rune_ancienne", "Rune ancienne", "rare", 3, NestAssets.ScrollApproved.resId),
-        LootUiItem("fragment_oeuf", "Fragment d'œuf", "rare", 1, NestAssets.EggSolarCracked.resId),
+        LootUiItem("lanterne", "Lanterne", "commun", 1, NestAssets.inventoryItemAsset("lantern")),
+        LootUiItem("pousse_feuille", "Pousse de feuille", "commun", 4, NestAssets.inventoryItemAsset("leaf_sprout")),
+        LootUiItem("livre_magique", "Livre magique", "rare", 1, NestAssets.inventoryItemAsset("magic_book")),
+        LootUiItem("charme_etoile", "Charme étoilé", "rare", 2, NestAssets.inventoryItemAsset("star_charm")),
+        LootUiItem("cristal", "Cristal", "commun", 6, NestAssets.interfaceAsset("crystal")),
+        LootUiItem("flammeches", "Flammèches", "commun", 20, NestAssets.interfaceAsset("flammeche")),
+        LootUiItem("coffre_rare", "Coffre rare", "rare", 1, NestAssets.chestAsset("rare")),
     )
 
 private val sampleEggs =
     listOf(
-        EggUiItem("oeuf_braise", "Œuf braise", "Prêt à couver", "3 pommes, 2 cristaux, 1 pierre chaude", 0.72f, NestAssets.EggSolarGlowing.resId),
-        EggUiItem("oeuf_lunaire", "Œuf lunaire", "À trouver", "Disponible dans une future saison", 0.18f, NestAssets.EggSolarSleeping.resId),
-        EggUiItem("oeuf_racine", "Œuf racine", "À trouver", "Disponible dans une future saison", 0.12f, NestAssets.EggSolarWarm.resId),
+        EggUiItem("egg_pyron", "Œuf Pyron", "Chaleur douce", "Progression principale du Gardien", 0.72f, NestAssets.eggAsset("pyron", "glowing"), contentDescription = "Œuf Pyron lumineux"),
+        EggUiItem("egg_fulmio", "Œuf Fulmio", "Énergie calme", "Activité physique et défis rapides", 0.34f, NestAssets.eggAsset("fulmio", "warm"), contentDescription = "Œuf Fulmio tiède"),
+        EggUiItem("egg_sylvyn", "Œuf Sylvyn", "Racines paisibles", "Rangement, maison et aide familiale", 0.18f, NestAssets.eggAsset("sylvyn", "sleeping"), contentDescription = "Œuf Sylvyn endormi"),
+        EggUiItem("egg_phenor", "Œuf Phenor", "Patience retrouvée", "Reprise après pause et persévérance", 0.48f, NestAssets.eggAsset("phenor", "glowing"), contentDescription = "Œuf Phenor lumineux"),
+        EggUiItem("egg_lunarys", "Œuf Lunarys", "Veillée tranquille", "Routines du soir et calme", 0.82f, NestAssets.eggAsset("lunarys", "cracked"), contentDescription = "Œuf Lunarys fissuré"),
+        EggUiItem("egg_chronyx", "Œuf Chronyx", "Temps régulier", "Séries, patience et habitudes", 0.27f, NestAssets.eggAsset("chronyx", "warm"), contentDescription = "Œuf Chronyx tiède"),
+        EggUiItem("egg_ambrio", "Œuf Ambrio", "Cœur attentif", "Entraide et gentillesse", 0.10f, NestAssets.eggAsset("ambrio", "sleeping"), contentDescription = "Œuf Ambrio endormi"),
+        EggUiItem("egg_cristao", "Œuf Cristao", "Concentration claire", "Lecture, devoirs et apprentissage", 1f, NestAssets.eggAsset("cristao", "hatching"), contentDescription = "Œuf Cristao en éclosion"),
     )
 
 private val sampleDragons =
     listOf(
-        DragonUiItem("dragon_braise", "Bébé dragon braise", "Bébé", "Prochaine évolution : jeune dragon", NestAssets.DragonEmberBaby.resId),
+        DragonUiItem("dragon_pyron", "Pyron", "Bébé dragon braise", "Progression générale et motivation principale", NestAssets.dragonAsset("pyron", "baby"), contentDescription = "Dragon Pyron bébé"),
+        DragonUiItem("dragon_fulmio", "Fulmio", "Jeune dragon tempête", "Activité physique et défis dynamiques", NestAssets.dragonAsset("fulmio", "young"), contentDescription = "Dragon Fulmio jeune"),
+        DragonUiItem("dragon_sylvyn", "Sylvyn", "Dragon racine moyen", "Rangement, maison et aide familiale", NestAssets.dragonAsset("sylvyn", "medium"), contentDescription = "Dragon Sylvyn moyen"),
+        DragonUiItem("dragon_phenor", "Phenor", "Dragon phénix jeune", "Reprise après pause, toujours sans punition", NestAssets.dragonAsset("phenor", "young"), contentDescription = "Dragon Phenor jeune"),
+        DragonUiItem("dragon_lunarys", "Lunarys", "Grand dragon lunaire", "Routines du soir et sommeil", NestAssets.dragonAsset("lunarys", "large"), contentDescription = "Dragon Lunarys grand"),
+        DragonUiItem("dragon_chronyx", "Chronyx", "Dragon chronos moyen", "Séries, régularité et patience", NestAssets.dragonAsset("chronyx", "medium"), contentDescription = "Dragon Chronyx moyen"),
+        DragonUiItem("dragon_ambrio", "Ambrio", "Dragon cœur bébé", "Entraide, famille et comportement positif", NestAssets.dragonAsset("ambrio", "baby"), contentDescription = "Dragon Ambrio bébé"),
+        DragonUiItem("dragon_cristao", "Cristao", "Dragon cristal légendaire", "Devoirs, lecture et concentration", NestAssets.dragonAsset("cristao", "legendary"), contentDescription = "Dragon Cristao légendaire"),
     )
 
 private val sampleWishes =
@@ -486,7 +565,7 @@ private val sampleWishes =
 
 private val sampleScrolls =
     listOf(
-        ScrollUiItem("Choisir le dessert", "TASKO-12-AB34CD", "Parchemin disponible"),
+        ScrollUiItem("Choisir le dessert", "TASKO-12-AB34CD", "disponible", "approved"),
     )
 
 private val sampleRequests =
