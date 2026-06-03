@@ -84,6 +84,16 @@ class QuestsViewModel
         }
 
         private fun resolveCanCreateQuest() {
+            if (authRepository.getAccessToken().isNullOrBlank()) {
+                _uiState.update {
+                    it.copy(
+                        canCreateQuest = true,
+                        canManageQuests = true,
+                    )
+                }
+                return
+            }
+
             viewModelScope.launch {
                 val canManage =
                     runCatching { authRepository.fetchMe().role.equals("PARENT", ignoreCase = true) }

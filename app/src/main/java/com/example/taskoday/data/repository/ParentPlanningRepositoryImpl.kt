@@ -27,7 +27,7 @@ class ParentPlanningRepositoryImpl
         }
 
         override suspend fun fetchChildren(): List<ParentChild> =
-            childrenApi.getChildren().map { child ->
+            childrenApi.getChildren().data.map { child ->
                 ParentChild(
                     id = child.id,
                     displayName = child.displayName,
@@ -57,7 +57,7 @@ class ParentPlanningRepositoryImpl
                         title = title.trim(),
                         description = description?.trim().takeUnless { it.isNullOrBlank() },
                         dayPart = dayPart.name,
-                        frequency = if (isDaily) "DAILY" else "SELECTED_DAYS",
+                        frequency = if (isDaily) "daily" else "custom",
                         daysOfWeek =
                             if (isDaily) {
                                 null
@@ -85,7 +85,7 @@ class ParentPlanningRepositoryImpl
                         title = title.trim(),
                         description = description?.trim().takeUnless { it.isNullOrBlank() },
                         dayPart = dayPart.name,
-                        scheduledDate = scheduledDate.toString(),
+                        scheduledDate = "${scheduledDate}T00:00:00Z",
                         pointsReward = points.coerceIn(0, 100),
                         isActive = true,
                     ),
@@ -106,7 +106,7 @@ class ParentPlanningRepositoryImpl
                         title = title.trim(),
                         description = description?.trim().takeUnless { it.isNullOrBlank() },
                         dayPart = dayPart.name,
-                        pointsReward = points.coerceIn(0, 100),
+                        pointsReward = points.coerceAtLeast(1),
                         isActive = true,
                     ),
             )

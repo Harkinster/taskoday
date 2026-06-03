@@ -6,9 +6,9 @@ data class ChildResponseDto(
     @SerializedName("id")
     val id: Long,
     @SerializedName("family_id")
-    val familyId: Long,
+    val familyId: Long? = null,
     @SerializedName("user_id")
-    val userId: Long?,
+    val userId: Long? = null,
     @SerializedName("email")
     val email: String,
     @SerializedName("display_name")

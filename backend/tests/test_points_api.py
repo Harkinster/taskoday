@@ -1,197 +1,157 @@
-from datetime import date
+API = "/api/v1"
 
 
 def _register_parent(client, email: str, family_name: str, password: str = "supersecret123") -> str:
     response = client.post(
-        "/auth/register-parent",
+        f"{API}/auth/register-parent",
         json={
             "email": email,
             "password": password,
             "family_name": family_name,
+            "birth_date": "1988-01-20",
         },
     )
     assert response.status_code == 201
     return response.json()["access_token"]
 
 
-def _login(client, email: str, password: str) -> str:
+def _register_child(client, email: str, display_name: str, password: str = "childsecret123") -> str:
     response = client.post(
-        "/auth/login",
-        json={"email": email, "password": password},
-    )
-    assert response.status_code == 200
-    return response.json()["access_token"]
-
-
-def _create_child(client, parent_token: str, email: str, display_name: str) -> dict:
-    response = client.post(
-        "/children",
-        headers={"Authorization": f"Bearer {parent_token}"},
+        f"{API}/auth/register-child",
         json={
             "email": email,
-            "password": "childsecret123",
+            "password": password,
             "display_name": display_name,
         },
     )
     assert response.status_code == 201
-    return response.json()
+    return response.json()["access_token"]
 
 
-def test_points_award_and_revoke_rules(client) -> None:
+def _attach_child(client, parent_token: str, child_token: str) -> int:
+    pairing = client.post(f"{API}/pairing/generate-code", headers={"Authorization": f"Bearer {child_token}"})
+    assert pairing.status_code == 200
+
+    response = client.post(
+        f"{API}/pairing/attach-child",
+        headers={"Authorization": f"Bearer {parent_token}"},
+        json={"code": pairing.json()["data"]["code"]},
+    )
+    assert response.status_code == 200
+    return response.json()["data"]["child_id"]
+
+
+def test_currency_award_and_routine_revoke_rules(client) -> None:
     parent_token = _register_parent(client, "points.parent@example.com", "Famille Points")
-    child = _create_child(client, parent_token, "points.child@example.com", "Yuna")
-    child_id = child["id"]
-    target_date = date(2026, 4, 27)
+    child_token = _register_child(client, "points.child@example.com", "Yuna")
+    child_id = _attach_child(client, parent_token, child_token)
 
     routine = client.post(
-        f"/children/{child_id}/routines",
+        f"{API}/children/{child_id}/routines",
         headers={"Authorization": f"Bearer {parent_token}"},
-        json={
-            "title": "Routine",
-            "day_part": "MATIN",
-            "frequency": "DAILY",
-            "is_active": True,
-        },
+        json={"title": "Routine", "repeat_type": "daily"},
     )
-    assert routine.status_code == 201
-    routine_id = routine.json()["id"]
+    assert routine.status_code == 200
+    routine_id = routine.json()["data"]["id"]
 
     mission = client.post(
-        f"/children/{child_id}/missions",
+        f"{API}/children/{child_id}/missions",
         headers={"Authorization": f"Bearer {parent_token}"},
-        json={
-            "title": "Mission",
-            "day_part": "MIDI",
-            "scheduled_date": target_date.isoformat(),
-            "is_active": True,
-        },
+        json={"title": "Mission", "due_date": "2026-04-27T00:00:00Z"},
     )
-    assert mission.status_code == 201
-    mission_id = mission.json()["id"]
+    assert mission.status_code == 200
+    mission_id = mission.json()["data"]["id"]
 
     quest = client.post(
-        f"/children/{child_id}/quests",
+        f"{API}/children/{child_id}/quests",
         headers={"Authorization": f"Bearer {parent_token}"},
-        json={
-            "title": "Quest",
-            "day_part": "SOIR",
-            "is_active": True,
-        },
+        json={"title": "Quest", "xp_reward": 30},
     )
-    assert quest.status_code == 201
-    quest_id = quest.json()["id"]
+    assert quest.status_code == 200
+    quest_id = quest.json()["data"]["id"]
 
-    # complete: +1 +2 +3
-    assert client.patch(
-        f"/planning/routine/{routine_id}/complete",
-        headers={"Authorization": f"Bearer {parent_token}"},
-        params={"date": target_date.isoformat()},
+    assert client.post(
+        f"{API}/routines/{routine_id}/complete",
+        headers={"Authorization": f"Bearer {child_token}"},
     ).status_code == 200
-    assert client.patch(
-        f"/planning/mission/{mission_id}/complete",
-        headers={"Authorization": f"Bearer {parent_token}"},
-        params={"date": target_date.isoformat()},
+    assert client.post(
+        f"{API}/missions/{mission_id}/complete",
+        headers={"Authorization": f"Bearer {child_token}"},
     ).status_code == 200
-    assert client.patch(
-        f"/planning/quest/{quest_id}/complete",
-        headers={"Authorization": f"Bearer {parent_token}"},
-        params={"date": target_date.isoformat()},
+    assert client.post(
+        f"{API}/quests/{quest_id}/complete",
+        headers={"Authorization": f"Bearer {child_token}"},
     ).status_code == 200
 
     balance_1 = client.get(
-        f"/children/{child_id}/points",
-        headers={"Authorization": f"Bearer {parent_token}"},
+        f"{API}/children/{child_id}/flammeches",
+        headers={"Authorization": f"Bearer {child_token}"},
     )
     assert balance_1.status_code == 200
-    assert balance_1.json()["balance"] == 6
+    assert balance_1.json()["data"]["balance"] == 20
 
     history_1 = client.get(
-        f"/children/{child_id}/points/history",
-        headers={"Authorization": f"Bearer {parent_token}"},
+        f"{API}/children/{child_id}/flammeches/history",
+        headers={"Authorization": f"Bearer {child_token}"},
     )
     assert history_1.status_code == 200
-    tx_1 = history_1.json()["transactions"]
+    tx_1 = history_1.json()["data"]["transactions"]
     assert len(tx_1) == 3
-    assert sorted(tx["amount"] for tx in tx_1) == [1, 2, 3]
+    assert sorted(tx["amount"] for tx in tx_1) == [2, 6, 12]
 
-    # idempotent complete: no extra points
-    assert client.patch(
-        f"/planning/routine/{routine_id}/complete",
-        headers={"Authorization": f"Bearer {parent_token}"},
-        params={"date": target_date.isoformat()},
+    assert client.post(
+        f"{API}/routines/{routine_id}/complete",
+        headers={"Authorization": f"Bearer {child_token}"},
     ).status_code == 200
     balance_after_duplicate = client.get(
-        f"/children/{child_id}/points",
-        headers={"Authorization": f"Bearer {parent_token}"},
+        f"{API}/children/{child_id}/flammeches",
+        headers={"Authorization": f"Bearer {child_token}"},
     )
-    assert balance_after_duplicate.json()["balance"] == 6
+    assert balance_after_duplicate.json()["data"]["balance"] == 20
 
-    # uncomplete mission: -2
-    assert client.patch(
-        f"/planning/mission/{mission_id}/uncomplete",
-        headers={"Authorization": f"Bearer {parent_token}"},
-        params={"date": target_date.isoformat()},
+    assert client.post(
+        f"{API}/routines/{routine_id}/uncomplete",
+        headers={"Authorization": f"Bearer {child_token}"},
     ).status_code == 200
 
     balance_2 = client.get(
-        f"/children/{child_id}/points",
-        headers={"Authorization": f"Bearer {parent_token}"},
+        f"{API}/children/{child_id}/flammeches",
+        headers={"Authorization": f"Bearer {child_token}"},
     )
-    assert balance_2.json()["balance"] == 4
-
-    history_2 = client.get(
-        f"/children/{child_id}/points/history",
-        headers={"Authorization": f"Bearer {parent_token}"},
-    )
-    tx_2 = history_2.json()["transactions"]
-    assert len(tx_2) == 4
-    assert any(tx["amount"] == -2 for tx in tx_2)
-
-    # idempotent uncomplete: no extra negative points
-    assert client.patch(
-        f"/planning/mission/{mission_id}/uncomplete",
-        headers={"Authorization": f"Bearer {parent_token}"},
-        params={"date": target_date.isoformat()},
-    ).status_code == 200
-    balance_3 = client.get(
-        f"/children/{child_id}/points",
-        headers={"Authorization": f"Bearer {parent_token}"},
-    )
-    assert balance_3.json()["balance"] == 4
+    assert balance_2.json()["data"]["balance"] == 18
 
 
-def test_points_access_control(client) -> None:
+def test_currency_access_control(client) -> None:
     parent_a = _register_parent(client, "points.parent.a@example.com", "Famille PA")
     parent_b = _register_parent(client, "points.parent.b@example.com", "Famille PB")
 
-    child_a1 = _create_child(client, parent_a, "points.a1@example.com", "A1")
-    child_a2 = _create_child(client, parent_a, "points.a2@example.com", "A2")
-    child_b1 = _create_child(client, parent_b, "points.b1@example.com", "B1")
+    child_a1_token = _register_child(client, "points.a1@example.com", "A1")
+    child_a2_token = _register_child(client, "points.a2@example.com", "A2")
+    child_b1_token = _register_child(client, "points.b1@example.com", "B1")
+    child_a1_id = _attach_child(client, parent_a, child_a1_token)
+    child_a2_id = _attach_child(client, parent_a, child_a2_token)
+    child_b1_id = _attach_child(client, parent_b, child_b1_token)
 
-    # parent B cannot read parent A child points
     forbidden_parent = client.get(
-        f"/children/{child_a1['id']}/points",
+        f"{API}/children/{child_a1_id}/flammeches",
         headers={"Authorization": f"Bearer {parent_b}"},
     )
-    assert forbidden_parent.status_code == 404
+    assert forbidden_parent.status_code == 403
 
-    child_a1_token = _login(client, "points.a1@example.com", "childsecret123")
-
-    own_points = client.get(
-        f"/children/{child_a1['id']}/points",
+    own_currency = client.get(
+        f"{API}/children/{child_a1_id}/flammeches",
         headers={"Authorization": f"Bearer {child_a1_token}"},
     )
-    assert own_points.status_code == 200
+    assert own_currency.status_code == 200
 
-    sibling_points = client.get(
-        f"/children/{child_a2['id']}/points",
+    sibling_currency = client.get(
+        f"{API}/children/{child_a2_id}/flammeches",
         headers={"Authorization": f"Bearer {child_a1_token}"},
     )
-    assert sibling_points.status_code == 403
+    assert sibling_currency.status_code == 403
 
-    other_family_points = client.get(
-        f"/children/{child_b1['id']}/points",
+    other_family_currency = client.get(
+        f"{API}/children/{child_b1_id}/flammeches",
         headers={"Authorization": f"Bearer {child_a1_token}"},
     )
-    assert other_family_points.status_code == 403
-
+    assert other_family_currency.status_code == 403

@@ -51,7 +51,16 @@ fun TaskDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(text = "Detail de la mission") },
+                title = {
+                    Text(
+                        text =
+                            if (uiState.task?.isDaily == true) {
+                                "Detail de la routine"
+                            } else {
+                                "Detail de la mission"
+                            },
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Retour")
@@ -59,7 +68,7 @@ fun TaskDetailScreen(
                 },
                 actions = {
                     uiState.task?.let { task ->
-                        if (uiState.canManageMission) {
+                        if (uiState.canManageTask) {
                             IconButton(
                                 onClick = { onEditTask(task.id) },
                                 modifier = Modifier.testTag(TaskodayTestTags.TaskDetailEditButton),
@@ -169,7 +178,7 @@ fun TaskDetailScreen(
                 Text(text = if (task.status == TaskStatus.DONE) "Rouvrir la tache" else "Marquer comme terminee")
             }
 
-            if (uiState.canManageMission) {
+            if (uiState.canManageTask) {
                 OutlinedButton(
                     onClick = viewModel::deleteTask,
                     modifier = Modifier.fillMaxWidth().testTag(TaskodayTestTags.TaskDetailDeleteButton),

@@ -46,14 +46,15 @@ import java.time.LocalDate
 fun ParentPlanningScreen(
     viewModel: ParentPlanningViewModel,
     onBack: () -> Unit,
+    initialFormType: PlanningFormType = PlanningFormType.ROUTINE,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val spacing = MaterialTheme.spacing
 
-    var formType by rememberSaveable { mutableStateOf(PlanningFormType.ROUTINE) }
+    var formType by rememberSaveable(initialFormType) { mutableStateOf(initialFormType) }
     var title by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
-    var pointsText by rememberSaveable { mutableStateOf("1") }
+    var pointsText by rememberSaveable(initialFormType) { mutableStateOf(defaultPoints(initialFormType).toString()) }
     var selectedDayPart by rememberSaveable { mutableStateOf(DayPart.MATIN) }
     var routineWeekdays by rememberSaveable { mutableStateOf(setOf<Int>()) }
     var missionDate by rememberSaveable { mutableStateOf(LocalDate.now()) }

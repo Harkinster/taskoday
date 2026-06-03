@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.taskoday.data.repository.RemotePlanningIdCodec
 import com.example.taskoday.domain.model.PlanningItemType
+import com.example.taskoday.domain.model.Task
 import com.example.taskoday.domain.model.TaskStatus
 import com.example.taskoday.domain.repository.AuthRepository
 import com.example.taskoday.domain.repository.MissionsRepository
@@ -31,6 +32,7 @@ class TasksViewModel
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(TasksUiState())
         val uiState: StateFlow<TasksUiState> = _uiState.asStateFlow()
+        private var canManageAllTasks = authRepository.getAccessToken().isNullOrBlank()
 
         init {
             observeTasks()
@@ -44,6 +46,7 @@ class TasksViewModel
                     _uiState.update {
                         it.copy(
                             tasks = tasks,
+                            manageableTaskIds = tasks.manageableTaskIds(),
                             isLoading = false,
                         )
                     }
@@ -53,7 +56,13 @@ class TasksViewModel
 
         private fun resolveCanManageMissions() {
             if (authRepository.getAccessToken().isNullOrBlank()) {
-                _uiState.update { it.copy(canManageMissions = true) }
+                canManageAllTasks = true
+                _uiState.update {
+                    it.copy(
+                        canManageMissions = true,
+                        manageableTaskIds = it.tasks.manageableTaskIds(),
+                    )
+                }
                 return
             }
 
@@ -61,7 +70,13 @@ class TasksViewModel
                 val canManage =
                     runCatching { authRepository.fetchMe().role.equals("PARENT", ignoreCase = true) }
                         .getOrDefault(false)
-                _uiState.update { it.copy(canManageMissions = canManage) }
+                canManageAllTasks = canManage
+                _uiState.update {
+                    it.copy(
+                        canManageMissions = canManage,
+                        manageableTaskIds = it.tasks.manageableTaskIds(),
+                    )
+                }
             }
         }
 
@@ -110,6 +125,17 @@ class TasksViewModel
 
         fun clearError() {
             _uiState.update { it.copy(errorMessage = null) }
+        }
+
+        private fun List<Task>.manageableTaskIds(): Set<Long> =
+            filter { task -> canManageTask(task) }
+                .map { task -> task.id }
+                .toSet()
+
+        private fun canManageTask(task: Task): Boolean {
+            if (canManageAllTasks) return true
+            val remoteRef = RemotePlanningIdCodec.decodeTaskId(task.id)
+            return task.isDaily && remoteRef == null
         }
     }
 

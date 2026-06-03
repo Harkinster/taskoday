@@ -26,10 +26,19 @@ import androidx.navigation.navArgument
 import com.example.taskoday.core.ui.component.fantasy.TaskodayBottomBar
 import com.example.taskoday.core.ui.theme.NightBlue900
 import com.example.taskoday.core.ui.theme.NightBlue950
+import com.example.taskoday.domain.model.PlanningFormType
+import com.example.taskoday.features.add.QuickAddFab
+import com.example.taskoday.features.add.QuickAddViewModel
 import com.example.taskoday.features.auth.AuthViewModel
 import com.example.taskoday.features.auth.LoginScreen
 import com.example.taskoday.features.auth.RegisterParentScreen
 import com.example.taskoday.features.auth.SessionEventsViewModel
+import com.example.taskoday.features.gamification.DragonsScreen
+import com.example.taskoday.features.gamification.EggsScreen
+import com.example.taskoday.features.gamification.InventoryScreen
+import com.example.taskoday.features.gamification.NestScreen
+import com.example.taskoday.features.gamification.ParentRewardsScreen
+import com.example.taskoday.features.gamification.ScrollsScreen
 import com.example.taskoday.features.home.HomeScreen
 import com.example.taskoday.features.home.HomeViewModel
 import com.example.taskoday.features.parent.ParentPlanningScreen
@@ -53,12 +62,16 @@ import com.example.taskoday.features.week.WeekScreen
 fun TaskodayApp() {
     val navController = rememberNavController()
     val sessionEventsViewModel: SessionEventsViewModel = hiltViewModel()
+    val quickAddViewModel: QuickAddViewModel = hiltViewModel()
+    val quickAddUiState by quickAddViewModel.uiState.collectAsStateWithLifecycle()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
     val currentTopLevelIndex =
         TopLevelDestinations.indexOfFirst { destination ->
             currentDestination?.hierarchy?.any { it.route == destination.route } == true
         }
+    val isProfileDestination =
+        currentDestination?.hierarchy?.any { it.route == TaskodayDestination.Settings.route } == true
 
     val navigateToTopLevel: (TaskodayDestination) -> Unit = { destination ->
         navController.navigate(destination.route) {
@@ -67,6 +80,11 @@ fun TaskodayApp() {
             }
             launchSingleTop = true
             restoreState = true
+        }
+    }
+    val navigateToProfile: () -> Unit = {
+        navController.navigate(TaskodayDestination.Settings.route) {
+            launchSingleTop = true
         }
     }
 
@@ -81,9 +99,13 @@ fun TaskodayApp() {
         }
     }
 
-    val showBottomBar = currentTopLevelIndex >= 0
+    LaunchedEffect(navBackStackEntry?.destination?.route) {
+        quickAddViewModel.refresh()
+    }
+
+    val showBottomBar = currentTopLevelIndex >= 0 || isProfileDestination
     val swipeModifier =
-        if (showBottomBar) {
+        if (currentTopLevelIndex >= 0) {
             Modifier.pointerInput(currentTopLevelIndex) {
                 val swipeThresholdPx = MENU_SWIPE_THRESHOLD_DP.toPx()
                 var accumulatedDrag = 0f
@@ -123,6 +145,35 @@ fun TaskodayApp() {
     ) {
         Scaffold(
             containerColor = Color.Transparent,
+            floatingActionButton = {
+                if (showBottomBar) {
+                    QuickAddFab(
+                        uiState = quickAddUiState,
+                        onRefresh = quickAddViewModel::refresh,
+                        onCreateRoutine = {
+                            if (quickAddUiState.hasRemoteSession && quickAddUiState.isParent) {
+                                navController.navigate(TaskodayDestination.ParentPlanning.createRoute("routine"))
+                            } else {
+                                navController.navigate(TaskodayDestination.TaskEdit.createRoutineRoute())
+                            }
+                        },
+                        onCreateMission = {
+                            if (quickAddUiState.hasRemoteSession && quickAddUiState.isParent) {
+                                navController.navigate(TaskodayDestination.ParentPlanning.createRoute("mission"))
+                            } else {
+                                navController.navigate(TaskodayDestination.TaskEdit.createMissionRoute())
+                            }
+                        },
+                        onCreateQuest = {
+                            if (quickAddUiState.hasRemoteSession && quickAddUiState.isParent) {
+                                navController.navigate(TaskodayDestination.ParentPlanning.createRoute("quest"))
+                            } else {
+                                navigateToTopLevel(TaskodayDestination.Quests)
+                            }
+                        },
+                    )
+                }
+            },
             bottomBar = {
                 if (showBottomBar) {
                     TaskodayBottomBar(
@@ -154,7 +205,7 @@ fun TaskodayApp() {
                 LaunchedEffect(uiState.isCheckingSession, uiState.isAuthenticated, uiState.isLocalMode) {
                     if (!uiState.isCheckingSession) {
                         if (uiState.isAuthenticated || uiState.isLocalMode) {
-                            navController.navigate(TaskodayDestination.Home.route) {
+                            navController.navigate(TaskodayDestination.Nest.route) {
                                 popUpTo(TaskodayDestination.Splash.route) {
                                     inclusive = true
                                 }
@@ -178,7 +229,7 @@ fun TaskodayApp() {
                     viewModel = viewModel,
                     onOpenRegisterParent = { navController.navigate(TaskodayDestination.RegisterParent.route) },
                     onOpenApp = {
-                        navController.navigate(TaskodayDestination.Home.route) {
+                        navController.navigate(TaskodayDestination.Nest.route) {
                             popUpTo(TaskodayDestination.Login.route) {
                                 inclusive = true
                             }
@@ -194,13 +245,25 @@ fun TaskodayApp() {
                     viewModel = viewModel,
                     onBackToLogin = { navController.popBackStack() },
                     onOpenApp = {
-                        navController.navigate(TaskodayDestination.Home.route) {
+                        navController.navigate(TaskodayDestination.Nest.route) {
                             popUpTo(TaskodayDestination.Login.route) {
                                 inclusive = true
                             }
                             launchSingleTop = true
                         }
                     },
+                )
+            }
+
+            composable(TaskodayDestination.Nest.route) {
+                NestScreen(
+                    onOpenPlanning = { navigateToTopLevel(TaskodayDestination.Home) },
+                    onOpenInventory = { navController.navigate(TaskodayDestination.Inventory.route) },
+                    onOpenEggs = { navController.navigate(TaskodayDestination.Eggs.route) },
+                    onOpenDragons = { navController.navigate(TaskodayDestination.Dragons.route) },
+                    onOpenWishes = { navigateToTopLevel(TaskodayDestination.Shop) },
+                    onOpenScrolls = { navController.navigate(TaskodayDestination.Scrolls.route) },
+                    onOpenProfile = navigateToProfile,
                 )
             }
 
@@ -211,6 +274,7 @@ fun TaskodayApp() {
                     onOpenTasks = { navController.navigate(TaskodayDestination.Tasks.route) },
                     onOpenWeek = { navController.navigate(TaskodayDestination.Week.route) },
                     onOpenTask = { taskId -> navController.navigate(TaskodayDestination.TaskDetail.createRoute(taskId)) },
+                    onOpenProfile = navigateToProfile,
                 )
             }
 
@@ -219,19 +283,39 @@ fun TaskodayApp() {
                 TasksScreen(
                     viewModel = viewModel,
                     onTaskClick = { taskId -> navController.navigate(TaskodayDestination.TaskDetail.createRoute(taskId)) },
-                    onCreateTask = { navController.navigate(TaskodayDestination.TaskEdit.createRoute(null)) },
                     onEditTask = { taskId -> navController.navigate(TaskodayDestination.TaskEdit.createRoute(taskId)) },
+                    onOpenProfile = navigateToProfile,
                 )
             }
 
             composable(TaskodayDestination.Quests.route) {
                 val viewModel: QuestsViewModel = hiltViewModel()
-                QuestsScreen(viewModel = viewModel)
+                QuestsScreen(viewModel = viewModel, onOpenProfile = navigateToProfile)
             }
 
             composable(TaskodayDestination.Shop.route) {
                 val viewModel: ShopViewModel = hiltViewModel()
-                ShopScreen(viewModel = viewModel)
+                ShopScreen(viewModel = viewModel, onOpenProfile = navigateToProfile)
+            }
+
+            composable(TaskodayDestination.Inventory.route) {
+                InventoryScreen(onOpenProfile = navigateToProfile)
+            }
+
+            composable(TaskodayDestination.Eggs.route) {
+                EggsScreen(onOpenProfile = navigateToProfile)
+            }
+
+            composable(TaskodayDestination.Dragons.route) {
+                DragonsScreen(onOpenProfile = navigateToProfile)
+            }
+
+            composable(TaskodayDestination.Scrolls.route) {
+                ScrollsScreen(onOpenProfile = navigateToProfile)
+            }
+
+            composable(TaskodayDestination.ParentRewards.route) {
+                ParentRewardsScreen(onOpenProfile = navigateToProfile)
             }
 
             composable(
@@ -254,6 +338,10 @@ fun TaskodayApp() {
                             type = NavType.LongType
                             defaultValue = -1L
                         },
+                        navArgument(TaskodayDestination.TaskEdit.ARG_MODE) {
+                            type = NavType.StringType
+                            defaultValue = ""
+                        },
                     ),
             ) {
                 val viewModel: TaskEditViewModel = hiltViewModel()
@@ -268,15 +356,26 @@ fun TaskodayApp() {
                 val viewModel: SettingsViewModel = hiltViewModel()
                 SettingsScreen(
                     viewModel = viewModel,
-                    onOpenParentMode = { navController.navigate(TaskodayDestination.ParentPlanning.route) },
+                    onOpenParentMode = { navController.navigate(TaskodayDestination.ParentPlanning.createRoute()) },
                 )
             }
 
-            composable(TaskodayDestination.ParentPlanning.route) {
+            composable(
+                route = TaskodayDestination.ParentPlanning.route,
+                arguments =
+                    listOf(
+                        navArgument(TaskodayDestination.ParentPlanning.ARG_TYPE) {
+                            type = NavType.StringType
+                            defaultValue = PlanningFormType.ROUTINE.name.lowercase()
+                        },
+                    ),
+            ) { entry ->
                 val viewModel: ParentPlanningViewModel = hiltViewModel()
+                val initialFormType = entry.arguments?.getString(TaskodayDestination.ParentPlanning.ARG_TYPE).toPlanningFormType()
                 ParentPlanningScreen(
                     viewModel = viewModel,
                     onBack = { navController.popBackStack() },
+                    initialFormType = initialFormType,
                 )
             }
 
@@ -289,3 +388,10 @@ fun TaskodayApp() {
 }
 
 private val MENU_SWIPE_THRESHOLD_DP = 90.dp
+
+private fun String?.toPlanningFormType(): PlanningFormType =
+    when (this?.lowercase()) {
+        "mission" -> PlanningFormType.MISSION
+        "quest" -> PlanningFormType.QUEST
+        else -> PlanningFormType.ROUTINE
+    }

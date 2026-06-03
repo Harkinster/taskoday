@@ -13,8 +13,10 @@ data class MissionItemDto(
     val description: String? = null,
     @SerializedName("day_part")
     val dayPart: String? = null,
-    @SerializedName("scheduled_date")
+    @SerializedName("due_date")
     val scheduledDate: String? = null,
+    @SerializedName("status")
+    val status: String? = null,
     @SerializedName("points_reward")
     val pointsReward: Int? = null,
     @SerializedName("is_active")
@@ -34,7 +36,7 @@ data class MissionCreateRequestDto(
     val description: String? = null,
     @SerializedName("day_part")
     val dayPart: String,
-    @SerializedName("scheduled_date")
+    @SerializedName("due_date")
     val scheduledDate: String,
     @SerializedName("points_reward")
     val pointsReward: Int,
@@ -49,7 +51,7 @@ data class MissionUpdateRequestDto(
     val description: String? = null,
     @SerializedName("day_part")
     val dayPart: String? = null,
-    @SerializedName("scheduled_date")
+    @SerializedName("due_date")
     val scheduledDate: String? = null,
     @SerializedName("points_reward")
     val pointsReward: Int? = null,
@@ -72,6 +74,10 @@ data class QuestItemDto(
     val scheduledDate: String? = null,
     @SerializedName("points_reward")
     val pointsReward: Int? = null,
+    @SerializedName("xp_reward")
+    val xpReward: Int? = null,
+    @SerializedName("status")
+    val status: String? = null,
     @SerializedName("is_active")
     val isActive: Boolean = true,
     @SerializedName("is_completed")
@@ -91,7 +97,7 @@ data class QuestCreateRequestDto(
     val dayPart: String,
     @SerializedName("scheduled_date")
     val scheduledDate: String? = null,
-    @SerializedName("points_reward")
+    @SerializedName("xp_reward")
     val pointsReward: Int,
     @SerializedName("is_active")
     val isActive: Boolean = true,
@@ -106,7 +112,7 @@ data class QuestUpdateRequestDto(
     val dayPart: String? = null,
     @SerializedName("scheduled_date")
     val scheduledDate: String? = null,
-    @SerializedName("points_reward")
+    @SerializedName("xp_reward")
     val pointsReward: Int? = null,
     @SerializedName("is_active")
     val isActive: Boolean? = null,

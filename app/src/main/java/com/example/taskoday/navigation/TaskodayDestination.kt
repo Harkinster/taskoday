@@ -6,6 +6,7 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Redeem
+import androidx.compose.material.icons.outlined.Today
 import androidx.compose.ui.graphics.vector.ImageVector
 
 sealed class TaskodayDestination(
@@ -19,7 +20,9 @@ sealed class TaskodayDestination(
 
     data object RegisterParent : TaskodayDestination(route = "auth/register", label = "Inscription")
 
-    data object Home : TaskodayDestination(route = "home", label = "Accueil", icon = Icons.Outlined.Home)
+    data object Nest : TaskodayDestination(route = "nest", label = "Nid", icon = Icons.Outlined.Home)
+
+    data object Home : TaskodayDestination(route = "home", label = "Journee", icon = Icons.Outlined.Today)
 
     data object Tasks :
         TaskodayDestination(route = "tasks", label = "Missions", icon = Icons.Outlined.CheckCircle)
@@ -28,12 +31,26 @@ sealed class TaskodayDestination(
         TaskodayDestination(route = "quests", label = "Quetes", icon = Icons.Outlined.AutoAwesome)
 
     data object Shop :
-        TaskodayDestination(route = "shop", label = "Recompenses", icon = Icons.Outlined.Redeem)
+        TaskodayDestination(route = "shop", label = "Caverne", icon = Icons.Outlined.Redeem)
+
+    data object Inventory : TaskodayDestination(route = "inventory", label = "Inventaire")
+
+    data object Eggs : TaskodayDestination(route = "eggs", label = "Oeufs")
+
+    data object Dragons : TaskodayDestination(route = "dragons", label = "Dragons")
+
+    data object Scrolls : TaskodayDestination(route = "scrolls", label = "Parchemins")
+
+    data object ParentRewards : TaskodayDestination(route = "parent/rewards", label = "Souhaits parent")
 
     data object Settings :
         TaskodayDestination(route = "settings", label = "Profil", icon = Icons.Outlined.Person)
 
-    data object ParentPlanning : TaskodayDestination(route = "parent/planning", label = "Mode parent")
+    data object ParentPlanning : TaskodayDestination(route = "parent/planning?type={type}", label = "Mode parent") {
+        const val ARG_TYPE: String = "type"
+
+        fun createRoute(type: String? = null): String = type?.let { "parent/planning?type=$it" } ?: "parent/planning"
+    }
 
     data object Week : TaskodayDestination(route = "week", label = "Semaine")
 
@@ -43,17 +60,35 @@ sealed class TaskodayDestination(
         fun createRoute(taskId: Long): String = "task_detail/$taskId"
     }
 
-    data object TaskEdit : TaskodayDestination(route = "task_edit?taskId={taskId}", label = "Edition mission") {
+    data object TaskEdit :
+        TaskodayDestination(route = "task_edit?taskId={taskId}&mode={mode}", label = "Edition mission") {
         const val ARG_TASK_ID: String = "taskId"
+        const val ARG_MODE: String = "mode"
+        const val MODE_ROUTINE: String = "routine"
+        const val MODE_MISSION: String = "mission"
 
-        fun createRoute(taskId: Long?): String = if (taskId == null) "task_edit" else "task_edit?taskId=$taskId"
+        fun createRoute(
+            taskId: Long?,
+            mode: String? = null,
+        ): String {
+            val params = buildList {
+                if (taskId != null) add("taskId=$taskId")
+                if (!mode.isNullOrBlank()) add("mode=$mode")
+            }
+            return if (params.isEmpty()) "task_edit" else "task_edit?${params.joinToString("&")}"
+        }
+
+        fun createRoutineRoute(): String = createRoute(taskId = null, mode = MODE_ROUTINE)
+
+        fun createMissionRoute(): String = createRoute(taskId = null, mode = MODE_MISSION)
     }
 }
 
 val TopLevelDestinations: List<TaskodayDestination> =
     listOf(
+        TaskodayDestination.Nest,
         TaskodayDestination.Home,
         TaskodayDestination.Tasks,
         TaskodayDestination.Quests,
-        TaskodayDestination.Settings,
+        TaskodayDestination.Shop,
     )

@@ -13,6 +13,7 @@ import com.example.taskoday.data.remote.pairing.PairingApi
 import com.example.taskoday.data.remote.planning.PlanningApi
 import com.example.taskoday.data.remote.profile.ProfileApi
 import com.example.taskoday.data.remote.quests.QuestsApi
+import com.example.taskoday.data.remote.rewards.RewardsApi
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import dagger.Module
@@ -98,6 +99,10 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideQuestsApi(apiClient: ApiClient): QuestsApi = apiClient.create(QuestsApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideRewardsApi(apiClient: ApiClient): RewardsApi = apiClient.create(RewardsApi::class.java)
 
     @Provides
     @Singleton

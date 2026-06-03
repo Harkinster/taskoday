@@ -18,7 +18,7 @@ data class ChildRoutineCreateRequestDto(
     val description: String?,
     @SerializedName("day_part")
     val dayPart: String,
-    @SerializedName("frequency")
+    @SerializedName("repeat_type")
     val frequency: String,
     @SerializedName("days_of_week")
     val daysOfWeek: String?,
@@ -35,9 +35,9 @@ data class ChildMissionCreateRequestDto(
     val description: String?,
     @SerializedName("day_part")
     val dayPart: String,
-    @SerializedName("scheduled_date")
+    @SerializedName("due_date")
     val scheduledDate: String,
-    @SerializedName("points_reward")
+    @SerializedName("xp_reward")
     val pointsReward: Int,
     @SerializedName("is_active")
     val isActive: Boolean = true,
@@ -50,7 +50,7 @@ data class ChildQuestCreateRequestDto(
     val description: String?,
     @SerializedName("day_part")
     val dayPart: String,
-    @SerializedName("points_reward")
+    @SerializedName("xp_reward")
     val pointsReward: Int,
     @SerializedName("is_active")
     val isActive: Boolean = true,
@@ -114,4 +114,15 @@ data class CompletionToggleResponseDto(
     val completionDate: String,
     @SerializedName("completed")
     val completed: Boolean,
+)
+
+data class RemoteCompletionResponseDto(
+    @SerializedName("routine_id")
+    val routineId: Long? = null,
+    @SerializedName("mission_id")
+    val missionId: Long? = null,
+    @SerializedName("quest_id")
+    val questId: Long? = null,
+    @SerializedName("completed")
+    val completed: Boolean = true,
 )

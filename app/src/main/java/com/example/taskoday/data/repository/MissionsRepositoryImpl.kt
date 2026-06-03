@@ -38,7 +38,7 @@ class MissionsRepositoryImpl
             }
 
             return runCatching {
-                val missions = missionsApi.getMissions(childId)
+                val missions = missionsApi.getMissions(childId).data
                 taskRepository.clearRemoteMissionCache()
                 val now = System.currentTimeMillis()
                 missions
@@ -73,11 +73,11 @@ class MissionsRepositoryImpl
                                 title = task.title.trim(),
                                 description = task.description,
                                 dayPart = task.dayPart.name,
-                                scheduledDate = scheduledDate.toString(),
+                                scheduledDate = "${scheduledDate}T00:00:00Z",
                                 pointsReward = task.priority.toPointsReward(),
                                 isActive = true,
                             ),
-                    )
+                    ).data
                 created.toTask(nowMillis = System.currentTimeMillis())
             }.onFailure { error ->
                 Log.w(TAG, "Creation mission distante echouee", error)
@@ -99,11 +99,11 @@ class MissionsRepositoryImpl
                                 title = task.title.trim(),
                                 description = task.description,
                                 dayPart = task.dayPart.name,
-                                scheduledDate = scheduledDate.toString(),
+                                scheduledDate = "${scheduledDate}T00:00:00Z",
                                 pointsReward = task.priority.toPointsReward(),
                                 isActive = true,
                             ),
-                    )
+                    ).data
                 updated.toTask(nowMillis = System.currentTimeMillis())
             }.onFailure { error ->
                 Log.w(TAG, "Mise a jour mission distante echouee", error)
@@ -114,6 +114,7 @@ class MissionsRepositoryImpl
                 val remoteRef = RemotePlanningIdCodec.decodeTaskId(localTaskId)
                 require(remoteRef?.itemType == PlanningItemType.MISSION) { "Identifiant mission invalide." }
                 missionsApi.completeMission(remoteRef.remoteItemId)
+                Unit
             }.onFailure { error ->
                 Log.w(TAG, "Completion mission distante echouee", error)
             }
@@ -134,7 +135,7 @@ class MissionsRepositoryImpl
 
 private fun MissionItemDto.toTask(nowMillis: Long): Task {
     val parsedDayPart = runCatching { DayPart.valueOf(dayPart.orEmpty()) }.getOrDefault(DayPart.MATIN)
-    val scheduledLocalDate = scheduledDate?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+    val scheduledLocalDate = scheduledDate?.take(10)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
     val scheduledDayStart = scheduledLocalDate?.let { DateTimeUtils.startOfDayMillis(it) }
     val dueDate =
         scheduledLocalDate?.let { date ->
@@ -148,7 +149,7 @@ private fun MissionItemDto.toTask(nowMillis: Long): Task {
         description = description,
         dueDate = dueDate,
         priority = TaskPriority.NORMAL,
-        status = if (isCompleted == true) TaskStatus.DONE else TaskStatus.TODO,
+        status = if (isCompleted == true || status.equals("completed", ignoreCase = true)) TaskStatus.DONE else TaskStatus.TODO,
         taskType = TaskType.ONE_TIME,
         dayPart = parsedDayPart,
         scheduledDate = scheduledDayStart,

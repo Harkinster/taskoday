@@ -13,7 +13,7 @@ class ChildrenRepositoryImpl
         private val childrenApi: ChildrenApi,
     ) : ChildrenRepository {
         override suspend fun fetchChildren(): List<ParentChild> =
-            childrenApi.getChildren().map { child ->
+            childrenApi.getChildren().data.map { child ->
                 ParentChild(
                     id = child.id,
                     displayName = child.displayName,

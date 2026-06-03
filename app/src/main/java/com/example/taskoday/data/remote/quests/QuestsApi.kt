@@ -1,8 +1,10 @@
 package com.example.taskoday.data.remote.quests
 
+import com.example.taskoday.data.remote.dto.ApiEnvelopeDto
 import com.example.taskoday.data.remote.dto.QuestCreateRequestDto
 import com.example.taskoday.data.remote.dto.QuestItemDto
 import com.example.taskoday.data.remote.dto.QuestUpdateRequestDto
+import com.example.taskoday.data.remote.dto.RemoteCompletionResponseDto
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
@@ -14,19 +16,19 @@ interface QuestsApi {
     @GET("children/{childId}/quests")
     suspend fun getQuests(
         @Path("childId") childId: Long,
-    ): List<QuestItemDto>
+    ): ApiEnvelopeDto<List<QuestItemDto>>
 
     @POST("children/{childId}/quests")
     suspend fun createQuest(
         @Path("childId") childId: Long,
         @Body payload: QuestCreateRequestDto,
-    ): QuestItemDto
+    ): ApiEnvelopeDto<QuestItemDto>
 
     @PATCH("quests/{questId}")
     suspend fun updateQuest(
         @Path("questId") questId: Long,
         @Body payload: QuestUpdateRequestDto,
-    ): QuestItemDto
+    ): ApiEnvelopeDto<QuestItemDto>
 
     @DELETE("quests/{questId}")
     suspend fun deleteQuest(
@@ -36,5 +38,5 @@ interface QuestsApi {
     @POST("quests/{questId}/complete")
     suspend fun completeQuest(
         @Path("questId") questId: Long,
-    )
+    ): ApiEnvelopeDto<RemoteCompletionResponseDto>
 }

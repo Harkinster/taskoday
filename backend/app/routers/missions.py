@@ -5,8 +5,9 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.dependencies import ensure_child_access, ensure_parent_child_access, get_current_user, success_response
 from app.models.task import Mission, TaskCompletion, TaskStatus, TaskType
-from app.models.user import User, UserRole
+from app.models.user import User
 from app.schemas.task import MissionCreateRequest, MissionUpdateRequest
+from app.services.gamification_service import award_task_completion
 
 router = APIRouter(tags=["missions"])
 
@@ -40,13 +41,7 @@ def create_mission(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    if current_user.role == UserRole.PARENT:
-        ensure_parent_child_access(db, current_user, child_id)
-    elif current_user.role == UserRole.CHILD:
-        if current_user.id != child_id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Action non autorisee.")
-    else:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Action non autorisee.")
+    ensure_parent_child_access(db, current_user, child_id)
 
     mission = Mission(
         child_id=child_id,
@@ -154,7 +149,16 @@ def complete_mission(mission_id: int, db: Session = Depends(get_db), current_use
                 completed_by_user_id=current_user.id,
             )
         )
+        award = award_task_completion(
+            db,
+            child_id=mission.child_id,
+            task_type=TaskType.MISSION,
+            task_id=mission.id,
+            title=mission.title,
+        )
+    else:
+        award = None
 
     db.commit()
 
-    return success_response({"mission_id": mission.id, "completed": True}, message="Mission completee.")
+    return success_response({"mission_id": mission.id, "completed": True, "award": award}, message="Mission completee.")

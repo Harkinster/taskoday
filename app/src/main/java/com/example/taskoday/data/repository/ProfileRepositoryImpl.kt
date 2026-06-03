@@ -35,14 +35,14 @@ class ProfileRepositoryImpl
             val profile = fetchProfile(childId)
 
             val stats =
-                runCatching { profileApi.getStats(childId).toDomain() }
+                runCatching { profileApi.getStats(childId).data.toDomain() }
                     .getOrElse { error ->
                         Log.w(TAG, "Stats indisponibles, fallback valeur locale", error)
                         ChildStats()
                     }
 
             val xpHistory =
-                runCatching { profileApi.getXpHistory(childId).mapNotNull { it.toDomainOrNull() } }
+                runCatching { profileApi.getXpHistory(childId).data.mapNotNull { it.toDomainOrNull() } }
                     .getOrElse { error ->
                         Log.w(TAG, "Historique XP indisponible, fallback vide", error)
                         emptyList()
@@ -57,16 +57,16 @@ class ProfileRepositoryImpl
 
         private suspend fun fetchProfile(childId: Long): ChildProfile {
             val profileDto =
-                runCatching { profileApi.getProfile(childId) }
+                runCatching { profileApi.getProfile(childId).data }
                     .recoverCatching { throwable ->
                         if (throwable is HttpException && throwable.code() == 404) {
-                            childrenApi.getChild(childId).toProfileDto()
+                            childrenApi.getChild(childId).data.toProfileDto()
                         } else {
                             throw throwable
                         }
                     }.recoverCatching { throwable ->
                         if (throwable is HttpException && throwable.code() == 403) {
-                            childrenApi.getChild(childId).toProfileDto()
+                            childrenApi.getChild(childId).data.toProfileDto()
                         } else {
                             throw throwable
                         }

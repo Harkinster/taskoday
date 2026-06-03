@@ -7,6 +7,8 @@ from app.dependencies import ensure_child_access, ensure_parent_child_access, ge
 from app.models.task import RepeatType, Routine, TaskCompletion, TaskType
 from app.models.user import User
 from app.schemas.task import RoutineCreateRequest, RoutineUpdateRequest
+from app.services.gamification_service import award_task_completion
+from app.services.scales_service import revoke_scales_for_task_if_missing
 
 router = APIRouter(tags=["routines"])
 
@@ -169,9 +171,18 @@ def complete_routine(routine_id: int, db: Session = Depends(get_db), current_use
             completed_by_user_id=current_user.id,
         )
         db.add(completion)
+        award = award_task_completion(
+            db,
+            child_id=routine.child_id,
+            task_type=TaskType.ROUTINE,
+            task_id=routine.id,
+            title=routine.title,
+        )
         db.commit()
 
-    return success_response({"routine_id": routine.id, "completed": True}, message="Routine completee.")
+        return success_response({"routine_id": routine.id, "completed": True, "award": award}, message="Routine completee.")
+
+    return success_response({"routine_id": routine.id, "completed": True, "award": None}, message="Routine deja completee.")
 
 
 @router.post("/routines/{routine_id}/uncomplete")
@@ -192,6 +203,13 @@ def uncomplete_routine(routine_id: int, db: Session = Depends(get_db), current_u
 
     if completion:
         db.delete(completion)
+        revoke_scales_for_task_if_missing(
+            db,
+            child_id=routine.child_id,
+            task_type=TaskType.ROUTINE,
+            task_id=routine.id,
+            title=routine.title,
+        )
         db.commit()
 
     return success_response({"routine_id": routine.id, "completed": False}, message="Routine devalidee.")

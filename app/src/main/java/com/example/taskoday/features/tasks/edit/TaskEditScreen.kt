@@ -61,7 +61,13 @@ fun TaskEditScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = if (uiState.taskId == null) "Nouvelle mission" else "Modifier mission",
+                        text =
+                            when {
+                                uiState.taskId == null && uiState.isRoutine -> "Nouvelle routine"
+                                uiState.taskId == null -> "Nouvelle mission"
+                                uiState.isRoutine -> "Modifier routine"
+                                else -> "Modifier mission"
+                            },
                     )
                 },
                 navigationIcon = {

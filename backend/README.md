@@ -68,9 +68,90 @@ Procedure complete : voir `DEPLOYMENT_UBUNTU.md`.
 - `PATCH /api/v1/quests/{quest_id}`
 - `DELETE /api/v1/quests/{quest_id}`
 - `POST /api/v1/quests/{quest_id}/complete`
+- `GET /api/v1/children/{child_id}/progress`
+- `GET /api/v1/children/{child_id}/flammeches`
+- `GET /api/v1/children/{child_id}/chests`
+- `POST /api/v1/children/{child_id}/chests/{chest_id}/open`
+- `GET /api/v1/children/{child_id}/inventory`
+- `GET /api/v1/children/{child_id}/eggs`
+- `POST /api/v1/children/{child_id}/eggs/{egg_id}/hatch`
+- `GET /api/v1/children/{child_id}/dragons`
+- `POST /api/v1/children/{child_id}/dragons/{dragon_id}/evolve`
+- `GET /api/v1/children/{child_id}/scales`
+- `GET /api/v1/children/{child_id}/scales/history`
+- `GET /api/v1/children/{child_id}/rewards`
+- `POST /api/v1/children/{child_id}/rewards`
+- `GET /api/v1/children/{child_id}/wishes`
+- `POST /api/v1/children/{child_id}/wishes`
+- `PATCH /api/v1/rewards/{reward_id}`
+- `POST /api/v1/rewards/{reward_id}/requests`
+- `POST /api/v1/wishes/{reward_id}/requests`
+- `GET /api/v1/children/{child_id}/reward-requests`
+- `GET /api/v1/children/{child_id}/wish-requests`
+- `PATCH /api/v1/reward-requests/{request_id}`
+- `GET /api/v1/children/{child_id}/scrolls`
+- `POST /api/v1/scrolls/{coupon_id}/use`
+- `POST /api/v1/reward-coupons/{coupon_id}/use`
 - `GET /api/v1/profile/me`
 - `GET /api/v1/children/{child_id}/profile`
 - `GET /api/v1/children/{child_id}/xp-history`
+
+## XP, Ecailles et recompenses externes
+
+- L'XP n'est jamais depensee. Elle sert uniquement a la progression du profil enfant, du dragon et du sanctuaire.
+- Les Ecailles sont la monnaie de la Caverne aux Souhaits.
+- Une routine completee rapporte 5 XP, 2 Ecailles et 1 point coffre.
+- Une mission completee rapporte 15 XP, 6 Ecailles et 3 points coffre.
+- Une quete completee rapporte 30 XP, 12 Ecailles et un coffre rare.
+- Une recompense est creee par un parent pour un enfant.
+- L'enfant peut creer une demande si son solde d'Ecailles couvre le cout.
+- Le parent peut accepter, refuser ou expirer une demande.
+- L'acceptation retire les Ecailles et cree un Parchemin.
+- Un Parchemin approuve peut ensuite etre marque comme utilise.
+- Statuts de demande: `pending`, `approved`, `refused`, `used`, `expired`.
+- Statuts de Parchemin: `available`, `used`, `expired`, `cancelled`.
+
+Les champs/routes `scales`, `flammeches`, `rewards` et `reward-coupons` restent disponibles pour compatibilite backend. Les routes canoniques cote app sont `wishes`, `wish-requests` et `scrolls`.
+
+Creer un souhait parent:
+
+```bash
+curl -X POST http://127.0.0.1:8060/api/v1/children/2/wishes \
+  -H "Authorization: Bearer <PARENT_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title":"Choisir le dessert",
+    "description":"Bonus du soir",
+    "cost_scales":5,
+    "emoji":"gift",
+    "is_active":true
+  }'
+```
+
+Demander un souhait enfant:
+
+```bash
+curl -X POST http://127.0.0.1:8060/api/v1/wishes/1/requests \
+  -H "Authorization: Bearer <CHILD_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"note":"Je voudrais ce soir."}'
+```
+
+Accepter une demande et creer le Parchemin:
+
+```bash
+curl -X PATCH http://127.0.0.1:8060/api/v1/reward-requests/1 \
+  -H "Authorization: Bearer <PARENT_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"status":"approved"}'
+```
+
+Marquer un Parchemin comme utilise:
+
+```bash
+curl -X POST http://127.0.0.1:8060/api/v1/scrolls/1/use \
+  -H "Authorization: Bearer <PARENT_TOKEN>"
+```
 
 ## Format de reponse
 

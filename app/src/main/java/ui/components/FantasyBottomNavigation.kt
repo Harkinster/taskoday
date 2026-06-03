@@ -34,7 +34,7 @@ val DefaultTaskodayNavItems = listOf(
     TaskodayNavItem("accueil", "Accueil", Icons.Outlined.Home),
     TaskodayNavItem("missions", "Missions", Icons.Outlined.Checklist),
     TaskodayNavItem("quetes", "Quêtes", Icons.Outlined.Star),
-    TaskodayNavItem("recompenses", "Récompenses", Icons.Outlined.EmojiEvents),
+    TaskodayNavItem("recompenses", "Souhaits", Icons.Outlined.EmojiEvents),
     TaskodayNavItem("profil", "Profil", Icons.Outlined.Person)
 )
 

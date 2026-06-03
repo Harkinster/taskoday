@@ -7,7 +7,7 @@ from app.dependencies import ensure_child_access, ensure_parent_child_access, ge
 from app.models.task import Quest, TaskCompletion, TaskStatus, TaskType
 from app.models.user import User
 from app.schemas.task import QuestCreateRequest, QuestUpdateRequest
-from app.services.xp_service import add_xp
+from app.services.gamification_service import award_task_completion
 
 router = APIRouter(tags=["quests"])
 
@@ -130,7 +130,7 @@ def complete_quest(quest_id: int, db: Session = Depends(get_db), current_user: U
     ensure_child_access(db, current_user, quest.child_id)
 
     already_completed = quest.status == TaskStatus.COMPLETED
-    xp_awarded = 0
+    award = None
 
     if not already_completed:
         quest.status = TaskStatus.COMPLETED
@@ -151,25 +151,21 @@ def complete_quest(quest_id: int, db: Session = Depends(get_db), current_user: U
                     completed_by_user_id=current_user.id,
                 )
             )
+            award = award_task_completion(
+                db,
+                child_id=quest.child_id,
+                task_type=TaskType.QUEST,
+                task_id=quest.id,
+                title=quest.title,
+            )
 
-        profile, history = add_xp(
-            db,
-            child_id=quest.child_id,
-            amount=quest.xp_reward,
-            reason=f"Quete completee: {quest.title}",
-            source_type="quest",
-            source_id=quest.id,
-        )
-        xp_awarded = history.amount
         db.commit()
 
         return success_response(
             {
                 "quest_id": quest.id,
                 "completed": True,
-                "xp_awarded": xp_awarded,
-                "child_xp": profile.xp,
-                "child_level": profile.level,
+                "award": award,
             },
             message="Quete completee.",
         )
@@ -178,7 +174,7 @@ def complete_quest(quest_id: int, db: Session = Depends(get_db), current_user: U
         {
             "quest_id": quest.id,
             "completed": True,
-            "xp_awarded": xp_awarded,
+            "award": None,
         },
         message="Quete deja completee.",
     )

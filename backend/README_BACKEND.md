@@ -1,321 +1,113 @@
 # Taskoday Backend (FastAPI)
 
-Backend API auto-heberge pour Taskoday (Ubuntu + MariaDB), dedie a la gestion des comptes parent/enfant.
+Backend API auto-heberge pour Taskoday. Le backend actif expose ses routes metier sous le prefixe `/api/v1`; seul `/health` reste sans prefixe.
 
 ## Stack
+
 - FastAPI
 - SQLAlchemy 2.x
 - Alembic
-- MariaDB (driver PyMySQL)
-- JWT (`python-jose`)
-- Hash mot de passe (`passlib[bcrypt]`)
-- Pydantic + `pydantic-settings`
-- `python-dotenv`
+- MariaDB / SQLite de test
+- JWT
+- Pydantic
 
-## Arborescence
-```text
-backend/
-  app/
-    api/
-      deps/
-        auth.py
-      routes/
-        auth.py
-        health.py
-    core/
-      config.py
-      security.py
-    db/
-      base.py
-      session.py
-    models/
-      base.py
-      enums.py
-      family.py
-      user.py
-      child_profile.py
-      family_member.py
-    schemas/
-      auth.py
-      health.py
-    services/
-      auth_service.py
-    main.py
-  alembic/
-    versions/
-      20260425_0001_initial_schema.py
-    env.py
-    script.py.mako
-  tests/
-    conftest.py
-    test_auth.py
-    test_health.py
-  .env.example
-  alembic.ini
-  requirements.txt
-```
-
-## Installation
-Depuis le dossier racine du projet:
+## Installation locale
 
 ```bash
 cd backend
-python3 -m venv .venv
-source .venv/bin/activate
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-cp .env.example .env
-```
-
-## Configuration MariaDB
-Mettre a jour `DATABASE_URL` dans `.env`.
-
-Exemple:
-```env
-DATABASE_URL=mysql+pymysql://taskoday:taskoday@127.0.0.1:3306/taskoday
+copy .env.example .env
 ```
 
 ## Migrations
-Appliquer le schema initial:
 
 ```bash
+cd backend
+alembic heads
 alembic upgrade head
 ```
 
-Generer une nouvelle migration (plus tard):
-
-```bash
-alembic revision --autogenerate -m "add something"
-```
-
 ## Lancement serveur
+
 ```bash
+cd backend
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-Endpoint de sante:
+## Endpoints actifs
 
-```bash
-curl http://127.0.0.1:8000/health
-```
+- `GET /health`
+- `POST /api/v1/auth/register-parent`
+- `POST /api/v1/auth/register-child`
+- `POST /api/v1/auth/login`
+- `GET /api/v1/auth/me`
+- `POST /api/v1/families`
+- `GET /api/v1/families/me`
+- `GET /api/v1/families/{family_id}/children`
+- `POST /api/v1/pairing/generate-code`
+- `GET /api/v1/pairing/my-code`
+- `POST /api/v1/pairing/attach-child`
+- `GET /api/v1/children`
+- `GET /api/v1/children/{child_id}`
+- `PATCH /api/v1/children/{child_id}`
+- `GET /api/v1/children/{child_id}/stats`
+- `GET /api/v1/children/{child_id}/routines`
+- `POST /api/v1/children/{child_id}/routines`
+- `PATCH /api/v1/routines/{routine_id}`
+- `DELETE /api/v1/routines/{routine_id}`
+- `POST /api/v1/routines/{routine_id}/complete`
+- `POST /api/v1/routines/{routine_id}/uncomplete`
+- `GET /api/v1/children/{child_id}/missions`
+- `POST /api/v1/children/{child_id}/missions`
+- `PATCH /api/v1/missions/{mission_id}`
+- `DELETE /api/v1/missions/{mission_id}`
+- `POST /api/v1/missions/{mission_id}/complete`
+- `GET /api/v1/children/{child_id}/quests`
+- `POST /api/v1/children/{child_id}/quests`
+- `PATCH /api/v1/quests/{quest_id}`
+- `DELETE /api/v1/quests/{quest_id}`
+- `POST /api/v1/quests/{quest_id}/complete`
+- `GET /api/v1/children/{child_id}/progress`
+- `GET /api/v1/children/{child_id}/flammeches`
+- `GET /api/v1/children/{child_id}/flammeches/history`
+- `GET /api/v1/children/{child_id}/chests`
+- `POST /api/v1/children/{child_id}/chests/{chest_id}/open`
+- `GET /api/v1/children/{child_id}/inventory`
+- `GET /api/v1/children/{child_id}/eggs`
+- `POST /api/v1/children/{child_id}/eggs/{egg_id}/hatch`
+- `GET /api/v1/children/{child_id}/dragons`
+- `POST /api/v1/children/{child_id}/dragons/{dragon_id}/evolve`
+- `GET /api/v1/children/{child_id}/wishes`
+- `POST /api/v1/children/{child_id}/wishes`
+- `PATCH /api/v1/rewards/{reward_id}`
+- `POST /api/v1/wishes/{reward_id}/requests`
+- `GET /api/v1/children/{child_id}/wish-requests`
+- `PATCH /api/v1/reward-requests/{request_id}`
+- `GET /api/v1/children/{child_id}/scrolls`
+- `POST /api/v1/scrolls/{coupon_id}/use`
+- `GET /api/v1/profile/me`
+- `GET /api/v1/children/{child_id}/profile`
+- `GET /api/v1/children/{child_id}/xp-history`
 
-## Auth endpoints
-- `POST /auth/register-parent`
-- `POST /auth/login`
-- `GET /auth/me` (Bearer token requis)
-- `POST /families`
-- `GET /families/current`
-- `POST /children`
-- `GET /children`
-- `GET /children/{child_id}`
-- `GET /children/{child_id}/planning?date=YYYY-MM-DD`
-- `POST /children/{child_id}/routines`
-- `POST /children/{child_id}/missions`
-- `POST /children/{child_id}/quests`
-- `PATCH /planning/{item_type}/{item_id}/complete?date=YYYY-MM-DD`
-- `PATCH /planning/{item_type}/{item_id}/uncomplete?date=YYYY-MM-DD`
-- `GET /children/{child_id}/points`
-- `GET /children/{child_id}/points/history`
-- `POST /children/{child_id}/rewards`
-- `GET /children/{child_id}/rewards`
-- `PATCH /rewards/{reward_id}`
-- `POST /rewards/{reward_id}/purchase`
-- `GET /children/{child_id}/reward-purchases`
+## Flux parent/enfant
 
-### Exemples curl
-Inscription parent:
+Un parent cree son compte avec `register-parent`. Un enfant cree son compte avec `register-child`, genere un code avec `pairing/generate-code`, puis le parent l'attache a sa famille via `pairing/attach-child`.
 
-```bash
-curl -X POST http://127.0.0.1:8000/auth/register-parent \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email":"parent@example.com",
-    "password":"supersecret123",
-    "family_name":"Famille Martin"
-  }'
-```
+Il n'y a pas de `POST /api/v1/children` dans le backend actif.
 
-Connexion:
+## Ecailles et souhaits
 
-```bash
-curl -X POST http://127.0.0.1:8000/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email":"parent@example.com",
-    "password":"supersecret123"
-  }'
-```
-
-Profil utilisateur connecte:
-
-```bash
-curl http://127.0.0.1:8000/auth/me \
-  -H "Authorization: Bearer <ACCESS_TOKEN>"
-```
-
-Creer une famille (parent sans famille):
-
-```bash
-curl -X POST http://127.0.0.1:8000/families \
-  -H "Authorization: Bearer <PARENT_TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Famille Martin"}'
-```
-
-Recuperer la famille courante:
-
-```bash
-curl http://127.0.0.1:8000/families/current \
-  -H "Authorization: Bearer <PARENT_TOKEN>"
-```
-
-Ajouter un enfant:
-
-```bash
-curl -X POST http://127.0.0.1:8000/children \
-  -H "Authorization: Bearer <PARENT_TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email":"child@example.com",
-    "password":"childsecret123",
-    "display_name":"Emma"
-  }'
-```
-
-Lister les enfants visibles:
-
-```bash
-curl http://127.0.0.1:8000/children \
-  -H "Authorization: Bearer <TOKEN>"
-```
-
-Voir un enfant:
-
-```bash
-curl http://127.0.0.1:8000/children/1 \
-  -H "Authorization: Bearer <TOKEN>"
-```
-
-Planning d'un enfant pour une date:
-
-```bash
-curl "http://127.0.0.1:8000/children/1/planning?date=2026-04-27" \
-  -H "Authorization: Bearer <TOKEN>"
-```
-
-Ajouter une routine:
-
-```bash
-curl -X POST http://127.0.0.1:8000/children/1/routines \
-  -H "Authorization: Bearer <PARENT_TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title":"Brosser les dents",
-    "day_part":"MATIN",
-    "frequency":"DAILY",
-    "points_reward":1,
-    "is_active":true
-  }'
-```
-
-Ajouter une mission:
-
-```bash
-curl -X POST http://127.0.0.1:8000/children/1/missions \
-  -H "Authorization: Bearer <PARENT_TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title":"Apporter le cahier",
-    "day_part":"MIDI",
-    "scheduled_date":"2026-04-27",
-    "points_reward":2,
-    "is_active":true
-  }'
-```
-
-Ajouter une quete:
-
-```bash
-curl -X POST http://127.0.0.1:8000/children/1/quests \
-  -H "Authorization: Bearer <PARENT_TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title":"Lire 10 min",
-    "day_part":"SOIR",
-    "points_reward":3,
-    "is_active":true
-  }'
-```
-
-Cocher / decocher un item:
-
-```bash
-curl -X PATCH "http://127.0.0.1:8000/planning/routine/1/complete?date=2026-04-27" \
-  -H "Authorization: Bearer <TOKEN>"
-
-curl -X PATCH "http://127.0.0.1:8000/planning/routine/1/uncomplete?date=2026-04-27" \
-  -H "Authorization: Bearer <TOKEN>"
-```
-
-Solde de points:
-
-```bash
-curl "http://127.0.0.1:8000/children/1/points" \
-  -H "Authorization: Bearer <TOKEN>"
-```
-
-Historique de points:
-
-```bash
-curl "http://127.0.0.1:8000/children/1/points/history?limit=50" \
-  -H "Authorization: Bearer <TOKEN>"
-```
-
-Creer une recompense (parent):
-
-```bash
-curl -X POST http://127.0.0.1:8000/children/1/rewards \
-  -H "Authorization: Bearer <PARENT_TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title":"Choisir le dessert",
-    "description":"Bonus du soir",
-    "cost_points":10,
-    "is_active":true
-  }'
-```
-
-Lister les recompenses:
-
-```bash
-curl "http://127.0.0.1:8000/children/1/rewards" \
-  -H "Authorization: Bearer <TOKEN>"
-```
-
-Acheter une recompense:
-
-```bash
-curl -X POST "http://127.0.0.1:8000/rewards/1/purchase" \
-  -H "Authorization: Bearer <TOKEN>"
-```
-
-Historique des achats:
-
-```bash
-curl "http://127.0.0.1:8000/children/1/reward-purchases" \
-  -H "Authorization: Bearer <TOKEN>"
-```
+- L'XP n'est jamais depensee.
+- Les Ecailles servent uniquement aux recompenses externes creees par les parents.
+- Les champs techniques `scales_balance` et `cost_scales` restent des noms de compatibilite API.
+- Les routes canoniques cote app sont `wishes`, `wish-requests` et `scrolls`.
+- Les routes `scales`, `rewards` et `reward-coupons` restent exposees comme alias backend de compatibilite.
 
 ## Tests
+
 ```bash
+cd backend
 pytest -q
 ```
-
-## Modeles V1
-- `User`
-- `Family`
-- `ChildProfile`
-- `FamilyMember`
-
-Roles:
-- `PARENT`
-- `CHILD`

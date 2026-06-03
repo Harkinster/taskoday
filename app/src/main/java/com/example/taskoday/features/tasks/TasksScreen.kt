@@ -9,11 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -22,7 +18,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.taskoday.core.ui.component.fantasy.FantasyScreenBackground
 import com.example.taskoday.core.ui.component.fantasy.MissionCard
@@ -32,8 +27,6 @@ import com.example.taskoday.core.ui.component.fantasy.NeonCard
 import com.example.taskoday.core.ui.component.fantasy.NeonTone
 import com.example.taskoday.core.ui.component.fantasy.ProgressHeroCard
 import com.example.taskoday.core.ui.component.fantasy.TaskodayHeader
-import com.example.taskoday.core.ui.testing.TaskodayTestTags
-import com.example.taskoday.core.ui.theme.NeonBlue
 import com.example.taskoday.core.ui.theme.NeonCyan
 import com.example.taskoday.core.ui.theme.StarWhite
 import com.example.taskoday.core.ui.theme.TextMuted
@@ -47,8 +40,8 @@ import com.example.taskoday.domain.model.TaskStatus
 fun TasksScreen(
     viewModel: TasksViewModel,
     onTaskClick: (Long) -> Unit,
-    onCreateTask: () -> Unit,
     onEditTask: (Long) -> Unit,
+    onOpenProfile: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val spacing = MaterialTheme.spacing
@@ -63,19 +56,6 @@ fun TasksScreen(
     Scaffold(
         containerColor = Color.Transparent,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onCreateTask,
-                containerColor = NeonBlue,
-                contentColor = StarWhite,
-                modifier = Modifier.testTag(TaskodayTestTags.TasksAddFab),
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Add,
-                    contentDescription = "Ajouter une mission",
-                )
-            }
-        },
     ) { innerPadding ->
         FantasyScreenBackground(
             modifier =
@@ -106,6 +86,7 @@ fun TasksScreen(
                         title = "Missions",
                         subtitle = "Des actions du quotidien, des victoires concretes.",
                         avatarInitials = "AB",
+                        onAvatarClick = onOpenProfile,
                     )
                 }
 
@@ -159,7 +140,7 @@ fun TasksScreen(
                     MissionSection(
                         title = "A faire aujourd hui",
                         tasks = todoTasks,
-                        canManageMissions = uiState.canManageMissions,
+                        manageableTaskIds = uiState.manageableTaskIds,
                         onTaskClick = onTaskClick,
                         onEditTask = onEditTask,
                         onDeleteTask = viewModel::deleteTask,
@@ -171,7 +152,7 @@ fun TasksScreen(
                     MissionSection(
                         title = "En cours",
                         tasks = inProgressTasks,
-                        canManageMissions = uiState.canManageMissions,
+                        manageableTaskIds = uiState.manageableTaskIds,
                         onTaskClick = onTaskClick,
                         onEditTask = onEditTask,
                         onDeleteTask = viewModel::deleteTask,
@@ -183,7 +164,7 @@ fun TasksScreen(
                     MissionSection(
                         title = "Terminees",
                         tasks = doneTasks,
-                        canManageMissions = uiState.canManageMissions,
+                        manageableTaskIds = uiState.manageableTaskIds,
                         onTaskClick = onTaskClick,
                         onEditTask = onEditTask,
                         onDeleteTask = viewModel::deleteTask,
@@ -199,7 +180,7 @@ fun TasksScreen(
 private fun MissionSection(
     title: String,
     tasks: List<Task>,
-    canManageMissions: Boolean,
+    manageableTaskIds: Set<Long>,
     onTaskClick: (Long) -> Unit,
     onEditTask: (Long) -> Unit,
     onDeleteTask: (Long) -> Unit,
@@ -226,6 +207,7 @@ private fun MissionSection(
 
         tasks.forEach { task ->
             val done = task.status == TaskStatus.DONE
+            val canManageTask = manageableTaskIds.contains(task.id)
             MissionCard(
                 title = task.title,
                 description = task.description,
@@ -238,8 +220,8 @@ private fun MissionSection(
                 tone = toneFrom(task.status),
                 onClick = { onTaskClick(task.id) },
                 onToggleDone = { if (!done) onMarkTaskDone(task.id) },
-                onEdit = if (canManageMissions) ({ onEditTask(task.id) }) else null,
-                onDelete = if (canManageMissions) ({ onDeleteTask(task.id) }) else null,
+                onEdit = if (canManageTask) ({ onEditTask(task.id) }) else null,
+                onDelete = if (canManageTask) ({ onDeleteTask(task.id) }) else null,
             )
         }
     }

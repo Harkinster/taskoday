@@ -34,7 +34,7 @@ class QuestsRepositoryImpl
             }
 
             return runCatching {
-                val quests = questsApi.getQuests(childId)
+                val quests = questsApi.getQuests(childId).data
                 questRepository.clearRemoteCache()
                 val now = System.currentTimeMillis()
                 quests
@@ -58,6 +58,7 @@ class QuestsRepositoryImpl
                 val remoteRef = RemotePlanningIdCodec.decodeQuestId(localQuestId)
                 require(remoteRef?.itemType == PlanningItemType.QUEST) { "Identifiant quete invalide." }
                 questsApi.completeQuest(remoteRef.remoteItemId)
+                Unit
             }.onFailure { error ->
                 Log.w(TAG, "Completion quete distante echouee", error)
             }
@@ -81,7 +82,7 @@ class QuestsRepositoryImpl
                                 pointsReward = quest.pointsReward,
                                 isActive = true,
                             ),
-                    )
+                    ).data
                 created.toDomain(System.currentTimeMillis())
             }.onFailure { error ->
                 Log.w(TAG, "Creation quete distante echouee", error)
@@ -104,7 +105,7 @@ class QuestsRepositoryImpl
                                 pointsReward = quest.pointsReward,
                                 isActive = quest.isActive,
                             ),
-                    )
+                    ).data
                 updated.toDomain(System.currentTimeMillis())
             }.onFailure { error ->
                 Log.w(TAG, "Mise a jour quete distante echouee", error)
@@ -132,8 +133,8 @@ private fun QuestItemDto.toDomain(nowMillis: Long): Quest =
         title = title,
         description = description,
         emoji = "\u2B50",
-        pointsReward = pointsReward ?: 3,
-        isActive = isActive,
+        pointsReward = xpReward ?: pointsReward ?: 3,
+        isActive = isActive && !status.equals("completed", ignoreCase = true),
         dayPart = runCatching { DayPart.valueOf(dayPart.orEmpty()) }.getOrDefault(DayPart.APRES_MIDI),
         createdAt = nowMillis,
         updatedAt = nowMillis,

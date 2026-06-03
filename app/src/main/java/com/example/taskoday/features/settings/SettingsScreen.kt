@@ -66,7 +66,7 @@ fun SettingsScreen(
     val spacing = MaterialTheme.spacing
     var pairingCodeInput by rememberSaveable { mutableStateOf("") }
 
-    val points = uiState.totalXp
+    val xp = uiState.totalXp
     val level = uiState.level
     val nextLevelXp = uiState.nextLevelXp
     val levelXp = uiState.levelXp
@@ -133,7 +133,7 @@ fun SettingsScreen(
                     ProfileHeroCard(
                         name = uiState.profileName,
                         subtitle = uiState.profileSubtitle,
-                        pointsLabel = "$points points",
+                        pointsLabel = "$xp XP",
                         levelLabel = "NIV $level",
                         xpLabel = "$levelXp / $nextLevelXp XP - prochain niveau ${level + 1}",
                         progress = levelProgress,
@@ -199,7 +199,7 @@ fun SettingsScreen(
 
                 item {
                     RewardsCard(
-                        title = "Recompenses obtenues",
+                        title = "Souhaits validés",
                         rewards = rewardItems,
                     )
                 }

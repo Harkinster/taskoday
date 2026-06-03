@@ -39,7 +39,7 @@ class RoutinesRepositoryImpl
             }
 
             val routines =
-                runCatching { childrenApi.getRoutines(childId) }
+                runCatching { childrenApi.getRoutines(childId).data }
                     .getOrElse { error ->
                         return RoutinesSyncResult(
                             usedRemoteData = false,

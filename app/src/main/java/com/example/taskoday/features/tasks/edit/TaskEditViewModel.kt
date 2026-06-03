@@ -35,8 +35,10 @@ class TaskEditViewModel
         private val missionsRepository: MissionsRepository,
     ) : ViewModel() {
         private val rawTaskIdArg: Long = savedStateHandle[TaskodayDestination.TaskEdit.ARG_TASK_ID] ?: -1L
+        private val initialMode: String? = savedStateHandle[TaskodayDestination.TaskEdit.ARG_MODE]
         private val editingTaskId: Long? =
             rawTaskIdArg.takeIf { it != -1L }
+        private val startsAsRoutine = initialMode == TaskodayDestination.TaskEdit.MODE_ROUTINE
 
         private var loadedTask: Task? = null
 
@@ -44,6 +46,8 @@ class TaskEditViewModel
             MutableStateFlow(
                 TaskEditUiState(
                     scheduledDate = DateTimeUtils.startOfDayMillis(),
+                    taskType = if (startsAsRoutine) TaskType.DAILY else TaskType.ONE_TIME,
+                    isRoutine = startsAsRoutine,
                 ),
             )
         val uiState: StateFlow<TaskEditUiState> = _uiState.asStateFlow()

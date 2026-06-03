@@ -59,7 +59,10 @@ import com.example.taskoday.domain.model.QuestForDay
 private const val XP_PER_LEVEL: Int = 1000
 
 @Composable
-fun QuestsScreen(viewModel: QuestsViewModel) {
+fun QuestsScreen(
+    viewModel: QuestsViewModel,
+    onOpenProfile: () -> Unit,
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val spacing = MaterialTheme.spacing
     val completedCount = uiState.quests.count { it.isCompletedForDay }
@@ -123,6 +126,7 @@ fun QuestsScreen(viewModel: QuestsViewModel) {
                         title = "Quetes",
                         subtitle = "Accomplis des actions, gagne de l XP et deviens legendaire.",
                         avatarInitials = "AB",
+                        onAvatarClick = onOpenProfile,
                     )
                 }
 

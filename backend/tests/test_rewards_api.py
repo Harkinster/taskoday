@@ -1,200 +1,206 @@
-from datetime import date
-
-
 def _register_parent(client, email: str, family_name: str, password: str = "supersecret123") -> str:
     response = client.post(
-        "/auth/register-parent",
+        "/api/v1/auth/register-parent",
         json={
             "email": email,
             "password": password,
             "family_name": family_name,
+            "birth_date": "1988-01-20",
         },
     )
     assert response.status_code == 201
     return response.json()["access_token"]
 
 
-def _login(client, email: str, password: str) -> str:
+def _register_child(client, email: str, display_name: str, password: str = "childsecret123") -> str:
     response = client.post(
-        "/auth/login",
-        json={"email": email, "password": password},
-    )
-    assert response.status_code == 200
-    return response.json()["access_token"]
-
-
-def _create_child(client, parent_token: str, email: str, display_name: str) -> dict:
-    response = client.post(
-        "/children",
-        headers={"Authorization": f"Bearer {parent_token}"},
+        "/api/v1/auth/register-child",
         json={
             "email": email,
-            "password": "childsecret123",
+            "password": password,
             "display_name": display_name,
+            "birth_date": "2014-07-03",
         },
     )
     assert response.status_code == 201
-    return response.json()
+    return response.json()["access_token"]
 
 
-def test_rewards_purchase_flow_with_points_deduction(client) -> None:
-    parent_token = _register_parent(client, "shop.parent@example.com", "Famille Shop")
-    child = _create_child(client, parent_token, "shop.child@example.com", "Yuna")
-    child_id = child["id"]
-    child_token = _login(client, "shop.child@example.com", "childsecret123")
-    target_date = date(2026, 4, 27)
+def _attach_child(client, parent_token: str, child_token: str) -> int:
+    pairing = client.post("/api/v1/pairing/generate-code", headers={"Authorization": f"Bearer {child_token}"})
+    assert pairing.status_code == 200
+    code = pairing.json()["data"]["code"]
 
-    reward_create = client.post(
-        f"/children/{child_id}/rewards",
+    attached = client.post(
+        "/api/v1/pairing/attach-child",
         headers={"Authorization": f"Bearer {parent_token}"},
-        json={
-            "title": "Choisir le dessert",
-            "description": "Bonus du soir",
-            "cost_points": 3,
-            "is_active": True,
-        },
+        json={"code": code},
     )
-    assert reward_create.status_code == 201
-    reward_id = reward_create.json()["id"]
+    assert attached.status_code == 200
+    return attached.json()["data"]["child_id"]
 
-    rewards_for_child = client.get(
-        f"/children/{child_id}/rewards",
+
+def _complete_routine_mission_and_quest(client, parent_token: str, child_token: str, child_id: int) -> None:
+    routine = client.post(
+        f"/api/v1/children/{child_id}/routines",
+        headers={"Authorization": f"Bearer {parent_token}"},
+        json={"title": "Se brosser les dents", "repeat_type": "daily", "can_child_delete": False},
+    )
+    assert routine.status_code == 200
+    routine_id = routine.json()["data"]["id"]
+    complete_routine = client.post(
+        f"/api/v1/routines/{routine_id}/complete",
         headers={"Authorization": f"Bearer {child_token}"},
     )
-    assert rewards_for_child.status_code == 200
-    assert len(rewards_for_child.json()["rewards"]) == 1
+    assert complete_routine.status_code == 200
 
-    insufficient_purchase = client.post(
-        f"/rewards/{reward_id}/purchase",
+    mission = client.post(
+        f"/api/v1/children/{child_id}/missions",
+        headers={"Authorization": f"Bearer {parent_token}"},
+        json={"title": "Ranger le bureau"},
+    )
+    assert mission.status_code == 200
+    mission_id = mission.json()["data"]["id"]
+    complete_mission = client.post(
+        f"/api/v1/missions/{mission_id}/complete",
         headers={"Authorization": f"Bearer {child_token}"},
     )
-    assert insufficient_purchase.status_code == 400
-    assert "Insufficient points" in insufficient_purchase.json()["detail"]
+    assert complete_mission.status_code == 200
 
     quest = client.post(
-        f"/children/{child_id}/quests",
+        f"/api/v1/children/{child_id}/quests",
         headers={"Authorization": f"Bearer {parent_token}"},
-        json={
-            "title": "Lire 10 minutes",
-            "day_part": "SOIR",
-            "is_active": True,
-        },
+        json={"title": "Lire 10 minutes", "xp_reward": 25},
     )
-    assert quest.status_code == 201
-    quest_id = quest.json()["id"]
-
-    complete_quest = client.patch(
-        f"/planning/quest/{quest_id}/complete",
+    assert quest.status_code == 200
+    quest_id = quest.json()["data"]["id"]
+    complete_quest = client.post(
+        f"/api/v1/quests/{quest_id}/complete",
         headers={"Authorization": f"Bearer {child_token}"},
-        params={"date": target_date.isoformat()},
     )
     assert complete_quest.status_code == 200
 
-    before_purchase_points = client.get(
-        f"/children/{child_id}/points",
-        headers={"Authorization": f"Bearer {child_token}"},
-    )
-    assert before_purchase_points.status_code == 200
-    assert before_purchase_points.json()["balance"] == 3
 
-    purchase = client.post(
-        f"/rewards/{reward_id}/purchase",
-        headers={"Authorization": f"Bearer {child_token}"},
-    )
-    assert purchase.status_code == 200
-    purchase_payload = purchase.json()
-    assert purchase_payload["purchase"]["reward_id"] == reward_id
-    assert purchase_payload["purchase"]["cost_points"] == 3
-    assert purchase_payload["balance"] == 0
+def test_external_reward_request_approval_creates_coupon_and_spends_scales(client) -> None:
+    parent_token = _register_parent(client, "shop.parent@example.com", "Famille Shop")
+    child_token = _register_child(client, "shop.child@example.com", "Yuna")
+    child_id = _attach_child(client, parent_token, child_token)
 
-    after_purchase_points = client.get(
-        f"/children/{child_id}/points",
-        headers={"Authorization": f"Bearer {child_token}"},
-    )
-    assert after_purchase_points.status_code == 200
-    assert after_purchase_points.json()["balance"] == 0
+    _complete_routine_mission_and_quest(client, parent_token, child_token, child_id)
 
-    purchases_history = client.get(
-        f"/children/{child_id}/reward-purchases",
-        headers={"Authorization": f"Bearer {child_token}"},
-    )
-    assert purchases_history.status_code == 200
-    history_payload = purchases_history.json()
-    assert history_payload["balance"] == 0
-    assert len(history_payload["purchases"]) == 1
-    assert history_payload["purchases"][0]["reward_title"] == "Choisir le dessert"
-
-
-def test_rewards_access_control_and_patch_rules(client) -> None:
-    parent_a = _register_parent(client, "shop.parent.a@example.com", "Famille A")
-    parent_b = _register_parent(client, "shop.parent.b@example.com", "Famille B")
-    child_a = _create_child(client, parent_a, "shop.a.child@example.com", "A")
-    child_b = _create_child(client, parent_b, "shop.b.child@example.com", "B")
-    child_a_token = _login(client, "shop.a.child@example.com", "childsecret123")
-    child_b_token = _login(client, "shop.b.child@example.com", "childsecret123")
+    scales = client.get(f"/api/v1/children/{child_id}/scales", headers={"Authorization": f"Bearer {child_token}"})
+    assert scales.status_code == 200
+    assert scales.json()["data"]["balance"] == 20
 
     reward_create = client.post(
-        f"/children/{child_a['id']}/rewards",
-        headers={"Authorization": f"Bearer {parent_a}"},
-        json={
-            "title": "Bonus A",
-            "cost_points": 2,
-            "is_active": True,
-        },
+        f"/api/v1/children/{child_id}/rewards",
+        headers={"Authorization": f"Bearer {parent_token}"},
+        json={"title": "Choisir le dessert", "description": "Bonus du soir", "cost_scales": 5, "is_active": True},
     )
     assert reward_create.status_code == 201
-    reward_id = reward_create.json()["id"]
+    reward_id = reward_create.json()["data"]["id"]
 
-    forbidden_parent_patch = client.patch(
-        f"/rewards/{reward_id}",
+    reward_request = client.post(
+        f"/api/v1/rewards/{reward_id}/requests",
+        headers={"Authorization": f"Bearer {child_token}"},
+        json={"note": "Je voudrais ce soir."},
+    )
+    assert reward_request.status_code == 201
+    request_payload = reward_request.json()["data"]
+    assert request_payload["status"] == "pending"
+    assert request_payload["coupon"] is None
+
+    before_approval = client.get(f"/api/v1/children/{child_id}/scales", headers={"Authorization": f"Bearer {child_token}"})
+    assert before_approval.json()["data"]["balance"] == 20
+
+    approved = client.patch(
+        f"/api/v1/reward-requests/{request_payload['id']}",
+        headers={"Authorization": f"Bearer {parent_token}"},
+        json={"status": "approved"},
+    )
+    assert approved.status_code == 200
+    approved_payload = approved.json()["data"]
+    assert approved_payload["status"] == "approved"
+    assert approved_payload["coupon"]["code"].startswith("TASKO-")
+    assert approved_payload["coupon"]["status"] == "available"
+
+    after_approval = client.get(f"/api/v1/children/{child_id}/scales", headers={"Authorization": f"Bearer {child_token}"})
+    assert after_approval.json()["data"]["balance"] == 15
+
+    used = client.post(
+        f"/api/v1/reward-coupons/{approved_payload['coupon']['id']}/use",
+        headers={"Authorization": f"Bearer {parent_token}"},
+    )
+    assert used.status_code == 200
+    assert used.json()["data"]["status"] == "used"
+    assert used.json()["data"]["coupon"]["status"] == "used"
+
+
+def test_reward_refusal_and_access_control_do_not_spend_scales(client) -> None:
+    parent_a = _register_parent(client, "shop.parent.a@example.com", "Famille A")
+    parent_b = _register_parent(client, "shop.parent.b@example.com", "Famille B")
+    child_token = _register_child(client, "shop.child.a@example.com", "A")
+    child_id = _attach_child(client, parent_a, child_token)
+    _complete_routine_mission_and_quest(client, parent_a, child_token, child_id)
+
+    reward = client.post(
+        f"/api/v1/children/{child_id}/rewards",
+        headers={"Authorization": f"Bearer {parent_a}"},
+        json={"title": "Dessiner avant le coucher", "cost_scales": 3},
+    )
+    assert reward.status_code == 201
+
+    request = client.post(
+        f"/api/v1/rewards/{reward.json()['data']['id']}/requests",
+        headers={"Authorization": f"Bearer {child_token}"},
+        json={},
+    )
+    assert request.status_code == 201
+    request_id = request.json()["data"]["id"]
+
+    forbidden = client.patch(
+        f"/api/v1/reward-requests/{request_id}",
         headers={"Authorization": f"Bearer {parent_b}"},
-        json={"title": "No Access"},
+        json={"status": "approved"},
     )
-    assert forbidden_parent_patch.status_code == 404
+    assert forbidden.status_code == 403
 
-    forbidden_child_patch = client.patch(
-        f"/rewards/{reward_id}",
-        headers={"Authorization": f"Bearer {child_a_token}"},
-        json={"title": "No Access"},
-    )
-    assert forbidden_child_patch.status_code == 403
-
-    forbidden_child_list = client.get(
-        f"/children/{child_b['id']}/rewards",
-        headers={"Authorization": f"Bearer {child_a_token}"},
-    )
-    assert forbidden_child_list.status_code == 403
-
-    forbidden_child_purchase = client.post(
-        f"/rewards/{reward_id}/purchase",
-        headers={"Authorization": f"Bearer {child_b_token}"},
-    )
-    assert forbidden_child_purchase.status_code == 403
-
-    updated_reward = client.patch(
-        f"/rewards/{reward_id}",
+    refused = client.patch(
+        f"/api/v1/reward-requests/{request_id}",
         headers={"Authorization": f"Bearer {parent_a}"},
-        json={
-            "description": "Mise a jour",
-            "cost_points": 4,
-            "is_active": False,
-        },
+        json={"status": "refused"},
     )
-    assert updated_reward.status_code == 200
-    assert updated_reward.json()["cost_points"] == 4
-    assert updated_reward.json()["is_active"] is False
+    assert refused.status_code == 200
+    assert refused.json()["data"]["status"] == "refused"
+    assert refused.json()["data"]["coupon"] is None
 
-    child_visible_rewards = client.get(
-        f"/children/{child_a['id']}/rewards",
-        headers={"Authorization": f"Bearer {child_a_token}"},
-    )
-    assert child_visible_rewards.status_code == 200
-    assert child_visible_rewards.json()["rewards"] == []
+    scales = client.get(f"/api/v1/children/{child_id}/scales", headers={"Authorization": f"Bearer {child_token}"})
+    assert scales.json()["data"]["balance"] == 20
 
-    parent_all_rewards = client.get(
-        f"/children/{child_a['id']}/rewards",
-        headers={"Authorization": f"Bearer {parent_a}"},
-        params={"include_inactive": "true"},
+
+def test_child_cannot_create_mission_or_request_without_scales(client) -> None:
+    parent_token = _register_parent(client, "shop.parent.rules@example.com", "Famille Regles")
+    child_token = _register_child(client, "shop.rules.child@example.com", "Rules")
+    child_id = _attach_child(client, parent_token, child_token)
+
+    child_mission = client.post(
+        f"/api/v1/children/{child_id}/missions",
+        headers={"Authorization": f"Bearer {child_token}"},
+        json={"title": "Mission enfant interdite"},
     )
-    assert parent_all_rewards.status_code == 200
-    assert len(parent_all_rewards.json()["rewards"]) == 1
+    assert child_mission.status_code == 403
+
+    reward = client.post(
+        f"/api/v1/children/{child_id}/rewards",
+        headers={"Authorization": f"Bearer {parent_token}"},
+        json={"title": "Cinema", "cost_scales": 1},
+    )
+    assert reward.status_code == 201
+
+    request = client.post(
+        f"/api/v1/rewards/{reward.json()['data']['id']}/requests",
+        headers={"Authorization": f"Bearer {child_token}"},
+        json={},
+    )
+    assert request.status_code == 400
+    assert "Flammeches insuffisantes" in request.json()["error"]["message"]

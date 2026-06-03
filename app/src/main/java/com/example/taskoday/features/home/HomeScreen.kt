@@ -70,6 +70,7 @@ fun HomeScreen(
     onOpenTasks: () -> Unit,
     onOpenWeek: () -> Unit,
     onOpenTask: (Long) -> Unit,
+    onOpenProfile: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val spacing = MaterialTheme.spacing
@@ -135,6 +136,7 @@ fun HomeScreen(
                         title = "Bonjour, Alex !",
                         subtitle = "Organise ta journee, etape par etape.",
                         avatarInitials = "AB",
+                        onAvatarClick = onOpenProfile,
                     )
                 }
 
@@ -160,7 +162,7 @@ fun HomeScreen(
                             } else {
                                 "Continue comme ca !"
                             },
-                        badgeLabel = "${uiState.pointsBalance} points",
+                        badgeLabel = "${uiState.pointsBalance} Flammèches",
                     )
                 }
 

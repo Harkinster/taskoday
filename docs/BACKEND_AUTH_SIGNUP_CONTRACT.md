@@ -70,7 +70,7 @@ L'app Android envoie maintenant des infos differentes selon le type de compte a 
 - `POST /api/v1/auth/login`
 - `GET /api/v1/auth/me`
 
-Format `GET /auth/me` attendu:
+Format `GET /api/v1/auth/me` attendu:
 
 ```json
 {

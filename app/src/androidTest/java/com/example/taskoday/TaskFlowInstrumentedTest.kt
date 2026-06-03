@@ -70,6 +70,9 @@ class TaskFlowInstrumentedTest {
         composeRule
             .onNodeWithTag(TaskodayTestTags.TasksAddFab)
             .performClick()
+        composeRule
+            .onNodeWithText("Mission")
+            .performClick()
 
         composeRule
             .onNodeWithTag(TaskodayTestTags.TaskEditTitleField)
