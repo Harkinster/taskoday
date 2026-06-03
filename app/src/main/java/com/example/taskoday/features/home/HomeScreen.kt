@@ -15,7 +15,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Today
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -39,14 +38,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.taskoday.R
 import com.example.taskoday.core.ui.component.fantasy.FantasyButton
 import com.example.taskoday.core.ui.component.fantasy.FantasyButtonStyle
 import com.example.taskoday.core.ui.component.fantasy.FantasyCard
 import com.example.taskoday.core.ui.component.fantasy.FantasyHeader
 import com.example.taskoday.core.ui.component.fantasy.FantasyProgressBar
 import com.example.taskoday.core.ui.component.fantasy.FantasyScreenBackground
+import com.example.taskoday.core.ui.component.fantasy.FantasyStateCard
 import com.example.taskoday.core.ui.component.fantasy.FantasyTone
+import com.example.taskoday.core.ui.component.fantasy.NestAssets
 import com.example.taskoday.core.ui.component.fantasy.RewardToast
 import com.example.taskoday.core.ui.component.fantasy.RoutineItemRow
 import com.example.taskoday.core.ui.theme.EmberOrange
@@ -118,7 +118,12 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
-                    CircularProgressIndicator(color = EmberOrange)
+                    FantasyStateCard(
+                        title = "Le Nid se réveille",
+                        message = "La Journée du Gardien se prépare doucement.",
+                        loading = true,
+                        tone = FantasyTone.Gold,
+                    )
                 }
                 return@FantasyScreenBackground
             }
@@ -135,7 +140,7 @@ fun HomeScreen(
                     FantasyHeader(
                         title = "Journée",
                         subtitle = "Le Gardien avance pas à pas, routine après routine.",
-                        assetResId = R.drawable.placeholder_nest,
+                        assetResId = NestAssets.NestBackground.resId,
                         assetDescription = "Le Nid",
                         onAvatarClick = onOpenProfile,
                     )

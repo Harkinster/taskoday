@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -30,12 +31,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.example.taskoday.core.ui.testing.TaskodayTestTags
-import com.example.taskoday.core.ui.theme.ArcaneViolet
-import com.example.taskoday.core.ui.theme.NeonBlue
-import com.example.taskoday.core.ui.theme.NeonCyan
-import com.example.taskoday.core.ui.theme.StarWhite
-import com.example.taskoday.core.ui.theme.SurfacePanel
-import com.example.taskoday.core.ui.theme.TextMuted
+import com.example.taskoday.core.ui.theme.EmberOrange
+import com.example.taskoday.core.ui.theme.InkMuted
+import com.example.taskoday.core.ui.theme.MagicViolet
+import com.example.taskoday.core.ui.theme.ParchmentLight
+import com.example.taskoday.core.ui.theme.SoftGold
+import com.example.taskoday.core.ui.theme.WoodBrownDark
 import com.example.taskoday.core.ui.theme.spacing
 
 @Composable
@@ -55,8 +56,8 @@ fun QuickAddFab(
             showDialog = true
         },
         modifier = modifier.testTag(TaskodayTestTags.TasksAddFab),
-        containerColor = NeonBlue,
-        contentColor = StarWhite,
+        containerColor = EmberOrange,
+        contentColor = ParchmentLight,
     ) {
         Icon(imageVector = Icons.Outlined.Add, contentDescription = "Ajouter")
     }
@@ -65,9 +66,9 @@ fun QuickAddFab(
         AlertDialog(
             onDismissRequest = { showDialog = false },
             title = { Text(text = "Ajouter") },
-            containerColor = SurfacePanel,
-            titleContentColor = StarWhite,
-            textContentColor = TextMuted,
+            containerColor = ParchmentLight,
+            titleContentColor = WoodBrownDark,
+            textContentColor = InkMuted,
             text = {
                 Column(
                     verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
@@ -103,7 +104,7 @@ fun QuickAddFab(
                         Text(
                             text = "Missions et quêtes sont réservées au parent.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = TextMuted,
+                            color = InkMuted,
                         )
                     }
                 }
@@ -112,7 +113,7 @@ fun QuickAddFab(
             dismissButton = {
                 TextButton(
                     onClick = { showDialog = false },
-                    colors = ButtonDefaults.textButtonColors(contentColor = NeonCyan),
+                    colors = ButtonDefaults.textButtonColors(contentColor = EmberOrange),
                 ) {
                     Text(text = "Fermer")
                 }
@@ -131,13 +132,13 @@ private fun QuickAddOption(
     OutlinedButton(
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp),
         shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(1.dp, if (enabled) NeonCyan.copy(alpha = 0.8f) else ArcaneViolet.copy(alpha = 0.35f)),
+        border = BorderStroke(1.dp, if (enabled) SoftGold.copy(alpha = 0.9f) else MagicViolet.copy(alpha = 0.35f)),
         colors =
             ButtonDefaults.outlinedButtonColors(
-                contentColor = StarWhite,
-                disabledContentColor = TextMuted,
+                contentColor = WoodBrownDark,
+                disabledContentColor = InkMuted,
             ),
     ) {
         Row(

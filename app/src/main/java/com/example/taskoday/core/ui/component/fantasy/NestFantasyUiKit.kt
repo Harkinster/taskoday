@@ -10,21 +10,19 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -38,12 +36,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.taskoday.R
 import com.example.taskoday.core.ui.theme.EmberOrange
 import com.example.taskoday.core.ui.theme.EmberOrangeSoft
-import com.example.taskoday.core.ui.theme.InkBrown
 import com.example.taskoday.core.ui.theme.InkMuted
 import com.example.taskoday.core.ui.theme.MagicViolet
 import com.example.taskoday.core.ui.theme.MagicVioletSoft
@@ -80,13 +78,14 @@ enum class FantasyButtonStyle {
 fun FantasyCard(
     modifier: Modifier = Modifier,
     tone: FantasyTone = FantasyTone.Gold,
-    contentPadding: PaddingValues = PaddingValues(16.dp),
+    contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val shape = RoundedCornerShape(18.dp)
     Box(
         modifier =
             modifier
+                .defaultMinSize(minHeight = 72.dp)
                 .clip(shape)
                 .background(
                     brush =
@@ -117,7 +116,7 @@ fun FantasyCard(
                 Modifier
                     .fillMaxWidth()
                     .padding(contentPadding),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(9.dp),
             content = content,
         )
     }
@@ -132,12 +131,24 @@ fun FantasyButton(
     enabled: Boolean = true,
 ) {
     val shape = RoundedCornerShape(14.dp)
+    val buttonModifier = modifier.defaultMinSize(minHeight = 48.dp)
+    val textContent: @Composable () -> Unit = {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+
     when (style) {
         FantasyButtonStyle.Filled ->
             Button(
                 onClick = onClick,
                 enabled = enabled,
-                modifier = modifier.defaultMinSize(minHeight = 44.dp),
+                modifier = buttonModifier,
                 shape = shape,
                 colors =
                     ButtonDefaults.buttonColors(
@@ -147,14 +158,14 @@ fun FantasyButton(
                         disabledContentColor = InkMuted,
                     ),
             ) {
-                Text(text = text, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                textContent()
             }
 
         FantasyButtonStyle.Outline ->
             OutlinedButton(
                 onClick = onClick,
                 enabled = enabled,
-                modifier = modifier.defaultMinSize(minHeight = 44.dp),
+                modifier = buttonModifier,
                 shape = shape,
                 border = BorderStroke(1.2.dp, SoftGold),
                 colors =
@@ -164,14 +175,14 @@ fun FantasyButton(
                         disabledContentColor = InkMuted,
                     ),
             ) {
-                Text(text = text, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                textContent()
             }
 
         FantasyButtonStyle.Quiet ->
             Button(
                 onClick = onClick,
                 enabled = enabled,
-                modifier = modifier.defaultMinSize(minHeight = 42.dp),
+                modifier = buttonModifier,
                 shape = shape,
                 colors =
                     ButtonDefaults.buttonColors(
@@ -181,7 +192,7 @@ fun FantasyButton(
                         disabledContentColor = InkMuted,
                     ),
             ) {
-                Text(text = text, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                textContent()
             }
     }
 }
@@ -192,8 +203,8 @@ fun FantasyHeader(
     subtitle: String,
     modifier: Modifier = Modifier,
     avatarInitials: String = "AB",
-    assetResId: Int = R.drawable.placeholder_nest,
-    assetDescription: String = "Nid",
+    assetResId: Int = NestAssets.NestBackground.resId,
+    assetDescription: String = "Le Nid",
     onAvatarClick: () -> Unit = {},
 ) {
     Column(
@@ -211,7 +222,7 @@ fun FantasyHeader(
             horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            FantasyAssetBubble(assetResId = assetResId, contentDescription = assetDescription, size = 70.dp)
+            FantasyAssetBubble(assetResId = assetResId, contentDescription = assetDescription, size = 64.dp)
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -227,6 +238,8 @@ fun FantasyHeader(
                     text = subtitle,
                     style = MaterialTheme.typography.bodyMedium,
                     color = InkMuted,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
@@ -237,7 +250,7 @@ fun FantasyHeader(
 fun FantasyProgressBar(
     progress: Float,
     modifier: Modifier = Modifier,
-    height: androidx.compose.ui.unit.Dp = 10.dp,
+    height: Dp = 10.dp,
 ) {
     val clamped = progress.coerceIn(0f, 1f)
     Box(
@@ -262,7 +275,7 @@ fun NestStatCard(
     label: String,
     value: String,
     modifier: Modifier = Modifier,
-    assetResId: Int = R.drawable.placeholder_flame,
+    assetResId: Int = NestAssets.Flameche.resId,
     tone: FantasyTone = FantasyTone.Gold,
 ) {
     FantasyCard(modifier = modifier, tone = tone, contentPadding = PaddingValues(12.dp)) {
@@ -272,9 +285,21 @@ fun NestStatCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             FantasyAssetBubble(assetResId = assetResId, contentDescription = label, size = 42.dp)
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(text = value, style = MaterialTheme.typography.titleLarge, color = WoodBrownDark)
-                Text(text = label, style = MaterialTheme.typography.bodySmall, color = InkMuted)
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = WoodBrownDark,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = InkMuted,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }
@@ -287,16 +312,28 @@ fun EggProgressCard(
     requirements: String,
     progress: Float,
     modifier: Modifier = Modifier,
-    assetResId: Int = R.drawable.placeholder_egg_luminous,
+    assetResId: Int = NestAssets.EggSolarSleeping.resId,
 ) {
     FantasyCard(modifier = modifier.fillMaxWidth(), tone = FantasyTone.Gold) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             FantasyAssetBubble(assetResId = assetResId, contentDescription = title, size = 58.dp)
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                Text(text = title, style = MaterialTheme.typography.titleMedium, color = WoodBrownDark)
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = WoodBrownDark,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 Text(text = status, style = MaterialTheme.typography.bodyMedium, color = MossGreen)
                 FantasyProgressBar(progress = progress)
-                Text(text = requirements, style = MaterialTheme.typography.bodySmall, color = InkMuted)
+                Text(
+                    text = requirements,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = InkMuted,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }
@@ -308,15 +345,27 @@ fun DragonCard(
     stage: String,
     nextStep: String,
     modifier: Modifier = Modifier,
-    assetResId: Int = R.drawable.placeholder_dragon_ember,
+    assetResId: Int = NestAssets.DragonEmberBaby.resId,
 ) {
     FantasyCard(modifier = modifier.fillMaxWidth(), tone = FantasyTone.Ember) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             FantasyAssetBubble(assetResId = assetResId, contentDescription = title, size = 64.dp)
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(text = title, style = MaterialTheme.typography.titleMedium, color = WoodBrownDark)
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = WoodBrownDark,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 Text(text = stage, style = MaterialTheme.typography.bodyMedium, color = EmberOrange)
-                Text(text = nextStep, style = MaterialTheme.typography.bodySmall, color = InkMuted)
+                Text(
+                    text = nextStep,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = InkMuted,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }
@@ -329,16 +378,33 @@ fun WishCard(
     costLabel: String,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    supportingText: String? = null,
+    assetResId: Int = NestAssets.Flameche.resId,
     onMakeWish: (() -> Unit)? = null,
 ) {
     FantasyCard(modifier = modifier.fillMaxWidth(), tone = FantasyTone.Violet) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            FantasyAssetBubble(assetResId = R.drawable.placeholder_flame, contentDescription = "Flammèche", size = 48.dp)
+            FantasyAssetBubble(assetResId = assetResId, contentDescription = "Flammèche", size = 48.dp)
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                Text(text = title, style = MaterialTheme.typography.titleMedium, color = WoodBrownDark)
-                Text(text = description, style = MaterialTheme.typography.bodyMedium, color = InkMuted)
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = WoodBrownDark,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = InkMuted,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 Text(text = costLabel, style = MaterialTheme.typography.labelLarge, color = MagicViolet)
             }
+        }
+        if (!supportingText.isNullOrBlank()) {
+            Text(text = supportingText, style = MaterialTheme.typography.bodySmall, color = InkMuted)
         }
         if (onMakeWish != null) {
             FantasyButton(
@@ -357,14 +423,27 @@ fun ScrollCard(
     code: String,
     status: String,
     modifier: Modifier = Modifier,
+    assetResId: Int = NestAssets.ScrollApproved.resId,
     onUse: (() -> Unit)? = null,
 ) {
     FantasyCard(modifier = modifier.fillMaxWidth(), tone = FantasyTone.Wood) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            FantasyAssetBubble(assetResId = R.drawable.placeholder_scroll, contentDescription = "Parchemin", size = 54.dp)
+            FantasyAssetBubble(assetResId = assetResId, contentDescription = "Parchemin", size = 54.dp)
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(text = title, style = MaterialTheme.typography.titleMedium, color = WoodBrownDark)
-                Text(text = code, style = MaterialTheme.typography.bodyMedium, color = InkMuted)
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = WoodBrownDark,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = code,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = InkMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 Text(text = status, style = MaterialTheme.typography.labelLarge, color = MossGreen)
             }
         }
@@ -380,11 +459,12 @@ fun ChestCard(
     pointsRequired: Int,
     unopenedChests: Int,
     modifier: Modifier = Modifier,
+    assetResId: Int = NestAssets.ChestCommon.resId,
 ) {
     val progress = if (pointsRequired <= 0) 0f else points.toFloat() / pointsRequired.toFloat()
     FantasyCard(modifier = modifier.fillMaxWidth(), tone = FantasyTone.Wood) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            FantasyAssetBubble(assetResId = R.drawable.placeholder_chest, contentDescription = "Coffre", size = 58.dp)
+            FantasyAssetBubble(assetResId = assetResId, contentDescription = "Coffre", size = 58.dp)
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text(text = "Coffre du Gardien", style = MaterialTheme.typography.titleMedium, color = WoodBrownDark)
                 Text(text = "$points/$pointsRequired points coffre", style = MaterialTheme.typography.bodyMedium, color = InkMuted)
@@ -413,11 +493,48 @@ fun RewardToast(
 }
 
 @Composable
+fun FantasyStateCard(
+    title: String,
+    message: String,
+    modifier: Modifier = Modifier,
+    tone: FantasyTone = FantasyTone.Gold,
+    assetResId: Int = NestAssets.NestBackground.resId,
+    assetDescription: String? = null,
+    loading: Boolean = false,
+) {
+    FantasyCard(modifier = modifier.fillMaxWidth(), tone = tone) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (loading) {
+                Box(modifier = Modifier.size(52.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = tone.accent, strokeWidth = 3.dp)
+                }
+            } else {
+                FantasyAssetBubble(assetResId = assetResId, contentDescription = assetDescription, size = 52.dp)
+            }
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = WoodBrownDark,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(text = message, style = MaterialTheme.typography.bodyMedium, color = InkMuted)
+            }
+        }
+    }
+}
+
+@Composable
 fun FantasyAssetBubble(
     assetResId: Int,
     contentDescription: String?,
     modifier: Modifier = Modifier,
-    size: androidx.compose.ui.unit.Dp = 52.dp,
+    size: Dp = 52.dp,
 ) {
     Box(
         modifier =
@@ -444,16 +561,24 @@ fun InventoryLootCard(
     rarity: String,
     quantity: Int,
     modifier: Modifier = Modifier,
-    assetResId: Int = R.drawable.placeholder_crystal,
+    assetResId: Int = NestAssets.Crystal.resId,
 ) {
     FantasyCard(modifier = modifier.fillMaxWidth(), tone = if (rarity == "rare") FantasyTone.Violet else FantasyTone.Moss) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                FantasyAssetBubble(assetResId = assetResId, contentDescription = title, size = 50.dp)
-                Column(verticalArrangement = Arrangement.spacedBy(3.dp), modifier = Modifier.widthIn(max = 210.dp)) {
-                    Text(text = title, style = MaterialTheme.typography.titleMedium, color = WoodBrownDark, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(text = rarity, style = MaterialTheme.typography.bodySmall, color = InkMuted)
-                }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            FantasyAssetBubble(assetResId = assetResId, contentDescription = title, size = 50.dp)
+            Column(verticalArrangement = Arrangement.spacedBy(3.dp), modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = WoodBrownDark,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(text = rarity, style = MaterialTheme.typography.bodySmall, color = InkMuted)
             }
             Text(text = "x$quantity", style = MaterialTheme.typography.titleLarge, color = WoodBrownDark)
         }

@@ -46,6 +46,7 @@ private val TaskodayFantasyDarkColors: ColorScheme = TaskodayFantasyColors
 private val TaskodayFantasyLightColors: ColorScheme = TaskodayFantasyColors
 
 @Composable
+@Suppress("DEPRECATION")
 fun TaskodayTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = false,

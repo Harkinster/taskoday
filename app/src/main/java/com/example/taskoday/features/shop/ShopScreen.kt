@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -32,13 +31,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.taskoday.R
 import com.example.taskoday.core.ui.component.fantasy.FantasyButton
 import com.example.taskoday.core.ui.component.fantasy.FantasyButtonStyle
 import com.example.taskoday.core.ui.component.fantasy.FantasyCard
 import com.example.taskoday.core.ui.component.fantasy.FantasyHeader
 import com.example.taskoday.core.ui.component.fantasy.FantasyScreenBackground
+import com.example.taskoday.core.ui.component.fantasy.FantasyStateCard
 import com.example.taskoday.core.ui.component.fantasy.FantasyTone
+import com.example.taskoday.core.ui.component.fantasy.NestAssets
 import com.example.taskoday.core.ui.component.fantasy.NestStatCard
 import com.example.taskoday.core.ui.component.fantasy.ScrollCard
 import com.example.taskoday.core.ui.component.fantasy.WishCard
@@ -87,7 +87,12 @@ fun ShopScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
-                    CircularProgressIndicator(color = EmberOrange)
+                    FantasyStateCard(
+                        title = "La Caverne s'éclaire",
+                        message = "Les Souhaits arrivent dans un instant.",
+                        loading = true,
+                        tone = FantasyTone.Ember,
+                    )
                 }
                 return@FantasyScreenBackground
             }
@@ -109,7 +114,7 @@ fun ShopScreen(
                             } else {
                                 "Transforme tes Flammèches en moments magiques."
                             },
-                        assetResId = R.drawable.placeholder_flame,
+                        assetResId = NestAssets.Flameche.resId,
                         assetDescription = "Flammèche",
                         onAvatarClick = onOpenProfile,
                     )
@@ -119,7 +124,7 @@ fun ShopScreen(
                     NestStatCard(
                         label = if (uiState.isParent) "Souhaits parent" else "Solde du Gardien",
                         value = "${uiState.scalesBalance} Flammèches",
-                        assetResId = R.drawable.placeholder_flame,
+                        assetResId = NestAssets.Flameche.resId,
                         tone = FantasyTone.Ember,
                     )
                 }
@@ -150,14 +155,21 @@ fun ShopScreen(
 
                 if (uiState.rewards.isEmpty()) {
                     item {
-                        EmptyCard(text = "Aucun Souhait disponible.")
+                        EmptyCard(text = "Aucun Souhait pour le moment. La Caverne garde sa magie au chaud.")
                     }
                 } else {
                     items(uiState.rewards, key = { reward -> reward.id }) { reward ->
+                        val alreadyRequested =
+                            uiState.requests.any { request ->
+                                request.rewardId == reward.id &&
+                                    request.status in setOf(RewardRequestStatus.PENDING, RewardRequestStatus.APPROVED)
+                            }
                         RewardRow(
                             reward = reward,
                             isParent = uiState.isParent,
-                            canRequest = uiState.hasRemoteSession && !uiState.isParent && uiState.scalesBalance >= reward.cost,
+                            hasRemoteSession = uiState.hasRemoteSession,
+                            scalesBalance = uiState.scalesBalance,
+                            alreadyRequested = alreadyRequested,
                             isSubmitting = uiState.isSubmitting,
                             onRequest = { viewModel.requestReward(reward) },
                         )
@@ -169,7 +181,7 @@ fun ShopScreen(
                 if (uiState.requests.isEmpty()) {
                     item {
                         if (uiState.hasRemoteSession) {
-                            EmptyCard(text = "Aucune demande.")
+                            EmptyCard(text = "Aucun Parchemin pour le moment.")
                         } else {
                             LocalHistory(transactions = uiState.localTransactions)
                         }
@@ -256,15 +268,28 @@ private fun ParentRewardCreator(
 private fun RewardRow(
     reward: Reward,
     isParent: Boolean,
-    canRequest: Boolean,
+    hasRemoteSession: Boolean,
+    scalesBalance: Int,
+    alreadyRequested: Boolean,
     isSubmitting: Boolean,
     onRequest: () -> Unit,
 ) {
+    val canRequest = hasRemoteSession && !isParent && scalesBalance >= reward.cost && !alreadyRequested
+    val supportingText =
+        when {
+            isParent -> "Ce Souhait est prêt pour les Gardiens."
+            alreadyRequested -> "Souhait déjà demandé : il est déjà en chemin."
+            !hasRemoteSession -> "Connecte le compte enfant pour faire un souhait."
+            scalesBalance < reward.cost -> "Il manque encore ${reward.cost - scalesBalance} Flammèches pour ce Souhait."
+            else -> null
+        }
+
     WishCard(
         title = "${reward.emoji} ${reward.title}",
         description = reward.description ?: "Souhait créé par un parent.",
         costLabel = "${reward.cost} Flammèches",
         enabled = canRequest && !isSubmitting,
+        supportingText = supportingText,
         onMakeWish = if (isParent) null else onRequest,
     )
 }
@@ -319,6 +344,13 @@ private fun RewardRequestRow(
             style = MaterialTheme.typography.bodyMedium,
             color = MagicViolet,
         )
+        if (request.status == RewardRequestStatus.PENDING) {
+            Text(
+                text = "Parchemin en attente de validation.",
+                style = MaterialTheme.typography.bodySmall,
+                color = InkMuted,
+            )
+        }
 
         if (isParent && request.status == RewardRequestStatus.PENDING) {
             Row(
