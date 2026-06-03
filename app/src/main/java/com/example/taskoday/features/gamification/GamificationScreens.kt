@@ -96,19 +96,27 @@ fun NestScreen(
             DragonCard(
                 title = "Pyron",
                 stage = "Bébé dragon braise",
-                nextStep = "Prochaine évolution : jeune dragon",
+                nextStep = "Investis des consommables pour choisir sa prochaine évolution.",
                 assetResId = NestAssets.dragonAsset("pyron", "baby"),
                 contentDescription = "Dragon Pyron, stade bébé",
+                badgeLabel = "Compagnon actif",
+                primaryActionLabel = "Faire évoluer",
+                onPrimaryAction = {},
+                secondaryActionLabel = "Changer de compagnon",
+                onSecondaryAction = {},
             )
         }
         item {
             EggProgressCard(
                 title = "Œuf Pyron",
                 status = "Chaleur douce",
-                requirements = "Continue les routines simples pour nourrir sa flamme.",
+                requirements = "Ajoute des pousses, potions ou fragments pour avancer à ton rythme.",
                 progress = 0.72f,
                 assetResId = NestAssets.eggAsset("pyron", "glowing"),
                 contentDescription = "Œuf Pyron lumineux",
+                materialLabel = "Matériaux libres : 72%",
+                actionLabel = "Améliorer l'Œuf",
+                onAction = {},
             )
         }
         item {
@@ -121,6 +129,20 @@ fun NestScreen(
                 unopenedChests = 1,
                 assetResId = NestAssets.chestAsset("common"),
                 contentDescription = "Coffre du Gardien",
+            )
+        }
+        item {
+            ChestCard(
+                points = 0,
+                pointsRequired = 0,
+                unopenedChests = 1,
+                title = "Coffres en Cristaux",
+                costLabel = "Commun 5 Cristaux, rare 15, épique 40.",
+                actionLabel = "Ouvrir un coffre",
+                onAction = {},
+                assetResId = NestAssets.chestAsset("rare"),
+                contentDescription = "Coffre rare",
+                rarity = "rare",
             )
         }
         item {
@@ -179,6 +201,7 @@ fun InventoryScreen(
                     quantity = item.quantity,
                     assetResId = item.assetResId,
                     contentDescription = "${item.title}, ${item.rarityLabel}",
+                    usageLabel = item.usageLabel,
                 )
             }
         }
@@ -215,6 +238,9 @@ fun EggsScreen(
                     assetResId = egg.assetResId,
                     contentDescription = egg.contentDescription,
                     locked = egg.locked,
+                    materialLabel = egg.materialLabel,
+                    actionLabel = egg.actionLabel,
+                    onAction = {},
                 )
             }
         }
@@ -227,7 +253,7 @@ fun DragonsScreen(
 ) {
     GamificationListScreen(
         title = "Dragons",
-        subtitle = "Les compagnons braise débloqués dans Le Nid.",
+        subtitle = "Les compagnons du Gardien débloqués dans Le Nid.",
         assetResId = NestAssets.dragonAsset("pyron", "baby"),
         assetDescription = "Dragon Pyron bébé",
         onOpenProfile = onOpenProfile,
@@ -249,6 +275,11 @@ fun DragonsScreen(
                     nextStep = dragon.nextStep,
                     assetResId = dragon.assetResId,
                     contentDescription = dragon.contentDescription,
+                    badgeLabel = if (dragon.active) "Compagnon actif" else null,
+                    primaryActionLabel = if (dragon.active) "Faire évoluer" else "Définir comme compagnon",
+                    onPrimaryAction = {},
+                    secondaryActionLabel = "Voir l'artefact",
+                    onSecondaryAction = {},
                 )
             }
         }
@@ -481,6 +512,7 @@ data class LootUiItem(
     val rarityLabel: String,
     val quantity: Int,
     val assetResId: Int,
+    val usageLabel: String,
 )
 
 data class EggUiItem(
@@ -492,6 +524,8 @@ data class EggUiItem(
     val assetResId: Int,
     val locked: Boolean = false,
     val contentDescription: String = title,
+    val materialLabel: String? = null,
+    val actionLabel: String? = "Améliorer l'Œuf",
 )
 
 data class DragonUiItem(
@@ -501,6 +535,7 @@ data class DragonUiItem(
     val nextStep: String,
     val assetResId: Int,
     val contentDescription: String = title,
+    val active: Boolean = false,
 )
 
 data class WishUiItem(
@@ -524,37 +559,38 @@ data class ParentRequestUiItem(
 
 private val sampleLoot =
     listOf(
-        LootUiItem("lanterne", "Lanterne", "commun", 1, NestAssets.inventoryItemAsset("lantern")),
-        LootUiItem("pousse_feuille", "Pousse de feuille", "commun", 4, NestAssets.inventoryItemAsset("leaf_sprout")),
-        LootUiItem("livre_magique", "Livre magique", "rare", 1, NestAssets.inventoryItemAsset("magic_book")),
-        LootUiItem("charme_etoile", "Charme étoilé", "rare", 2, NestAssets.inventoryItemAsset("star_charm")),
-        LootUiItem("cristal", "Cristal", "commun", 6, NestAssets.interfaceAsset("crystal")),
-        LootUiItem("flammeches", "Flammèches", "commun", 20, NestAssets.interfaceAsset("flammeche")),
-        LootUiItem("coffre_rare", "Coffre rare", "rare", 1, NestAssets.chestAsset("rare")),
+        LootUiItem("crystal", "Cristal", "ressource", 6, NestAssets.interfaceAsset("crystal"), "Ouvrir des Coffres"),
+        LootUiItem("wood_logs", "Rondins de bois", "commun", 3, NestAssets.inventoryItemAsset("wood_logs"), "Perchoir"),
+        LootUiItem("leaf_sprout", "Pousse de feuille", "commun", 4, NestAssets.inventoryItemAsset("leaf_sprout"), "Œuf ou Perchoir"),
+        LootUiItem("mushroom", "Champignon", "commun", 2, NestAssets.inventoryItemAsset("mushroom"), "Œuf"),
+        LootUiItem("potion", "Potion douce", "peu commun", 1, NestAssets.inventoryItemAsset("potion"), "Dragon ou Œuf"),
+        LootUiItem("lantern", "Lanterne", "peu commun", 1, NestAssets.inventoryItemAsset("lantern"), "Perchoir"),
+        LootUiItem("magic_book", "Livre magique", "rare", 1, NestAssets.inventoryItemAsset("magic_book"), "Dragon"),
+        LootUiItem("star_charm", "Charme étoile", "épique", 1, NestAssets.inventoryItemAsset("star_charm"), "Artefact légendaire"),
     )
 
 private val sampleEggs =
     listOf(
-        EggUiItem("egg_pyron", "Œuf Pyron", "Chaleur douce", "Progression principale du Gardien", 0.72f, NestAssets.eggAsset("pyron", "glowing"), contentDescription = "Œuf Pyron lumineux"),
-        EggUiItem("egg_fulmio", "Œuf Fulmio", "Énergie calme", "Activité physique et défis rapides", 0.34f, NestAssets.eggAsset("fulmio", "warm"), contentDescription = "Œuf Fulmio tiède"),
-        EggUiItem("egg_sylvyn", "Œuf Sylvyn", "Racines paisibles", "Rangement, maison et aide familiale", 0.18f, NestAssets.eggAsset("sylvyn", "sleeping"), contentDescription = "Œuf Sylvyn endormi"),
-        EggUiItem("egg_phenor", "Œuf Phenor", "Patience retrouvée", "Reprise après pause et persévérance", 0.48f, NestAssets.eggAsset("phenor", "glowing"), contentDescription = "Œuf Phenor lumineux"),
-        EggUiItem("egg_lunarys", "Œuf Lunarys", "Veillée tranquille", "Routines du soir et calme", 0.82f, NestAssets.eggAsset("lunarys", "cracked"), contentDescription = "Œuf Lunarys fissuré"),
-        EggUiItem("egg_chronyx", "Œuf Chronyx", "Temps régulier", "Séries, patience et habitudes", 0.27f, NestAssets.eggAsset("chronyx", "warm"), contentDescription = "Œuf Chronyx tiède"),
-        EggUiItem("egg_ambrio", "Œuf Ambrio", "Cœur attentif", "Entraide et gentillesse", 0.10f, NestAssets.eggAsset("ambrio", "sleeping"), contentDescription = "Œuf Ambrio endormi"),
-        EggUiItem("egg_cristao", "Œuf Cristao", "Concentration claire", "Lecture, devoirs et apprentissage", 1f, NestAssets.eggAsset("cristao", "hatching"), contentDescription = "Œuf Cristao en éclosion"),
+        EggUiItem("egg_pyron", "Œuf Pyron", "Chaleur douce", "Pousses, potions ou fragments au choix", 0.72f, NestAssets.eggAsset("pyron", "glowing"), contentDescription = "Œuf Pyron lumineux", materialLabel = "72% de matériaux"),
+        EggUiItem("egg_fulmio", "Œuf Fulmio", "Souffle tranquille", "Matériaux libres, aucune tâche imposée", 0.34f, NestAssets.eggAsset("fulmio", "warm"), contentDescription = "Œuf Fulmio tiède", materialLabel = "34% de matériaux"),
+        EggUiItem("egg_sylvyn", "Œuf Sylvyn", "Racines paisibles", "Rondins et pousses peuvent l'aider", 0.18f, NestAssets.eggAsset("sylvyn", "sleeping"), contentDescription = "Œuf Sylvyn endormi", materialLabel = "18% de matériaux"),
+        EggUiItem("egg_phenor", "Œuf Phenor", "Patience retrouvée", "Un retour après pause peut aussi apporter du loot", 0.48f, NestAssets.eggAsset("phenor", "glowing"), contentDescription = "Œuf Phenor lumineux", materialLabel = "48% de matériaux"),
+        EggUiItem("egg_lunarys", "Œuf Lunarys", "Veillée tranquille", "Choisis les objets que tu veux investir", 0.82f, NestAssets.eggAsset("lunarys", "cracked"), contentDescription = "Œuf Lunarys fissuré", materialLabel = "82% de matériaux"),
+        EggUiItem("egg_chronyx", "Œuf Chronyx", "Temps régulier", "Les consommables guident sa progression", 0.27f, NestAssets.eggAsset("chronyx", "warm"), contentDescription = "Œuf Chronyx tiède", materialLabel = "27% de matériaux"),
+        EggUiItem("egg_ambrio", "Œuf Ambrio", "Cœur attentif", "Les doublons deviendront des Cristaux ou fragments", 0.10f, NestAssets.eggAsset("ambrio", "sleeping"), contentDescription = "Œuf Ambrio endormi", materialLabel = "10% de matériaux"),
+        EggUiItem("egg_cristao", "Œuf Cristao", "Concentration claire", "Prêt à éclore avec les bons objets", 1f, NestAssets.eggAsset("cristao", "hatching"), contentDescription = "Œuf Cristao en éclosion", materialLabel = "Prêt à éclore", actionLabel = "Faire éclore"),
     )
 
 private val sampleDragons =
     listOf(
-        DragonUiItem("dragon_pyron", "Pyron", "Bébé dragon braise", "Progression générale et motivation principale", NestAssets.dragonAsset("pyron", "baby"), contentDescription = "Dragon Pyron bébé"),
-        DragonUiItem("dragon_fulmio", "Fulmio", "Jeune dragon tempête", "Activité physique et défis dynamiques", NestAssets.dragonAsset("fulmio", "young"), contentDescription = "Dragon Fulmio jeune"),
-        DragonUiItem("dragon_sylvyn", "Sylvyn", "Dragon racine moyen", "Rangement, maison et aide familiale", NestAssets.dragonAsset("sylvyn", "medium"), contentDescription = "Dragon Sylvyn moyen"),
-        DragonUiItem("dragon_phenor", "Phenor", "Dragon phénix jeune", "Reprise après pause, toujours sans punition", NestAssets.dragonAsset("phenor", "young"), contentDescription = "Dragon Phenor jeune"),
-        DragonUiItem("dragon_lunarys", "Lunarys", "Grand dragon lunaire", "Routines du soir et sommeil", NestAssets.dragonAsset("lunarys", "large"), contentDescription = "Dragon Lunarys grand"),
-        DragonUiItem("dragon_chronyx", "Chronyx", "Dragon chronos moyen", "Séries, régularité et patience", NestAssets.dragonAsset("chronyx", "medium"), contentDescription = "Dragon Chronyx moyen"),
-        DragonUiItem("dragon_ambrio", "Ambrio", "Dragon cœur bébé", "Entraide, famille et comportement positif", NestAssets.dragonAsset("ambrio", "baby"), contentDescription = "Dragon Ambrio bébé"),
-        DragonUiItem("dragon_cristao", "Cristao", "Dragon cristal légendaire", "Devoirs, lecture et concentration", NestAssets.dragonAsset("cristao", "legendary"), contentDescription = "Dragon Cristao légendaire"),
+        DragonUiItem("dragon_pyron", "Pyron", "Bébé dragon braise", "Consommables choisis pour la prochaine évolution", NestAssets.dragonAsset("pyron", "baby"), contentDescription = "Dragon Pyron bébé", active = true),
+        DragonUiItem("dragon_fulmio", "Fulmio", "Jeune dragon tempête", "Peut devenir compagnon quand le Gardien le souhaite", NestAssets.dragonAsset("fulmio", "young"), contentDescription = "Dragon Fulmio jeune"),
+        DragonUiItem("dragon_sylvyn", "Sylvyn", "Dragon racine moyen", "Progression libre par objets et Cristaux", NestAssets.dragonAsset("sylvyn", "medium"), contentDescription = "Dragon Sylvyn moyen"),
+        DragonUiItem("dragon_phenor", "Phenor", "Dragon phénix jeune", "Reprise douce, toujours sans punition", NestAssets.dragonAsset("phenor", "young"), contentDescription = "Dragon Phenor jeune"),
+        DragonUiItem("dragon_lunarys", "Lunarys", "Grand dragon lunaire", "Le lore reste doux sans verrou de tâche", NestAssets.dragonAsset("lunarys", "large"), contentDescription = "Dragon Lunarys grand"),
+        DragonUiItem("dragon_chronyx", "Chronyx", "Dragon chronos moyen", "Régularité et patience en inspiration", NestAssets.dragonAsset("chronyx", "medium"), contentDescription = "Dragon Chronyx moyen"),
+        DragonUiItem("dragon_ambrio", "Ambrio", "Dragon cœur bébé", "Entraide et famille en inspiration", NestAssets.dragonAsset("ambrio", "baby"), contentDescription = "Dragon Ambrio bébé"),
+        DragonUiItem("dragon_cristao", "Cristao", "Dragon cristal légendaire", "Artefact légendaire préparé", NestAssets.dragonAsset("cristao", "legendary"), contentDescription = "Dragon Cristao légendaire"),
     )
 
 private val sampleWishes =

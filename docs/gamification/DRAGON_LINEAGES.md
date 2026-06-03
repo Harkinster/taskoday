@@ -1,8 +1,14 @@
 # Dragon Lineages
 
-Ce registre documente les 8 familles officielles du Nid. Il decrit le mapping visuel, l'energie associee et les intentions de progression, sans modifier les regles metier backend.
+Ce registre documente les 8 familles officielles du Nid. Les lignees sont du lore, du design et de l'attachement. Elles ne verrouillent pas la progression.
 
-## Progression des oeufs
+## Regle produit
+
+- Une tache terminee donne des ressources generiques.
+- Le Gardien choisit ensuite quel Oeuf, Dragon ou Perchoir ameliorer.
+- Les categories de taches peuvent inspirer le texte et les bonus, mais ne doivent pas forcer une lignee.
+
+## Progression des Oeufs
 
 | Progression | Etat visuel | Fonction Android |
 | --- | --- | --- |
@@ -12,30 +18,28 @@ Ce registre documente les 8 familles officielles du Nid. Il decrit le mapping vi
 | 76 a 99 % | `cracked` | `NestAssets.eggAsset(dragonKey, "cracked")` |
 | 100 % | `hatching` | `NestAssets.eggAsset(dragonKey, "hatching")` |
 
-Apres eclosion, le dragon commence au stade `baby`.
+## Progression des Dragons
 
-## Progression des dragons
+| Stade visuel | Fonction Android |
+| --- | --- |
+| `baby` | `NestAssets.dragonAsset(dragonKey, "baby")` |
+| `young` | `NestAssets.dragonAsset(dragonKey, "young")` |
+| `medium` | `NestAssets.dragonAsset(dragonKey, "medium")` |
+| `large` | `NestAssets.dragonAsset(dragonKey, "large")` |
+| `legendary` | `NestAssets.dragonAsset(dragonKey, "legendary")` |
 
-| XP de lignee | Stade visuel | Fonction Android |
-| --- | --- | --- |
-| 0 | `baby` | `NestAssets.dragonAsset(dragonKey, "baby")` |
-| 500 | `young` | `NestAssets.dragonAsset(dragonKey, "young")` |
-| 1500 | `medium` | `NestAssets.dragonAsset(dragonKey, "medium")` |
-| 3500 | `large` | `NestAssets.dragonAsset(dragonKey, "large")` |
-| 7000 | `legendary` | `NestAssets.dragonAsset(dragonKey, "legendary")` |
+## Lignees officielles
 
-## Lignes officielles
-
-| Dragon | Key | Lignee | Energie | Taches associees | Progression | Couleurs | Role gameplay |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| Fulmio | `fulmio` | Tempete | `storm` | Activite physique, defi dynamique, mission rapide | Gagne avec les taches d'activite, sport et mouvement | Bleu electrique, violet, blanc lumineux | Canalise l'energie et encourage l'action |
-| Sylvyn | `sylvyn` | Racine | `root` | Rangement, maison, aide familiale | Gagne avec missions maison et routines de rangement | Vert mousse, brun bois, dore naturel | Ancre les habitudes familiales |
-| Phenor | `phenor` | Phenix | `phoenix` | Reprise apres pause, retour apres oubli, perseverance | Gagne surtout via bonus de retour, jamais via punition | Orange, or, rouge doux | Favorise la reprise douce |
-| Lunarys | `lunarys` | Lunaire | `lunar` | Routine du soir, coucher, calme | Gagne avec les routines du soir | Bleu nuit, violet, dore doux | Accompagne le calme et le sommeil |
-| Pyron | `pyron` | Braise | `ember` | Progression generale, routines simples, motivation principale | Dragon de depart recommande | Orange braise, noir chaud, dore | Porte la progression principale du Gardien |
-| Chronyx | `chronyx` | Chronos | `chronos` | Series, regularite, habitudes | Gagne via flamme de suite et journees completes | Dore, violet, brun ancien | Valorise la patience et la constance |
-| Ambrio | `ambrio` | Coeur | `heart` | Entraide, gentillesse, comportement positif | Gagne via missions d'aide et encouragements parent | Dore, rose doux, orange chaud | Renforce les gestes familiaux positifs |
-| Cristao | `cristao` | Cristal | `crystal` | Devoirs, lecture, apprentissage | Gagne via quetes d'apprentissage et devoirs | Bleu cristallin, cyan, violet magique | Soutient concentration et apprentissage |
+| Dragon | Key | Lignee | Theme | Couleurs | Role lore |
+| --- | --- | --- | --- | --- | --- |
+| Fulmio | `fulmio` | Tempete | mouvement, elan, defis | bleu electrique, violet, blanc lumineux | canalise l'energie |
+| Sylvyn | `sylvyn` | Racine | foyer, rangement, stabilite | vert mousse, brun bois, dore naturel | ancre les habitudes |
+| Phenor | `phenor` | Phenix | reprise, perseverance | orange, or, rouge doux | valorise le retour |
+| Lunarys | `lunarys` | Lunaire | soir, calme, sommeil | bleu nuit, violet, dore doux | accompagne l'apaisement |
+| Pyron | `pyron` | Braise | motivation principale | orange braise, noir chaud, dore | porte la flamme du Nid |
+| Chronyx | `chronyx` | Chronos | regularite, series, patience | dore, violet, brun ancien | valorise le temps |
+| Ambrio | `ambrio` | Coeur | entraide, famille, gentillesse | dore, rose doux, orange chaud | renforce le lien familial |
+| Cristao | `cristao` | Cristal | apprentissage, concentration | bleu cristallin, cyan, violet magique | soutient la clarte |
 
 ## Assets attendus par famille
 
@@ -52,4 +56,4 @@ Chaque famille doit fournir :
 - `asset_dragon_{dragon}_large`
 - `asset_dragon_{dragon}_legendary`
 
-Tous ces assets sont presents dans `docs/assetsbase/` et copies dans `app/src/main/res/drawable-nodpi/`.
+Les artefacts legendaires futurs suivent le pattern `asset_artifact_{dragon}_legendary` et utilisent `asset_item_star_charm` en fallback.

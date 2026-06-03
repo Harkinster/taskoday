@@ -23,6 +23,14 @@ Inventaire genere depuis `docs/assetsbase/`. Les fichiers finaux `asset_*.png` o
 | --- | --- | --- | --- |
 | `asset_nest_background` | backgrounds | manquant optionnel | `asset_icon_nid` |
 | `asset_wish_cave_background` | backgrounds | manquant optionnel | `asset_icon_nid` |
+| `asset_artifact_fulmio_legendary` | artifacts | manquant optionnel | `asset_item_star_charm` |
+| `asset_artifact_sylvyn_legendary` | artifacts | manquant optionnel | `asset_item_star_charm` |
+| `asset_artifact_phenor_legendary` | artifacts | manquant optionnel | `asset_item_star_charm` |
+| `asset_artifact_lunarys_legendary` | artifacts | manquant optionnel | `asset_item_star_charm` |
+| `asset_artifact_pyron_legendary` | artifacts | manquant optionnel | `asset_item_star_charm` |
+| `asset_artifact_chronyx_legendary` | artifacts | manquant optionnel | `asset_item_star_charm` |
+| `asset_artifact_ambrio_legendary` | artifacts | manquant optionnel | `asset_item_star_charm` |
+| `asset_artifact_cristao_legendary` | artifacts | manquant optionnel | `asset_item_star_charm` |
 
 ## Inventaire complet
 

@@ -1,19 +1,22 @@
-# Taskoday Rewards And Ecailles API
+# Taskoday Rewards And Flammeches API
 
 ## Principles
 
 - XP is never spent.
-- XP is reserved for Gardien, dragon, sanctuary, levels and profile history.
-- `scales` and `flammeches` remain backend compatibility names for Ecailles.
-- Ecailles are only spent on parent-created external rewards.
-- Loot items, not Ecailles, are used for eggs and dragon evolution.
-- Approval spends Ecailles and creates a Parchemin.
+- XP is reserved for Gardien, sanctuary, levels and profile history.
+- `scales` and `flammeches` remain backend compatibility names.
+- The user-facing currency is Flammeches.
+- Flammeches are only spent on parent-created Souhaits.
+- Loot items, Cristaux and consumables are used for Coffres, Oeufs, Dragons and Perchoirs.
+- Approval spends Flammeches and creates a Parchemin.
 
 ## Completion Rewards
 
-- Routine: +5 XP, +2 Ecailles, +1 chest point.
-- Mission: +15 XP, +6 Ecailles, +3 chest points.
-- Quest: +30 XP, +12 Ecailles, rare chest guaranteed.
+- Routine: +5 XP, +2 Flammeches, +1 chest point.
+- Mission: +15 XP, +6 Flammeches, +3 chest points.
+- Quest: +30 XP, +12 Flammeches, rare chest guaranteed.
+
+The target balancing can also award Cristaux without changing legacy endpoints.
 
 ## Statuses
 
@@ -36,7 +39,7 @@ Parchemin statuses:
 
 All endpoints below are under `/api/v1`.
 
-### Ecailles
+### Flammeches
 
 `GET /children/{child_id}/flammeches`
 
@@ -76,11 +79,13 @@ Parent only.
 }
 ```
 
+`cost_scales` is a compatibility field that means Flammeches.
+
 `GET /children/{child_id}/wishes`
 
 Compatibility: `GET /children/{child_id}/rewards`
 
-Parent or child. Children only see active rewards.
+Parent or child. Children only see active Souhaits.
 
 `PATCH /rewards/{reward_id}`
 
@@ -100,7 +105,7 @@ Child only.
 }
 ```
 
-The request stays `pending`; Ecailles are not spent yet.
+The request stays `pending`; Flammeches are not spent yet.
 
 `GET /children/{child_id}/wish-requests`
 
@@ -120,7 +125,7 @@ Parent only.
 ```
 
 Allowed decision statuses from `pending`: `approved`, `refused`, `expired`.
-Approval checks the balance again, spends Ecailles and creates a Parchemin.
+Approval checks the balance again, spends Flammeches and creates a Parchemin.
 
 ### Scrolls
 

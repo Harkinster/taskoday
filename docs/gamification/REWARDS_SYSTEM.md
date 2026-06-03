@@ -1,34 +1,34 @@
 # Rewards System
 
-## Currency Split
+## Separation des monnaies
 
-- XP du Gardien is progression only.
-- Ecailles are the only currency for external parent-created rewards.
-- Loot items are the only materials for eggs and dragon evolution.
+- L'XP du Gardien est reservee a la progression. Elle n'est jamais depensee.
+- Les Flammeches sont la seule monnaie pour les Souhaits crees par les parents.
+- Les Cristaux et consommables servent au Nid, aux Coffres, aux Oeufs, aux Dragons et aux Perchoirs.
 
 ## Caverne aux Souhaits
 
-Parents create active rewards for a child:
+Les parents creent des Souhaits actifs pour un enfant :
 
 - `id`
 - `title`
 - `description`
-- `cost_scales` as the backend-compatible field for Ecailles
+- `cost_scales`, champ backend-compatible qui represente le cout en Flammeches
 - `is_active`
-- optional visual `emoji`
+- `emoji` optionnel
 
-MVP keeps compatibility with `/rewards` and adds `/wishes` aliases.
+Le MVP garde les routes `/rewards` et ajoute les alias `/wishes`.
 
-## Wish Flow
+## Parcours Souhait
 
-1. Child can request an active reward if current Ecailles balance covers the cost.
-2. Request is created with `pending` status.
-3. Pending request does not spend Ecailles.
-4. Parent can approve or refuse.
-5. Approval checks balance again, spends Ecailles, and creates a Parchemin.
-6. Refusal does not spend Ecailles.
+1. L'enfant peut demander un Souhait actif si son solde de Flammeches couvre le cout.
+2. La demande est creee avec le statut `pending`.
+3. Une demande en attente ne depense pas de Flammeches.
+4. Le parent peut accepter ou refuser.
+5. L'acceptation verifie le solde, retire les Flammeches et cree un Parchemin.
+6. Le refus ne retire rien.
 
-Request statuses:
+Statuts de demande :
 
 - `pending`
 - `approved`
@@ -36,25 +36,30 @@ Request statuses:
 - `used`
 - `expired`
 
-Parchemin statuses:
+Statuts de Parchemin :
 
 - `available`
 - `used`
 - `expired`
 - `cancelled`
 
-## Compatibility
+## Compatibilite
 
-Existing names kept:
+Noms historiques conserves :
 
 - `/children/{child_id}/scales`
 - `/rewards/{reward_id}/requests`
 - `/reward-coupons/{coupon_id}/use`
+- `cost_scales`
+- `scales_balance`
 
-New aliases:
+Alias et vocabulaire cible :
 
-- `/children/{child_id}/flammeches` (compatibility route for Ecailles)
+- `/children/{child_id}/flammeches`
 - `/children/{child_id}/wishes`
 - `/wishes/{reward_id}/requests`
 - `/children/{child_id}/scrolls`
 - `/scrolls/{coupon_id}/use`
+- `flammeches_balance`
+
+Les noms legacy ne doivent pas etre affiches dans l'UI utilisateur.

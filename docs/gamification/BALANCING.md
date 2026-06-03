@@ -1,44 +1,60 @@
-# Balancing XP et Flammeches
+# Balancing XP, Flammeches, Cristaux et Coffres
 
-Ce document propose un bareme MVP pour Le Nid. Il sert de reference produit et design, sans changement backend automatique.
+Ce document propose un bareme MVP cible. Il ne modifie pas automatiquement le backend.
+
+## Ressources
+
+| Ressource | Role | Peut etre depensee |
+| --- | --- | --- |
+| XP du Gardien | progression du profil et du Nid | non |
+| Flammeches | Souhaits dans la Caverne aux Souhaits | oui, seulement sur accord parent |
+| Cristaux | ouverture ou obtention de Coffres | oui |
+| Consommables | Oeufs, Dragons, Perchoirs | oui |
 
 ## Bareme recommande
 
-| Evenement | XP Gardien | Flammeches | Energie de lignee |
-| --- | --- | --- | --- |
-| Routine simple | +5 | +2 | +1 energie liee |
-| Routine importante | +8 | +4 | +2 energie liee |
-| Mission simple | +10 | +5 | +2 energie liee |
-| Quete | +20 a +40 | +10 a +20 | +3 a +6 energie liee |
-| Journee complete | +25 | +10 | +2 energie Chronos |
-| Flamme de suite 3 jours | +30 | +15 | +3 energie Chronos |
-| Flamme de suite 7 jours | +100 | +50 | +8 energie Chronos |
-| Retour apres pause | +15 | +5 | +2 energie Phenix |
+| Evenement | XP Gardien | Flammeches | Cristaux | Coffre |
+| --- | ---: | ---: | ---: | --- |
+| Routine simple | +5 | +2 | +1 | progression douce |
+| Routine importante | +8 | +4 | +1 a +2 | progression douce |
+| Mission simple | +15 | +6 | +2 a +3 | progression moyenne |
+| Quete | +30 | +12 | +4 a +6 | chance ou Coffre rare |
+| Journee complete | +25 | +10 | +3 | chance Coffre commun |
+| Suite 3 jours | +30 | +15 | +5 | Coffre commun possible |
+| Suite 7 jours | +100 | +50 | +15 | Coffre rare possible |
+| Retour apres pause | +15 | +5 | +3 | bonus reprise doux |
 
-## Energies associees
+## Cout des Coffres
 
-| Energie | Dragon | Actions principales |
-| --- | --- | --- |
-| `storm` | Fulmio | Activite physique, mouvement, defis rapides |
-| `root` | Sylvyn | Rangement, maison, aide familiale |
-| `phoenix` | Phenor | Retour apres pause, perseverance |
-| `lunar` | Lunarys | Soir, calme, sommeil |
-| `ember` | Pyron | Routines simples, progression principale |
-| `chronos` | Chronyx | Regularite, series, habitudes |
-| `heart` | Ambrio | Entraide, gentillesse, comportement positif |
-| `crystal` | Cristao | Devoirs, lecture, apprentissage |
+| Coffre | Cout Cristaux |
+| --- | ---: |
+| Commun | 5 |
+| Rare | 15 |
+| Epique | 40 |
 
-## Regles anti-frustration
+Les Coffres directs donnes par une mission ou une quete peuvent rester gratuits a ouvrir pendant la phase de compatibilite.
+
+## Anti-frustration
 
 - Ne jamais retirer d'XP.
-- Ne jamais retirer de dragon.
+- Ne jamais retirer un Dragon.
 - Ne jamais afficher "echec".
-- Ne jamais rendre un dragon malade.
-- Toujours favoriser la reprise.
-- Le retour apres pause doit etre valorise par Phenor plutot que sanctionne.
+- Ne jamais rendre un Dragon malade.
+- Valoriser le retour apres une pause.
+- Convertir les doublons d'Oeufs en Cristaux, consommables ou fragments.
+- Laisser le Gardien choisir quel Oeuf, Dragon ou Perchoir ameliorer.
 
-## Notes produit
+## Lignees
 
-- L'XP sert uniquement a la progression du Gardien, des dragons et du Nid.
-- Les Flammeches servent a demander des Souhaits dans la Caverne aux Souhaits.
-- Les baremes peuvent etre ajustes cote produit, mais l'interface doit rester positive et familiale.
+Les lignees donnent du sens visuel :
+
+- Fulmio : tempete, mouvement.
+- Sylvyn : racine, foyer.
+- Phenor : phenix, reprise.
+- Lunarys : calme, soir.
+- Pyron : braise, motivation.
+- Chronyx : temps, regularite.
+- Ambrio : coeur, entraide.
+- Cristao : cristal, apprentissage.
+
+Elles ne doivent pas imposer un verrou de progression par categorie de tache.

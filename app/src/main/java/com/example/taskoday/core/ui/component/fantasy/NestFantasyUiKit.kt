@@ -316,6 +316,9 @@ fun EggProgressCard(
     assetResId: Int = NestAssets.eggAsset("pyron", "sleeping"),
     contentDescription: String = title,
     locked: Boolean = false,
+    materialLabel: String? = null,
+    actionLabel: String? = null,
+    onAction: (() -> Unit)? = null,
 ) {
     FantasyCard(modifier = modifier.fillMaxWidth(), tone = if (locked) FantasyTone.Night else FantasyTone.Gold) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -339,6 +342,18 @@ fun EggProgressCard(
                 )
             }
         }
+        if (!materialLabel.isNullOrBlank()) {
+            Text(text = materialLabel, style = MaterialTheme.typography.labelLarge, color = WoodBrownDark)
+        }
+        if (!actionLabel.isNullOrBlank() && onAction != null) {
+            FantasyButton(
+                text = actionLabel,
+                onClick = onAction,
+                style = FantasyButtonStyle.Quiet,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !locked,
+            )
+        }
     }
 }
 
@@ -351,6 +366,11 @@ fun DragonCard(
     assetResId: Int = NestAssets.dragonAsset("pyron", "baby"),
     contentDescription: String = title,
     locked: Boolean = false,
+    badgeLabel: String? = null,
+    primaryActionLabel: String? = null,
+    onPrimaryAction: (() -> Unit)? = null,
+    secondaryActionLabel: String? = null,
+    onSecondaryAction: (() -> Unit)? = null,
 ) {
     FantasyCard(modifier = modifier.fillMaxWidth(), tone = if (locked) FantasyTone.Night else FantasyTone.Ember) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -371,7 +391,28 @@ fun DragonCard(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
+                if (!badgeLabel.isNullOrBlank()) {
+                    Text(text = badgeLabel, style = MaterialTheme.typography.labelLarge, color = MossGreen)
+                }
             }
+        }
+        if (!primaryActionLabel.isNullOrBlank() && onPrimaryAction != null) {
+            FantasyButton(
+                text = primaryActionLabel,
+                onClick = onPrimaryAction,
+                style = FantasyButtonStyle.Filled,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !locked,
+            )
+        }
+        if (!secondaryActionLabel.isNullOrBlank() && onSecondaryAction != null) {
+            FantasyButton(
+                text = secondaryActionLabel,
+                onClick = onSecondaryAction,
+                style = FantasyButtonStyle.Outline,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !locked,
+            )
         }
     }
 }
@@ -469,6 +510,10 @@ fun ChestCard(
     assetResId: Int = NestAssets.chestAsset("common"),
     contentDescription: String = "Coffre",
     rarity: String = "common",
+    title: String = "Coffre du Gardien",
+    costLabel: String? = null,
+    actionLabel: String? = null,
+    onAction: (() -> Unit)? = null,
 ) {
     val progress = if (pointsRequired <= 0) 0f else points.toFloat() / pointsRequired.toFloat()
     val tone =
@@ -481,11 +526,24 @@ fun ChestCard(
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             FantasyAssetBubble(assetResId = assetResId, contentDescription = contentDescription, size = 58.dp)
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                Text(text = "Coffre du Gardien", style = MaterialTheme.typography.titleMedium, color = WoodBrownDark)
-                Text(text = "$points/$pointsRequired points coffre", style = MaterialTheme.typography.bodyMedium, color = InkMuted)
-                FantasyProgressBar(progress = progress)
+                Text(text = title, style = MaterialTheme.typography.titleMedium, color = WoodBrownDark)
+                if (pointsRequired > 0) {
+                    Text(text = "$points/$pointsRequired points coffre", style = MaterialTheme.typography.bodyMedium, color = InkMuted)
+                    FantasyProgressBar(progress = progress)
+                }
+                if (!costLabel.isNullOrBlank()) {
+                    Text(text = costLabel, style = MaterialTheme.typography.bodyMedium, color = InkMuted)
+                }
                 Text(text = "$unopenedChests coffre en attente", style = MaterialTheme.typography.bodySmall, color = MossGreen)
             }
+        }
+        if (!actionLabel.isNullOrBlank() && onAction != null) {
+            FantasyButton(
+                text = actionLabel,
+                onClick = onAction,
+                style = FantasyButtonStyle.Outline,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }
@@ -578,6 +636,7 @@ fun InventoryLootCard(
     modifier: Modifier = Modifier,
     assetResId: Int = NestAssets.interfaceAsset("crystal"),
     contentDescription: String = title,
+    usageLabel: String? = null,
 ) {
     FantasyCard(modifier = modifier.fillMaxWidth(), tone = if (rarity == "rare") FantasyTone.Violet else FantasyTone.Moss) {
         Row(
@@ -595,6 +654,9 @@ fun InventoryLootCard(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(text = rarity, style = MaterialTheme.typography.bodySmall, color = InkMuted)
+                if (!usageLabel.isNullOrBlank()) {
+                    Text(text = usageLabel, style = MaterialTheme.typography.bodySmall, color = MossGreen)
+                }
             }
             Text(text = "x$quantity", style = MaterialTheme.typography.titleLarge, color = WoodBrownDark)
         }

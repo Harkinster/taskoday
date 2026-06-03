@@ -11,7 +11,7 @@ data class DragonVisualFamily(
     val key: String,
     val name: String,
     val lineage: String,
-    val energy: String,
+    val lineageKey: String,
     val theme: String,
     val colors: String,
 )
@@ -19,7 +19,7 @@ data class DragonVisualFamily(
 object DragonVisualRegistry {
     val families =
         listOf(
-            DragonVisualFamily("fulmio", "Fulmio", "Tempete", "storm", "Energie, mouvement, activite, defis physiques", "Bleu electrique, violet, blanc lumineux"),
+            DragonVisualFamily("fulmio", "Fulmio", "Tempete", "storm", "Mouvement, activite, defis physiques", "Bleu electrique, violet, blanc lumineux"),
             DragonVisualFamily("sylvyn", "Sylvyn", "Racine", "root", "Rangement, maison, aide familiale, stabilite", "Vert mousse, brun bois, dore naturel"),
             DragonVisualFamily("phenor", "Phenor", "Phenix", "phoenix", "Reprise apres pause, perseverance, renaissance", "Orange, or, rouge doux"),
             DragonVisualFamily("lunarys", "Lunarys", "Lunaire", "lunar", "Routines du soir, calme, sommeil", "Bleu nuit, violet, dore doux"),
@@ -242,6 +242,12 @@ object NestAssets {
             "wood_logs" to ItemWoodLogs,
         )
 
+    // Remplacer ces fallbacks par les assets reels `asset_artifact_{dragon}_legendary` quand disponibles.
+    private val legendaryArtifactAssets =
+        DragonVisualRegistry.families.associate { family ->
+            family.key to NestAsset("asset_artifact_${family.key}_legendary", ItemStarCharm.resId)
+        }
+
     private val perchAssets =
         mapOf(1 to PerchLevel1, 2 to PerchLevel2, 3 to PerchLevel3, 4 to PerchLevel4, 5 to PerchLevel5)
 
@@ -265,6 +271,9 @@ object NestAssets {
 
     fun itemAsset(itemKey: String): Int =
         inventoryItemAsset(itemKey)
+
+    fun artifactAsset(dragonKey: String): Int =
+        legendaryArtifactAssets[dragonKey.normalizeAssetKey()]?.resId ?: ItemStarCharm.resId
 
     fun perchAsset(level: Int): Int =
         perchAssets[level.coerceIn(1, 5)]?.resId ?: PerchLevel1.resId
