@@ -46,14 +46,18 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.taskoday.R
 import com.example.taskoday.core.ui.theme.ArcaneViolet
+import com.example.taskoday.core.ui.theme.BackgroundBottom
+import com.example.taskoday.core.ui.theme.BackgroundTop
 import com.example.taskoday.core.ui.theme.DangerGlow
+import com.example.taskoday.core.ui.theme.EmberOrange
 import com.example.taskoday.core.ui.theme.NebulaViolet
 import com.example.taskoday.core.ui.theme.NeonBlue
 import com.example.taskoday.core.ui.theme.NeonCyan
 import com.example.taskoday.core.ui.theme.NeonCyanSoft
-import com.example.taskoday.core.ui.theme.NightBlue850
-import com.example.taskoday.core.ui.theme.NightBlue900
-import com.example.taskoday.core.ui.theme.NightBlue950
+import com.example.taskoday.core.ui.theme.NestNightBlue
+import com.example.taskoday.core.ui.theme.ParchmentCream
+import com.example.taskoday.core.ui.theme.ParchmentShadow
+import com.example.taskoday.core.ui.theme.SoftGold
 import com.example.taskoday.core.ui.theme.StarWhite
 import com.example.taskoday.core.ui.theme.SuccessGlow
 import com.example.taskoday.core.ui.theme.SurfacePanel
@@ -72,7 +76,7 @@ fun FantasyScreenBackground(
                 .background(
                     brush =
                         Brush.verticalGradient(
-                            colors = listOf(NightBlue900, NightBlue950),
+                            colors = listOf(BackgroundTop, BackgroundBottom),
                         ),
                 ),
     ) {
@@ -81,17 +85,17 @@ fun FantasyScreenBackground(
             val height = size.height
 
             drawCircle(
-                color = ArcaneViolet.copy(alpha = 0.28f),
-                radius = width * 0.54f,
-                center = Offset(width * 0.85f, height * 0.16f),
+                color = SoftGold.copy(alpha = 0.34f),
+                radius = width * 0.52f,
+                center = Offset(width * 0.88f, height * 0.08f),
             )
             drawCircle(
-                color = NeonCyan.copy(alpha = 0.12f),
+                color = ArcaneViolet.copy(alpha = 0.16f),
                 radius = width * 0.46f,
                 center = Offset(width * 0.12f, height * 0.70f),
             )
             drawCircle(
-                color = NeonBlue.copy(alpha = 0.18f),
+                color = EmberOrange.copy(alpha = 0.12f),
                 radius = width * 0.40f,
                 center = Offset(width * 0.88f, height * 0.90f),
             )
@@ -101,7 +105,7 @@ fun FantasyScreenBackground(
                 val y = (((i * 37 + 19) % 100) / 100f) * height
                 val radius = if (i % 4 == 0) 2.2f else 1.2f
                 drawCircle(
-                    color = StarWhite.copy(alpha = 0.14f),
+                    color = NestNightBlue.copy(alpha = 0.08f),
                     radius = radius,
                     center = Offset(x, y),
                 )
@@ -129,7 +133,7 @@ fun TaskodayBrand(
                 Modifier
                     .size(iconSize)
                     .clip(CircleShape)
-                    .background(NeonBlue.copy(alpha = 0.18f))
+                    .background(SoftGold.copy(alpha = 0.45f))
                     .border(
                         width = 1.dp,
                         color = NeonCyanSoft.copy(alpha = 0.62f),
@@ -167,7 +171,7 @@ fun UserAvatarBadge(
             .background(
                 brush =
                     Brush.radialGradient(
-                        colors = listOf(NeonBlue.copy(alpha = 0.88f), NightBlue850),
+                            colors = listOf(EmberOrange.copy(alpha = 0.88f), SoftGold),
                     ),
             )
             .border(
@@ -258,7 +262,7 @@ fun FantasyHeader(
 fun GlowingCard(
     modifier: Modifier = Modifier,
     shape: RoundedCornerShape = RoundedCornerShape(20.dp),
-    backgroundColor: Color = SurfacePanel.copy(alpha = 0.74f),
+    backgroundColor: Color = ParchmentCream.copy(alpha = 0.94f),
     contentPadding: PaddingValues = PaddingValues(16.dp),
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -375,7 +379,7 @@ fun NeonPrimaryButton(
             ButtonDefaults.buttonColors(
                 containerColor = NeonBlue,
                 contentColor = StarWhite,
-                disabledContainerColor = NightBlue850,
+                disabledContainerColor = ParchmentShadow,
                 disabledContentColor = TextMuted,
             ),
     ) {

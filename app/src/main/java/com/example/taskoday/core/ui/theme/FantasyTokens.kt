@@ -29,10 +29,10 @@ fun taskodayBackgroundBrush(): Brush = Brush.verticalGradient(listOf(BackgroundT
 
 fun taskodayNeonBorderBrush(): Brush =
     Brush.linearGradient(
-        colors = listOf(NeonBorderStart, NeonBorderEnd),
+        colors = listOf(SoftGold, MagicVioletSoft),
     )
 
 fun taskodayNeonProgressBrush(): Brush =
     Brush.horizontalGradient(
-        colors = listOf(NeonPurple, CrystalBlue, NeonCyan),
+        colors = listOf(EmberOrange, SoftGold, MossGreen),
     )

@@ -978,7 +978,7 @@ fun FantasyBottomNavigation(
                 .background(
                     brush =
                         Brush.verticalGradient(
-                            listOf(NightBlue850, NightBlue900),
+                            listOf(SurfacePanel, SurfaceGlass),
                         ),
                     shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
                 )
@@ -1005,7 +1005,7 @@ fun FantasyBottomNavigation(
                             .background(
                                 if (selected) {
                                     Brush.horizontalGradient(
-                                        colors = listOf(NeonBlue.copy(alpha = 0.32f), ArcaneViolet.copy(alpha = 0.26f)),
+                                        colors = listOf(NeonCyanSoft.copy(alpha = 0.42f), ArcaneViolet.copy(alpha = 0.18f)),
                                     )
                                 } else {
                                     Brush.horizontalGradient(

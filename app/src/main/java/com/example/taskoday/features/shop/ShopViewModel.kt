@@ -174,7 +174,7 @@ class ShopViewModel
                 rewardRepository
                     .useRemoteCoupon(couponId)
                     .onSuccess {
-                        _uiState.update { it.copy(isSubmitting = false, userMessage = "Parchemin utilise.") }
+                        _uiState.update { it.copy(isSubmitting = false, userMessage = "Parchemin utilisé.") }
                         refreshRemoteData()
                     }.onFailure { error ->
                         _uiState.update { it.copy(isSubmitting = false, userMessage = error.toUserMessage()) }

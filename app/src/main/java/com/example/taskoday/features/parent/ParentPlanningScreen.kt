@@ -1,31 +1,35 @@
 package com.example.taskoday.features.parent
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,15 +37,33 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.taskoday.core.ui.component.fantasy.FantasyScreenBackground
+import com.example.taskoday.core.ui.component.fantasy.NeonButton
+import com.example.taskoday.core.ui.component.fantasy.NeonButtonStyle
+import com.example.taskoday.core.ui.component.fantasy.NeonCard
+import com.example.taskoday.core.ui.component.fantasy.NeonTone
+import com.example.taskoday.core.ui.component.fantasy.TaskodayTopBar
+import com.example.taskoday.core.ui.theme.ArcaneViolet
+import com.example.taskoday.core.ui.theme.DangerGlow
+import com.example.taskoday.core.ui.theme.NeonBlue
+import com.example.taskoday.core.ui.theme.NeonCyan
+import com.example.taskoday.core.ui.theme.NeonCyanSoft
+import com.example.taskoday.core.ui.theme.StarWhite
+import com.example.taskoday.core.ui.theme.SuccessGlow
+import com.example.taskoday.core.ui.theme.SurfacePanel
+import com.example.taskoday.core.ui.theme.TextMuted
+import com.example.taskoday.core.ui.theme.WarningGlow
 import com.example.taskoday.core.ui.theme.spacing
 import com.example.taskoday.domain.model.DayPart
 import com.example.taskoday.domain.model.ParentChild
 import com.example.taskoday.domain.model.PlanningFormType
 import java.time.LocalDate
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ParentPlanningScreen(
     viewModel: ParentPlanningViewModel,
@@ -60,208 +82,288 @@ fun ParentPlanningScreen(
     var missionDate by rememberSaveable { mutableStateOf(LocalDate.now()) }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Mode parent") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(imageVector = Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Retour")
-                    }
-                },
-            )
-        },
+        containerColor = Color.Transparent,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
     ) { innerPadding ->
-        if (uiState.isLoading) {
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                CircularProgressIndicator()
-            }
-            return@Scaffold
-        }
-
-        if (!uiState.hasParentAccess) {
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                        .padding(spacing.medium),
-                verticalArrangement = Arrangement.spacedBy(spacing.medium),
-            ) {
-                Text("Acces refuse: cette section est reservee au parent.")
-                uiState.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                Button(onClick = onBack) { Text("Retour") }
-            }
-            return@Scaffold
-        }
-
-        Column(
+        FantasyScreenBackground(
             modifier =
                 Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(spacing.medium),
-            verticalArrangement = Arrangement.spacedBy(spacing.medium),
+                    .statusBarsPadding()
+                    .padding(innerPadding),
         ) {
-            Text("Choisir un enfant", style = MaterialTheme.typography.titleMedium)
-            ChildrenSelector(
-                children = uiState.children,
-                selectedChildId = uiState.selectedChildId,
-                onSelect = viewModel::selectChild,
-            )
-
-            FormTypeSelector(
-                selected = formType,
-                onSelect = { selected ->
-                    formType = selected
-                    pointsText =
-                        when (selected) {
-                            PlanningFormType.ROUTINE -> "1"
-                            PlanningFormType.MISSION -> "2"
-                            PlanningFormType.QUEST -> "3"
-                        }
-                },
-            )
-
-            OutlinedTextField(
-                value = title,
-                onValueChange = {
-                    title = it
-                    viewModel.clearMessages()
-                },
-                label = { Text("Titre") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            OutlinedTextField(
-                value = description,
-                onValueChange = {
-                    description = it
-                    viewModel.clearMessages()
-                },
-                label = { Text("Description (optionnelle)") },
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            DayPartSelector(
-                selected = selectedDayPart,
-                onSelect = {
-                    selectedDayPart = it
-                    viewModel.clearMessages()
-                },
-            )
-
-            when (formType) {
-                PlanningFormType.ROUTINE -> {
-                    WeekdaysSelector(
-                        selectedDays = routineWeekdays,
-                        onToggle = { day ->
-                            routineWeekdays =
-                                if (routineWeekdays.contains(day)) {
-                                    routineWeekdays - day
-                                } else {
-                                    routineWeekdays + day
-                                }
-                            viewModel.clearMessages()
-                        },
-                    )
-                    Text(
-                        "Aucun jour selectionne = routine quotidienne.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+            if (uiState.isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(color = NeonCyan)
                 }
-
-                PlanningFormType.MISSION -> {
-                    OutlinedTextField(
-                        value = missionDate.toString(),
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Date mission") },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(spacing.small)) {
-                        TextButton(onClick = {
-                            missionDate = missionDate.minusDays(1)
-                            viewModel.clearMessages()
-                        }) {
-                            Text("Jour precedent")
-                        }
-                        TextButton(onClick = {
-                            missionDate = missionDate.plusDays(1)
-                            viewModel.clearMessages()
-                        }) {
-                            Text("Jour suivant")
-                        }
-                    }
-                }
-
-                PlanningFormType.QUEST -> Unit
+                return@FantasyScreenBackground
             }
 
-            OutlinedTextField(
-                value = pointsText,
-                onValueChange = {
-                    pointsText = it.filter { c -> c.isDigit() }.take(3)
-                    viewModel.clearMessages()
-                },
-                label = { Text("Points") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            uiState.successMessage?.let {
-                Text(it, color = MaterialTheme.colorScheme.primary)
-            }
-            uiState.errorMessage?.let {
-                Text(it, color = MaterialTheme.colorScheme.error)
-            }
-
-            Button(
-                onClick = {
-                    val parsedPoints = pointsText.toIntOrNull() ?: defaultPoints(formType)
-                    when (formType) {
-                        PlanningFormType.ROUTINE ->
-                            viewModel.createRoutine(
-                                title = title,
-                                description = description,
-                                dayPart = selectedDayPart,
-                                selectedWeekdays = routineWeekdays,
-                                points = parsedPoints,
-                            )
-
-                        PlanningFormType.MISSION ->
-                            viewModel.createMission(
-                                title = title,
-                                description = description,
-                                dayPart = selectedDayPart,
-                                scheduledDate = missionDate,
-                                points = parsedPoints,
-                            )
-
-                        PlanningFormType.QUEST ->
-                            viewModel.createQuest(
-                                title = title,
-                                description = description,
-                                dayPart = selectedDayPart,
-                                points = parsedPoints,
-                            )
-                    }
-                },
-                enabled = !uiState.isSubmitting && uiState.selectedChildId != null,
-                modifier = Modifier.fillMaxWidth(),
+            LazyColumn(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = spacing.medium),
+                contentPadding = PaddingValues(top = spacing.large, bottom = spacing.xxLarge),
+                verticalArrangement = Arrangement.spacedBy(spacing.medium),
             ) {
-                Text(if (uiState.isSubmitting) "Envoi..." else "Ajouter")
+                item {
+                    ParentPlanningHeader(
+                        subtitle = formType.subtitle(),
+                        onBack = onBack,
+                    )
+                }
+
+                if (!uiState.hasParentAccess) {
+                    item {
+                        NeonCard(tone = NeonTone.Warning) {
+                            Text(
+                                text = "Accès refusé",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = WarningGlow,
+                            )
+                            Text(
+                                text = "Cette section est réservée au parent.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextMuted,
+                            )
+                            uiState.errorMessage?.let { message ->
+                                Text(message, color = DangerGlow, style = MaterialTheme.typography.bodyMedium)
+                            }
+                            NeonButton(
+                                text = "Retour",
+                                onClick = onBack,
+                                style = NeonButtonStyle.Outline,
+                            )
+                        }
+                    }
+                    return@LazyColumn
+                }
+
+                item {
+                    NeonCard(tone = NeonTone.Blue) {
+                        SectionTitle("Choisir un enfant")
+                        ChildrenSelector(
+                            children = uiState.children,
+                            selectedChildId = uiState.selectedChildId,
+                            onSelect = viewModel::selectChild,
+                        )
+                    }
+                }
+
+                item {
+                    NeonCard(tone = NeonTone.Violet) {
+                        SectionTitle("Type d'ajout")
+                        FormTypeSelector(
+                            selected = formType,
+                            onSelect = { selected ->
+                                formType = selected
+                                pointsText =
+                                    when (selected) {
+                                        PlanningFormType.ROUTINE -> "1"
+                                        PlanningFormType.MISSION -> "2"
+                                        PlanningFormType.QUEST -> "3"
+                                    }
+                            },
+                        )
+
+                        OutlinedTextField(
+                            value = title,
+                            onValueChange = {
+                                title = it
+                                viewModel.clearMessages()
+                            },
+                            label = { Text("Titre") },
+                            singleLine = true,
+                            colors = fantasyTextFieldColors(),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+
+                        OutlinedTextField(
+                            value = description,
+                            onValueChange = {
+                                description = it
+                                viewModel.clearMessages()
+                            },
+                            label = { Text("Description optionnelle") },
+                            colors = fantasyTextFieldColors(),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+
+                        SectionTitle("Moment")
+                        DayPartSelector(
+                            selected = selectedDayPart,
+                            onSelect = {
+                                selectedDayPart = it
+                                viewModel.clearMessages()
+                            },
+                        )
+
+                        when (formType) {
+                            PlanningFormType.ROUTINE -> {
+                                SectionTitle("Jours")
+                                WeekdaysSelector(
+                                    selectedDays = routineWeekdays,
+                                    onToggle = { day ->
+                                        routineWeekdays =
+                                            if (routineWeekdays.contains(day)) {
+                                                routineWeekdays - day
+                                            } else {
+                                                routineWeekdays + day
+                                            }
+                                        viewModel.clearMessages()
+                                    },
+                                )
+                                Text(
+                                    text = "Aucun jour sélectionné = routine quotidienne.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextMuted,
+                                )
+                            }
+
+                            PlanningFormType.MISSION -> {
+                                OutlinedTextField(
+                                    value = missionDate.toString(),
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    label = { Text("Date mission") },
+                                    colors = fantasyTextFieldColors(),
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                                Row(horizontalArrangement = Arrangement.spacedBy(spacing.small)) {
+                                    NeonButton(
+                                        text = "Jour précédent",
+                                        onClick = {
+                                            missionDate = missionDate.minusDays(1)
+                                            viewModel.clearMessages()
+                                        },
+                                        style = NeonButtonStyle.Outline,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                    NeonButton(
+                                        text = "Jour suivant",
+                                        onClick = {
+                                            missionDate = missionDate.plusDays(1)
+                                            viewModel.clearMessages()
+                                        },
+                                        style = NeonButtonStyle.Outline,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                }
+                            }
+
+                            PlanningFormType.QUEST -> Unit
+                        }
+
+                        OutlinedTextField(
+                            value = pointsText,
+                            onValueChange = {
+                                pointsText = it.filter { c -> c.isDigit() }.take(3)
+                                viewModel.clearMessages()
+                            },
+                            label = { Text("Points") },
+                            singleLine = true,
+                            colors = fantasyTextFieldColors(),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+
+                        uiState.successMessage?.let {
+                            Text(it, color = SuccessGlow, style = MaterialTheme.typography.bodyMedium)
+                        }
+                        uiState.errorMessage?.let {
+                            Text(it, color = DangerGlow, style = MaterialTheme.typography.bodyMedium)
+                        }
+
+                        NeonButton(
+                            text = if (uiState.isSubmitting) "Envoi..." else "Ajouter",
+                            onClick = {
+                                val parsedPoints = pointsText.toIntOrNull() ?: defaultPoints(formType)
+                                when (formType) {
+                                    PlanningFormType.ROUTINE ->
+                                        viewModel.createRoutine(
+                                            title = title,
+                                            description = description,
+                                            dayPart = selectedDayPart,
+                                            selectedWeekdays = routineWeekdays,
+                                            points = parsedPoints,
+                                        )
+
+                                    PlanningFormType.MISSION ->
+                                        viewModel.createMission(
+                                            title = title,
+                                            description = description,
+                                            dayPart = selectedDayPart,
+                                            scheduledDate = missionDate,
+                                            points = parsedPoints,
+                                        )
+
+                                    PlanningFormType.QUEST ->
+                                        viewModel.createQuest(
+                                            title = title,
+                                            description = description,
+                                            dayPart = selectedDayPart,
+                                            points = parsedPoints,
+                                        )
+                                }
+                            },
+                            enabled = !uiState.isSubmitting && uiState.selectedChildId != null,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
             }
         }
     }
+}
+
+@Composable
+private fun ParentPlanningHeader(
+    subtitle: String,
+    onBack: () -> Unit,
+) {
+    val spacing = MaterialTheme.spacing
+    Column(verticalArrangement = Arrangement.spacedBy(spacing.medium)) {
+        TaskodayTopBar(
+            avatarInitials = "AB",
+            showNotification = false,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(spacing.small),
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                    contentDescription = "Retour",
+                    tint = StarWhite,
+                )
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(spacing.xSmall)) {
+                Text(
+                    text = "Mode parent",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = StarWhite,
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextMuted,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionTitle(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleMedium,
+        color = StarWhite,
+    )
 }
 
 @Composable
@@ -273,8 +375,9 @@ private fun ChildrenSelector(
     val spacing = MaterialTheme.spacing
     if (children.isEmpty()) {
         Text(
-            "Aucun enfant disponible pour ce parent.",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            text = "Aucun enfant disponible pour ce parent.",
+            color = TextMuted,
+            style = MaterialTheme.typography.bodyMedium,
         )
         return
     }
@@ -282,29 +385,12 @@ private fun ChildrenSelector(
     LazyRow(horizontalArrangement = Arrangement.spacedBy(spacing.small)) {
         items(children, key = { it.id }) { child ->
             val selected = child.id == selectedChildId
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                border =
-                    if (selected) {
-                        BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-                    } else {
-                        BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
-                    },
-                colors =
-                    CardDefaults.cardColors(
-                        containerColor =
-                            if (selected) {
-                                MaterialTheme.colorScheme.primaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.surface
-                            },
-                    ),
+            SelectableCard(
+                selected = selected,
                 modifier = Modifier.clickable { onSelect(child.id) },
             ) {
-                Column(modifier = Modifier.padding(spacing.small)) {
-                    Text(child.displayName, style = MaterialTheme.typography.titleSmall)
-                    Text(child.email, style = MaterialTheme.typography.bodySmall)
-                }
+                Text(child.displayName, style = MaterialTheme.typography.titleSmall, color = StarWhite)
+                Text(child.email, style = MaterialTheme.typography.bodySmall, color = TextMuted)
             }
         }
     }
@@ -320,27 +406,16 @@ private fun FormTypeSelector(
         listOf(
             PlanningFormType.ROUTINE to "Routine",
             PlanningFormType.MISSION to "Mission",
-            PlanningFormType.QUEST to "Quete",
+            PlanningFormType.QUEST to "Quête",
         )
     Row(horizontalArrangement = Arrangement.spacedBy(spacing.small)) {
         items.forEach { (type, label) ->
-            val selectedType = selected == type
-            Card(
-                shape = RoundedCornerShape(14.dp),
-                colors =
-                    CardDefaults.cardColors(
-                        containerColor =
-                            if (selectedType) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
-                    ),
-                border = BorderStroke(if (selectedType) 2.dp else 1.dp, MaterialTheme.colorScheme.outline),
-                modifier = Modifier.weight(1f).clickable { onSelect(type) },
-            ) {
-                Text(
-                    text = label,
-                    modifier = Modifier.padding(vertical = spacing.small, horizontal = spacing.small),
-                    style = MaterialTheme.typography.labelLarge,
-                )
-            }
+            SelectableChip(
+                label = label,
+                selected = selected == type,
+                modifier = Modifier.weight(1f),
+                onClick = { onSelect(type) },
+            )
         }
     }
 }
@@ -353,22 +428,11 @@ private fun DayPartSelector(
     val spacing = MaterialTheme.spacing
     LazyRow(horizontalArrangement = Arrangement.spacedBy(spacing.small)) {
         items(DayPart.entries, key = { it.name }) { dayPart ->
-            val isSelected = dayPart == selected
-            Card(
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(if (isSelected) 2.dp else 1.dp, MaterialTheme.colorScheme.outline),
-                colors =
-                    CardDefaults.cardColors(
-                        containerColor =
-                            if (isSelected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
-                    ),
-                modifier = Modifier.clickable { onSelect(dayPart) },
-            ) {
-                Text(
-                    text = "${dayPart.emoji()} ${dayPart.label()}",
-                    modifier = Modifier.padding(horizontal = spacing.small, vertical = spacing.xSmall),
-                )
-            }
+            SelectableChip(
+                label = "${dayPart.emoji()} ${dayPart.label()}",
+                selected = dayPart == selected,
+                onClick = { onSelect(dayPart) },
+            )
         }
     }
 }
@@ -382,22 +446,91 @@ private fun WeekdaysSelector(
     val spacing = MaterialTheme.spacing
     Row(horizontalArrangement = Arrangement.spacedBy(spacing.small)) {
         labels.forEach { (day, label) ->
-            val selected = selectedDays.contains(day)
-            Card(
-                shape = RoundedCornerShape(8.dp),
-                border = BorderStroke(if (selected) 2.dp else 1.dp, MaterialTheme.colorScheme.outline),
-                colors =
-                    CardDefaults.cardColors(
-                        containerColor =
-                            if (selected) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.surface,
-                    ),
-                modifier = Modifier.clickable { onToggle(day) },
-            ) {
-                Text(text = label, modifier = Modifier.padding(horizontal = spacing.small, vertical = spacing.xSmall))
-            }
+            SelectableChip(
+                label = label,
+                selected = selectedDays.contains(day),
+                modifier = Modifier.weight(1f),
+                onClick = { onToggle(day) },
+            )
         }
     }
 }
+
+@Composable
+private fun SelectableCard(
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        border =
+            BorderStroke(
+                width = if (selected) 2.dp else 1.dp,
+                color = if (selected) NeonCyan else ArcaneViolet.copy(alpha = 0.52f),
+            ),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = if (selected) NeonBlue.copy(alpha = 0.28f) else SurfacePanel.copy(alpha = 0.72f),
+            ),
+        modifier = modifier,
+    ) {
+        Column(
+            modifier = Modifier.padding(MaterialTheme.spacing.small),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xSmall),
+            content = { content() },
+        )
+    }
+}
+
+@Composable
+private fun SelectableChip(
+    label: String,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(12.dp))
+                .background(if (selected) NeonBlue.copy(alpha = 0.28f) else SurfacePanel.copy(alpha = 0.58f))
+                .border(
+                    width = if (selected) 2.dp else 1.dp,
+                    color = if (selected) NeonCyan else ArcaneViolet.copy(alpha = 0.52f),
+                    shape = RoundedCornerShape(12.dp),
+                )
+                .clickable(onClick = onClick)
+                .padding(horizontal = MaterialTheme.spacing.small, vertical = MaterialTheme.spacing.xSmall),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            color = if (selected) NeonCyanSoft else StarWhite,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+@Composable
+private fun fantasyTextFieldColors() =
+    OutlinedTextFieldDefaults.colors(
+        focusedTextColor = StarWhite,
+        unfocusedTextColor = StarWhite,
+        focusedBorderColor = NeonCyan,
+        unfocusedBorderColor = TextMuted.copy(alpha = 0.7f),
+        focusedLabelColor = NeonCyan,
+        unfocusedLabelColor = TextMuted,
+        cursorColor = NeonCyan,
+    )
+
+private fun PlanningFormType.subtitle(): String =
+    when (this) {
+        PlanningFormType.ROUTINE -> "Prépare une routine régulière."
+        PlanningFormType.MISSION -> "Planifie une mission obligatoire."
+        PlanningFormType.QUEST -> "Ajoute une quête facultative."
+    }
 
 private fun defaultPoints(formType: PlanningFormType): Int =
     when (formType) {

@@ -39,20 +39,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.taskoday.R
+import com.example.taskoday.core.ui.component.fantasy.FantasyButton
+import com.example.taskoday.core.ui.component.fantasy.FantasyButtonStyle
+import com.example.taskoday.core.ui.component.fantasy.FantasyCard
+import com.example.taskoday.core.ui.component.fantasy.FantasyHeader
+import com.example.taskoday.core.ui.component.fantasy.FantasyProgressBar
 import com.example.taskoday.core.ui.component.fantasy.FantasyScreenBackground
-import com.example.taskoday.core.ui.component.fantasy.NeonButton
-import com.example.taskoday.core.ui.component.fantasy.NeonButtonStyle
-import com.example.taskoday.core.ui.component.fantasy.NeonCard
-import com.example.taskoday.core.ui.component.fantasy.NeonTone
-import com.example.taskoday.core.ui.component.fantasy.ProgressHeroCard
+import com.example.taskoday.core.ui.component.fantasy.FantasyTone
+import com.example.taskoday.core.ui.component.fantasy.RewardToast
 import com.example.taskoday.core.ui.component.fantasy.RoutineItemRow
-import com.example.taskoday.core.ui.component.fantasy.RoutineSectionCard
-import com.example.taskoday.core.ui.component.fantasy.TaskodayHeader
-import com.example.taskoday.core.ui.theme.ArcaneViolet
-import com.example.taskoday.core.ui.theme.NeonBlue
-import com.example.taskoday.core.ui.theme.NeonCyan
-import com.example.taskoday.core.ui.theme.StarWhite
-import com.example.taskoday.core.ui.theme.TextMuted
+import com.example.taskoday.core.ui.theme.EmberOrange
+import com.example.taskoday.core.ui.theme.InkMuted
+import com.example.taskoday.core.ui.theme.MossGreen
+import com.example.taskoday.core.ui.theme.WoodBrownDark
 import com.example.taskoday.core.ui.theme.spacing
 import com.example.taskoday.core.util.DateTimeUtils
 import com.example.taskoday.domain.model.DayPart
@@ -118,7 +118,7 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
-                    CircularProgressIndicator(color = NeonCyan)
+                    CircularProgressIndicator(color = EmberOrange)
                 }
                 return@FantasyScreenBackground
             }
@@ -132,10 +132,11 @@ fun HomeScreen(
                 verticalArrangement = Arrangement.spacedBy(spacing.medium),
             ) {
                 item {
-                    TaskodayHeader(
-                        title = "Bonjour, Alex !",
-                        subtitle = "Organise ta journee, etape par etape.",
-                        avatarInitials = "AB",
+                    FantasyHeader(
+                        title = "Journée",
+                        subtitle = "Le Gardien avance pas à pas, routine après routine.",
+                        assetResId = R.drawable.placeholder_nest,
+                        assetDescription = "Le Nid",
                         onAvatarClick = onOpenProfile,
                     )
                 }
@@ -151,7 +152,7 @@ fun HomeScreen(
                 }
 
                 item {
-                    ProgressHeroCard(
+                    DailyProgressCard(
                         title = "Routines du jour",
                         completed = completedCount,
                         total = planningItems.size,
@@ -160,7 +161,7 @@ fun HomeScreen(
                             if (planningItems.isEmpty()) {
                                 "Aucune routine pour ce jour."
                             } else {
-                                "Continue comme ca !"
+                                "Chaque geste nourrit Le Nid."
                             },
                         badgeLabel = "${uiState.pointsBalance} Flammèches",
                     )
@@ -168,16 +169,16 @@ fun HomeScreen(
 
                 if (uiState.usingRemoteData) {
                     item {
-                        NeonCard(tone = NeonTone.Blue) {
+                        FantasyCard(tone = FantasyTone.Night) {
                             Text(
-                                text = "Mode synchronise",
+                                text = "Mode synchronisé",
                                 style = MaterialTheme.typography.titleSmall,
-                                color = StarWhite,
+                                color = WoodBrownDark,
                             )
                             Text(
                                 text = "Les routines du jour viennent du backend.",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = TextMuted,
+                                color = InkMuted,
                             )
                         }
                     }
@@ -185,23 +186,7 @@ fun HomeScreen(
 
                 if (!uiState.errorMessage.isNullOrBlank()) {
                     item {
-                        NeonCard(tone = NeonTone.Danger) {
-                            Text(
-                                text = "Alerte reseau",
-                                style = MaterialTheme.typography.titleSmall,
-                                color = StarWhite,
-                            )
-                            Text(
-                                text = uiState.errorMessage.orEmpty(),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextMuted,
-                            )
-                            NeonButton(
-                                text = "Fermer",
-                                onClick = viewModel::clearError,
-                                style = NeonButtonStyle.Outline,
-                            )
-                        }
+                        RewardToast(message = "Alerte réseau : ${uiState.errorMessage.orEmpty()}", tone = FantasyTone.Ember)
                     }
                 }
 
@@ -230,16 +215,15 @@ fun HomeScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(spacing.small),
                     ) {
-                        NeonButton(
+                        FantasyButton(
                             text = "Semaine",
                             onClick = onOpenWeek,
-                            style = NeonButtonStyle.Outline,
+                            style = FantasyButtonStyle.Outline,
                             modifier = Modifier.weight(1f),
                         )
-                        NeonButton(
+                        FantasyButton(
                             text = "Missions",
                             onClick = onOpenTasks,
-                            style = NeonButtonStyle.Filled,
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -288,7 +272,7 @@ private fun HomeDateCard(
     onToday: () -> Unit,
     onOpenCalendar: () -> Unit,
 ) {
-    NeonCard(tone = NeonTone.Violet) {
+    FantasyCard(tone = FantasyTone.Gold) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -297,20 +281,20 @@ private fun HomeDateCard(
             IconButton(onClick = onPrevious) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                    contentDescription = "Jour precedent",
-                    tint = StarWhite,
+                    contentDescription = "Jour précédent",
+                    tint = WoodBrownDark,
                 )
             }
             Text(
                 text = dateLabel,
                 style = MaterialTheme.typography.titleMedium,
-                color = StarWhite,
+                color = WoodBrownDark,
             )
             IconButton(onClick = onNext) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = "Jour suivant",
-                    tint = StarWhite,
+                    tint = WoodBrownDark,
                 )
             }
         }
@@ -322,17 +306,41 @@ private fun HomeDateCard(
             IconButton(onClick = onToday) {
                 Icon(
                     imageVector = Icons.Outlined.Today,
-                    contentDescription = "Aujourd hui",
-                    tint = NeonCyan,
+                    contentDescription = "Aujourd'hui",
+                    tint = EmberOrange,
                 )
             }
             IconButton(onClick = onOpenCalendar) {
                 Icon(
                     imageVector = Icons.Outlined.CalendarMonth,
                     contentDescription = "Calendrier",
-                    tint = NeonCyan,
+                    tint = EmberOrange,
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun DailyProgressCard(
+    title: String,
+    completed: Int,
+    total: Int,
+    progress: Float,
+    subtitle: String,
+    badgeLabel: String,
+) {
+    FantasyCard(tone = FantasyTone.Moss) {
+        Text(text = title, style = MaterialTheme.typography.titleLarge, color = WoodBrownDark)
+        Text(text = "$completed/$total terminées", style = MaterialTheme.typography.headlineSmall, color = MossGreen)
+        FantasyProgressBar(progress = progress, modifier = Modifier.fillMaxWidth())
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(text = subtitle, style = MaterialTheme.typography.bodyMedium, color = InkMuted, modifier = Modifier.weight(1f))
+            Text(text = badgeLabel, style = MaterialTheme.typography.labelLarge, color = EmberOrange)
         }
     }
 }
@@ -345,18 +353,30 @@ private fun DayPartCard(
 ) {
     val doneCount = section.items.count { it.isCompleted }
 
-    RoutineSectionCard(
-        title = "${section.dayPart.emoji()} ${section.dayPart.label()}",
-        progressLabel = "$doneCount/${section.items.size}",
-        tone = section.tone,
-    ) {
+    FantasyCard(tone = section.tone) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "${section.dayPart.emoji()} ${section.dayPart.label()}",
+                style = MaterialTheme.typography.titleLarge,
+                color = WoodBrownDark,
+            )
+            Text(
+                text = "$doneCount/${section.items.size}",
+                style = MaterialTheme.typography.titleMedium,
+                color = EmberOrange,
+            )
+        }
         if (section.items.isEmpty()) {
             Text(
-                text = "Rien de prevu pour ce moment.",
+                text = "Rien de prévu pour ce moment.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = TextMuted,
+                color = InkMuted,
             )
-            return@RoutineSectionCard
+            return@FantasyCard
         }
 
         section.items.forEach { item ->
@@ -379,7 +399,7 @@ private fun DayPartCard(
 
 private data class HomeSection(
     val dayPart: DayPart,
-    val tone: NeonTone,
+    val tone: FantasyTone,
     val items: List<HomePlanningItem>,
 )
 
@@ -428,12 +448,12 @@ private fun buildPlanningItems(
 private fun buildSections(items: List<HomePlanningItem>): List<HomeSection> {
     val tones =
         mapOf(
-            DayPart.MATIN to NeonTone.Cyan,
-            DayPart.MATINEE to NeonTone.Blue,
-            DayPart.MIDI to NeonTone.Blue,
-            DayPart.APRES_MIDI to NeonTone.Blue,
-            DayPart.SOIR to NeonTone.Violet,
-            DayPart.SOIREE to NeonTone.Violet,
+            DayPart.MATIN to FantasyTone.Gold,
+            DayPart.MATINEE to FantasyTone.Moss,
+            DayPart.MIDI to FantasyTone.Wood,
+            DayPart.APRES_MIDI to FantasyTone.Ember,
+            DayPart.SOIR to FantasyTone.Violet,
+            DayPart.SOIREE to FantasyTone.Night,
         )
     return DayPart.entries.map { dayPart ->
         HomeSection(
@@ -467,6 +487,6 @@ private val POSITIVE_MESSAGES: List<String> =
     listOf(
         "Bravo !",
         "Excellent travail !",
-        "Mission validee !",
+        "Mission validée !",
         "Continue ton aventure !",
     )

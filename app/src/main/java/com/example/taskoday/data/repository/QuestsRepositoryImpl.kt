@@ -45,7 +45,7 @@ class QuestsRepositoryImpl
                     }
                 QuestsSyncResult(usedRemoteData = true)
             }.getOrElse { error ->
-                Log.w(TAG, "Impossible de synchroniser les quetes", error)
+                Log.w(TAG, "Impossible de synchroniser les quêtes", error)
                 QuestsSyncResult(
                     usedRemoteData = false,
                     errorMessage = error.toRemoteUserMessage("Erreur reseau, fallback local."),
@@ -56,11 +56,11 @@ class QuestsRepositoryImpl
         override suspend fun completeQuest(localQuestId: Long): Result<Unit> =
             runCatching {
                 val remoteRef = RemotePlanningIdCodec.decodeQuestId(localQuestId)
-                require(remoteRef?.itemType == PlanningItemType.QUEST) { "Identifiant quete invalide." }
+                require(remoteRef?.itemType == PlanningItemType.QUEST) { "Identifiant quête invalide." }
                 questsApi.completeQuest(remoteRef.remoteItemId)
                 Unit
             }.onFailure { error ->
-                Log.w(TAG, "Completion quete distante echouee", error)
+                Log.w(TAG, "Complétion quête distante échouée", error)
             }
 
         override suspend fun createQuest(quest: Quest): Result<Quest> =
@@ -69,7 +69,7 @@ class QuestsRepositoryImpl
                 require(me.role.equals("PARENT", ignoreCase = true)) { "Action non autorisee." }
                 val childId =
                     authRepository.getActiveChildId(forceRefresh = true)
-                        ?: error("Aucun enfant actif pour creer la quete.")
+                        ?: error("Aucun enfant actif pour créer la quête.")
                 val created =
                     questsApi.createQuest(
                         childId = childId,
@@ -85,7 +85,7 @@ class QuestsRepositoryImpl
                     ).data
                 created.toDomain(System.currentTimeMillis())
             }.onFailure { error ->
-                Log.w(TAG, "Creation quete distante echouee", error)
+                Log.w(TAG, "Création quête distante échouée", error)
             }
 
         override suspend fun updateQuest(quest: Quest): Result<Quest> =
@@ -93,7 +93,7 @@ class QuestsRepositoryImpl
                 val me = authRepository.fetchMe()
                 require(me.role.equals("PARENT", ignoreCase = true)) { "Action non autorisee." }
                 val remoteRef = RemotePlanningIdCodec.decodeQuestId(quest.id)
-                require(remoteRef?.itemType == PlanningItemType.QUEST) { "Identifiant quete invalide." }
+                require(remoteRef?.itemType == PlanningItemType.QUEST) { "Identifiant quête invalide." }
                 val updated =
                     questsApi.updateQuest(
                         questId = remoteRef.remoteItemId,
@@ -108,7 +108,7 @@ class QuestsRepositoryImpl
                     ).data
                 updated.toDomain(System.currentTimeMillis())
             }.onFailure { error ->
-                Log.w(TAG, "Mise a jour quete distante echouee", error)
+                Log.w(TAG, "Mise à jour quête distante échouée", error)
             }
 
         override suspend fun deleteQuest(localQuestId: Long): Result<Unit> =
@@ -116,10 +116,10 @@ class QuestsRepositoryImpl
                 val me = authRepository.fetchMe()
                 require(me.role.equals("PARENT", ignoreCase = true)) { "Action non autorisee." }
                 val remoteRef = RemotePlanningIdCodec.decodeQuestId(localQuestId)
-                require(remoteRef?.itemType == PlanningItemType.QUEST) { "Identifiant quete invalide." }
+                require(remoteRef?.itemType == PlanningItemType.QUEST) { "Identifiant quête invalide." }
                 questsApi.deleteQuest(remoteRef.remoteItemId)
             }.onFailure { error ->
-                Log.w(TAG, "Suppression quete distante echouee", error)
+                Log.w(TAG, "Suppression quête distante échouée", error)
             }
 
         private companion object {

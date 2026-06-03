@@ -80,7 +80,7 @@ fun SettingsScreen(
     val stats =
         listOf(
             TaskodayStatItem(label = "Missions", value = uiState.missionsStat),
-            TaskodayStatItem(label = "Quetes", value = uiState.questsStat),
+            TaskodayStatItem(label = "Quêtes", value = uiState.questsStat),
             TaskodayStatItem(label = "Serie", value = uiState.streakStat),
             TaskodayStatItem(label = "Succes", value = uiState.successStat),
         )
@@ -266,7 +266,7 @@ fun SettingsScreen(
                                 color = StarWhite,
                             )
                             Text(
-                                text = "Accede a la gestion des routines, missions et quetes d un enfant.",
+                                text = "Accède à la gestion des routines, missions et quêtes d'un enfant.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = TextMuted,
                             )

@@ -93,7 +93,7 @@ class ParentPlanningViewModel
                     selectedWeekdays = selectedWeekdays,
                     points = points,
                 )
-                "Routine ajoutee."
+                "Routine ajoutée."
             }
         }
 
@@ -118,7 +118,7 @@ class ParentPlanningViewModel
                     scheduledDate = scheduledDate,
                     points = points,
                 )
-                "Mission ajoutee."
+                "Mission ajoutée."
             }
         }
 
@@ -130,7 +130,7 @@ class ParentPlanningViewModel
         ) {
             val childId = _uiState.value.selectedChildId ?: return
             if (title.isBlank()) {
-                _uiState.update { it.copy(errorMessage = "Le titre de la quete est requis.") }
+                _uiState.update { it.copy(errorMessage = "Le titre de la quête est requis.") }
                 return
             }
             submitAction {
@@ -141,7 +141,7 @@ class ParentPlanningViewModel
                     dayPart = dayPart,
                     points = points,
                 )
-                "Quete ajoutee."
+                "Quête ajoutée."
             }
         }
 
@@ -175,7 +175,7 @@ class ParentPlanningViewModel
 private fun Throwable.toMessage(): String =
     when (this) {
         is UnknownHostException, is ConnectException -> "Serveur indisponible."
-        is SocketTimeoutException -> "Requete expiree."
+        is SocketTimeoutException -> "Requête expirée."
         is HttpException -> "Erreur backend (${code()})."
         is IOException -> "Erreur reseau."
         else -> message ?: "Erreur inconnue."

@@ -1,15 +1,18 @@
 package com.example.taskoday.features.add
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -25,7 +28,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
 import com.example.taskoday.core.ui.testing.TaskodayTestTags
+import com.example.taskoday.core.ui.theme.ArcaneViolet
+import com.example.taskoday.core.ui.theme.NeonBlue
+import com.example.taskoday.core.ui.theme.NeonCyan
+import com.example.taskoday.core.ui.theme.StarWhite
+import com.example.taskoday.core.ui.theme.SurfacePanel
+import com.example.taskoday.core.ui.theme.TextMuted
 import com.example.taskoday.core.ui.theme.spacing
 
 @Composable
@@ -45,6 +55,8 @@ fun QuickAddFab(
             showDialog = true
         },
         modifier = modifier.testTag(TaskodayTestTags.TasksAddFab),
+        containerColor = NeonBlue,
+        contentColor = StarWhite,
     ) {
         Icon(imageVector = Icons.Outlined.Add, contentDescription = "Ajouter")
     }
@@ -53,6 +65,9 @@ fun QuickAddFab(
         AlertDialog(
             onDismissRequest = { showDialog = false },
             title = { Text(text = "Ajouter") },
+            containerColor = SurfacePanel,
+            titleContentColor = StarWhite,
+            textContentColor = TextMuted,
             text = {
                 Column(
                     verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
@@ -76,7 +91,7 @@ fun QuickAddFab(
                         },
                     )
                     QuickAddOption(
-                        label = "Quete",
+                        label = "Quête",
                         icon = Icons.Outlined.AutoAwesome,
                         enabled = uiState.canCreateQuest,
                         onClick = {
@@ -86,16 +101,19 @@ fun QuickAddFab(
                     )
                     if (uiState.hasRemoteSession && !uiState.isParent) {
                         Text(
-                            text = "Missions et quetes sont reservees au parent.",
+                            text = "Missions et quêtes sont réservées au parent.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = TextMuted,
                         )
                     }
                 }
             },
             confirmButton = {},
             dismissButton = {
-                TextButton(onClick = { showDialog = false }) {
+                TextButton(
+                    onClick = { showDialog = false },
+                    colors = ButtonDefaults.textButtonColors(contentColor = NeonCyan),
+                ) {
                     Text(text = "Fermer")
                 }
             },
@@ -114,6 +132,13 @@ private fun QuickAddOption(
         onClick = onClick,
         enabled = enabled,
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        border = BorderStroke(1.dp, if (enabled) NeonCyan.copy(alpha = 0.8f) else ArcaneViolet.copy(alpha = 0.35f)),
+        colors =
+            ButtonDefaults.outlinedButtonColors(
+                contentColor = StarWhite,
+                disabledContentColor = TextMuted,
+            ),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

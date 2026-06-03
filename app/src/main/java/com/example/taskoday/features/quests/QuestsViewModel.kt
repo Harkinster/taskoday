@@ -183,7 +183,7 @@ class QuestsViewModel
                 return
             }
             if (title.isBlank()) {
-                _uiState.update { it.copy(errorMessage = "Le titre de la quete est requis.") }
+                _uiState.update { it.copy(errorMessage = "Le titre de la quête est requis.") }
                 return
             }
 
@@ -217,7 +217,7 @@ class QuestsViewModel
                 _uiState.update {
                     it.copy(
                         isSubmittingQuest = false,
-                        errorMessage = "Serveur indisponible, quete enregistree en local.",
+                        errorMessage = "Serveur indisponible, quête enregistrée en local.",
                     )
                 }
             }
@@ -235,7 +235,7 @@ class QuestsViewModel
                 return
             }
             if (title.isBlank()) {
-                _uiState.update { it.copy(errorMessage = "Le titre de la quete est requis.") }
+                _uiState.update { it.copy(errorMessage = "Le titre de la quête est requis.") }
                 return
             }
 
@@ -320,7 +320,7 @@ class QuestsViewModel
 private fun Throwable.toMessage(): String =
     when (this) {
         is UnknownHostException, is ConnectException -> "Serveur indisponible."
-        is SocketTimeoutException -> "Requete expiree."
+        is SocketTimeoutException -> "Requête expirée."
         is HttpException ->
             when (code()) {
                 403 -> "Action non autorisee."

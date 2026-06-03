@@ -104,7 +104,7 @@ private fun DayPart.defaultHour(): Int =
 private fun Throwable.toMessage(): String =
     when (this) {
         is UnknownHostException, is ConnectException -> "Serveur backend indisponible. Passage en mode local."
-        is SocketTimeoutException -> "Requete routines expiree. Passage en mode local."
+        is SocketTimeoutException -> "Requête routines expirée. Passage en mode local."
         is HttpException -> "Erreur backend (${code()}). Passage en mode local."
         else -> message ?: "Erreur reseau. Passage en mode local."
     }

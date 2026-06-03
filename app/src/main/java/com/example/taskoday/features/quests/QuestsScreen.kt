@@ -123,7 +123,7 @@ fun QuestsScreen(
             ) {
                 item {
                     TaskodayHeader(
-                        title = "Quetes",
+                        title = "Quêtes",
                         subtitle = "Accomplis des actions, gagne de l XP et deviens legendaire.",
                         avatarInitials = "AB",
                         onAvatarClick = onOpenProfile,
@@ -188,7 +188,7 @@ fun QuestsScreen(
 
                 item {
                     ProgressHeroCard(
-                        title = "Quetes du jour",
+                        title = "Quêtes du jour",
                         completed = completedCount,
                         total = uiState.quests.size,
                         progress = questProgress,
@@ -270,7 +270,7 @@ fun QuestsScreen(
                     item {
                         NeonCard(tone = NeonTone.Blue) {
                             Text(
-                                text = "Aucune quete active.",
+                                text = "Aucune quête active.",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = StarWhite,
                             )
@@ -370,7 +370,7 @@ private fun QuestFormCard(
 ) {
     NeonCard(tone = NeonTone.Violet) {
         Text(
-            text = if (isEditing) "Modifier la quete" else "Ajouter une quete",
+            text = if (isEditing) "Modifier la quête" else "Ajouter une quête",
             style = MaterialTheme.typography.titleMedium,
             color = StarWhite,
         )
@@ -410,7 +410,7 @@ private fun QuestFormCard(
             }
         }
         NeonButton(
-            text = if (isEditing) "Mettre a jour" else "Creer la quete",
+            text = if (isEditing) "Mettre à jour" else "Créer la quête",
             onClick = onSubmit,
             enabled = !isSubmitting,
             modifier = Modifier.fillMaxWidth(),

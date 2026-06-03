@@ -1,31 +1,25 @@
 package com.example.taskoday.features.shop
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Star
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -35,15 +29,32 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.taskoday.R
+import com.example.taskoday.core.ui.component.fantasy.FantasyButton
+import com.example.taskoday.core.ui.component.fantasy.FantasyButtonStyle
+import com.example.taskoday.core.ui.component.fantasy.FantasyCard
+import com.example.taskoday.core.ui.component.fantasy.FantasyHeader
+import com.example.taskoday.core.ui.component.fantasy.FantasyScreenBackground
+import com.example.taskoday.core.ui.component.fantasy.FantasyTone
+import com.example.taskoday.core.ui.component.fantasy.NestStatCard
+import com.example.taskoday.core.ui.component.fantasy.ScrollCard
+import com.example.taskoday.core.ui.component.fantasy.WishCard
+import com.example.taskoday.core.ui.theme.DangerGlow
+import com.example.taskoday.core.ui.theme.EmberOrange
+import com.example.taskoday.core.ui.theme.InkMuted
+import com.example.taskoday.core.ui.theme.MagicViolet
+import com.example.taskoday.core.ui.theme.MossGreen
+import com.example.taskoday.core.ui.theme.SoftGold
+import com.example.taskoday.core.ui.theme.WoodBrownDark
 import com.example.taskoday.core.ui.theme.spacing
 import com.example.taskoday.domain.model.PointsTransaction
 import com.example.taskoday.domain.model.Reward
 import com.example.taskoday.domain.model.RewardRedemptionRequest
 import com.example.taskoday.domain.model.RewardRequestStatus
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShopScreen(
     viewModel: ShopViewModel,
@@ -61,99 +72,119 @@ fun ShopScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(text = "Caverne aux Souhaits") },
-                actions = {
-                    IconButton(onClick = onOpenProfile) {
-                        Icon(
-                            imageVector = Icons.Outlined.Person,
-                            contentDescription = "Profil",
-                        )
-                    }
-                },
-            )
-        },
+        containerColor = Color.Transparent,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
     ) { innerPadding ->
-        if (uiState.isLoading) {
-            Column(
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                CircularProgressIndicator()
-            }
-            return@Scaffold
-        }
-
-        LazyColumn(
+        FantasyScreenBackground(
             modifier =
                 Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(horizontal = spacing.medium),
-            verticalArrangement = Arrangement.spacedBy(spacing.medium),
+                    .statusBarsPadding()
+                    .padding(innerPadding),
         ) {
-            item {
-                BalanceCard(
-                    scalesBalance = uiState.scalesBalance,
-                    isParent = uiState.isParent,
-                    hasRemoteSession = uiState.hasRemoteSession,
-                )
+            if (uiState.isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(color = EmberOrange)
+                }
+                return@FantasyScreenBackground
             }
 
-            if (uiState.isParent && uiState.hasRemoteSession) {
+            LazyColumn(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = spacing.medium),
+                contentPadding = PaddingValues(top = spacing.large, bottom = spacing.xxLarge),
+                verticalArrangement = Arrangement.spacedBy(spacing.medium),
+            ) {
                 item {
-                    ParentRewardCreator(
-                        isSubmitting = uiState.isSubmitting,
-                        onCreate = viewModel::createReward,
+                    FantasyHeader(
+                        title = "Caverne aux Souhaits",
+                        subtitle =
+                            if (uiState.isParent) {
+                                "Crée les Souhaits et valide les Parchemins."
+                            } else {
+                                "Transforme tes Flammèches en moments magiques."
+                            },
+                        assetResId = R.drawable.placeholder_flame,
+                        assetDescription = "Flammèche",
+                        onAvatarClick = onOpenProfile,
                     )
                 }
-            }
 
-            item {
-                Text(text = "Souhaits", style = MaterialTheme.typography.titleLarge)
-            }
-
-            if (uiState.rewards.isEmpty()) {
                 item {
-                    EmptyCard(text = "Aucun Souhait disponible.")
-                }
-            } else {
-                items(uiState.rewards, key = { reward -> reward.id }) { reward ->
-                    RewardRow(
-                        reward = reward,
-                        isParent = uiState.isParent,
-                        canRequest = uiState.hasRemoteSession && !uiState.isParent && uiState.scalesBalance >= reward.cost,
-                        isSubmitting = uiState.isSubmitting,
-                        onRequest = { viewModel.requestReward(reward) },
+                    NestStatCard(
+                        label = if (uiState.isParent) "Souhaits parent" else "Solde du Gardien",
+                        value = "${uiState.scalesBalance} Flammèches",
+                        assetResId = R.drawable.placeholder_flame,
+                        tone = FantasyTone.Ember,
                     )
                 }
-            }
 
-            item {
-                Text(text = "Demandes et Parchemins", style = MaterialTheme.typography.titleLarge)
-            }
-
-            if (uiState.requests.isEmpty()) {
-                item {
-                    if (uiState.hasRemoteSession) {
-                        EmptyCard(text = "Aucune demande.")
-                    } else {
-                        LocalHistory(transactions = uiState.localTransactions)
+                if (!uiState.hasRemoteSession) {
+                    item {
+                        FantasyCard(tone = FantasyTone.Night) {
+                            Text(text = "Mode local", style = MaterialTheme.typography.titleMedium, color = WoodBrownDark)
+                            Text(
+                                text = "Connecte un compte pour suivre les demandes et les Parchemins.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = InkMuted,
+                            )
+                        }
                     }
                 }
-            } else {
-                items(uiState.requests, key = { request -> request.id }) { request ->
-                    RewardRequestRow(
-                        request = request,
-                        isParent = uiState.isParent,
-                        isSubmitting = uiState.isSubmitting,
-                        onApprove = { viewModel.approveRequest(request.id) },
-                        onRefuse = { viewModel.refuseRequest(request.id) },
-                        onUseCoupon = { couponId -> viewModel.useCoupon(couponId) },
-                    )
+
+                if (uiState.isParent && uiState.hasRemoteSession) {
+                    item {
+                        ParentRewardCreator(
+                            isSubmitting = uiState.isSubmitting,
+                            onCreate = viewModel::createReward,
+                        )
+                    }
+                }
+
+                item { SectionTitle(text = "Souhaits disponibles") }
+
+                if (uiState.rewards.isEmpty()) {
+                    item {
+                        EmptyCard(text = "Aucun Souhait disponible.")
+                    }
+                } else {
+                    items(uiState.rewards, key = { reward -> reward.id }) { reward ->
+                        RewardRow(
+                            reward = reward,
+                            isParent = uiState.isParent,
+                            canRequest = uiState.hasRemoteSession && !uiState.isParent && uiState.scalesBalance >= reward.cost,
+                            isSubmitting = uiState.isSubmitting,
+                            onRequest = { viewModel.requestReward(reward) },
+                        )
+                    }
+                }
+
+                item { SectionTitle(text = "Demandes et Parchemins") }
+
+                if (uiState.requests.isEmpty()) {
+                    item {
+                        if (uiState.hasRemoteSession) {
+                            EmptyCard(text = "Aucune demande.")
+                        } else {
+                            LocalHistory(transactions = uiState.localTransactions)
+                        }
+                    }
+                } else {
+                    items(uiState.requests, key = { request -> request.id }) { request ->
+                        RewardRequestRow(
+                            request = request,
+                            isParent = uiState.isParent,
+                            isSubmitting = uiState.isSubmitting,
+                            onApprove = { viewModel.approveRequest(request.id) },
+                            onRefuse = { viewModel.refuseRequest(request.id) },
+                            onUseCoupon = { couponId -> viewModel.useCoupon(couponId) },
+                        )
+                    }
                 }
             }
         }
@@ -161,35 +192,12 @@ fun ShopScreen(
 }
 
 @Composable
-private fun BalanceCard(
-    scalesBalance: Int,
-    isParent: Boolean,
-    hasRemoteSession: Boolean,
-) {
-    val spacing = MaterialTheme.spacing
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(spacing.medium),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column {
-                Text(text = if (isParent) "Souhaits parent" else "Solde", style = MaterialTheme.typography.titleMedium)
-                Text(
-                    text = if (hasRemoteSession) "Synchronise" else "Mode local",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(spacing.xSmall), verticalAlignment = Alignment.CenterVertically) {
-                Icon(imageVector = Icons.Outlined.Star, contentDescription = null)
-                Text(text = "$scalesBalance Flammèches", style = MaterialTheme.typography.titleMedium)
-            }
-        }
-    }
+private fun SectionTitle(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleLarge,
+        color = WoodBrownDark,
+    )
 }
 
 @Composable
@@ -202,45 +210,45 @@ private fun ParentRewardCreator(
     var description by rememberSaveable { mutableStateOf("") }
     var costText by rememberSaveable { mutableStateOf("") }
 
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(spacing.medium),
-            verticalArrangement = Arrangement.spacedBy(spacing.small),
-        ) {
-            Text(text = "Nouveau Souhait", style = MaterialTheme.typography.titleMedium)
-            OutlinedTextField(
-                value = title,
-                onValueChange = { title = it },
-                label = { Text("Titre") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = description,
-                onValueChange = { description = it },
-                label = { Text("Description") },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = costText,
-                onValueChange = { costText = it.filter { c -> c.isDigit() }.take(5) },
-                label = { Text("Coût en Flammèches") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Button(
-                onClick = {
-                    onCreate(title, description, costText.toIntOrNull() ?: 0)
-                    title = ""
-                    description = ""
-                    costText = ""
-                },
-                enabled = !isSubmitting && title.isNotBlank() && (costText.toIntOrNull() ?: 0) > 0,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(text = "Creer")
-            }
-        }
+    FantasyCard(modifier = Modifier.fillMaxWidth(), tone = FantasyTone.Violet) {
+        Text(text = "Nouveau Souhait", style = MaterialTheme.typography.titleMedium, color = WoodBrownDark)
+        OutlinedTextField(
+            value = title,
+            onValueChange = { title = it },
+            label = { Text("Titre") },
+            singleLine = true,
+            colors = fantasyTextFieldColors(),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = description,
+            onValueChange = { description = it },
+            label = { Text("Description") },
+            colors = fantasyTextFieldColors(),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = costText,
+            onValueChange = { costText = it.filter { c -> c.isDigit() }.take(5) },
+            label = { Text("Coût en Flammèches") },
+            singleLine = true,
+            colors = fantasyTextFieldColors(),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        FantasyButton(
+            text = if (isSubmitting) "Création..." else "Créer le Souhait",
+            onClick = {
+                onCreate(title, description, costText.toIntOrNull() ?: 0)
+                title = ""
+                description = ""
+                costText = ""
+            },
+            enabled = !isSubmitting && title.isNotBlank() && (costText.toIntOrNull() ?: 0) > 0,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = spacing.xSmall),
+        )
     }
 }
 
@@ -252,38 +260,13 @@ private fun RewardRow(
     isSubmitting: Boolean,
     onRequest: () -> Unit,
 ) {
-    val spacing = MaterialTheme.spacing
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(spacing.medium),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(spacing.xSmall),
-            ) {
-                Text(text = "${reward.emoji} ${reward.title}", style = MaterialTheme.typography.titleMedium)
-                reward.description?.let { description ->
-                    Text(
-                        text = description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Text(text = "Coût : ${reward.cost} Flammèches", style = MaterialTheme.typography.labelLarge)
-            }
-
-            if (!isParent) {
-                Button(onClick = onRequest, enabled = canRequest && !isSubmitting) {
-                    Text(text = "Demander")
-                }
-            }
-        }
-    }
+    WishCard(
+        title = "${reward.emoji} ${reward.title}",
+        description = reward.description ?: "Souhait créé par un parent.",
+        costLabel = "${reward.cost} Flammèches",
+        enabled = canRequest && !isSubmitting,
+        onMakeWish = if (isParent) null else onRequest,
+    )
 }
 
 @Composable
@@ -296,42 +279,65 @@ private fun RewardRequestRow(
     onUseCoupon: (Long) -> Unit,
 ) {
     val spacing = MaterialTheme.spacing
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(spacing.medium),
-            verticalArrangement = Arrangement.spacedBy(spacing.xSmall),
+    request.coupon?.let { coupon ->
+        ScrollCard(
+            title = request.rewardTitle,
+            code = coupon.code,
+            status = request.status.displayLabel(),
+            onUse =
+                if (isParent && request.status == RewardRequestStatus.APPROVED) {
+                    { onUseCoupon(coupon.id) }
+                } else {
+                    null
+                },
+        )
+        return
+    }
+
+    FantasyCard(modifier = Modifier.fillMaxWidth(), tone = request.status.toTone()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
+            Text(
+                text = request.rewardTitle,
+                style = MaterialTheme.typography.titleMedium,
+                color = WoodBrownDark,
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = request.status.displayLabel(),
+                style = MaterialTheme.typography.labelLarge,
+                color = request.status.toColor(),
+            )
+        }
+        Text(
+            text = "${request.costScales} Flammèches",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MagicViolet,
+        )
+
+        if (isParent && request.status == RewardRequestStatus.PENDING) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(spacing.small),
             ) {
-                Text(text = request.rewardTitle, style = MaterialTheme.typography.titleMedium)
-                Text(text = request.status.label, style = MaterialTheme.typography.labelLarge)
-            }
-            Text(text = "${request.costScales} Flammèches", style = MaterialTheme.typography.bodyMedium)
-            request.coupon?.let { coupon ->
-                Text(text = "Parchemin: ${coupon.code}", style = MaterialTheme.typography.bodyMedium)
-                Text(text = "Statut: ${coupon.status}", style = MaterialTheme.typography.bodySmall)
-            }
-
-            when {
-                isParent && request.status == RewardRequestStatus.PENDING -> {
-                    Row(horizontalArrangement = Arrangement.spacedBy(spacing.small)) {
-                        Button(onClick = onApprove, enabled = !isSubmitting) {
-                            Text("Accepter")
-                        }
-                        TextButton(onClick = onRefuse, enabled = !isSubmitting) {
-                            Text("Refuser")
-                        }
-                    }
-                }
-
-                isParent && request.status == RewardRequestStatus.APPROVED && request.coupon != null -> {
-                    Button(onClick = { onUseCoupon(request.coupon.id) }, enabled = !isSubmitting) {
-                        Text("Marquer utilise")
-                    }
-                }
+                FantasyButton(
+                    text = "Accepter",
+                    onClick = onApprove,
+                    enabled = !isSubmitting,
+                    modifier = Modifier.weight(1f),
+                )
+                FantasyButton(
+                    text = "Refuser",
+                    onClick = onRefuse,
+                    enabled = !isSubmitting,
+                    style = FantasyButtonStyle.Outline,
+                    modifier = Modifier.weight(1f),
+                )
             }
         }
     }
@@ -339,11 +345,11 @@ private fun RewardRequestRow(
 
 @Composable
 private fun EmptyCard(text: String) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    FantasyCard(modifier = Modifier.fillMaxWidth(), tone = FantasyTone.Gold) {
         Text(
             text = text,
-            modifier = Modifier.padding(MaterialTheme.spacing.medium),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium,
+            color = InkMuted,
         )
     }
 }
@@ -358,16 +364,66 @@ private fun LocalHistory(transactions: List<PointsTransaction>) {
     val spacing = MaterialTheme.spacing
     Column(verticalArrangement = Arrangement.spacedBy(spacing.small)) {
         transactions.forEach { transaction ->
-            Card(modifier = Modifier.fillMaxWidth()) {
+            FantasyCard(modifier = Modifier.fillMaxWidth(), tone = FantasyTone.Moss) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(spacing.medium),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(text = transaction.reason, style = MaterialTheme.typography.bodyMedium)
-                    Text(text = "${transaction.amount} Flammèches")
+                    Text(
+                        text = transaction.reason,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = WoodBrownDark,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = "${transaction.amount} Flammèches",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = EmberOrange,
+                    )
                 }
             }
         }
     }
 }
+
+@Composable
+private fun fantasyTextFieldColors() =
+    OutlinedTextFieldDefaults.colors(
+        focusedTextColor = WoodBrownDark,
+        unfocusedTextColor = WoodBrownDark,
+        focusedBorderColor = EmberOrange,
+        unfocusedBorderColor = SoftGold.copy(alpha = 0.9f),
+        focusedLabelColor = EmberOrange,
+        unfocusedLabelColor = InkMuted,
+        cursorColor = EmberOrange,
+    )
+
+private fun RewardRequestStatus.toTone(): FantasyTone =
+    when (this) {
+        RewardRequestStatus.PENDING -> FantasyTone.Gold
+        RewardRequestStatus.APPROVED -> FantasyTone.Moss
+        RewardRequestStatus.REFUSED -> FantasyTone.Ember
+        RewardRequestStatus.USED -> FantasyTone.Wood
+        RewardRequestStatus.EXPIRED -> FantasyTone.Ember
+    }
+
+private fun RewardRequestStatus.toColor(): Color =
+    when (this) {
+        RewardRequestStatus.PENDING -> EmberOrange
+        RewardRequestStatus.APPROVED -> MossGreen
+        RewardRequestStatus.REFUSED -> DangerGlow
+        RewardRequestStatus.USED -> WoodBrownDark
+        RewardRequestStatus.EXPIRED -> DangerGlow
+    }
+
+private fun RewardRequestStatus.displayLabel(): String =
+    when (this) {
+        RewardRequestStatus.PENDING -> "En attente"
+        RewardRequestStatus.APPROVED -> "Approuvée"
+        RewardRequestStatus.REFUSED -> "Refusée"
+        RewardRequestStatus.USED -> "Utilisée"
+        RewardRequestStatus.EXPIRED -> "Expirée"
+    }

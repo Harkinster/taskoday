@@ -142,7 +142,7 @@ class TasksViewModel
 private fun Throwable.toMessage(): String =
     when (this) {
         is UnknownHostException, is ConnectException -> "Serveur indisponible."
-        is SocketTimeoutException -> "Requete expiree."
+        is SocketTimeoutException -> "Requête expirée."
         is HttpException ->
             when (code()) {
                 403 -> "Action non autorisee."

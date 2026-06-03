@@ -9,7 +9,7 @@ import retrofit2.HttpException
 internal fun Throwable.toRemoteUserMessage(fallback: String = "Erreur reseau."): String =
     when (this) {
         is UnknownHostException, is ConnectException -> "Serveur indisponible."
-        is SocketTimeoutException -> "Requete expiree."
+        is SocketTimeoutException -> "Requête expirée."
         is HttpException ->
             when (code()) {
                 401 -> "Session expiree."

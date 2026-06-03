@@ -216,7 +216,7 @@ class HomeViewModel
                     questId = item.quest.id,
                     dayStartMillis = dayStart,
                     points = item.quest.pointsReward,
-                    reason = "Quete: ${item.quest.title}",
+                    reason = "Quête : ${item.quest.title}",
                 )
             } else {
                 pointsRepository.revokeForQuest(item.quest.id, dayStart)

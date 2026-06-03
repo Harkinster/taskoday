@@ -56,7 +56,7 @@ class PlanningSyncRepositoryImpl
                     }
 
                     PlanningItemType.QUEST -> {
-                        require(completed) { "La devalidation distante des quetes n'est pas disponible." }
+                        require(completed) { "La dévalidation distante des quêtes n'est pas disponible." }
                         planningApi.completeQuest(remoteRef.remoteItemId)
                     }
                 }

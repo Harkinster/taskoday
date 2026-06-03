@@ -20,22 +20,22 @@ sealed class TaskodayDestination(
 
     data object RegisterParent : TaskodayDestination(route = "auth/register", label = "Inscription")
 
-    data object Nest : TaskodayDestination(route = "nest", label = "Nid", icon = Icons.Outlined.Home)
+    data object Nest : TaskodayDestination(route = "nest", label = "Le Nid", icon = Icons.Outlined.Home)
 
-    data object Home : TaskodayDestination(route = "home", label = "Journee", icon = Icons.Outlined.Today)
+    data object Home : TaskodayDestination(route = "home", label = "Journée", icon = Icons.Outlined.Today)
 
     data object Tasks :
         TaskodayDestination(route = "tasks", label = "Missions", icon = Icons.Outlined.CheckCircle)
 
     data object Quests :
-        TaskodayDestination(route = "quests", label = "Quetes", icon = Icons.Outlined.AutoAwesome)
+        TaskodayDestination(route = "quests", label = "Quêtes", icon = Icons.Outlined.AutoAwesome)
 
     data object Shop :
-        TaskodayDestination(route = "shop", label = "Caverne", icon = Icons.Outlined.Redeem)
+        TaskodayDestination(route = "shop", label = "Souhaits", icon = Icons.Outlined.Redeem)
 
     data object Inventory : TaskodayDestination(route = "inventory", label = "Inventaire")
 
-    data object Eggs : TaskodayDestination(route = "eggs", label = "Oeufs")
+    data object Eggs : TaskodayDestination(route = "eggs", label = "Œufs")
 
     data object Dragons : TaskodayDestination(route = "dragons", label = "Dragons")
 
@@ -86,8 +86,8 @@ sealed class TaskodayDestination(
 
 val TopLevelDestinations: List<TaskodayDestination> =
     listOf(
-        TaskodayDestination.Nest,
         TaskodayDestination.Home,
+        TaskodayDestination.Nest,
         TaskodayDestination.Tasks,
         TaskodayDestination.Quests,
         TaskodayDestination.Shop,

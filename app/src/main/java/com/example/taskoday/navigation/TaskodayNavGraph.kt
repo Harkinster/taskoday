@@ -24,8 +24,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.taskoday.core.ui.component.fantasy.TaskodayBottomBar
-import com.example.taskoday.core.ui.theme.NightBlue900
-import com.example.taskoday.core.ui.theme.NightBlue950
+import com.example.taskoday.core.ui.theme.BackgroundBottom
+import com.example.taskoday.core.ui.theme.BackgroundTop
 import com.example.taskoday.domain.model.PlanningFormType
 import com.example.taskoday.features.add.QuickAddFab
 import com.example.taskoday.features.add.QuickAddViewModel
@@ -140,7 +140,7 @@ fun TaskodayApp() {
             Modifier
                 .fillMaxSize()
                 .background(
-                    brush = Brush.verticalGradient(listOf(NightBlue900, NightBlue950)),
+                    brush = Brush.verticalGradient(listOf(BackgroundTop, BackgroundBottom)),
                 ),
     ) {
         Scaffold(
@@ -205,7 +205,7 @@ fun TaskodayApp() {
                 LaunchedEffect(uiState.isCheckingSession, uiState.isAuthenticated, uiState.isLocalMode) {
                     if (!uiState.isCheckingSession) {
                         if (uiState.isAuthenticated || uiState.isLocalMode) {
-                            navController.navigate(TaskodayDestination.Nest.route) {
+                            navController.navigate(TaskodayDestination.Home.route) {
                                 popUpTo(TaskodayDestination.Splash.route) {
                                     inclusive = true
                                 }
@@ -229,7 +229,7 @@ fun TaskodayApp() {
                     viewModel = viewModel,
                     onOpenRegisterParent = { navController.navigate(TaskodayDestination.RegisterParent.route) },
                     onOpenApp = {
-                        navController.navigate(TaskodayDestination.Nest.route) {
+                        navController.navigate(TaskodayDestination.Home.route) {
                             popUpTo(TaskodayDestination.Login.route) {
                                 inclusive = true
                             }
@@ -245,7 +245,7 @@ fun TaskodayApp() {
                     viewModel = viewModel,
                     onBackToLogin = { navController.popBackStack() },
                     onOpenApp = {
-                        navController.navigate(TaskodayDestination.Nest.route) {
+                        navController.navigate(TaskodayDestination.Home.route) {
                             popUpTo(TaskodayDestination.Login.route) {
                                 inclusive = true
                             }
