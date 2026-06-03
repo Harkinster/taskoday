@@ -28,7 +28,7 @@ sealed class TaskodayDestination(
         TaskodayDestination(route = "tasks", label = "Mission", icon = Icons.Outlined.Flag)
 
     data object Quests :
-        TaskodayDestination(route = "quests", label = "Quêtes", icon = Icons.Outlined.AutoAwesome)
+        TaskodayDestination(route = "quests", label = "Quête", icon = Icons.Outlined.AutoAwesome)
 
     data object Shop :
         TaskodayDestination(route = "shop", label = "Caverne aux Souhaits", icon = Icons.Outlined.Redeem)
