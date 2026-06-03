@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
@@ -29,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.taskoday.core.ui.testing.TaskodayTestTags
 import com.example.taskoday.core.ui.theme.EmberOrange
@@ -59,13 +61,13 @@ fun QuickAddFab(
         containerColor = EmberOrange,
         contentColor = ParchmentLight,
     ) {
-        Icon(imageVector = Icons.Outlined.Add, contentDescription = "Ajouter")
+        Icon(imageVector = Icons.Outlined.Add, contentDescription = "Ajouter", modifier = Modifier.size(30.dp))
     }
 
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
-            title = { Text(text = "Ajouter") },
+            title = { Text(text = "Ajouter une action", fontWeight = FontWeight.SemiBold) },
             containerColor = ParchmentLight,
             titleContentColor = WoodBrownDark,
             textContentColor = InkMuted,
@@ -75,6 +77,7 @@ fun QuickAddFab(
                 ) {
                     QuickAddOption(
                         label = "Routine",
+                        description = "Habitude régulière à suivre.",
                         icon = Icons.Outlined.Repeat,
                         enabled = uiState.canCreateRoutine,
                         onClick = {
@@ -84,6 +87,7 @@ fun QuickAddFab(
                     )
                     QuickAddOption(
                         label = "Mission",
+                        description = "Objectif planifié par le parent.",
                         icon = Icons.Outlined.Flag,
                         enabled = uiState.canCreateMission,
                         onClick = {
@@ -93,6 +97,7 @@ fun QuickAddFab(
                     )
                     QuickAddOption(
                         label = "Quête",
+                        description = "Défi facultatif pour progresser.",
                         icon = Icons.Outlined.AutoAwesome,
                         enabled = uiState.canCreateQuest,
                         onClick = {
@@ -125,6 +130,7 @@ fun QuickAddFab(
 @Composable
 private fun QuickAddOption(
     label: String,
+    description: String,
     icon: ImageVector,
     enabled: Boolean,
     onClick: () -> Unit,
@@ -132,7 +138,7 @@ private fun QuickAddOption(
     OutlinedButton(
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp),
+        modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 64.dp),
         shape = RoundedCornerShape(14.dp),
         border = BorderStroke(1.dp, if (enabled) SoftGold.copy(alpha = 0.9f) else MagicViolet.copy(alpha = 0.35f)),
         colors =
@@ -147,7 +153,10 @@ private fun QuickAddOption(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(imageVector = icon, contentDescription = null)
-            Text(text = label)
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(text = label, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Text(text = description, style = MaterialTheme.typography.bodySmall)
+            }
         }
     }
 }

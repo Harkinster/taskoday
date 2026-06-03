@@ -2,11 +2,11 @@ package com.example.taskoday.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoAwesome
-import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Redeem
-import androidx.compose.material.icons.outlined.Today
+import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.ui.graphics.vector.ImageVector
 
 sealed class TaskodayDestination(
@@ -22,16 +22,16 @@ sealed class TaskodayDestination(
 
     data object Nest : TaskodayDestination(route = "nest", label = "Le Nid", icon = Icons.Outlined.Home)
 
-    data object Home : TaskodayDestination(route = "home", label = "Journée", icon = Icons.Outlined.Today)
+    data object Home : TaskodayDestination(route = "home", label = "Routine", icon = Icons.Outlined.Repeat)
 
     data object Tasks :
-        TaskodayDestination(route = "tasks", label = "Missions", icon = Icons.Outlined.CheckCircle)
+        TaskodayDestination(route = "tasks", label = "Mission", icon = Icons.Outlined.Flag)
 
     data object Quests :
         TaskodayDestination(route = "quests", label = "Quêtes", icon = Icons.Outlined.AutoAwesome)
 
     data object Shop :
-        TaskodayDestination(route = "shop", label = "Souhaits", icon = Icons.Outlined.Redeem)
+        TaskodayDestination(route = "shop", label = "Caverne aux Souhaits", icon = Icons.Outlined.Redeem)
 
     data object Inventory : TaskodayDestination(route = "inventory", label = "Inventaire")
 
@@ -87,8 +87,7 @@ sealed class TaskodayDestination(
 val TopLevelDestinations: List<TaskodayDestination> =
     listOf(
         TaskodayDestination.Home,
-        TaskodayDestination.Nest,
         TaskodayDestination.Tasks,
         TaskodayDestination.Quests,
-        TaskodayDestination.Shop,
+        TaskodayDestination.Nest,
     )

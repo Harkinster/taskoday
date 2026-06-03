@@ -261,7 +261,7 @@ fun TaskodayApp() {
                     onOpenInventory = { navController.navigate(TaskodayDestination.Inventory.route) },
                     onOpenEggs = { navController.navigate(TaskodayDestination.Eggs.route) },
                     onOpenDragons = { navController.navigate(TaskodayDestination.Dragons.route) },
-                    onOpenWishes = { navigateToTopLevel(TaskodayDestination.Shop) },
+                    onOpenWishes = { navController.navigate(TaskodayDestination.Shop.route) },
                     onOpenScrolls = { navController.navigate(TaskodayDestination.Scrolls.route) },
                     onOpenProfile = navigateToProfile,
                 )
@@ -271,7 +271,7 @@ fun TaskodayApp() {
                 val viewModel: HomeViewModel = hiltViewModel()
                 HomeScreen(
                     viewModel = viewModel,
-                    onOpenTasks = { navController.navigate(TaskodayDestination.Tasks.route) },
+                    onOpenTasks = { navigateToTopLevel(TaskodayDestination.Tasks) },
                     onOpenWeek = { navController.navigate(TaskodayDestination.Week.route) },
                     onOpenTask = { taskId -> navController.navigate(TaskodayDestination.TaskDetail.createRoute(taskId)) },
                     onOpenProfile = navigateToProfile,

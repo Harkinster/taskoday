@@ -2,6 +2,7 @@ package com.example.taskoday.features.home
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -11,10 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.CalendarMonth
-import androidx.compose.material.icons.outlined.Today
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -56,7 +54,6 @@ import com.example.taskoday.core.ui.theme.WoodBrownDark
 import com.example.taskoday.core.ui.theme.spacing
 import com.example.taskoday.core.util.DateTimeUtils
 import com.example.taskoday.domain.model.DayPart
-import com.example.taskoday.domain.model.QuestForDay
 import com.example.taskoday.domain.model.TaskForDay
 import java.time.Instant
 import java.time.LocalDate
@@ -78,19 +75,15 @@ fun HomeScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
-    val tasksForDay =
+    val visibleTasksForDay =
         if (uiState.usingRemoteData) {
             uiState.tasksForDay.filter { it.task.id < 0L }
         } else {
             uiState.tasksForDay.filter { it.task.id > 0L }
         }
-    val questsForDay =
-        if (uiState.usingRemoteData) {
-            uiState.questsForDay.filter { it.quest.id < 0L }
-        } else {
-            uiState.questsForDay.filter { it.quest.id > 0L }
-        }
-    val planningItems = buildPlanningItems(tasksForDay, questsForDay)
+    val routinesForDay = visibleTasksForDay.filter { it.task.isDaily }
+    val missionsForDay = visibleTasksForDay.filter { !it.task.isDaily }
+    val planningItems = buildPlanningItems(routinesForDay)
     val completedCount = planningItems.count { it.isCompleted }
     val progress = if (planningItems.isEmpty()) 0f else completedCount.toFloat() / planningItems.size.toFloat()
     val sections = buildSections(planningItems)
@@ -120,7 +113,7 @@ fun HomeScreen(
                 ) {
                     FantasyStateCard(
                         title = "Le Nid se réveille",
-                        message = "La Journée du Gardien se prépare doucement.",
+                        message = "La Routine du Gardien se prépare doucement.",
                         loading = true,
                         tone = FantasyTone.Gold,
                     )
@@ -138,8 +131,8 @@ fun HomeScreen(
             ) {
                 item {
                     FantasyHeader(
-                        title = "Journée",
-                        subtitle = "Le Gardien avance pas à pas, routine après routine.",
+                        title = "Routine",
+                        subtitle = "Le Gardien avance pas à pas avec ses routines.",
                         assetResId = NestAssets.interfaceAsset("nid"),
                         assetDescription = null,
                         onAvatarClick = onOpenProfile,
@@ -147,11 +140,13 @@ fun HomeScreen(
                 }
 
                 item {
-                    HomeDateCard(
-                        dateLabel = uiState.dateLabel,
-                        onPrevious = viewModel::goToPreviousDay,
-                        onNext = viewModel::goToNextDay,
-                        onToday = viewModel::goToToday,
+                    RoutineDateHeader(
+                        dateLabel =
+                            if (selectedDate == LocalDate.now()) {
+                                "Aujourd'hui — ${uiState.dateLabel}"
+                            } else {
+                                uiState.dateLabel
+                            },
                         onOpenCalendar = { showDatePicker = true },
                     )
                 }
@@ -164,12 +159,21 @@ fun HomeScreen(
                         progress = progress,
                         subtitle =
                             if (planningItems.isEmpty()) {
-                                "Aucune routine pour ce jour."
+                                "Rien de prévu pour cette routine."
                             } else {
                                 "Chaque geste nourrit Le Nid."
                             },
                         badgeLabel = "${uiState.pointsBalance} Flammèches",
                     )
+                }
+
+                if (missionsForDay.isNotEmpty()) {
+                    item {
+                        MissionsAvailableCard(
+                            missionCount = missionsForDay.size,
+                            onOpenMissions = onOpenTasks,
+                        )
+                    }
                 }
 
                 if (uiState.usingRemoteData) {
@@ -181,7 +185,7 @@ fun HomeScreen(
                                 color = WoodBrownDark,
                             )
                             Text(
-                                text = "Les routines du jour viennent du backend.",
+                                text = "Les routines viennent du backend.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = InkMuted,
                             )
@@ -195,42 +199,34 @@ fun HomeScreen(
                     }
                 }
 
-                sections.forEach { section ->
-                    item(key = "section-${section.dayPart.name}") {
-                        DayPartCard(
-                            section = section,
-                            onOpenTask = onOpenTask,
-                            onToggleCheck = { item, checked ->
-                                when {
-                                    item.taskForDay != null -> viewModel.setTaskChecked(item.taskForDay, checked)
-                                    item.questForDay != null -> viewModel.setQuestChecked(item.questForDay, checked)
-                                }
-                                if (checked) {
-                                    coroutineScope.launch {
-                                        snackbarHostState.showSnackbar(POSITIVE_MESSAGES.random())
-                                    }
-                                }
-                            },
+                if (planningItems.isEmpty()) {
+                    item {
+                        FantasyStateCard(
+                            title = "Routine vide",
+                            message = "Rien de prévu pour cette routine.",
+                            assetResId = NestAssets.interfaceAsset("nid"),
+                            assetDescription = null,
+                            tone = FantasyTone.Moss,
                         )
                     }
-                }
-
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(spacing.small),
-                    ) {
-                        FantasyButton(
-                            text = "Semaine",
-                            onClick = onOpenWeek,
-                            style = FantasyButtonStyle.Outline,
-                            modifier = Modifier.weight(1f),
-                        )
-                        FantasyButton(
-                            text = "Missions",
-                            onClick = onOpenTasks,
-                            modifier = Modifier.weight(1f),
-                        )
+                } else {
+                    sections.filter { section -> section.items.isNotEmpty() }.forEach { section ->
+                        item(key = "section-${section.dayPart.name}") {
+                            DayPartCard(
+                                section = section,
+                                onOpenTask = onOpenTask,
+                                onToggleCheck = { item, checked ->
+                                    item.taskForDay?.let { taskForDay ->
+                                        viewModel.setTaskChecked(taskForDay, checked)
+                                    }
+                                    if (checked) {
+                                        coroutineScope.launch {
+                                            snackbarHostState.showSnackbar(POSITIVE_MESSAGES.random())
+                                        }
+                                    }
+                                },
+                            )
+                        }
                     }
                 }
             }
@@ -270,58 +266,54 @@ fun HomeScreen(
 }
 
 @Composable
-private fun HomeDateCard(
+private fun RoutineDateHeader(
     dateLabel: String,
-    onPrevious: () -> Unit,
-    onNext: () -> Unit,
-    onToday: () -> Unit,
     onOpenCalendar: () -> Unit,
 ) {
-    FantasyCard(tone = FantasyTone.Gold) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = dateLabel,
+            style = MaterialTheme.typography.titleMedium,
+            color = WoodBrownDark,
+        )
+        IconButton(onClick = onOpenCalendar) {
+            Icon(
+                imageVector = Icons.Outlined.CalendarMonth,
+                contentDescription = "Calendrier",
+                tint = EmberOrange,
+            )
+        }
+    }
+}
+
+@Composable
+private fun MissionsAvailableCard(
+    missionCount: Int,
+    onOpenMissions: () -> Unit,
+) {
+    FantasyCard(tone = FantasyTone.Violet) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(onClick = onPrevious) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                    contentDescription = "Jour précédent",
-                    tint = WoodBrownDark,
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xSmall)) {
+                Text(text = "Missions disponibles", style = MaterialTheme.typography.titleMedium, color = WoodBrownDark)
+                Text(
+                    text = "$missionCount mission${if (missionCount > 1) "s" else ""} à faire",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = InkMuted,
                 )
             }
-            Text(
-                text = dateLabel,
-                style = MaterialTheme.typography.titleMedium,
-                color = WoodBrownDark,
+            FantasyButton(
+                text = "Voir les missions",
+                onClick = onOpenMissions,
+                style = FantasyButtonStyle.Outline,
             )
-            IconButton(onClick = onNext) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = "Jour suivant",
-                    tint = WoodBrownDark,
-                )
-            }
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onClick = onToday) {
-                Icon(
-                    imageVector = Icons.Outlined.Today,
-                    contentDescription = "Aujourd'hui",
-                    tint = EmberOrange,
-                )
-            }
-            IconButton(onClick = onOpenCalendar) {
-                Icon(
-                    imageVector = Icons.Outlined.CalendarMonth,
-                    contentDescription = "Calendrier",
-                    tint = EmberOrange,
-                )
-            }
         }
     }
 }
@@ -416,17 +408,13 @@ private data class HomePlanningItem(
     val dueDate: Long?,
     val isCompleted: Boolean,
     val taskForDay: TaskForDay? = null,
-    val questForDay: QuestForDay? = null,
 )
 
-private fun buildPlanningItems(
-    tasks: List<TaskForDay>,
-    quests: List<QuestForDay>,
-): List<HomePlanningItem> {
-    val taskItems =
-        tasks.map { item ->
+private fun buildPlanningItems(tasks: List<TaskForDay>): List<HomePlanningItem> =
+    tasks
+        .map { item ->
             HomePlanningItem(
-                key = "task-${item.task.id}",
+                key = "routine-${item.task.id}",
                 dayPart = item.task.dayPart,
                 title = item.task.title,
                 emoji = item.task.emoji,
@@ -434,21 +422,7 @@ private fun buildPlanningItems(
                 isCompleted = item.isCompleted,
                 taskForDay = item,
             )
-        }
-    val questItems =
-        quests.map { item ->
-            HomePlanningItem(
-                key = "quest-${item.quest.id}",
-                dayPart = item.quest.dayPart,
-                title = item.quest.title,
-                emoji = item.quest.emoji,
-                dueDate = null,
-                isCompleted = item.isCompletedForDay,
-                questForDay = item,
-            )
-        }
-    return (taskItems + questItems).sortedBy { it.dueDate ?: Long.MAX_VALUE }
-}
+        }.sortedBy { it.dueDate ?: Long.MAX_VALUE }
 
 private fun buildSections(items: List<HomePlanningItem>): List<HomeSection> {
     val tones =
@@ -492,6 +466,6 @@ private val POSITIVE_MESSAGES: List<String> =
     listOf(
         "Bravo !",
         "Excellent travail !",
-        "Mission validée !",
+        "Routine validée !",
         "Continue ton aventure !",
     )

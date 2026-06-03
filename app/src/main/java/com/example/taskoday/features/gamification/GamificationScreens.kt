@@ -16,6 +16,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -53,6 +57,11 @@ fun NestScreen(
     onOpenScrolls: () -> Unit,
     onOpenProfile: () -> Unit,
 ) {
+    var activeCompanionKey by rememberSaveable { mutableStateOf("dragon_pyron") }
+    var followedEggKey by rememberSaveable { mutableStateOf("egg_pyron") }
+    val activeDragon = sampleDragons.firstOrNull { dragon -> dragon.key == activeCompanionKey }
+    val followedEgg = sampleEggs.firstOrNull { egg -> egg.key == followedEggKey } ?: sampleEggs.first()
+
     GamificationScaffold {
         item {
             FantasyHeader(
@@ -93,17 +102,30 @@ fun NestScreen(
             }
         }
         item {
+            WishAccessCard(
+                onOpenWishes = onOpenWishes,
+                onOpenScrolls = onOpenScrolls,
+            )
+        }
+        item {
+            ActiveNestDisplayCard(
+                dragon = activeDragon,
+                egg = followedEgg,
+                perchLevel = 1,
+            )
+        }
+        item {
             DragonCard(
-                title = "Pyron",
-                stage = "Bébé dragon braise",
-                nextStep = "Investis des consommables pour choisir sa prochaine évolution.",
-                assetResId = NestAssets.dragonAsset("pyron", "baby"),
-                contentDescription = "Dragon Pyron, stade bébé",
-                badgeLabel = "Compagnon actif",
+                title = activeDragon?.title ?: followedEgg.title,
+                stage = activeDragon?.stage ?: "Œuf suivi",
+                nextStep = activeDragon?.nextStep ?: "Choisis un œuf à suivre dans le Bestiaire.",
+                assetResId = activeDragon?.assetResId ?: followedEgg.assetResId,
+                contentDescription = activeDragon?.contentDescription ?: followedEgg.contentDescription,
+                badgeLabel = if (activeDragon != null) "Compagnon actif" else "Œuf suivi",
                 primaryActionLabel = "Faire évoluer",
                 onPrimaryAction = {},
-                secondaryActionLabel = "Changer de compagnon",
-                onSecondaryAction = {},
+                secondaryActionLabel = "Bestiaire du Nid",
+                onSecondaryAction = { onOpenDragons() },
             )
         }
         item {
@@ -147,7 +169,7 @@ fun NestScreen(
         }
         item {
             NavigationButtons(
-                primaryLabel = "Journée",
+                primaryLabel = "Routine",
                 onPrimaryClick = onOpenPlanning,
                 secondaryLabel = "Inventaire",
                 onSecondaryClick = onOpenInventory,
@@ -163,11 +185,24 @@ fun NestScreen(
         }
         item {
             NavigationButtons(
-                primaryLabel = "Caverne aux Souhaits",
-                onPrimaryClick = onOpenWishes,
+                primaryLabel = "Dragons",
+                onPrimaryClick = onOpenDragons,
                 secondaryLabel = "Parchemins",
                 onSecondaryClick = onOpenScrolls,
                 outline = true,
+            )
+        }
+        item {
+            BestiaryPreviewCard(
+                activeCompanionKey = activeCompanionKey,
+                followedEggKey = followedEggKey,
+                onSelectDragon = { key -> activeCompanionKey = key },
+                onSelectEgg = { key ->
+                    followedEggKey = key
+                    activeCompanionKey = ""
+                },
+                onOpenDragons = onOpenDragons,
+                onOpenEggs = onOpenEggs,
             )
         }
     }
@@ -405,6 +440,159 @@ private fun GuardianProgressCard(
             text = "$levelName vers $nextLevelLabel",
             style = MaterialTheme.typography.bodyMedium,
             color = InkMuted,
+        )
+    }
+}
+
+@Composable
+private fun WishAccessCard(
+    onOpenWishes: () -> Unit,
+    onOpenScrolls: () -> Unit,
+) {
+    FantasyCard(tone = FantasyTone.Ember) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            FantasyAssetBubble(
+                assetResId = NestAssets.interfaceAsset("flammeche"),
+                contentDescription = "Flammèches",
+                size = 52.dp,
+            )
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(text = "Flammèches : 20", style = MaterialTheme.typography.titleMedium, color = WoodBrownDark)
+                Text(
+                    text = "Les Souhaits et Parchemins restent dans Le Nid.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = InkMuted,
+                )
+            }
+        }
+        NavigationButtons(
+            primaryLabel = "Caverne aux Souhaits",
+            onPrimaryClick = onOpenWishes,
+            secondaryLabel = "Mes Parchemins",
+            onSecondaryClick = onOpenScrolls,
+            outline = true,
+        )
+    }
+}
+
+@Composable
+private fun ActiveNestDisplayCard(
+    dragon: DragonUiItem?,
+    egg: EggUiItem,
+    perchLevel: Int,
+) {
+    FantasyCard(tone = FantasyTone.Gold) {
+        Text(text = "Affichage du Nid", style = MaterialTheme.typography.titleMedium, color = WoodBrownDark)
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            FantasyAssetBubble(
+                assetResId = NestAssets.perchAsset(perchLevel),
+                contentDescription = "Perchoir niveau $perchLevel",
+                size = 72.dp,
+            )
+            FantasyAssetBubble(
+                assetResId = dragon?.assetResId ?: egg.assetResId,
+                contentDescription = dragon?.contentDescription ?: egg.contentDescription,
+                size = 82.dp,
+            )
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = dragon?.title ?: egg.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = WoodBrownDark,
+                )
+                Text(
+                    text = dragon?.let { "Compagnon actif" } ?: "Œuf suivi",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MossGreen,
+                )
+                Text(
+                    text = "Le perchoir soutient le compagnon ou l'œuf suivi.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = InkMuted,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BestiaryPreviewCard(
+    activeCompanionKey: String,
+    followedEggKey: String,
+    onSelectDragon: (String) -> Unit,
+    onSelectEgg: (String) -> Unit,
+    onOpenDragons: () -> Unit,
+    onOpenEggs: () -> Unit,
+) {
+    FantasyCard(tone = FantasyTone.Violet) {
+        Text(text = "Bestiaire du Nid", style = MaterialTheme.typography.titleMedium, color = WoodBrownDark)
+        Text(
+            text = "Choisis le compagnon affiché dans Le Nid ou l'œuf à suivre.",
+            style = MaterialTheme.typography.bodySmall,
+            color = InkMuted,
+        )
+        sampleDragons.take(2).forEach { dragon ->
+            BestiaryChoiceRow(
+                title = dragon.title,
+                subtitle = if (dragon.key == activeCompanionKey) "Compagnon actif" else "Dragon débloqué",
+                assetResId = dragon.assetResId,
+                contentDescription = dragon.contentDescription,
+                actionLabel = if (dragon.key == activeCompanionKey) "Actif" else "Définir comme compagnon",
+                enabled = dragon.key != activeCompanionKey,
+                onClick = { onSelectDragon(dragon.key) },
+            )
+        }
+        sampleEggs.take(2).forEach { egg ->
+            BestiaryChoiceRow(
+                title = egg.title,
+                subtitle = if (egg.key == followedEggKey && activeCompanionKey.isBlank()) "Œuf suivi" else "Œuf découvert",
+                assetResId = egg.assetResId,
+                contentDescription = egg.contentDescription,
+                actionLabel = "Suivre cet Œuf",
+                enabled = true,
+                onClick = { onSelectEgg(egg.key) },
+            )
+        }
+        BestiaryChoiceRow(
+            title = "Dragon non découvert",
+            subtitle = "Fais éclore un Œuf pour rencontrer ton premier dragon.",
+            assetResId = NestAssets.interfaceAsset("egg_locked"),
+            contentDescription = "Œuf verrouillé",
+            actionLabel = "Verrouillé",
+            enabled = false,
+            onClick = {},
+        )
+        NavigationButtons(
+            primaryLabel = "Voir les Dragons",
+            onPrimaryClick = onOpenDragons,
+            secondaryLabel = "Voir les Œufs",
+            onSecondaryClick = onOpenEggs,
+            outline = true,
+        )
+    }
+}
+
+@Composable
+private fun BestiaryChoiceRow(
+    title: String,
+    subtitle: String,
+    assetResId: Int,
+    contentDescription: String,
+    actionLabel: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+        FantasyAssetBubble(assetResId = assetResId, contentDescription = contentDescription, size = 48.dp)
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(text = title, style = MaterialTheme.typography.titleSmall, color = WoodBrownDark)
+            Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = InkMuted)
+        }
+        FantasyButton(
+            text = actionLabel,
+            onClick = onClick,
+            style = if (enabled) FantasyButtonStyle.Outline else FantasyButtonStyle.Quiet,
+            enabled = enabled,
         )
     }
 }

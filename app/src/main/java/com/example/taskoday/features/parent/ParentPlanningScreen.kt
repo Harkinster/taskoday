@@ -80,6 +80,7 @@ fun ParentPlanningScreen(
     var selectedDayPart by rememberSaveable { mutableStateOf(DayPart.MATIN) }
     var routineWeekdays by rememberSaveable { mutableStateOf(setOf<Int>()) }
     var missionDate by rememberSaveable { mutableStateOf(LocalDate.now()) }
+    val selectedChild = uiState.children.firstOrNull { child -> child.id == uiState.selectedChildId }
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -151,6 +152,10 @@ fun ParentPlanningScreen(
                             onSelect = viewModel::selectChild,
                         )
                     }
+                }
+
+                item {
+                    ParentChildOverviewCard(childName = selectedChild?.displayName)
                 }
 
                 item {
@@ -343,7 +348,7 @@ private fun ParentPlanningHeader(
             }
             Column(verticalArrangement = Arrangement.spacedBy(spacing.xSmall)) {
                 Text(
-                    text = "Mode parent",
+                    text = "Mes enfants",
                     style = MaterialTheme.typography.headlineMedium,
                     color = StarWhite,
                 )
@@ -364,6 +369,43 @@ private fun SectionTitle(text: String) {
         style = MaterialTheme.typography.titleMedium,
         color = StarWhite,
     )
+}
+
+@Composable
+private fun ParentChildOverviewCard(childName: String?) {
+    NeonCard(tone = NeonTone.Cyan) {
+        SectionTitle(childName?.let { "Vue de $it" } ?: "Sélectionne un enfant")
+        Text(
+            text = "Routines, missions, quêtes et progression rapide seront affichées ici dès que les données seront branchées.",
+            style = MaterialTheme.typography.bodySmall,
+            color = TextMuted,
+        )
+        ParentEmptyLine(title = "Routine", message = "Rien de prévu pour cette routine.")
+        ParentEmptyLine(title = "Mission", message = "Aucune mission pour le moment.")
+        ParentEmptyLine(title = "Quête", message = "Aucune quête active.")
+        ParentEmptyLine(title = "Progression", message = "Le Nid attend les prochaines réussites du Gardien.")
+    }
+}
+
+@Composable
+private fun ParentEmptyLine(
+    title: String,
+    message: String,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(text = title, style = MaterialTheme.typography.labelLarge, color = NeonCyanSoft)
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodySmall,
+            color = TextMuted,
+            textAlign = TextAlign.End,
+            modifier = Modifier.weight(1f),
+        )
+    }
 }
 
 @Composable

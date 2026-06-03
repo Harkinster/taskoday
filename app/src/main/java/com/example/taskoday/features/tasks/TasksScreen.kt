@@ -83,7 +83,7 @@ fun TasksScreen(
             ) {
                 item {
                     TaskodayHeader(
-                        title = "Missions",
+                        title = "Mission",
                         subtitle = "Des actions du quotidien, des victoires concretes.",
                         avatarInitials = "AB",
                         onAvatarClick = onOpenProfile,
@@ -122,7 +122,7 @@ fun TasksScreen(
                     item {
                         NeonCard(tone = NeonTone.Violet) {
                             Text(
-                                text = "Aucune mission active.",
+                                text = "Aucune mission pour le moment.",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = StarWhite,
                             )

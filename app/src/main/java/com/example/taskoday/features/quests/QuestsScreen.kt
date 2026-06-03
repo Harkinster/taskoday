@@ -123,7 +123,7 @@ fun QuestsScreen(
             ) {
                 item {
                     TaskodayHeader(
-                        title = "Quêtes",
+                        title = "Quête",
                         subtitle = "Accomplis des actions, gagne de l XP et deviens legendaire.",
                         avatarInitials = "AB",
                         onAvatarClick = onOpenProfile,
