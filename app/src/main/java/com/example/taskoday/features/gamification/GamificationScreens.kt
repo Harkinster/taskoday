@@ -398,34 +398,6 @@ fun ScrollsScreen(
 }
 
 @Composable
-fun ParentRewardsScreen(
-    onOpenProfile: () -> Unit,
-) {
-    GamificationListScreen(
-        title = "Souhaits parent",
-        subtitle = "Valider, refuser ou suivre les demandes du Gardien.",
-        assetResId = NestAssets.scrollAsset("pending"),
-        assetDescription = "Parchemin",
-        onOpenProfile = onOpenProfile,
-    ) {
-        if (sampleRequests.isEmpty()) {
-            item {
-                FantasyStateCard(
-                    title = "Aucune demande en attente",
-                    message = "Les Souhaits du Gardien apparaîtront ici quand ils seront prêts.",
-                    assetResId = NestAssets.scrollAsset("pending"),
-                    assetDescription = "Parchemin",
-                )
-            }
-        } else {
-            items(sampleRequests, key = { request -> request.childName + request.title }) { request ->
-                ParentRequestCard(request = request)
-            }
-        }
-    }
-}
-
-@Composable
 private fun GuardianProgressCard(
     xp: Int,
     levelName: String,
@@ -620,15 +592,6 @@ private fun PerchOverviewCard(level: Int) {
 }
 
 @Composable
-private fun ParentRequestCard(request: ParentRequestUiItem) {
-    FantasyCard(tone = FantasyTone.Violet) {
-        Text(text = request.title, style = MaterialTheme.typography.titleMedium, color = WoodBrownDark)
-        Text(text = request.childName, style = MaterialTheme.typography.bodyMedium, color = InkMuted)
-        Text(text = request.status, style = MaterialTheme.typography.labelLarge, color = EmberOrange)
-    }
-}
-
-@Composable
 private fun NavigationButtons(
     primaryLabel: String,
     onPrimaryClick: () -> Unit,
@@ -739,12 +702,6 @@ data class ScrollUiItem(
     val statusKey: String,
 )
 
-data class ParentRequestUiItem(
-    val childName: String,
-    val title: String,
-    val status: String,
-)
-
 private val sampleLoot =
     listOf(
         LootUiItem("crystal", "Cristal", "ressource", 6, NestAssets.interfaceAsset("crystal"), "Ouvrir des Coffres"),
@@ -790,10 +747,4 @@ private val sampleWishes =
 private val sampleScrolls =
     listOf(
         ScrollUiItem("Choisir le dessert", "TASKO-12-AB34CD", "disponible", "approved"),
-    )
-
-private val sampleRequests =
-    listOf(
-        ParentRequestUiItem("Alex", "Choisir le dessert", "En attente"),
-        ParentRequestUiItem("Alex", "Cinéma maison", "Refusé"),
     )

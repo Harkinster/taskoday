@@ -7,8 +7,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.example.taskoday.core.ui.theme.TaskodayTheme
 import com.example.taskoday.navigation.TaskodayApp
-import com.taskoday.ui.theme.TaskodayTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint

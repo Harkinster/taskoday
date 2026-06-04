@@ -37,7 +37,6 @@ import com.example.taskoday.features.gamification.DragonsScreen
 import com.example.taskoday.features.gamification.EggsScreen
 import com.example.taskoday.features.gamification.InventoryScreen
 import com.example.taskoday.features.gamification.NestScreen
-import com.example.taskoday.features.gamification.ParentRewardsScreen
 import com.example.taskoday.features.gamification.ScrollsScreen
 import com.example.taskoday.features.home.HomeScreen
 import com.example.taskoday.features.home.HomeViewModel
@@ -56,7 +55,6 @@ import com.example.taskoday.features.tasks.detail.TaskDetailScreen
 import com.example.taskoday.features.tasks.detail.TaskDetailViewModel
 import com.example.taskoday.features.tasks.edit.TaskEditScreen
 import com.example.taskoday.features.tasks.edit.TaskEditViewModel
-import com.example.taskoday.features.week.WeekScreen
 
 @Composable
 fun TaskodayApp() {
@@ -272,7 +270,6 @@ fun TaskodayApp() {
                 HomeScreen(
                     viewModel = viewModel,
                     onOpenTasks = { navigateToTopLevel(TaskodayDestination.Tasks) },
-                    onOpenWeek = { navController.navigate(TaskodayDestination.Week.route) },
                     onOpenTask = { taskId -> navController.navigate(TaskodayDestination.TaskDetail.createRoute(taskId)) },
                     onOpenProfile = navigateToProfile,
                 )
@@ -312,10 +309,6 @@ fun TaskodayApp() {
 
             composable(TaskodayDestination.Scrolls.route) {
                 ScrollsScreen(onOpenProfile = navigateToProfile)
-            }
-
-            composable(TaskodayDestination.ParentRewards.route) {
-                ParentRewardsScreen(onOpenProfile = navigateToProfile)
             }
 
             composable(
@@ -377,10 +370,6 @@ fun TaskodayApp() {
                     onBack = { navController.popBackStack() },
                     initialFormType = initialFormType,
                 )
-            }
-
-            composable(TaskodayDestination.Week.route) {
-                WeekScreen(onBack = { navController.popBackStack() })
             }
             }
         }

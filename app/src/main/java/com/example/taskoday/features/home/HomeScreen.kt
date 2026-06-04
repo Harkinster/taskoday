@@ -65,7 +65,6 @@ import kotlinx.coroutines.launch
 fun HomeScreen(
     viewModel: HomeViewModel,
     onOpenTasks: () -> Unit,
-    onOpenWeek: () -> Unit,
     onOpenTask: (Long) -> Unit,
     onOpenProfile: () -> Unit,
 ) {

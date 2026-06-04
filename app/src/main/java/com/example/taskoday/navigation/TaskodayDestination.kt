@@ -41,8 +41,6 @@ sealed class TaskodayDestination(
 
     data object Scrolls : TaskodayDestination(route = "scrolls", label = "Parchemins")
 
-    data object ParentRewards : TaskodayDestination(route = "parent/rewards", label = "Souhaits parent")
-
     data object Settings :
         TaskodayDestination(route = "settings", label = "Profil", icon = Icons.Outlined.Person)
 
@@ -51,8 +49,6 @@ sealed class TaskodayDestination(
 
         fun createRoute(type: String? = null): String = type?.let { "parent/planning?type=$it" } ?: "parent/planning"
     }
-
-    data object Week : TaskodayDestination(route = "week", label = "Semaine")
 
     data object TaskDetail : TaskodayDestination(route = "task_detail/{taskId}", label = "Detail mission") {
         const val ARG_TASK_ID: String = "taskId"
