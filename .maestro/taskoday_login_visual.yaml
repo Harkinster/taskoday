@@ -1,0 +1,20 @@
+appId: com.example.taskoday
+---
+- launchApp
+- waitForAnimationToEnd
+- takeScreenshot: qa/screenshots/00_login
+- tapOn: "Continuer en mode local"
+- waitForAnimationToEnd
+- takeScreenshot: qa/screenshots/01_launch
+- tapOn: "Routine"
+- waitForAnimationToEnd
+- takeScreenshot: qa/screenshots/02_routine
+- tapOn: "Mission"
+- waitForAnimationToEnd
+- takeScreenshot: qa/screenshots/03_mission
+- tapOn: "Quête"
+- waitForAnimationToEnd
+- takeScreenshot: qa/screenshots/04_quete
+- tapOn: "Le Nid"
+- waitForAnimationToEnd
+- takeScreenshot: qa/screenshots/05_le_nid
