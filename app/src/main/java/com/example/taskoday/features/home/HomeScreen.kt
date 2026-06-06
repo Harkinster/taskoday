@@ -35,9 +35,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.taskoday.core.ui.component.fantasy.FantasyButton
 import com.example.taskoday.core.ui.component.fantasy.FantasyButtonStyle
+import com.example.taskoday.core.ui.component.fantasy.FantasyAssetBubble
 import com.example.taskoday.core.ui.component.fantasy.FantasyCard
 import com.example.taskoday.core.ui.component.fantasy.FantasyHeader
 import com.example.taskoday.core.ui.component.fantasy.FantasyProgressBar
@@ -50,6 +52,7 @@ import com.example.taskoday.core.ui.component.fantasy.RoutineItemRow
 import com.example.taskoday.core.ui.theme.EmberOrange
 import com.example.taskoday.core.ui.theme.InkMuted
 import com.example.taskoday.core.ui.theme.MossGreen
+import com.example.taskoday.core.ui.theme.SoftGold
 import com.example.taskoday.core.ui.theme.WoodBrownDark
 import com.example.taskoday.core.ui.theme.spacing
 import com.example.taskoday.core.util.DateTimeUtils
@@ -125,7 +128,7 @@ fun HomeScreen(
                     Modifier
                         .fillMaxSize()
                         .padding(horizontal = spacing.medium),
-                contentPadding = PaddingValues(top = spacing.large, bottom = spacing.xxLarge),
+                contentPadding = PaddingValues(top = spacing.large, bottom = 148.dp),
                 verticalArrangement = Arrangement.spacedBy(spacing.medium),
             ) {
                 item {
@@ -277,13 +280,14 @@ private fun RoutineDateHeader(
         Text(
             text = dateLabel,
             style = MaterialTheme.typography.titleMedium,
-            color = WoodBrownDark,
+            color = SoftGold,
+            maxLines = 1,
         )
         IconButton(onClick = onOpenCalendar) {
             Icon(
                 imageVector = Icons.Outlined.CalendarMonth,
                 contentDescription = "Calendrier",
-                tint = EmberOrange,
+                tint = SoftGold,
             )
         }
     }
@@ -355,11 +359,23 @@ private fun DayPartCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = "${section.dayPart.emoji()} ${section.dayPart.label()}",
-                style = MaterialTheme.typography.titleLarge,
-                color = WoodBrownDark,
-            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f),
+            ) {
+                FantasyAssetBubble(
+                    assetResId = dayPartAsset(section.dayPart),
+                    contentDescription = section.dayPart.label(),
+                    size = 34.dp,
+                )
+                Text(
+                    text = section.dayPart.label(),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = WoodBrownDark,
+                    maxLines = 1,
+                )
+            }
             Text(
                 text = "$doneCount/${section.items.size}",
                 style = MaterialTheme.typography.titleMedium,
@@ -441,6 +457,19 @@ private fun buildSections(items: List<HomePlanningItem>): List<HomeSection> {
         )
     }
 }
+
+private fun dayPartAsset(dayPart: DayPart): Int =
+    when (dayPart) {
+        DayPart.MATIN,
+        DayPart.MATINEE,
+        -> NestAssets.interfaceAsset("flammeche")
+        DayPart.MIDI,
+        DayPart.APRES_MIDI,
+        -> NestAssets.interfaceAsset("crystal")
+        DayPart.SOIR,
+        DayPart.SOIREE,
+        -> NestAssets.interfaceAsset("nid")
+    }
 
 private fun formatPlanningTime(item: HomePlanningItem): String {
     return item.dueDate?.let { DateTimeUtils.formatTimeOnly(it) } ?: defaultTimeForPart(item.dayPart)

@@ -1,17 +1,27 @@
 package com.example.taskoday.features.gamification
 
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -22,15 +32,26 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.taskoday.core.ui.component.fantasy.ChestCard
 import com.example.taskoday.core.ui.component.fantasy.DragonCard
 import com.example.taskoday.core.ui.component.fantasy.EggProgressCard
 import com.example.taskoday.core.ui.component.fantasy.FantasyAssetBubble
+import com.example.taskoday.core.ui.component.fantasy.FantasyBadge
 import com.example.taskoday.core.ui.component.fantasy.FantasyButton
 import com.example.taskoday.core.ui.component.fantasy.FantasyButtonStyle
 import com.example.taskoday.core.ui.component.fantasy.FantasyCard
+import com.example.taskoday.core.ui.component.fantasy.FantasyCompactButton
 import com.example.taskoday.core.ui.component.fantasy.FantasyHeader
 import com.example.taskoday.core.ui.component.fantasy.FantasyProgressBar
 import com.example.taskoday.core.ui.component.fantasy.FantasyScreenBackground
@@ -41,15 +62,17 @@ import com.example.taskoday.core.ui.component.fantasy.NestAssets
 import com.example.taskoday.core.ui.component.fantasy.NestStatCard
 import com.example.taskoday.core.ui.component.fantasy.ScrollCard
 import com.example.taskoday.core.ui.component.fantasy.WishCard
-import com.example.taskoday.core.ui.theme.EmberOrange
 import com.example.taskoday.core.ui.theme.InkMuted
+import com.example.taskoday.core.ui.theme.MagicViolet
 import com.example.taskoday.core.ui.theme.MossGreen
+import com.example.taskoday.core.ui.theme.ParchmentLight
+import com.example.taskoday.core.ui.theme.SoftGold
 import com.example.taskoday.core.ui.theme.WoodBrownDark
 import com.example.taskoday.core.ui.theme.spacing
+import com.example.taskoday.core.ui.theme.taskodayWoodPanelBrush
 
 @Composable
 fun NestScreen(
-    onOpenPlanning: () -> Unit,
     onOpenInventory: () -> Unit,
     onOpenEggs: () -> Unit,
     onOpenDragons: () -> Unit,
@@ -73,33 +96,11 @@ fun NestScreen(
             )
         }
         item {
-            GuardianProgressCard(
-                xp = 50,
-                levelName = "Nid paisible",
-                nextLevelLabel = "Nid éveillé",
-                progress = 0.50f,
+            ActiveNestDisplayCard(
+                dragon = activeDragon,
+                egg = followedEgg,
+                perchLevel = 1,
             )
-        }
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
-            ) {
-                NestStatCard(
-                    label = "Flammèches",
-                    value = "20",
-                    assetResId = NestAssets.interfaceAsset("flammeche"),
-                    tone = FantasyTone.Ember,
-                    modifier = Modifier.weight(1f),
-                )
-                NestStatCard(
-                    label = "Cristaux",
-                    value = "6",
-                    assetResId = NestAssets.interfaceAsset("crystal"),
-                    tone = FantasyTone.Violet,
-                    modifier = Modifier.weight(1f),
-                )
-            }
         }
         item {
             WishAccessCard(
@@ -108,36 +109,46 @@ fun NestScreen(
             )
         }
         item {
-            ActiveNestDisplayCard(
-                dragon = activeDragon,
-                egg = followedEgg,
-                perchLevel = 1,
+            GuardianProgressCard(
+                xp = 50,
+                levelName = "Nid paisible",
+                nextLevelLabel = "Nid éveillé",
+                progress = 0.50f,
             )
         }
         item {
-            DragonCard(
-                title = activeDragon?.title ?: followedEgg.title,
-                stage = activeDragon?.stage ?: "Œuf suivi",
-                nextStep = activeDragon?.nextStep ?: "Choisis un œuf à suivre dans le Bestiaire.",
-                assetResId = activeDragon?.assetResId ?: followedEgg.assetResId,
-                contentDescription = activeDragon?.contentDescription ?: followedEgg.contentDescription,
-                badgeLabel = if (activeDragon != null) "Compagnon actif" else "Œuf suivi",
-                primaryActionLabel = "Faire évoluer",
-                onPrimaryAction = {},
-                secondaryActionLabel = "Bestiaire du Nid",
-                onSecondaryAction = { onOpenDragons() },
+            NestHubTiles(
+                onOpenInventory = onOpenInventory,
+                onOpenEggs = onOpenEggs,
+                onOpenDragons = onOpenDragons,
+                onOpenScrolls = onOpenScrolls,
+                onOpenWishes = onOpenWishes,
+            )
+        }
+        item {
+            BestiaryPreviewCard(
+                activeCompanionKey = activeCompanionKey,
+                followedEggKey = followedEggKey,
+                onSelectDragon = { key -> activeCompanionKey = key },
+                onSelectEgg = { key ->
+                    followedEggKey = key
+                    activeCompanionKey = ""
+                },
+                onOpenDragons = onOpenDragons,
+                onOpenEggs = onOpenEggs,
             )
         }
         item {
             EggProgressCard(
-                title = "Œuf Pyron",
-                status = "Chaleur douce",
-                requirements = "Ajoute des pousses, potions ou fragments pour avancer à ton rythme.",
-                progress = 0.72f,
-                assetResId = NestAssets.eggAsset("pyron", "glowing"),
-                contentDescription = "Œuf Pyron lumineux",
-                materialLabel = "Matériaux libres : 72%",
-                actionLabel = "Améliorer l'Œuf",
+                title = followedEgg.title,
+                status = followedEgg.status,
+                requirements = followedEgg.requirements,
+                progress = followedEgg.progress,
+                assetResId = followedEgg.assetResId,
+                contentDescription = followedEgg.contentDescription,
+                locked = followedEgg.locked,
+                materialLabel = followedEgg.materialLabel,
+                actionLabel = followedEgg.actionLabel,
                 onAction = {},
             )
         }
@@ -165,44 +176,6 @@ fun NestScreen(
                 assetResId = NestAssets.chestAsset("rare"),
                 contentDescription = "Coffre rare",
                 rarity = "rare",
-            )
-        }
-        item {
-            NavigationButtons(
-                primaryLabel = "Routine",
-                onPrimaryClick = onOpenPlanning,
-                secondaryLabel = "Inventaire",
-                onSecondaryClick = onOpenInventory,
-            )
-        }
-        item {
-            NavigationButtons(
-                primaryLabel = "Œufs",
-                onPrimaryClick = onOpenEggs,
-                secondaryLabel = "Dragons",
-                onSecondaryClick = onOpenDragons,
-            )
-        }
-        item {
-            NavigationButtons(
-                primaryLabel = "Dragons",
-                onPrimaryClick = onOpenDragons,
-                secondaryLabel = "Parchemins",
-                onSecondaryClick = onOpenScrolls,
-                outline = true,
-            )
-        }
-        item {
-            BestiaryPreviewCard(
-                activeCompanionKey = activeCompanionKey,
-                followedEggKey = followedEggKey,
-                onSelectDragon = { key -> activeCompanionKey = key },
-                onSelectEgg = { key ->
-                    followedEggKey = key
-                    activeCompanionKey = ""
-                },
-                onOpenDragons = onOpenDragons,
-                onOpenEggs = onOpenEggs,
             )
         }
     }
@@ -405,8 +378,17 @@ private fun GuardianProgressCard(
     progress: Float,
 ) {
     FantasyCard(tone = FantasyTone.Gold) {
-        Text(text = "Gardien", style = MaterialTheme.typography.titleLarge, color = WoodBrownDark)
-        Text(text = "$xp XP du Gardien", style = MaterialTheme.typography.headlineSmall, color = WoodBrownDark)
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            FantasyAssetBubble(
+                assetResId = NestAssets.interfaceAsset("nid"),
+                contentDescription = null,
+                size = 56.dp,
+            )
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(text = "Gardien", style = MaterialTheme.typography.titleLarge, color = WoodBrownDark)
+                Text(text = "$xp XP du Gardien", style = MaterialTheme.typography.headlineSmall, color = WoodBrownDark)
+            }
+        }
         FantasyProgressBar(progress = progress)
         Text(
             text = "$levelName vers $nextLevelLabel",
@@ -421,29 +403,87 @@ private fun WishAccessCard(
     onOpenWishes: () -> Unit,
     onOpenScrolls: () -> Unit,
 ) {
-    FantasyCard(tone = FantasyTone.Ember) {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+    FantasyCard(tone = FantasyTone.Ember, contentPadding = PaddingValues(12.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             FantasyAssetBubble(
                 assetResId = NestAssets.interfaceAsset("flammeche"),
                 contentDescription = "Flammèches",
-                size = 52.dp,
+                size = 48.dp,
             )
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(text = "Flammèches : 20", style = MaterialTheme.typography.titleMedium, color = WoodBrownDark)
+                Text(text = "Monnaies du Nid", style = MaterialTheme.typography.titleMedium, color = WoodBrownDark)
                 Text(
-                    text = "Les Souhaits et Parchemins restent dans Le Nid.",
+                    text = "Flammèches pour les Souhaits, Cristaux pour les coffres.",
                     style = MaterialTheme.typography.bodySmall,
                     color = InkMuted,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+        ) {
+            CurrencyPill(
+                label = "Flammèches",
+                value = "20",
+                assetResId = NestAssets.interfaceAsset("flammeche"),
+                tone = FantasyTone.Ember,
+                modifier = Modifier.weight(1f),
+            )
+            CurrencyPill(
+                label = "Cristaux",
+                value = "6",
+                assetResId = NestAssets.interfaceAsset("crystal"),
+                tone = FantasyTone.Violet,
+                modifier = Modifier.weight(1f),
+            )
+        }
         NavigationButtons(
-            primaryLabel = "Caverne aux Souhaits",
+            primaryLabel = "Caverne",
             onPrimaryClick = onOpenWishes,
-            secondaryLabel = "Mes Parchemins",
+            secondaryLabel = "Parchemins",
             onSecondaryClick = onOpenScrolls,
             outline = true,
         )
+    }
+}
+
+@Composable
+private fun CurrencyPill(
+    label: String,
+    value: String,
+    assetResId: Int,
+    tone: FantasyTone,
+    modifier: Modifier = Modifier,
+) {
+    val shape = RoundedCornerShape(100.dp)
+    Box(
+        modifier =
+            modifier
+                .clip(shape)
+                .background(Brush.horizontalGradient(listOf(ParchmentLight.copy(alpha = 0.92f), tone.soft.copy(alpha = 0.72f))))
+                .border(1.dp, tone.accent.copy(alpha = 0.62f), shape),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            FantasyAssetBubble(assetResId = assetResId, contentDescription = label, size = 30.dp)
+            Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                Text(text = value, style = MaterialTheme.typography.titleSmall, color = WoodBrownDark, maxLines = 1)
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = InkMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    softWrap = false,
+                )
+            }
+        }
     }
 }
 
@@ -453,34 +493,245 @@ private fun ActiveNestDisplayCard(
     egg: EggUiItem,
     perchLevel: Int,
 ) {
-    FantasyCard(tone = FantasyTone.Gold) {
-        Text(text = "Affichage du Nid", style = MaterialTheme.typography.titleMedium, color = WoodBrownDark)
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+    val statusLabel = dragon?.let { "Compagnon actif" } ?: "Œuf suivi"
+    val platformGlow = (0.36f + perchLevel * 0.03f).coerceAtMost(0.52f)
+    FantasyCard(tone = FantasyTone.Gold, contentPadding = PaddingValues(12.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            FantasyBadge(text = statusLabel, tone = FantasyTone.Moss)
+            Text(
+                text = dragon?.title ?: egg.title,
+                style = MaterialTheme.typography.titleMedium,
+                color = WoodBrownDark,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(190.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                WoodBrownDark,
+                                MagicViolet,
+                                Color(0xFF2A174A),
+                                WoodBrownDark,
+                            ),
+                        ),
+                    )
+                    .border(1.4.dp, SoftGold.copy(alpha = 0.82f), RoundedCornerShape(18.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Canvas(modifier = Modifier.matchParentSize()) {
+                drawCircle(
+                    color = SoftGold.copy(alpha = 0.22f),
+                    radius = size.minDimension * 0.38f,
+                    center = Offset(size.width * 0.60f, size.height * 0.42f),
+                )
+                drawCircle(
+                    color = MagicViolet.copy(alpha = 0.28f),
+                    radius = size.minDimension * 0.54f,
+                    center = Offset(size.width * 0.50f, size.height * 0.50f),
+                )
+                drawLine(
+                    color = SoftGold.copy(alpha = 0.38f),
+                    start = Offset(size.width * 0.10f, size.height * 0.12f),
+                    end = Offset(size.width * 0.90f, size.height * 0.12f),
+                    strokeWidth = 2f,
+                    cap = StrokeCap.Round,
+                )
+            }
+            Box(
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .height(38.dp)
+                        .background(taskodayWoodPanelBrush()),
+            )
+            Box(
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth(0.64f)
+                        .height(18.dp)
+                        .clip(RoundedCornerShape(100.dp))
+                        .background(Brush.horizontalGradient(listOf(Color.Transparent, SoftGold.copy(alpha = 0.28f), Color.Transparent))),
+            )
+            Box(
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth(0.52f)
+                        .height(28.dp)
+                        .clip(RoundedCornerShape(100.dp))
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(
+                                    WoodBrownDark,
+                                    SoftGold.copy(alpha = platformGlow),
+                                    WoodBrownDark,
+                                ),
+                            ),
+                        )
+                        .border(1.dp, SoftGold.copy(alpha = 0.42f), RoundedCornerShape(100.dp)),
+            )
+            Box(
+                modifier =
+                    Modifier
+                        .align(Alignment.Center)
+                        .size(146.dp)
+                        .clip(RoundedCornerShape(26.dp))
+                        .background(
+                            Brush.radialGradient(
+                                listOf(
+                                    SoftGold.copy(alpha = 0.34f),
+                                    MagicViolet.copy(alpha = 0.74f),
+                                    WoodBrownDark.copy(alpha = 0.94f),
+                                ),
+                            ),
+                        )
+                        .border(1.4.dp, SoftGold.copy(alpha = 0.72f), RoundedCornerShape(26.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Image(
+                    painter = painterResource(id = dragon?.assetResId ?: egg.assetResId),
+                    contentDescription = dragon?.contentDescription ?: egg.contentDescription,
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(4.dp)
+                            .clip(RoundedCornerShape(22.dp)),
+                    contentScale = ContentScale.Crop,
+                    colorFilter = ColorFilter.tint(Color(0xFFFFC86F), BlendMode.Modulate),
+                )
+                Box(
+                    modifier =
+                        Modifier
+                            .matchParentSize()
+                            .background(MagicViolet.copy(alpha = 0.14f)),
+                )
+            }
             FantasyAssetBubble(
-                assetResId = NestAssets.perchAsset(perchLevel),
-                contentDescription = "Perchoir niveau $perchLevel",
-                size = 72.dp,
+                assetResId = NestAssets.interfaceAsset("flammeche"),
+                contentDescription = null,
+                size = 34.dp,
+                modifier = Modifier.align(Alignment.TopStart).padding(12.dp),
             )
             FantasyAssetBubble(
-                assetResId = dragon?.assetResId ?: egg.assetResId,
-                contentDescription = dragon?.contentDescription ?: egg.contentDescription,
-                size = 82.dp,
+                assetResId = NestAssets.interfaceAsset("crystal"),
+                contentDescription = null,
+                size = 34.dp,
+                modifier = Modifier.align(Alignment.TopEnd).padding(12.dp),
             )
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        }
+        Text(
+            text = "Le perchoir garde son compagnon au chaud.",
+            style = MaterialTheme.typography.bodySmall,
+            color = InkMuted,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun NestHubTiles(
+    onOpenInventory: () -> Unit,
+    onOpenEggs: () -> Unit,
+    onOpenDragons: () -> Unit,
+    onOpenScrolls: () -> Unit,
+    onOpenWishes: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+        ) {
+            NestHubTile(
+                title = "Inventaire",
+                subtitle = "Objets",
+                assetResId = NestAssets.interfaceAsset("inventory_empty"),
+                tone = FantasyTone.Wood,
+                modifier = Modifier.weight(1f),
+                onClick = onOpenInventory,
+            )
+            NestHubTile(
+                title = "Œufs",
+                subtitle = "Éclosion",
+                assetResId = NestAssets.eggAsset("pyron", "glowing"),
+                tone = FantasyTone.Gold,
+                modifier = Modifier.weight(1f),
+                onClick = onOpenEggs,
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+        ) {
+            NestHubTile(
+                title = "Dragons",
+                subtitle = "Compagnons",
+                assetResId = NestAssets.dragonAsset("pyron", "baby"),
+                tone = FantasyTone.Ember,
+                modifier = Modifier.weight(1f),
+                onClick = onOpenDragons,
+            )
+            NestHubTile(
+                title = "Parchemins",
+                subtitle = "Souhaits",
+                assetResId = NestAssets.scrollAsset("approved"),
+                tone = FantasyTone.Violet,
+                modifier = Modifier.weight(1f),
+                onClick = onOpenScrolls,
+            )
+        }
+        NestHubTile(
+            title = "Caverne",
+            subtitle = "Souhaits",
+            assetResId = NestAssets.interfaceAsset("wish_cave"),
+            tone = FantasyTone.Violet,
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onOpenWishes,
+        )
+    }
+}
+
+@Composable
+private fun NestHubTile(
+    title: String,
+    subtitle: String,
+    assetResId: Int,
+    tone: FantasyTone,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    FantasyCard(
+        modifier = modifier.clickable(onClick = onClick),
+        tone = tone,
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 10.dp),
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            FantasyAssetBubble(assetResId = assetResId, contentDescription = title, size = 40.dp)
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
                 Text(
-                    text = dragon?.title ?: egg.title,
-                    style = MaterialTheme.typography.titleMedium,
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
                     color = WoodBrownDark,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    softWrap = false,
                 )
                 Text(
-                    text = dragon?.let { "Compagnon actif" } ?: "Œuf suivi",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MossGreen,
-                )
-                Text(
-                    text = "Le perchoir soutient le compagnon ou l'œuf suivi.",
-                    style = MaterialTheme.typography.bodySmall,
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelMedium,
                     color = InkMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    softWrap = false,
                 )
             }
         }
@@ -496,32 +747,47 @@ private fun BestiaryPreviewCard(
     onOpenDragons: () -> Unit,
     onOpenEggs: () -> Unit,
 ) {
-    FantasyCard(tone = FantasyTone.Violet) {
-        Text(text = "Bestiaire du Nid", style = MaterialTheme.typography.titleMedium, color = WoodBrownDark)
-        Text(
-            text = "Choisis le compagnon affiché dans Le Nid ou l'œuf à suivre.",
-            style = MaterialTheme.typography.bodySmall,
-            color = InkMuted,
-        )
+    FantasyCard(tone = FantasyTone.Violet, contentPadding = PaddingValues(12.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.weight(1f)) {
+                Text(text = "Bestiaire du Nid", style = MaterialTheme.typography.titleMedium, color = WoodBrownDark)
+                Text(
+                    text = "Compagnon affiché et œuf suivi.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = InkMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            FantasyBadge(text = "Hub", tone = FantasyTone.Violet)
+        }
         sampleDragons.take(2).forEach { dragon ->
+            val isActive = dragon.key == activeCompanionKey
             BestiaryChoiceRow(
                 title = dragon.title,
-                subtitle = if (dragon.key == activeCompanionKey) "Compagnon actif" else "Dragon débloqué",
+                subtitle = "Dragon débloqué",
                 assetResId = dragon.assetResId,
                 contentDescription = dragon.contentDescription,
-                actionLabel = if (dragon.key == activeCompanionKey) "Actif" else "Définir comme compagnon",
-                enabled = dragon.key != activeCompanionKey,
+                actionLabel = if (isActive) "Actif" else "Choisir",
+                enabled = !isActive,
+                badgeTone = if (isActive) FantasyTone.Moss else FantasyTone.Gold,
                 onClick = { onSelectDragon(dragon.key) },
             )
         }
-        sampleEggs.take(2).forEach { egg ->
+        sampleEggs.take(1).forEach { egg ->
+            val isFollowed = egg.key == followedEggKey && activeCompanionKey.isBlank()
             BestiaryChoiceRow(
                 title = egg.title,
-                subtitle = if (egg.key == followedEggKey && activeCompanionKey.isBlank()) "Œuf suivi" else "Œuf découvert",
+                subtitle = "Œuf découvert",
                 assetResId = egg.assetResId,
                 contentDescription = egg.contentDescription,
-                actionLabel = "Suivre cet Œuf",
-                enabled = true,
+                actionLabel = if (isFollowed) "Suivi" else "Suivre",
+                enabled = !isFollowed,
+                badgeTone = if (isFollowed) FantasyTone.Moss else FantasyTone.Gold,
                 onClick = { onSelectEgg(egg.key) },
             )
         }
@@ -532,10 +798,11 @@ private fun BestiaryPreviewCard(
             contentDescription = "Œuf verrouillé",
             actionLabel = "Verrouillé",
             enabled = false,
+            badgeTone = FantasyTone.Night,
             onClick = {},
         )
         NavigationButtons(
-            primaryLabel = "Voir les Dragons",
+            primaryLabel = "Bestiaire complet",
             onPrimaryClick = onOpenDragons,
             secondaryLabel = "Voir les Œufs",
             onSecondaryClick = onOpenEggs,
@@ -552,23 +819,54 @@ private fun BestiaryChoiceRow(
     contentDescription: String,
     actionLabel: String,
     enabled: Boolean,
+    badgeTone: FantasyTone = FantasyTone.Gold,
     onClick: () -> Unit,
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-        FantasyAssetBubble(assetResId = assetResId, contentDescription = contentDescription, size = 48.dp)
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(text = title, style = MaterialTheme.typography.titleSmall, color = WoodBrownDark)
-            Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = InkMuted)
+    val shape = RoundedCornerShape(14.dp)
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(shape)
+                .background(Brush.horizontalGradient(listOf(ParchmentLight.copy(alpha = 0.90f), MagicViolet.copy(alpha = 0.08f))))
+                .border(1.dp, SoftGold.copy(alpha = 0.46f), shape),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 9.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(9.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            FantasyAssetBubble(assetResId = assetResId, contentDescription = contentDescription, size = 44.dp)
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = WoodBrownDark,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    softWrap = false,
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = InkMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    softWrap = false,
+                )
+            }
+            if (enabled) {
+                FantasyCompactButton(
+                    text = actionLabel,
+                    onClick = onClick,
+                    modifier = Modifier.widthIn(max = 92.dp),
+                )
+            } else {
+                FantasyBadge(text = actionLabel, tone = badgeTone, modifier = Modifier.widthIn(max = 96.dp))
+            }
         }
-        FantasyButton(
-            text = actionLabel,
-            onClick = onClick,
-            style = if (enabled) FantasyButtonStyle.Outline else FantasyButtonStyle.Quiet,
-            enabled = enabled,
-        )
     }
 }
-
 @Composable
 private fun PerchOverviewCard(level: Int) {
     FantasyCard(tone = FantasyTone.Moss) {
@@ -626,7 +924,7 @@ private fun GamificationScaffold(
         FantasyScreenBackground(modifier = Modifier.statusBarsPadding().padding(innerPadding)) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(horizontal = MaterialTheme.spacing.medium),
-                contentPadding = PaddingValues(top = MaterialTheme.spacing.large, bottom = MaterialTheme.spacing.xxLarge),
+                contentPadding = PaddingValues(top = MaterialTheme.spacing.large, bottom = 148.dp),
                 verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
                 content = content,
             )

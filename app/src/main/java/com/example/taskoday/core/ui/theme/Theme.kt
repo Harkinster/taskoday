@@ -21,15 +21,15 @@ private val TaskodayFantasyColors: ColorScheme =
     lightColorScheme(
         primary = EmberOrange,
         onPrimary = ParchmentLight,
-        primaryContainer = SoftGoldPale,
+        primaryContainer = LogoGoldLight,
         onPrimaryContainer = WoodBrownDark,
         secondary = MagicViolet,
         onSecondary = ParchmentLight,
-        secondaryContainer = Color(0xFFE8DBFF),
+        secondaryContainer = RoyalPurpleSoft.copy(alpha = 0.28f),
         onSecondaryContainer = WoodBrownDark,
         tertiary = MossGreen,
         onTertiary = ParchmentLight,
-        tertiaryContainer = Color(0xFFE4EECF),
+        tertiaryContainer = MossGreenSoft.copy(alpha = 0.34f),
         onTertiaryContainer = WoodBrownDark,
         background = ParchmentLight,
         onBackground = InkBrown,
@@ -66,9 +66,9 @@ fun TaskodayTheme(
         SideEffect {
             val window = (view.context as Activity).window
             window.statusBarColor = "#00000000".toColorInt()
-            window.navigationBarColor = "#FFF4D9".toColorInt()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = true
-            WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = true
+            window.navigationBarColor = "#3B2417".toColorInt()
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
+            WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = false
         }
     }
 

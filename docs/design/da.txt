@@ -1,0 +1,265 @@
+Objectif : corriger la DA Android actuelle de Taskoday à partir de la capture réelle fournie.
+
+Contexte :
+L’application se lance correctement, mais la DA actuelle ne correspond pas à l’esprit attendu.
+La capture montre que l’interface est trop pâle, trop plate, trop proche d’une app Material beige/orange, et pas assez proche de l’univers Taskoday de référence.
+
+Références DA attendues :
+
+* logo Taskoday doré 3D
+* contour violet profond
+* blason flamme violet/doré
+* bois sculpté
+* feuilles vertes
+* monde lumineux fantasy avec vallée, château, dragon
+* style mobile game premium chaleureux
+* UI fantasy lisible, pas admin, pas Material classique
+
+Problème visible dans la capture :
+
+* fond trop crème/pastel et vide
+* trop peu de violet royal
+* trop peu de bois sculpté
+* trop peu de doré premium
+* boutons orange plats
+* cartes trop grandes, molles, sans caractère
+* bordures trop fines et trop pâles
+* bottom navigation trop beige, pas assez premium
+* bouton + trop gros et chevauche le contenu
+* Bestiaire du Nid trop chargé
+* textes qui se coupent, notamment “Dragon débloqué”
+* doublon de bouton “Dragons”
+* hiérarchie visuelle confuse
+* l’écran ne donne pas l’impression d’un hub RPG fantasy
+
+Contraintes strictes :
+
+* Ne touche pas au backend.
+* Ne modifie pas les endpoints.
+* Ne modifie pas les DTO.
+* Ne change pas les règles métier.
+* Ne change pas la navigation principale.
+* Ne touche pas au dossier NE PAS TOUCHER/.
+* Ne modifie pas backend/app/services/gamification_service.py.
+* Ne modifie pas .idea/vcs.xml.
+* Ne crée pas de nouvelle mécanique gameplay.
+* Ne supprime pas les assets.
+* Tous les assets doivent rester centralisés via NestAssets.
+
+Navigation à conserver :
+
+* Routine
+* Mission
+* Quête
+* Le Nid
+
+Caverne aux Souhaits, Inventaire, Œufs, Dragons, Parchemins restent accessibles depuis Le Nid.
+
+1. Refaire la DA globale pour la rendre plus premium
+
+La DA cible doit être :
+
+* moins beige plat
+* plus bois/violet/doré
+* plus proche du logo Taskoday
+* plus jeu mobile fantasy
+* plus contrastée
+* plus lisible
+* plus chaleureuse
+* plus immersive
+
+Remplacer l’effet “fond pastel avec formes abstraites” par :
+
+* fond fantasy plus profond
+* dégradé ciel chaud + violet doux
+* touches de bois et parchemin
+* éventuellement formes décoratives type feuilles, blason ou lumière magique
+* éviter les gros aplats abstraits qui font maquette générique
+
+2. Palette à corriger
+
+Réduire :
+
+* orange plat trop dominant
+* crème trop pâle
+* bordures jaune pâle
+
+Renforcer :
+
+* violet royal profond pour navigation, contours, headers
+* doré chaud pour actions principales
+* brun bois pour panneaux et séparateurs
+* parchemin chaud pour cartes de lecture
+* orange braise uniquement pour Flammèches / actions importantes
+* bleu cristal pour cristaux
+* vert feuille en décoration légère
+
+La bottom nav doit être plutôt :
+
+* bois foncé / violet profond
+* item actif doré
+* contour ou glow doré
+* pas beige clair plat
+
+3. Corriger Le Nid
+
+L’écran Le Nid doit devenir un vrai hub RPG.
+
+Structure souhaitée :
+
+* header premium “Le Nid” façon panneau/blason
+* zone centrale perchoir + dragon/œuf plus mise en scène
+* monnaies Flammèches / Cristaux en petites pastilles premium
+* accès Caverne aux Souhaits près des Flammèches
+* accès Inventaire, Œufs, Dragons, Parchemins sous forme de tuiles fantasy
+
+Éviter :
+
+* grille de boutons trop plate
+* gros boutons orange simples
+* doublons
+* textes trop gros sans hiérarchie
+
+Corriger le doublon :
+
+* il ne doit pas y avoir deux boutons “Dragons”
+* remplacer le doublon par “Caverne”, “Coffres” ou supprimer selon les routes réellement disponibles
+
+4. Corriger le Bestiaire du Nid
+
+Le Bestiaire actuel est trop dense et casse sur mobile.
+
+Refaire la présentation :
+
+* carte plus compacte
+* liste en cartes verticales propres
+* chaque entrée : image à gauche, nom + statut au centre, action à droite
+* éviter les gros boutons qui écrasent le texte
+* limiter la largeur des boutons
+* éviter les textes sur plusieurs lignes moches
+
+Correction obligatoire :
+
+* “Dragon débloqué” ne doit pas se couper en “débloq / ué”
+* utiliser maxLines, overflow ellipsis ou layout plus large
+* réduire le texte si nécessaire
+
+Exemple de ligne :
+
+* image ronde
+* “Fulmio”
+* “Dragon débloqué”
+* petit bouton “Choisir”
+
+Pour l’actif :
+
+* badge compact “Actif”
+* pas un énorme bouton beige
+
+Pour verrouillé :
+
+* badge compact “Verrouillé”
+* texte clair
+
+5. Corriger le bouton +
+
+Le bouton + actuel chevauche le contenu.
+
+À faire :
+
+* repositionner le FAB pour qu’il ne masque pas les cartes
+* ajouter padding bottom suffisant au contenu scrollable
+* réduire légèrement sa taille si nécessaire
+* style médaillon doré/violet
+* ombre premium
+* pas orange plat
+
+6. Corriger les cartes et boutons
+
+Les cartes doivent ressembler à :
+
+* parchemin premium
+* panneau bois clair
+* bordure dorée/violette plus assumée
+* relief léger
+* ombre chaude
+* pas simple rectangle beige
+
+Les boutons doivent être :
+
+* doré premium pour action principale
+* violet/bois pour secondaire
+* moins gros
+* mieux alignés
+* plus cohérents
+* pas des rectangles orange plats
+
+7. Corriger la lisibilité mobile
+
+Vérifier sur largeur téléphone :
+
+* aucun texte coupé
+* boutons pas trop larges
+* pas de chevauchement avec le FAB
+* bottom nav ne cache pas le contenu
+* images pas trop petites
+* pas de cartes gigantesques inutiles
+* scroll fluide
+* espacement cohérent
+
+8. Revoir la bottom navigation
+
+La bottom nav doit rappeler le logo :
+
+* support bois/violet
+* actif doré
+* icônes lisibles
+* pas fond crème
+* taille compacte mais confortable
+* Le Nid actif doit être premium sans prendre trop de place
+
+9. Ajuster les composants
+
+Modifier prioritairement :
+
+* FantasyCard
+* FantasyButton
+* FantasyHeader
+* FantasyProgressBar
+* NestStatCard
+* DragonCard
+* EggProgressCard
+* WishCard
+* ScrollCard
+* Bottom navigation
+* QuickAddFab
+* Bestiaire du Nid
+
+Centraliser les corrections dans les composants plutôt que de patcher chaque écran.
+
+10. À ne pas faire
+
+Ne pas :
+
+* refaire le backend
+* changer les routes
+* changer la navigation
+* modifier le gameplay
+* ajouter de nouvelles features
+* ajouter des assets externes non validés
+* rendre l’UI sombre/agressive
+* faire un style casn
+* faenstl néo/yr
+ fareeIrpnni cap
+ .esàance
+ Utlis e J cmpe:
+ $nJVMECPm lsEp otuk51osoev:LUSHMEROFE.grlee:AHe:V_E\in;$envPTH"uslcgrade.bat-nodenapclDeoli cnlpn.rl. -odmon:mbDeg -nlpi.ge.t-no-daen:p:tebiTt-opli
+ 2ao tnu
+ l fn mi
+ *fhesodi
+ *cretosD té
+  retnséciuesr d*ocspiq ulesae
+   os un crctnbto av orcinsstxecp cnrmto presoduoros ésla et isislsrtvéfesutlhe
+   Imprn :e ut tepr du ierageo ae e iDTkay
+   scp votr,dé3 acenpi,il amnetslmu,dag mgo,mbl aefmlmim.
+   

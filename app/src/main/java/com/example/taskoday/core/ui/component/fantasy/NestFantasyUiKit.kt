@@ -1,9 +1,11 @@
 package com.example.taskoday.core.ui.component.fantasy
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -31,8 +34,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -46,6 +52,7 @@ import com.example.taskoday.core.ui.theme.InkMuted
 import com.example.taskoday.core.ui.theme.MagicViolet
 import com.example.taskoday.core.ui.theme.MagicVioletSoft
 import com.example.taskoday.core.ui.theme.MossGreen
+import com.example.taskoday.core.ui.theme.MossGreenSoft
 import com.example.taskoday.core.ui.theme.NestNightBlue
 import com.example.taskoday.core.ui.theme.ParchmentCream
 import com.example.taskoday.core.ui.theme.ParchmentLight
@@ -55,6 +62,9 @@ import com.example.taskoday.core.ui.theme.SoftGoldPale
 import com.example.taskoday.core.ui.theme.WoodBrown
 import com.example.taskoday.core.ui.theme.WoodBrownDark
 import com.example.taskoday.core.ui.theme.spacing
+import com.example.taskoday.core.ui.theme.taskodayGoldBrush
+import com.example.taskoday.core.ui.theme.taskodayNeonProgressBrush
+import com.example.taskoday.core.ui.theme.taskodayParchmentBrush
 
 enum class FantasyTone(
     val accent: Color,
@@ -74,31 +84,102 @@ enum class FantasyButtonStyle {
     Quiet,
 }
 
+private fun fantasyCardBrush(tone: FantasyTone): Brush =
+    Brush.verticalGradient(
+        colors =
+            when (tone) {
+                FantasyTone.Night,
+                FantasyTone.Violet,
+                -> listOf(ParchmentLight, ParchmentCream, Color(0xFFE9D8F7))
+                FantasyTone.Wood -> listOf(ParchmentLight, ParchmentCream, Color(0xFFEED4AE))
+                FantasyTone.Ember -> listOf(ParchmentLight, ParchmentCream, Color(0xFFFFD0A3))
+                FantasyTone.Moss -> listOf(ParchmentLight, ParchmentCream, Color(0xFFE6F0D0))
+                FantasyTone.Gold -> listOf(ParchmentLight, ParchmentCream, Color(0xFFFFE7B1))
+            },
+    )
+
+private fun fantasyButtonBrush(style: FantasyButtonStyle, enabled: Boolean): Brush =
+    if (!enabled) {
+        Brush.verticalGradient(listOf(ParchmentShadow.copy(alpha = 0.74f), WoodBrown.copy(alpha = 0.34f)))
+    } else {
+        when (style) {
+            FantasyButtonStyle.Filled -> taskodayGoldBrush()
+            FantasyButtonStyle.Outline -> Brush.verticalGradient(listOf(MagicViolet, WoodBrownDark))
+            FantasyButtonStyle.Quiet -> Brush.verticalGradient(listOf(ParchmentLight, ParchmentCream))
+        }
+    }
+
+private fun fantasyButtonTextColor(style: FantasyButtonStyle, enabled: Boolean): Color =
+    when {
+        !enabled -> InkMuted
+        style == FantasyButtonStyle.Filled -> WoodBrownDark
+        style == FantasyButtonStyle.Quiet -> WoodBrownDark
+        else -> ParchmentLight
+    }
+
+private fun fantasyBadgeBrush(tone: FantasyTone): Brush =
+    Brush.horizontalGradient(
+        colors =
+            if (tone == FantasyTone.Night) {
+                listOf(WoodBrownDark, MagicViolet)
+            } else {
+                listOf(ParchmentLight, tone.soft.copy(alpha = 0.78f))
+            },
+    )
+
+private fun fantasyHeaderBrush(): Brush =
+    Brush.verticalGradient(
+        listOf(
+            WoodBrownDark,
+            MagicViolet.copy(alpha = 0.96f),
+            NestNightBlue,
+        ),
+    )
+
 @Composable
 fun FantasyCard(
     modifier: Modifier = Modifier,
     tone: FantasyTone = FantasyTone.Gold,
-    contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
+    contentPadding: PaddingValues = PaddingValues(horizontal = 13.dp, vertical = 11.dp),
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val shape = RoundedCornerShape(18.dp)
+    val shape = RoundedCornerShape(16.dp)
     Box(
         modifier =
             modifier
-                .defaultMinSize(minHeight = 72.dp)
+                .defaultMinSize(minHeight = 58.dp)
+                .shadow(elevation = 5.dp, shape = shape, clip = false)
                 .clip(shape)
-                .background(
-                    brush =
-                        Brush.verticalGradient(
-                            colors = listOf(ParchmentLight.copy(alpha = 0.98f), ParchmentCream.copy(alpha = 0.96f)),
-                        ),
-                )
+                .background(fantasyCardBrush(tone))
                 .border(
-                    width = 1.2.dp,
-                    brush = Brush.linearGradient(listOf(tone.accent.copy(alpha = 0.72f), ParchmentShadow)),
+                    width = 1.8.dp,
+                    brush =
+                        Brush.linearGradient(
+                            listOf(
+                                SoftGold.copy(alpha = 0.95f),
+                                tone.accent.copy(alpha = 0.78f),
+                                ParchmentShadow.copy(alpha = 0.88f),
+                            ),
+                    ),
                     shape = shape,
                 ),
     ) {
+        Canvas(modifier = Modifier.matchParentSize()) {
+            drawLine(
+                color = SoftGold.copy(alpha = 0.32f),
+                start = Offset(size.width * 0.08f, 5f),
+                end = Offset(size.width * 0.92f, 5f),
+                strokeWidth = 2f,
+                cap = StrokeCap.Round,
+            )
+            drawLine(
+                color = WoodBrown.copy(alpha = 0.14f),
+                start = Offset(size.width * 0.08f, size.height - 5f),
+                end = Offset(size.width * 0.92f, size.height - 5f),
+                strokeWidth = 2f,
+                cap = StrokeCap.Round,
+            )
+        }
         Box(
             modifier =
                 Modifier
@@ -106,8 +187,8 @@ fun FantasyCard(
                     .background(
                         brush =
                             Brush.radialGradient(
-                                colors = listOf(tone.soft, Color.Transparent),
-                                radius = 460f,
+                                colors = listOf(tone.soft.copy(alpha = 0.30f), Color.Transparent),
+                                radius = 420f,
                             ),
                     ),
         )
@@ -116,7 +197,7 @@ fun FantasyCard(
                 Modifier
                     .fillMaxWidth()
                     .padding(contentPadding),
-            verticalArrangement = Arrangement.spacedBy(9.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
             content = content,
         )
     }
@@ -130,12 +211,19 @@ fun FantasyButton(
     style: FantasyButtonStyle = FantasyButtonStyle.Filled,
     enabled: Boolean = true,
 ) {
-    val shape = RoundedCornerShape(14.dp)
-    val buttonModifier = modifier.defaultMinSize(minHeight = 48.dp)
+    val shape = RoundedCornerShape(13.dp)
+    val buttonModifier =
+            modifier
+                .defaultMinSize(minHeight = 38.dp)
+                .shadow(elevation = if (enabled) 4.dp else 0.dp, shape = shape, clip = false)
+                .clip(shape)
+                .background(fantasyButtonBrush(style, enabled))
+                .clickable(enabled = enabled, onClick = onClick)
     val textContent: @Composable () -> Unit = {
         Text(
             text = text,
             style = MaterialTheme.typography.labelLarge,
+            color = fantasyButtonTextColor(style, enabled),
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center,
             maxLines = 2,
@@ -143,57 +231,86 @@ fun FantasyButton(
         )
     }
 
-    when (style) {
-        FantasyButtonStyle.Filled ->
-            Button(
-                onClick = onClick,
-                enabled = enabled,
-                modifier = buttonModifier,
-                shape = shape,
-                colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor = EmberOrange,
-                        contentColor = ParchmentLight,
-                        disabledContainerColor = ParchmentShadow,
-                        disabledContentColor = InkMuted,
-                    ),
-            ) {
-                textContent()
-            }
+    Box(
+        modifier =
+            buttonModifier
+                .border(
+                    width = if (style == FantasyButtonStyle.Filled) 1.dp else 1.2.dp,
+                    color = if (style == FantasyButtonStyle.Filled) MagicViolet.copy(alpha = 0.48f) else SoftGold.copy(alpha = 0.70f),
+                    shape = shape,
+                ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), contentAlignment = Alignment.Center) {
+            textContent()
+        }
+    }
+}
 
-        FantasyButtonStyle.Outline ->
-            OutlinedButton(
-                onClick = onClick,
-                enabled = enabled,
-                modifier = buttonModifier,
-                shape = shape,
-                border = BorderStroke(1.2.dp, SoftGold),
-                colors =
-                    ButtonDefaults.outlinedButtonColors(
-                        containerColor = ParchmentLight.copy(alpha = 0.68f),
-                        contentColor = WoodBrownDark,
-                        disabledContentColor = InkMuted,
-                    ),
-            ) {
-                textContent()
-            }
+@Composable
+fun FantasyCompactButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    OutlinedButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier =
+            modifier
+                .widthIn(min = 72.dp, max = 108.dp)
+                .defaultMinSize(minHeight = 34.dp),
+        shape = RoundedCornerShape(100.dp),
+        border = BorderStroke(1.dp, if (enabled) SoftGold.copy(alpha = 0.88f) else MagicViolet.copy(alpha = 0.36f)),
+        colors =
+            ButtonDefaults.outlinedButtonColors(
+                containerColor = ParchmentLight.copy(alpha = 0.84f),
+                contentColor = WoodBrownDark,
+                disabledContainerColor = ParchmentShadow.copy(alpha = 0.48f),
+                disabledContentColor = InkMuted,
+            ),
+        contentPadding = PaddingValues(horizontal = 9.dp, vertical = 4.dp),
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            softWrap = false,
+        )
+    }
+}
 
-        FantasyButtonStyle.Quiet ->
-            Button(
-                onClick = onClick,
-                enabled = enabled,
-                modifier = buttonModifier,
-                shape = shape,
-                colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor = MossGreen.copy(alpha = 0.18f),
-                        contentColor = MossGreen,
-                        disabledContainerColor = ParchmentShadow,
-                        disabledContentColor = InkMuted,
-                    ),
-            ) {
-                textContent()
-            }
+@Composable
+fun FantasyBadge(
+    text: String,
+    modifier: Modifier = Modifier,
+    tone: FantasyTone = FantasyTone.Gold,
+) {
+    val shape = RoundedCornerShape(100.dp)
+    Box(
+        modifier =
+            modifier
+                .widthIn(max = 128.dp)
+                .clip(shape)
+                .background(fantasyBadgeBrush(tone))
+                .border(1.dp, tone.accent.copy(alpha = 0.70f), shape)
+                .padding(horizontal = 9.dp, vertical = 4.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            color = if (tone == FantasyTone.Night) ParchmentLight else WoodBrownDark,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            softWrap = false,
+        )
     }
 }
 
@@ -217,28 +334,62 @@ fun FantasyHeader(
             showNotification = false,
             onAvatarClick = onAvatarClick,
         )
+        FantasyScreenHeader(
+            title = title,
+            subtitle = subtitle,
+            assetResId = assetResId,
+            assetDescription = assetDescription,
+        )
+    }
+}
+
+@Composable
+fun FantasyScreenHeader(
+    title: String,
+    subtitle: String,
+    modifier: Modifier = Modifier,
+    assetResId: Int = NestAssets.interfaceAsset("nid"),
+    assetDescription: String? = null,
+) {
+    val shape = RoundedCornerShape(18.dp)
+    Box(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .shadow(elevation = 6.dp, shape = shape, clip = false)
+                .clip(shape)
+                .background(fantasyHeaderBrush())
+                .border(1.8.dp, SoftGold.copy(alpha = 0.86f), shape),
+    ) {
+        Canvas(modifier = Modifier.matchParentSize()) {
+            drawCircle(
+                color = SoftGold.copy(alpha = 0.14f),
+                radius = size.minDimension * 0.70f,
+                center = Offset(size.width * 0.04f, 0f),
+            )
+        }
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            FantasyAssetBubble(assetResId = assetResId, contentDescription = assetDescription, size = 64.dp)
+            FantasyAssetBubble(assetResId = assetResId, contentDescription = assetDescription, size = 46.dp)
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = WoodBrownDark,
-                    maxLines = 2,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = SoftGoldPale,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = InkMuted,
-                    maxLines = 3,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = ParchmentCream,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
@@ -265,7 +416,7 @@ fun FantasyProgressBar(
                 Modifier
                     .fillMaxHeight()
                     .fillMaxWidth(clamped)
-                    .background(Brush.horizontalGradient(listOf(EmberOrange, SoftGold, MossGreen))),
+                    .background(taskodayNeonProgressBrush()),
         )
     }
 }
@@ -279,17 +430,17 @@ fun NestStatCard(
     contentDescription: String = label,
     tone: FantasyTone = FantasyTone.Gold,
 ) {
-    FantasyCard(modifier = modifier, tone = tone, contentPadding = PaddingValues(12.dp)) {
+    FantasyCard(modifier = modifier, tone = tone, contentPadding = PaddingValues(10.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            FantasyAssetBubble(assetResId = assetResId, contentDescription = contentDescription, size = 42.dp)
+            FantasyAssetBubble(assetResId = assetResId, contentDescription = contentDescription, size = 40.dp)
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     text = value,
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.titleMedium,
                     color = WoodBrownDark,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
@@ -322,7 +473,7 @@ fun EggProgressCard(
 ) {
     FantasyCard(modifier = modifier.fillMaxWidth(), tone = if (locked) FantasyTone.Night else FantasyTone.Gold) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            FantasyAssetBubble(assetResId = assetResId, contentDescription = contentDescription, size = 58.dp)
+            FantasyAssetBubble(assetResId = assetResId, contentDescription = contentDescription, size = 66.dp)
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text(
                     text = title,
@@ -374,7 +525,7 @@ fun DragonCard(
 ) {
     FantasyCard(modifier = modifier.fillMaxWidth(), tone = if (locked) FantasyTone.Night else FantasyTone.Ember) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            FantasyAssetBubble(assetResId = assetResId, contentDescription = contentDescription, size = 64.dp)
+            FantasyAssetBubble(assetResId = assetResId, contentDescription = contentDescription, size = 72.dp)
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = title,
@@ -431,7 +582,7 @@ fun WishCard(
 ) {
     FantasyCard(modifier = modifier.fillMaxWidth(), tone = FantasyTone.Violet) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            FantasyAssetBubble(assetResId = assetResId, contentDescription = contentDescription, size = 48.dp)
+            FantasyAssetBubble(assetResId = assetResId, contentDescription = contentDescription, size = 56.dp)
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text(
                     text = title,
@@ -476,7 +627,7 @@ fun ScrollCard(
 ) {
     FantasyCard(modifier = modifier.fillMaxWidth(), tone = FantasyTone.Wood) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            FantasyAssetBubble(assetResId = assetResId, contentDescription = contentDescription, size = 54.dp)
+            FantasyAssetBubble(assetResId = assetResId, contentDescription = contentDescription, size = 60.dp)
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = title,
@@ -524,7 +675,7 @@ fun ChestCard(
         }
     FantasyCard(modifier = modifier.fillMaxWidth(), tone = tone) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            FantasyAssetBubble(assetResId = assetResId, contentDescription = contentDescription, size = 58.dp)
+            FantasyAssetBubble(assetResId = assetResId, contentDescription = contentDescription, size = 68.dp)
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text(text = title, style = MaterialTheme.typography.titleMedium, color = WoodBrownDark)
                 if (pointsRequired > 0) {
@@ -534,7 +685,8 @@ fun ChestCard(
                 if (!costLabel.isNullOrBlank()) {
                     Text(text = costLabel, style = MaterialTheme.typography.bodyMedium, color = InkMuted)
                 }
-                Text(text = "$unopenedChests coffre en attente", style = MaterialTheme.typography.bodySmall, color = MossGreen)
+                val waitingLabel = if (unopenedChests > 1) "coffres en attente" else "coffre en attente"
+                Text(text = "$unopenedChests $waitingLabel", style = MaterialTheme.typography.bodySmall, color = MossGreen)
             }
         }
         if (!actionLabel.isNullOrBlank() && onAction != null) {
@@ -613,16 +765,21 @@ fun FantasyAssetBubble(
         modifier =
             modifier
                 .size(size)
+                .shadow(elevation = 3.dp, shape = CircleShape, clip = false)
                 .clip(CircleShape)
-                .background(Brush.radialGradient(listOf(SoftGoldPale, ParchmentCream)))
-                .border(1.dp, SoftGold.copy(alpha = 0.9f), CircleShape)
-                .padding(8.dp),
+                .border(1.3.dp, MagicViolet.copy(alpha = 0.72f), CircleShape)
+                .padding(if (size >= 70.dp) 7.dp else 8.dp),
         contentAlignment = Alignment.Center,
     ) {
+        FantasySkinSurface(
+            asset = FantasySkinAssets.iconFrameGold,
+            fallbackBrush = taskodayGoldBrush(),
+            modifier = Modifier.matchParentSize(),
+        ) {}
         Image(
             painter = painterResource(id = assetResId),
             contentDescription = contentDescription,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().fillMaxHeight(),
             contentScale = ContentScale.Fit,
         )
     }

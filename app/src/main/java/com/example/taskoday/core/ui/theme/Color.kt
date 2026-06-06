@@ -2,40 +2,60 @@ package com.example.taskoday.core.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val EmberOrange = Color(0xFFD95E2B)
-val EmberOrangeSoft = Color(0xFFF08A4B)
-val SoftGold = Color(0xFFFFC96B)
-val SoftGoldPale = Color(0xFFFFE8A3)
-val MagicViolet = Color(0xFF8D6AD8)
-val MagicVioletSoft = Color(0xFFB884F6)
-val NestNightBlue = Color(0xFF28345D)
-val NestNightBlueSoft = Color(0xFF3E4E7E)
-val ParchmentCream = Color(0xFFFFF4D9)
-val ParchmentLight = Color(0xFFFFFAEC)
-val ParchmentShadow = Color(0xFFF2D6A4)
-val WoodBrown = Color(0xFF7A4C2A)
-val WoodBrownDark = Color(0xFF3E2B1D)
-val MossGreen = Color(0xFF6F8E55)
-val MossGreenSoft = Color(0xFFA7C47D)
-val InkBrown = Color(0xFF2D241B)
-val InkMuted = Color(0xFF6A5A48)
+val LogoGold = Color(0xFFFFC247)
+val LogoGoldDeep = Color(0xFFE28A1F)
+val LogoGoldLight = Color(0xFFFFE7A2)
+val RoyalPurple = Color(0xFF5C318F)
+val RoyalPurpleDark = Color(0xFF2E205C)
+val RoyalPurpleSoft = Color(0xFF9B72D7)
+val ShieldPurple = Color(0xFF7140B0)
+val FlameOrange = Color(0xFFE46425)
+val FlameOrangeSoft = Color(0xFFFF8B41)
+val SkyGold = Color(0xFFFFE3A7)
+val SkyBlueSoft = Color(0xFFDCEFF4)
+val ValleyMist = Color(0xFFE7F0D4)
+val LeafGreen = Color(0xFF5F8B43)
+val LeafGreenSoft = Color(0xFFA7C871)
+val CrystalBlue = Color(0xFF3F91B7)
+val CrystalBlueLight = Color(0xFFAADBEA)
+val CarvedWood = Color(0xFF875225)
+val CarvedWoodDark = Color(0xFF3B2417)
+val CarvedWoodLight = Color(0xFFB97938)
+val SoftRed = Color(0xFFC95C52)
+
+val EmberOrange = FlameOrange
+val EmberOrangeSoft = FlameOrangeSoft
+val SoftGold = LogoGold
+val SoftGoldPale = LogoGoldLight
+val MagicViolet = RoyalPurple
+val MagicVioletSoft = RoyalPurpleSoft
+val NestNightBlue = Color(0xFF252D5C)
+val NestNightBlueSoft = Color(0xFF47527F)
+val ParchmentCream = Color(0xFFFFEDC9)
+val ParchmentLight = Color(0xFFFFF8EA)
+val ParchmentShadow = Color(0xFFE9C783)
+val WoodBrown = CarvedWood
+val WoodBrownDark = CarvedWoodDark
+val MossGreen = LeafGreen
+val MossGreenSoft = LeafGreenSoft
+val InkBrown = Color(0xFF2D2118)
+val InkMuted = Color(0xFF6B5745)
 
 val NightBlue950 = NestNightBlue
 val NightBlue900 = NestNightBlueSoft
 val NightBlue850 = Color(0xFF566B9A)
 val NightBlue800 = Color(0xFF6C82AF)
 
-val NebulaViolet = MagicViolet
-val ArcaneViolet = MagicVioletSoft
-val NeonBlue = EmberOrange
-val NeonCyan = EmberOrangeSoft
-val NeonCyanSoft = SoftGold
+val NebulaViolet = RoyalPurple
+val ArcaneViolet = ShieldPurple
+val NeonBlue = FlameOrange
+val NeonCyan = LogoGold
+val NeonCyanSoft = LogoGoldLight
 val NeonPurple = MagicViolet
-val CrystalBlue = MagicVioletSoft
 
-val SurfacePanel = ParchmentLight.copy(alpha = 0.96f)
+val SurfacePanel = ParchmentLight.copy(alpha = 0.98f)
 val SurfacePanelAlt = ParchmentCream.copy(alpha = 0.98f)
-val SurfaceGlass = ParchmentCream.copy(alpha = 0.88f)
+val SurfaceGlass = ParchmentCream.copy(alpha = 0.92f)
 val OutlineGlow = SoftGold
 val StarWhite = InkBrown
 val TextMuted = InkMuted
@@ -43,10 +63,10 @@ val TextDimmed = WoodBrown.copy(alpha = 0.7f)
 
 val SuccessGlow = MossGreen
 val WarningGlow = SoftGold
-val DangerGlow = Color(0xFFC45151)
+val DangerGlow = SoftRed
 
-val BackgroundTop = ParchmentLight
-val BackgroundBottom = Color(0xFFF7DFB9)
+val BackgroundTop = Color(0xFF170B2B)
+val BackgroundBottom = CarvedWoodDark
 
 val NeonBorderStart = SoftGold
 val NeonBorderEnd = MagicVioletSoft

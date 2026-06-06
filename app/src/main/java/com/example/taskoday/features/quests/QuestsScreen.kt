@@ -1,5 +1,7 @@
 package com.example.taskoday.features.quests
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +17,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -34,6 +37,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -48,10 +53,14 @@ import com.example.taskoday.core.ui.component.fantasy.QuestLevelBadge
 import com.example.taskoday.core.ui.component.fantasy.TaskodayDragonWatermark
 import com.example.taskoday.core.ui.component.fantasy.TaskodayHeader
 import com.example.taskoday.core.ui.component.fantasy.XpProgressBar
+import com.example.taskoday.core.ui.theme.MagicViolet
 import com.example.taskoday.core.ui.theme.NeonCyan
+import com.example.taskoday.core.ui.theme.ParchmentLight
+import com.example.taskoday.core.ui.theme.SoftGold
 import com.example.taskoday.core.ui.theme.StarWhite
 import com.example.taskoday.core.ui.theme.TextMuted
 import com.example.taskoday.core.ui.theme.WarningGlow
+import com.example.taskoday.core.ui.theme.WoodBrownDark
 import com.example.taskoday.core.ui.theme.spacing
 import com.example.taskoday.domain.model.DayPart
 import com.example.taskoday.domain.model.QuestForDay
@@ -118,7 +127,7 @@ fun QuestsScreen(
                     Modifier
                         .fillMaxSize()
                         .padding(horizontal = spacing.medium),
-                contentPadding = PaddingValues(top = spacing.large, bottom = spacing.xxLarge),
+                contentPadding = PaddingValues(top = spacing.large, bottom = 148.dp),
                 verticalArrangement = Arrangement.spacedBy(spacing.medium),
             ) {
                 item {
@@ -140,50 +149,11 @@ fun QuestsScreen(
                 }
 
                 item {
-                    NeonCard(
-                        tone = NeonTone.Violet,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Box(modifier = Modifier.fillMaxWidth()) {
-                            TaskodayDragonWatermark(
-                                modifier =
-                                    Modifier
-                                        .size(130.dp)
-                                        .align(Alignment.TopEnd),
-                            )
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                QuestLevelBadge(
-                                    level = level,
-                                    modifier = Modifier.size(72.dp),
-                                )
-                                Column(
-                                    modifier = Modifier.weight(1f),
-                                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                                ) {
-                                    Text(
-                                        text = "Ton aventure continue !",
-                                        style = MaterialTheme.typography.titleLarge,
-                                        color = StarWhite,
-                                    )
-                                    Text(
-                                        text = "Encore ${XP_PER_LEVEL - levelXp} XP pour passer au niveau ${level + 1}.",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = TextMuted,
-                                    )
-                                }
-                            }
-                        }
-                        XpProgressBar(progress = levelProgress, modifier = Modifier.fillMaxWidth())
-                        Text(
-                            text = "$levelXp / $XP_PER_LEVEL XP",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = NeonCyan,
-                        )
-                    }
+                    QuestAdventureProgressCard(
+                        level = level,
+                        levelXp = levelXp,
+                        levelProgress = levelProgress,
+                    )
                 }
 
                 item {
@@ -291,7 +261,7 @@ fun QuestsScreen(
                             xpLabel = "+${item.quest.pointsReward} XP",
                             progress = if (checked) 1f else 0.12f,
                             actionLabel = if (checked) "Recuperer" else "Commencer",
-                            dayPartLabel = "${item.quest.dayPart.emoji()} ${item.quest.dayPart.label()}",
+                            dayPartLabel = item.quest.dayPart.label(),
                             done = checked,
                             canManage = uiState.canManageQuests,
                             onAction = { viewModel.setQuestCompleted(item, !checked) },
@@ -315,7 +285,7 @@ private fun DateControlsCard(
     NeonCard(tone = NeonTone.Blue) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onPrevious) {
@@ -329,6 +299,7 @@ private fun DateControlsCard(
                 text = dateLabel,
                 style = MaterialTheme.typography.titleMedium,
                 color = StarWhite,
+                modifier = Modifier.weight(1f),
             )
             IconButton(onClick = onNext) {
                 Icon(
@@ -337,11 +308,6 @@ private fun DateControlsCard(
                     tint = StarWhite,
                 )
             }
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
-        ) {
             IconButton(onClick = onToday) {
                 Icon(
                     imageVector = Icons.Outlined.Today,
@@ -349,6 +315,66 @@ private fun DateControlsCard(
                     tint = NeonCyan,
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun QuestAdventureProgressCard(
+    level: Int,
+    levelXp: Int,
+    levelProgress: Float,
+) {
+    val shape = RoundedCornerShape(22.dp)
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(shape)
+                .background(Brush.verticalGradient(listOf(WoodBrownDark, MagicViolet, Color(0xFF241235))))
+                .border(1.6.dp, SoftGold.copy(alpha = 0.86f), shape)
+                .padding(13.dp),
+    ) {
+        TaskodayDragonWatermark(
+            modifier =
+                Modifier
+                    .size(132.dp)
+                    .align(Alignment.TopEnd),
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                QuestLevelBadge(
+                    level = level,
+                    modifier = Modifier.size(66.dp),
+                )
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(3.dp),
+                ) {
+                    Text(
+                        text = "Ton aventure continue !",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = SoftGold,
+                        maxLines = 1,
+                    )
+                    Text(
+                        text = "Encore ${XP_PER_LEVEL - levelXp} XP pour passer au niveau ${level + 1}.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = ParchmentLight,
+                        maxLines = 2,
+                    )
+                }
+            }
+            XpProgressBar(progress = levelProgress, modifier = Modifier.fillMaxWidth())
+            Text(
+                text = "$levelXp / $XP_PER_LEVEL XP",
+                style = MaterialTheme.typography.bodySmall,
+                color = SoftGold,
+            )
         }
     }
 }
@@ -368,31 +394,44 @@ private fun QuestFormCard(
     onSubmit: () -> Unit,
     onCancelEdit: () -> Unit,
 ) {
-    NeonCard(tone = NeonTone.Violet) {
+    val shape = RoundedCornerShape(20.dp)
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(shape)
+                .background(Brush.verticalGradient(listOf(WoodBrownDark, MagicViolet, Color(0xFF261238))))
+                .border(1.5.dp, SoftGold.copy(alpha = 0.82f), shape)
+                .padding(12.dp),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+        ) {
         Text(
             text = if (isEditing) "Modifier la quête" else "Ajouter une quête",
             style = MaterialTheme.typography.titleMedium,
-            color = StarWhite,
+            color = SoftGold,
         )
         OutlinedTextField(
             value = formTitle,
             onValueChange = onFormTitleChange,
             label = { Text("Titre") },
             singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(ParchmentLight.copy(alpha = 0.92f)),
         )
         OutlinedTextField(
             value = formDescription,
             onValueChange = onFormDescriptionChange,
             label = { Text("Description") },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(ParchmentLight.copy(alpha = 0.92f)),
         )
         OutlinedTextField(
             value = formPoints,
             onValueChange = onFormPointsChange,
             label = { Text("Points XP") },
             singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(ParchmentLight.copy(alpha = 0.92f)),
         )
         Row(
             modifier =
@@ -405,7 +444,7 @@ private fun QuestFormCard(
                 FilterChip(
                     selected = formDayPart == dayPart,
                     onClick = { onFormDayPartChange(dayPart) },
-                    label = { Text("${dayPart.emoji()} ${dayPart.label()}") },
+                    label = { Text(dayPart.label()) },
                 )
             }
         }
@@ -423,6 +462,7 @@ private fun QuestFormCard(
                 enabled = !isSubmitting,
                 modifier = Modifier.fillMaxWidth(),
             )
+        }
         }
     }
 }

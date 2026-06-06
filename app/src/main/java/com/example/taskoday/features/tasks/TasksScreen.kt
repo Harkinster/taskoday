@@ -2,6 +2,7 @@ package com.example.taskoday.features.tasks
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.taskoday.core.ui.component.fantasy.FantasyScreenBackground
 import com.example.taskoday.core.ui.component.fantasy.MissionCard
@@ -28,6 +30,7 @@ import com.example.taskoday.core.ui.component.fantasy.NeonTone
 import com.example.taskoday.core.ui.component.fantasy.ProgressHeroCard
 import com.example.taskoday.core.ui.component.fantasy.TaskodayHeader
 import com.example.taskoday.core.ui.theme.NeonCyan
+import com.example.taskoday.core.ui.theme.SoftGold
 import com.example.taskoday.core.ui.theme.StarWhite
 import com.example.taskoday.core.ui.theme.TextMuted
 import com.example.taskoday.core.ui.theme.WarningGlow
@@ -78,13 +81,13 @@ fun TasksScreen(
                     Modifier
                         .fillMaxSize()
                         .padding(horizontal = spacing.medium),
-                contentPadding = PaddingValues(top = spacing.large, bottom = spacing.xxLarge),
+                contentPadding = PaddingValues(top = spacing.large, bottom = 148.dp),
                 verticalArrangement = Arrangement.spacedBy(spacing.medium),
             ) {
                 item {
                     TaskodayHeader(
                         title = "Mission",
-                        subtitle = "Des actions du quotidien, des victoires concretes.",
+                        subtitle = "Des actions du quotidien, des victoires concrètes.",
                         avatarInitials = "AB",
                         onAvatarClick = onOpenProfile,
                     )
@@ -92,11 +95,11 @@ fun TasksScreen(
 
                 item {
                     ProgressHeroCard(
-                        title = "A faire aujourd hui",
+                        title = "À faire aujourd'hui",
                         completed = doneCount,
                         total = total,
                         progress = progress,
-                        subtitle = "Complete tes missions pour progresser.",
+                        subtitle = "Complète tes missions pour progresser.",
                         accent = NeonTone.Blue,
                     )
                 }
@@ -127,7 +130,7 @@ fun TasksScreen(
                                 color = StarWhite,
                             )
                             Text(
-                                text = "Cree ta premiere mission pour lancer ton aventure.",
+                                text = "Crée ta première mission pour lancer ton aventure.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = TextMuted,
                             )
@@ -136,20 +139,23 @@ fun TasksScreen(
                     return@LazyColumn
                 }
 
-                item {
-                    MissionSection(
-                        title = "A faire aujourd hui",
+                if (todoTasks.isNotEmpty()) {
+                    item {
+                        MissionSection(
+                        title = "À faire aujourd'hui",
                         tasks = todoTasks,
                         manageableTaskIds = uiState.manageableTaskIds,
                         onTaskClick = onTaskClick,
                         onEditTask = onEditTask,
                         onDeleteTask = viewModel::deleteTask,
                         onMarkTaskDone = viewModel::markTaskAsDone,
-                    )
+                        )
+                    }
                 }
 
-                item {
-                    MissionSection(
+                if (inProgressTasks.isNotEmpty()) {
+                    item {
+                        MissionSection(
                         title = "En cours",
                         tasks = inProgressTasks,
                         manageableTaskIds = uiState.manageableTaskIds,
@@ -157,19 +163,22 @@ fun TasksScreen(
                         onEditTask = onEditTask,
                         onDeleteTask = viewModel::deleteTask,
                         onMarkTaskDone = viewModel::markTaskAsDone,
-                    )
+                        )
+                    }
                 }
 
-                item {
-                    MissionSection(
-                        title = "Terminees",
+                if (doneTasks.isNotEmpty()) {
+                    item {
+                        MissionSection(
+                        title = "Terminées",
                         tasks = doneTasks,
                         manageableTaskIds = uiState.manageableTaskIds,
                         onTaskClick = onTaskClick,
                         onEditTask = onEditTask,
                         onDeleteTask = viewModel::deleteTask,
                         onMarkTaskDone = viewModel::markTaskAsDone,
-                    )
+                        )
+                    }
                 }
             }
         }
@@ -186,14 +195,14 @@ private fun MissionSection(
     onDeleteTask: (Long) -> Unit,
     onMarkTaskDone: (Long) -> Unit,
 ) {
-    NeonCard(
-        tone = NeonTone.Cyan,
+    Column(
         modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
     ) {
         Text(
             text = "$title (${tasks.size})",
-            style = MaterialTheme.typography.titleLarge,
-            color = StarWhite,
+            style = MaterialTheme.typography.titleMedium,
+            color = SoftGold,
         )
 
         if (tasks.isEmpty()) {
@@ -202,7 +211,7 @@ private fun MissionSection(
                 style = MaterialTheme.typography.bodyMedium,
                 color = TextMuted,
             )
-            return@NeonCard
+            return@Column
         }
 
         tasks.forEach { task ->

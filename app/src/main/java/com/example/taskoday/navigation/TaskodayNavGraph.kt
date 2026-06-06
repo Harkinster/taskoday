@@ -4,14 +4,16 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -132,6 +134,27 @@ fun TaskodayApp() {
         } else {
             Modifier
         }
+    val openCreateRoutine: () -> Unit = {
+        if (quickAddUiState.hasRemoteSession && quickAddUiState.isParent) {
+            navController.navigate(TaskodayDestination.ParentPlanning.createRoute("routine"))
+        } else {
+            navController.navigate(TaskodayDestination.TaskEdit.createRoutineRoute())
+        }
+    }
+    val openCreateMission: () -> Unit = {
+        if (quickAddUiState.hasRemoteSession && quickAddUiState.isParent) {
+            navController.navigate(TaskodayDestination.ParentPlanning.createRoute("mission"))
+        } else {
+            navController.navigate(TaskodayDestination.TaskEdit.createMissionRoute())
+        }
+    }
+    val openCreateQuest: () -> Unit = {
+        if (quickAddUiState.hasRemoteSession && quickAddUiState.isParent) {
+            navController.navigate(TaskodayDestination.ParentPlanning.createRoute("quest"))
+        } else {
+            navigateToTopLevel(TaskodayDestination.Quests)
+        }
+    }
 
     Box(
         modifier =
@@ -143,49 +166,33 @@ fun TaskodayApp() {
     ) {
         Scaffold(
             containerColor = Color.Transparent,
-            floatingActionButton = {
-                if (showBottomBar) {
-                    QuickAddFab(
-                        uiState = quickAddUiState,
-                        onRefresh = quickAddViewModel::refresh,
-                        onCreateRoutine = {
-                            if (quickAddUiState.hasRemoteSession && quickAddUiState.isParent) {
-                                navController.navigate(TaskodayDestination.ParentPlanning.createRoute("routine"))
-                            } else {
-                                navController.navigate(TaskodayDestination.TaskEdit.createRoutineRoute())
-                            }
-                        },
-                        onCreateMission = {
-                            if (quickAddUiState.hasRemoteSession && quickAddUiState.isParent) {
-                                navController.navigate(TaskodayDestination.ParentPlanning.createRoute("mission"))
-                            } else {
-                                navController.navigate(TaskodayDestination.TaskEdit.createMissionRoute())
-                            }
-                        },
-                        onCreateQuest = {
-                            if (quickAddUiState.hasRemoteSession && quickAddUiState.isParent) {
-                                navController.navigate(TaskodayDestination.ParentPlanning.createRoute("quest"))
-                            } else {
-                                navigateToTopLevel(TaskodayDestination.Quests)
-                            }
-                        },
-                    )
-                }
-            },
             bottomBar = {
                 if (showBottomBar) {
-                    TaskodayBottomBar(
-                        destinations = TopLevelDestinations,
-                        currentDestination = currentDestination,
-                        onNavigate = navigateToTopLevel,
-                    )
+                    Box {
+                        TaskodayBottomBar(
+                            destinations = TopLevelDestinations,
+                            currentDestination = currentDestination,
+                            onNavigate = navigateToTopLevel,
+                        )
+                        QuickAddFab(
+                            uiState = quickAddUiState,
+                            onRefresh = quickAddViewModel::refresh,
+                            onCreateRoutine = openCreateRoutine,
+                            onCreateMission = openCreateMission,
+                            onCreateQuest = openCreateQuest,
+                            modifier =
+                                Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(top = 8.dp, end = 10.dp),
+                        )
+                    }
                 }
             },
-        ) {
+        ) { innerPadding ->
             NavHost(
                 navController = navController,
                 startDestination = TaskodayDestination.Splash.route,
-                modifier = swipeModifier,
+                modifier = swipeModifier.padding(innerPadding),
             ) {
             composable(TaskodayDestination.Splash.route) {
                 val viewModel: AuthViewModel = hiltViewModel()
@@ -255,7 +262,6 @@ fun TaskodayApp() {
 
             composable(TaskodayDestination.Nest.route) {
                 NestScreen(
-                    onOpenPlanning = { navigateToTopLevel(TaskodayDestination.Home) },
                     onOpenInventory = { navController.navigate(TaskodayDestination.Inventory.route) },
                     onOpenEggs = { navController.navigate(TaskodayDestination.Eggs.route) },
                     onOpenDragons = { navController.navigate(TaskodayDestination.Dragons.route) },

@@ -36,26 +36,28 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.taskoday.R
 import com.example.taskoday.core.ui.theme.ArcaneViolet
-import com.example.taskoday.core.ui.theme.BackgroundBottom
-import com.example.taskoday.core.ui.theme.BackgroundTop
+import com.example.taskoday.core.ui.theme.CarvedWoodDark
 import com.example.taskoday.core.ui.theme.DangerGlow
 import com.example.taskoday.core.ui.theme.EmberOrange
+import com.example.taskoday.core.ui.theme.LeafGreenSoft
 import com.example.taskoday.core.ui.theme.NebulaViolet
 import com.example.taskoday.core.ui.theme.NeonBlue
 import com.example.taskoday.core.ui.theme.NeonCyan
 import com.example.taskoday.core.ui.theme.NeonCyanSoft
 import com.example.taskoday.core.ui.theme.NestNightBlue
 import com.example.taskoday.core.ui.theme.ParchmentCream
+import com.example.taskoday.core.ui.theme.ParchmentLight
 import com.example.taskoday.core.ui.theme.ParchmentShadow
 import com.example.taskoday.core.ui.theme.SoftGold
 import com.example.taskoday.core.ui.theme.StarWhite
@@ -63,6 +65,8 @@ import com.example.taskoday.core.ui.theme.SuccessGlow
 import com.example.taskoday.core.ui.theme.SurfacePanel
 import com.example.taskoday.core.ui.theme.TextMuted
 import com.example.taskoday.core.ui.theme.WarningGlow
+import com.example.taskoday.core.ui.theme.WoodBrownDark
+import com.example.taskoday.core.ui.theme.taskodayWorldBackgroundBrush
 
 @Composable
 fun FantasyScreenBackground(
@@ -73,39 +77,25 @@ fun FantasyScreenBackground(
         modifier =
             modifier
                 .fillMaxSize()
-                .background(
-                    brush =
-                        Brush.verticalGradient(
-                            colors = listOf(BackgroundTop, BackgroundBottom),
-                        ),
-                ),
+                .background(taskodayWorldBackgroundBrush()),
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val width = size.width
             val height = size.height
 
-            drawCircle(
-                color = SoftGold.copy(alpha = 0.34f),
-                radius = width * 0.52f,
-                center = Offset(width * 0.88f, height * 0.08f),
-            )
-            drawCircle(
-                color = ArcaneViolet.copy(alpha = 0.16f),
-                radius = width * 0.46f,
-                center = Offset(width * 0.12f, height * 0.70f),
-            )
-            drawCircle(
-                color = EmberOrange.copy(alpha = 0.12f),
-                radius = width * 0.40f,
-                center = Offset(width * 0.88f, height * 0.90f),
+            drawLine(
+                color = SoftGold.copy(alpha = 0.12f),
+                start = Offset(width * 0.08f, height * 0.20f),
+                end = Offset(width * 0.92f, height * 0.20f),
+                strokeWidth = 1.6f,
             )
 
-            for (i in 0..54) {
+            for (i in 0..26) {
                 val x = (((i * 67) % 100) / 100f) * width
                 val y = (((i * 37 + 19) % 100) / 100f) * height
-                val radius = if (i % 4 == 0) 2.2f else 1.2f
+                val radius = if (i % 4 == 0) 1.8f else 1.0f
                 drawCircle(
-                    color = NestNightBlue.copy(alpha = 0.08f),
+                    color = SoftGold.copy(alpha = 0.13f),
                     radius = radius,
                     center = Offset(x, y),
                 )
@@ -116,43 +106,56 @@ fun FantasyScreenBackground(
 }
 
 @Composable
+fun TaskodayWorldBackground(
+    modifier: Modifier = Modifier,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    Box(modifier = modifier.fillMaxSize()) {
+        Image(
+            painter = painterResource(id = NestAssets.SplashBackgroundTaskoday.resId),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop,
+        )
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color(0x66060418),
+                                Color(0x22060418),
+                                Color(0x33150523),
+                                Color(0xBB16051F),
+                            ),
+                        ),
+                    ),
+        )
+        content()
+    }
+}
+
+@Composable
 fun TaskodayBrand(
     modifier: Modifier = Modifier,
     compact: Boolean = false,
 ) {
-    val iconSize = if (compact) 30.dp else 36.dp
-    val wordmarkWidth = if (compact) 114.dp else 146.dp
+    val logoWidth = if (compact) 178.dp else 238.dp
+    val logoHeight = if (compact) 102.dp else 136.dp
 
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    Box(
+        modifier =
+            modifier
+                .width(logoWidth)
+                .height(logoHeight),
+        contentAlignment = Alignment.CenterStart,
     ) {
-        Box(
-            modifier =
-                Modifier
-                    .size(iconSize)
-                    .clip(CircleShape)
-                    .background(SoftGold.copy(alpha = 0.45f))
-                    .border(
-                        width = 1.dp,
-                        color = NeonCyanSoft.copy(alpha = 0.62f),
-                        shape = CircleShape,
-                    )
-                    .padding(4.dp),
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.taskoday_screenbot_logo_icon),
-                contentDescription = "Taskoday mascot",
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Fit,
-            )
-        }
         Image(
-            painter = painterResource(id = R.drawable.taskoday_screenbot_wordmark),
+            painter = painterResource(id = NestAssets.LogoTaskoday.resId),
             contentDescription = "Taskoday",
-            modifier = Modifier.width(wordmarkWidth),
-            contentScale = ContentScale.FillWidth,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Fit,
         )
     }
 }
@@ -170,13 +173,11 @@ fun UserAvatarBadge(
             .clip(CircleShape)
             .background(
                 brush =
-                    Brush.radialGradient(
-                            colors = listOf(EmberOrange.copy(alpha = 0.88f), SoftGold),
-                    ),
+                    Brush.verticalGradient(listOf(ArcaneViolet, NestNightBlue, CarvedWoodDark)),
             )
             .border(
                 width = 1.6.dp,
-                color = NeonCyanSoft.copy(alpha = 0.98f),
+                color = SoftGold.copy(alpha = 0.90f),
                 shape = CircleShape,
             )
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
@@ -188,7 +189,7 @@ fun UserAvatarBadge(
         Text(
             text = initials.take(2).uppercase(),
             style = MaterialTheme.typography.titleSmall,
-            color = StarWhite,
+            color = SoftGold,
             fontWeight = FontWeight.SemiBold,
         )
     }

@@ -43,11 +43,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
@@ -58,8 +60,10 @@ import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hierarchy
 import com.example.taskoday.R
 import com.example.taskoday.core.ui.theme.ArcaneViolet
+import com.example.taskoday.core.ui.theme.CarvedWoodDark
 import com.example.taskoday.core.ui.theme.DangerGlow
 import com.example.taskoday.core.ui.theme.GlowHalo
+import com.example.taskoday.core.ui.theme.MagicViolet
 import com.example.taskoday.core.ui.theme.NeonBlue
 import com.example.taskoday.core.ui.theme.NeonBorderEnd
 import com.example.taskoday.core.ui.theme.NeonBorderStart
@@ -68,6 +72,9 @@ import com.example.taskoday.core.ui.theme.NeonCyanSoft
 import com.example.taskoday.core.ui.theme.NeonPurple
 import com.example.taskoday.core.ui.theme.NightBlue850
 import com.example.taskoday.core.ui.theme.NightBlue900
+import com.example.taskoday.core.ui.theme.ParchmentCream
+import com.example.taskoday.core.ui.theme.ParchmentLight
+import com.example.taskoday.core.ui.theme.SoftGold
 import com.example.taskoday.core.ui.theme.StarWhite
 import com.example.taskoday.core.ui.theme.SuccessGlow
 import com.example.taskoday.core.ui.theme.SurfaceGlass
@@ -75,9 +82,13 @@ import com.example.taskoday.core.ui.theme.SurfacePanel
 import com.example.taskoday.core.ui.theme.TextDimmed
 import com.example.taskoday.core.ui.theme.TextMuted
 import com.example.taskoday.core.ui.theme.WarningGlow
+import com.example.taskoday.core.ui.theme.WoodBrownDark
 import com.example.taskoday.core.ui.theme.fantasyMetrics
+import com.example.taskoday.core.ui.theme.taskodayGoldBrush
 import com.example.taskoday.core.ui.theme.taskodayNeonBorderBrush
 import com.example.taskoday.core.ui.theme.taskodayNeonProgressBrush
+import com.example.taskoday.core.ui.theme.taskodayParchmentBrush
+import com.example.taskoday.core.ui.theme.taskodayWoodPanelBrush
 import com.example.taskoday.navigation.TaskodayDestination
 
 enum class NeonTone {
@@ -130,10 +141,10 @@ fun TaskodayTopBar(
                     Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .background(SurfacePanel.copy(alpha = 0.74f))
+                        .background(Brush.verticalGradient(listOf(MagicViolet, NightBlue900, WoodBrownDark)))
                         .border(
                             width = metrics.cardStroke,
-                            brush = taskodayNeonBorderBrush(),
+                            color = SoftGold.copy(alpha = 0.86f),
                             shape = CircleShape,
                         ),
             ) {
@@ -141,7 +152,7 @@ fun TaskodayTopBar(
                     Icon(
                         imageVector = Icons.Outlined.NotificationsNone,
                         contentDescription = "Notifications",
-                        tint = StarWhite,
+                        tint = SoftGold,
                     )
                 }
             }
@@ -174,23 +185,74 @@ fun TaskodayHeader(
     ) {
         TaskodayTopBar(
             avatarInitials = avatarInitials,
+            compact = true,
             showNotification = showNotification,
             onNotificationClick = onNotificationClick,
             onAvatarClick = onAvatarClick,
         )
-        Column(
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .shadow(elevation = 6.dp, shape = RoundedCornerShape(metrics.cardCornerLarge), clip = false)
+                    .clip(RoundedCornerShape(metrics.cardCornerLarge))
+                    .background(taskodayReadableHeaderBrush())
+                    .border(
+                        width = metrics.cardStrokeStrong,
+                        brush = taskodayNeonBorderBrush(),
+                        shape = RoundedCornerShape(metrics.cardCornerLarge),
+                    )
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineMedium,
-                color = StarWhite,
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodyMedium,
-                color = TextMuted,
-            )
+            Canvas(modifier = Modifier.matchParentSize()) {
+                drawCircle(
+                    color = GlowHalo.copy(alpha = 0.14f),
+                    radius = size.minDimension * 0.72f,
+                    center = Offset(size.width * 0.02f, size.height * 0.04f),
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier =
+                        Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(taskodayGoldBrush())
+                            .border(1.2.dp, MagicViolet.copy(alpha = 0.72f), CircleShape)
+                            .padding(6.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.taskoday_screenbot_logo_icon),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit,
+                    )
+                }
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(3.dp),
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = SoftGold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = ParchmentCream,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
         }
     }
 }
@@ -200,37 +262,33 @@ fun NeonCard(
     modifier: Modifier = Modifier,
     tone: NeonTone = NeonTone.Cyan,
     shape: RoundedCornerShape = RoundedCornerShape(MaterialTheme.fantasyMetrics.cardCorner),
-    contentPadding: PaddingValues = PaddingValues(14.dp),
+    contentPadding: PaddingValues = PaddingValues(horizontal = 12.dp, vertical = 11.dp),
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val borderTone = toneColor(tone)
     Box(
-        modifier =
+            modifier =
             modifier
+                .shadow(elevation = 4.dp, shape = shape, clip = false)
                 .clip(shape)
-                .background(
-                    brush =
-                        Brush.verticalGradient(
-                            colors = listOf(SurfacePanel.copy(alpha = 0.92f), SurfaceGlass),
-                        ),
-                )
+                .background(taskodayReadablePanelBrush(tone))
                 .border(
-                    width = MaterialTheme.fantasyMetrics.cardStroke,
+                    width = MaterialTheme.fantasyMetrics.cardStrokeStrong,
                     brush =
                         Brush.linearGradient(
-                            listOf(borderTone.copy(alpha = 0.9f), NeonBorderEnd.copy(alpha = 0.86f)),
+                            listOf(SoftGold.copy(alpha = 0.92f), borderTone.copy(alpha = 0.82f), NeonBorderEnd.copy(alpha = 0.68f)),
                         ),
                     shape = shape,
                 ),
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawCircle(
-                color = GlowHalo.copy(alpha = 0.25f),
+                color = GlowHalo.copy(alpha = 0.11f),
                 radius = size.minDimension * 0.60f,
                 center = Offset(size.width * 0.95f, size.height * 0.05f),
             )
             drawLine(
-                color = borderTone.copy(alpha = 0.40f),
+                color = SoftGold.copy(alpha = 0.72f),
                 start = Offset(size.width * 0.08f, size.height * 0.04f),
                 end = Offset(size.width * 0.92f, size.height * 0.04f),
                 strokeWidth = 2f,
@@ -242,7 +300,7 @@ fun NeonCard(
                 Modifier
                     .fillMaxWidth()
                     .padding(contentPadding),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
             content = content,
         )
     }
@@ -314,7 +372,7 @@ fun CircularProgressBadge(
             Text(
                 text = centerText,
                 style = MaterialTheme.typography.titleSmall,
-                color = StarWhite,
+                color = ParchmentLight,
                 textAlign = TextAlign.Center,
             )
         } else if (completed) {
@@ -337,42 +395,34 @@ fun NeonButton(
     enabled: Boolean = true,
 ) {
     val shape = RoundedCornerShape(MaterialTheme.fantasyMetrics.buttonCorner)
-    if (style == NeonButtonStyle.Outline) {
-        OutlinedButton(
-            onClick = onClick,
-            enabled = enabled,
-            modifier = modifier.defaultMinSize(minHeight = 42.dp),
-            shape = shape,
-            border =
-                androidx.compose.foundation.BorderStroke(
+    Box(
+        modifier =
+            modifier
+                .defaultMinSize(minHeight = 38.dp)
+                .shadow(elevation = if (enabled) 4.dp else 0.dp, shape = shape, clip = false)
+                .clip(shape)
+                .background(taskodayReadableButtonBrush(style, enabled))
+                .clickable(enabled = enabled, onClick = onClick)
+                .border(
                     width = MaterialTheme.fantasyMetrics.cardStroke,
-                    brush = taskodayNeonBorderBrush(),
+                    color = if (style == NeonButtonStyle.Filled) MagicViolet.copy(alpha = 0.58f) else SoftGold.copy(alpha = 0.76f),
+                    shape = shape,
                 ),
-            colors =
-                ButtonDefaults.outlinedButtonColors(
-                    contentColor = StarWhite,
-                    disabledContentColor = TextMuted,
-                ),
-        ) {
-            Text(text = text, style = MaterialTheme.typography.labelLarge)
-        }
-        return
-    }
-
-    Button(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = modifier.defaultMinSize(minHeight = 42.dp),
-        shape = shape,
-        colors =
-            ButtonDefaults.buttonColors(
-                containerColor = NeonBlue,
-                contentColor = StarWhite,
-                disabledContainerColor = NightBlue850,
-                disabledContentColor = TextMuted,
-            ),
+        contentAlignment = Alignment.Center,
     ) {
-        Text(text = text, style = MaterialTheme.typography.labelLarge)
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelLarge,
+            color =
+                when {
+                    !enabled -> TextMuted
+                    style == NeonButtonStyle.Filled -> WoodBrownDark
+                    else -> ParchmentLight
+                },
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+        )
     }
 }
 
@@ -391,31 +441,37 @@ fun ProgressHeroCard(
         modifier = modifier.fillMaxWidth(),
         tone = accent,
         shape = RoundedCornerShape(MaterialTheme.fantasyMetrics.cardCornerLarge),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             CircularProgressBadge(
                 progress = progress,
-                size = 92.dp,
+                size = 60.dp,
+                strokeWidth = 7.dp,
                 centerText = if (total <= 0) "0%" else "${(progress * 100f).toInt()}%",
                 completed = completed == total && total > 0,
             )
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.titleMedium,
                     color = StarWhite,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = "$completed/$total completes",
-                    style = MaterialTheme.typography.headlineMedium,
+                    text = "$completed/$total terminées",
+                    style = MaterialTheme.typography.titleLarge,
                     color = NeonCyan,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 XpProgressBar(progress = progress, modifier = Modifier.fillMaxWidth())
             }
@@ -429,12 +485,17 @@ fun ProgressHeroCard(
                 text = subtitle,
                 style = MaterialTheme.typography.bodyMedium,
                 color = TextMuted,
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
             if (!badgeLabel.isNullOrBlank()) {
                 Text(
                     text = badgeLabel,
                     style = MaterialTheme.typography.labelLarge,
                     color = NeonCyanSoft,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
@@ -452,6 +513,7 @@ fun RoutineSectionCard(
     NeonCard(
         modifier = modifier.fillMaxWidth(),
         tone = tone,
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 10.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -490,25 +552,37 @@ fun RoutineItemRow(
                 .clip(RoundedCornerShape(12.dp))
                 .background(
                     if (done) {
-                        NeonBlue.copy(alpha = 0.14f)
+                        Brush.horizontalGradient(listOf(ParchmentLight, ParchmentCream, SuccessGlow.copy(alpha = 0.12f)))
                     } else {
-                        Color.Transparent
+                        taskodayParchmentBrush()
                     },
                 )
                 .border(
-                    width = 1.dp,
-                    color = if (done) NeonCyan.copy(alpha = 0.74f) else NeonBorderStart.copy(alpha = 0.25f),
+                    width = 1.2.dp,
+                    color = if (done) SuccessGlow.copy(alpha = 0.72f) else SoftGold.copy(alpha = 0.62f),
                     shape = RoundedCornerShape(12.dp),
                 )
                 .clickable(enabled = onClick != null, onClick = { onClick?.invoke() })
-                .padding(horizontal = 10.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                .padding(horizontal = 9.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(9.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = emoji,
-            style = MaterialTheme.typography.titleMedium,
-        )
+        Box(
+            modifier =
+                Modifier
+                    .size(38.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(taskodayGoldBrush())
+                    .border(1.dp, MagicViolet.copy(alpha = 0.56f), RoundedCornerShape(10.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Star,
+                contentDescription = null,
+                tint = MagicViolet,
+                modifier = Modifier.size(20.dp),
+            )
+        }
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -516,7 +590,7 @@ fun RoutineItemRow(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
-                color = StarWhite,
+                color = WoodBrownDark,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -572,25 +646,63 @@ fun MissionCard(
     onEdit: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null,
 ) {
-    NeonCard(
-        modifier = modifier.fillMaxWidth(),
-        tone = tone,
+    val shape = RoundedCornerShape(18.dp)
+    Box(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .shadow(elevation = 5.dp, shape = shape, clip = false)
+                .clip(shape)
+                .background(taskodayParchmentBrush())
+                .border(
+                    width = 1.4.dp,
+                    brush = Brush.linearGradient(listOf(SoftGold.copy(alpha = 0.96f), toneColor(tone).copy(alpha = 0.76f), SoftGold.copy(alpha = 0.72f))),
+                    shape = shape,
+                )
+                .clickable(onClick = onClick),
     ) {
+        Canvas(modifier = Modifier.matchParentSize()) {
+            drawCircle(
+                color = toneColor(tone).copy(alpha = 0.10f),
+                radius = size.minDimension * 0.48f,
+                center = Offset(size.width * 0.06f, size.height * 0.16f),
+            )
+            drawLine(
+                color = SoftGold.copy(alpha = 0.42f),
+                start = Offset(size.width * 0.10f, 6f),
+                end = Offset(size.width * 0.90f, 6f),
+                strokeWidth = 2f,
+                cap = StrokeCap.Round,
+            )
+        }
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.Top,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier =
                     Modifier
-                        .size(52.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(NeonBlue.copy(alpha = 0.22f))
-                        .clickable(onClick = onClick),
+                        .size(60.dp)
+                        .clip(CircleShape)
+                        .border(1.4.dp, SoftGold.copy(alpha = 0.90f), CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(text = emoji, style = MaterialTheme.typography.titleLarge)
+                FantasySkinSurface(
+                    asset = FantasySkinAssets.iconFrameGold,
+                    fallbackBrush = taskodayWoodPanelBrush(),
+                    modifier = Modifier.matchParentSize(),
+                ) {}
+                Icon(
+                    imageVector = Icons.Outlined.Star,
+                    contentDescription = null,
+                    tint = SoftGold,
+                    modifier = Modifier.size(25.dp),
+                )
             }
             Column(
                 modifier = Modifier.weight(1f),
@@ -599,8 +711,8 @@ fun MissionCard(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
-                    color = StarWhite,
-                    maxLines = 1,
+                    color = WoodBrownDark,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
                 if (!description.isNullOrBlank()) {
@@ -620,7 +732,9 @@ fun MissionCard(
                         Text(
                             text = dueLabel,
                             style = MaterialTheme.typography.labelMedium,
-                            color = NeonCyanSoft,
+                            color = MagicViolet,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                     Text(
@@ -631,64 +745,64 @@ fun MissionCard(
                 }
                 XpProgressBar(progress = progress, modifier = Modifier.fillMaxWidth())
             }
-            Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+            FantasyActionMedallion(onClick = onClick)
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            FantasyInfoChip(text = "Objectif $completionLabel", accent = MagicViolet, modifier = Modifier.weight(1f))
+            FantasyInfoChip(text = statusLabel, accent = toneColor(tone), modifier = Modifier.weight(1f))
+            Box(
+                modifier =
+                    Modifier
+                        .size(34.dp)
+                        .clip(CircleShape)
+                        .background(if (done) SuccessGlow.copy(alpha = 0.20f) else ParchmentCream.copy(alpha = 0.88f))
+                        .border(
+                            width = 1.4.dp,
+                            color = if (done) SuccessGlow else ArcaneViolet,
+                            shape = CircleShape,
+                        )
+                        .clickable(onClick = onToggleDone),
+                contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = completionLabel,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = TextMuted,
-                )
-                Box(
-                    modifier =
-                        Modifier
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .border(
-                                width = 1.5.dp,
-                                color = if (done) SuccessGlow else ArcaneViolet,
-                                shape = CircleShape,
-                            )
-                            .clickable(onClick = onToggleDone),
-                    contentAlignment = Alignment.Center,
+                if (done) {
+                    Icon(
+                        imageVector = Icons.Outlined.Check,
+                        contentDescription = null,
+                        tint = SuccessGlow,
+                        modifier = Modifier.size(17.dp),
+                    )
+                }
+            }
+            val editAction = onEdit
+            val deleteAction = onDelete
+            if (editAction != null || deleteAction != null) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (done) {
-                        Icon(
-                            imageVector = Icons.Outlined.Check,
-                            contentDescription = null,
-                            tint = SuccessGlow,
-                            modifier = Modifier.size(18.dp),
+                    if (editAction != null) {
+                        CompactIconAction(
+                            icon = Icons.Outlined.Edit,
+                            contentDescription = "Editer",
+                            tint = WoodBrownDark.copy(alpha = 0.78f),
+                            onClick = editAction,
+                        )
+                    }
+                    if (deleteAction != null) {
+                        CompactIconAction(
+                            icon = Icons.Outlined.Delete,
+                            contentDescription = "Supprimer",
+                            tint = WoodBrownDark.copy(alpha = 0.58f),
+                            onClick = deleteAction,
                         )
                     }
                 }
             }
         }
-        if (onEdit != null || onDelete != null) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (onEdit != null) {
-                    IconButton(onClick = onEdit) {
-                        Icon(
-                            imageVector = Icons.Outlined.Edit,
-                            contentDescription = "Editer",
-                            tint = StarWhite,
-                        )
-                    }
-                }
-                if (onDelete != null) {
-                    IconButton(onClick = onDelete) {
-                        Icon(
-                            imageVector = Icons.Outlined.Delete,
-                            contentDescription = "Supprimer",
-                            tint = TextMuted,
-                        )
-                    }
-                }
-            }
         }
     }
 }
@@ -709,10 +823,57 @@ fun QuestCard(
     onEdit: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null,
 ) {
-    NeonCard(
-        modifier = modifier.fillMaxWidth(),
-        tone = if (done) NeonTone.Success else NeonTone.Violet,
+    ReferenceQuestCard(
+        title = title,
+        description = description,
+        xpLabel = xpLabel,
+        progress = progress,
+        actionLabel = actionLabel,
+        dayPartLabel = dayPartLabel,
+        modifier = modifier,
+        done = done,
+        canManage = canManage,
+        onAction = onAction,
+        onEdit = onEdit,
+        onDelete = onDelete,
+    )
+    return
+
+    val shape = RoundedCornerShape(MaterialTheme.fantasyMetrics.cardCorner)
+    Box(
+            modifier =
+            modifier
+                .fillMaxWidth()
+                .shadow(elevation = 7.dp, shape = shape, clip = false)
+                .clip(shape)
+                .background(taskodayQuestCardBrush())
+                .border(
+                    width = MaterialTheme.fantasyMetrics.cardStrokeStrong,
+                    brush = Brush.linearGradient(listOf(SoftGold, NeonBorderEnd, SoftGold.copy(alpha = 0.72f))),
+                    shape = shape,
+                ),
     ) {
+        Canvas(modifier = Modifier.matchParentSize()) {
+            drawCircle(
+                color = GlowHalo.copy(alpha = 0.18f),
+                radius = size.minDimension * 0.74f,
+                center = Offset(size.width * 0.02f, size.height * 0.02f),
+            )
+            drawLine(
+                color = SoftGold.copy(alpha = 0.42f),
+                start = Offset(size.width * 0.07f, 5f),
+                end = Offset(size.width * 0.93f, 5f),
+                strokeWidth = 2f,
+                cap = StrokeCap.Round,
+            )
+        }
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -721,12 +882,22 @@ fun QuestCard(
             Box(
                 modifier =
                     Modifier
-                        .size(52.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(ArcaneViolet.copy(alpha = 0.22f)),
+                        .size(58.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .border(1.4.dp, SoftGold.copy(alpha = 0.92f), RoundedCornerShape(16.dp)),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(text = emoji, style = MaterialTheme.typography.titleLarge)
+                FantasySkinSurface(
+                    asset = FantasySkinAssets.iconFrameGold,
+                    fallbackBrush = taskodayWoodPanelBrush(),
+                    modifier = Modifier.matchParentSize(),
+                ) {}
+                Icon(
+                    imageVector = Icons.Outlined.Star,
+                    contentDescription = null,
+                    tint = SoftGold,
+                    modifier = Modifier.size(24.dp),
+                )
             }
             Column(
                 modifier = Modifier.weight(1f),
@@ -735,7 +906,7 @@ fun QuestCard(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
-                    color = StarWhite,
+                    color = SoftGold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -743,7 +914,7 @@ fun QuestCard(
                     Text(
                         text = description,
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextMuted,
+                        color = ParchmentCream,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -751,26 +922,42 @@ fun QuestCard(
                 Text(
                     text = dayPartLabel,
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextMuted,
+                    color = ParchmentCream.copy(alpha = 0.82f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 XpProgressBar(progress = progress, modifier = Modifier.fillMaxWidth())
             }
             Column(
+                modifier =
+                    Modifier
+                        .widthIn(min = 88.dp, max = 104.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MagicViolet.copy(alpha = 0.34f))
+                        .border(1.dp, SoftGold.copy(alpha = 0.66f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 8.dp, vertical = 7.dp),
                 horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(5.dp),
             ) {
+                Text(
+                    text = "Récompenses",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = ParchmentCream,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 Text(
                     text = xpLabel,
                     style = MaterialTheme.typography.titleSmall,
-                    color = NeonCyan,
+                    color = SoftGold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 NeonButton(
                     text = actionLabel,
                     onClick = onAction,
                     style = if (done) NeonButtonStyle.Outline else NeonButtonStyle.Filled,
-                    modifier = Modifier.widthIn(min = 104.dp),
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }
@@ -784,7 +971,7 @@ fun QuestCard(
                         Icon(
                             imageVector = Icons.Outlined.Edit,
                             contentDescription = "Editer",
-                            tint = StarWhite,
+                            tint = ParchmentLight,
                         )
                     }
                 }
@@ -793,7 +980,154 @@ fun QuestCard(
                         Icon(
                             imageVector = Icons.Outlined.Delete,
                             contentDescription = "Supprimer",
-                            tint = TextMuted,
+                            tint = ParchmentCream,
+                        )
+                    }
+                }
+            }
+        }
+        }
+    }
+}
+
+@Composable
+private fun ReferenceQuestCard(
+    title: String,
+    description: String?,
+    xpLabel: String,
+    progress: Float,
+    actionLabel: String,
+    dayPartLabel: String,
+    modifier: Modifier = Modifier,
+    done: Boolean = false,
+    canManage: Boolean = false,
+    onAction: () -> Unit,
+    onEdit: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null,
+) {
+    val shape = RoundedCornerShape(20.dp)
+    Box(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .shadow(elevation = 8.dp, shape = shape, clip = false)
+                .clip(shape)
+                .background(taskodayQuestCardBrush())
+                .border(
+                    width = 1.6.dp,
+                    brush = Brush.linearGradient(listOf(SoftGold, NeonBorderEnd, SoftGold.copy(alpha = 0.72f))),
+                    shape = shape,
+                )
+                .clickable(onClick = onAction),
+    ) {
+        Canvas(modifier = Modifier.matchParentSize()) {
+            drawCircle(
+                color = GlowHalo.copy(alpha = 0.20f),
+                radius = size.minDimension * 0.68f,
+                center = Offset(size.width * 0.02f, size.height * 0.05f),
+            )
+            drawCircle(
+                color = SoftGold.copy(alpha = 0.08f),
+                radius = size.minDimension * 0.54f,
+                center = Offset(size.width * 0.86f, size.height * 0.18f),
+            )
+            drawLine(
+                color = SoftGold.copy(alpha = 0.50f),
+                start = Offset(size.width * 0.07f, 5f),
+                end = Offset(size.width * 0.93f, 5f),
+                strokeWidth = 2f,
+                cap = StrokeCap.Round,
+            )
+        }
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier =
+                        Modifier
+                            .size(66.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(MagicViolet.copy(alpha = 0.30f))
+                            .border(1.5.dp, SoftGold.copy(alpha = 0.94f), RoundedCornerShape(18.dp)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    FantasySkinSurface(
+                        asset = FantasySkinAssets.iconFrameGold,
+                        fallbackBrush = taskodayWoodPanelBrush(),
+                        modifier = Modifier.matchParentSize(),
+                    ) {}
+                    Icon(
+                        imageVector = Icons.Outlined.Star,
+                        contentDescription = null,
+                        tint = SoftGold,
+                        modifier = Modifier.size(27.dp),
+                    )
+                }
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(5.dp),
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = SoftGold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    if (!description.isNullOrBlank()) {
+                        Text(
+                            text = description,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = ParchmentCream,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    Text(
+                        text = dayPartLabel,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = ParchmentCream.copy(alpha = 0.82f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    XpProgressBar(progress = progress, modifier = Modifier.fillMaxWidth())
+                }
+                FantasyActionMedallion(onClick = onAction, dark = true)
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                FantasyInfoChip(text = xpLabel, accent = SoftGold, dark = true, modifier = Modifier.weight(1f))
+                FantasyInfoChip(text = if (done) "Terminée" else actionLabel, accent = if (done) SuccessGlow else SoftGold, dark = true, modifier = Modifier.weight(1f))
+            }
+            if (canManage && (onEdit != null || onDelete != null)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (onEdit != null) {
+                        CompactIconAction(
+                            icon = Icons.Outlined.Edit,
+                            contentDescription = "Editer",
+                            tint = ParchmentLight,
+                            onClick = onEdit,
+                        )
+                    }
+                    if (onDelete != null) {
+                        CompactIconAction(
+                            icon = Icons.Outlined.Delete,
+                            contentDescription = "Supprimer",
+                            tint = ParchmentCream,
+                            onClick = onDelete,
                         )
                     }
                 }
@@ -971,76 +1305,91 @@ fun FantasyBottomNavigation(
     onNavigate: (TaskodayDestination) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp)
     Box(
-        modifier =
+            modifier =
             modifier
                 .fillMaxWidth()
-                .background(
-                    brush =
-                        Brush.verticalGradient(
-                            listOf(SurfacePanel, SurfaceGlass),
-                        ),
-                    shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-                )
+                .shadow(elevation = 10.dp, shape = shape, clip = false)
+                .clip(shape)
+                .background(taskodayBottomNavBrush())
                 .border(
-                    width = 1.2.dp,
+                    width = 2.dp,
                     brush = taskodayNeonBorderBrush(),
-                    shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+                    shape = shape,
                 )
-                .padding(horizontal = 8.dp, vertical = 8.dp),
+                .padding(horizontal = 5.dp, vertical = 5.dp),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.fillMaxWidth().padding(end = 58.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             destinations.forEach { destination ->
                 val selected = currentDestination?.hierarchy?.any { it.route == destination.route } == true
-                val itemColor = if (selected) NeonCyan else TextMuted.copy(alpha = 0.86f)
+                val itemColor = if (selected) SoftGold else ParchmentCream.copy(alpha = 0.86f)
 
                 Column(
                     modifier =
                         Modifier
                             .weight(1f)
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(RoundedCornerShape(10.dp))
                             .background(
                                 if (selected) {
-                                    Brush.horizontalGradient(
-                                        colors = listOf(NeonCyanSoft.copy(alpha = 0.42f), ArcaneViolet.copy(alpha = 0.18f)),
-                                    )
+                                    Brush.verticalGradient(listOf(MagicViolet.copy(alpha = 0.96f), Color(0xFF4C1C66), WoodBrownDark.copy(alpha = 0.98f)))
                                 } else {
-                                    Brush.horizontalGradient(
-                                        colors = listOf(Color.Transparent, Color.Transparent),
-                                    )
+                                    Brush.verticalGradient(listOf(Color(0xFF2B1637).copy(alpha = 0.78f), Color(0xFF160B1E).copy(alpha = 0.92f)))
                                 },
                             )
                             .border(
-                                width = if (selected) 1.2.dp else 1.dp,
+                                width = if (selected) 1.4.dp else 0.8.dp,
                                 color =
                                     if (selected) {
-                                        NeonCyan.copy(alpha = 0.82f)
+                                        SoftGold.copy(alpha = 0.9f)
                                     } else {
-                                        Color.Transparent
+                                        SoftGold.copy(alpha = 0.18f)
                                     },
-                                shape = RoundedCornerShape(12.dp),
+                                shape = RoundedCornerShape(10.dp),
                             )
                             .clickable { onNavigate(destination) }
-                            .padding(vertical = 7.dp),
+                            .padding(vertical = if (selected) 5.dp else 4.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(3.dp),
                 ) {
                     destination.icon?.let { icon ->
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = destination.label,
-                            tint = itemColor,
-                            modifier = Modifier.size(20.dp),
-                        )
+                        Box(
+                            modifier =
+                                Modifier
+                                    .size(if (selected) 30.dp else 26.dp)
+                                    .clip(RoundedCornerShape(9.dp))
+                                    .background(
+                                        if (selected) {
+                                            taskodayGoldBrush()
+                                        } else {
+                                            Brush.verticalGradient(listOf(MagicViolet.copy(alpha = 0.24f), WoodBrownDark.copy(alpha = 0.24f)))
+                                        },
+                                    )
+                                    .border(
+                                        width = if (selected) 1.dp else 0.8.dp,
+                                        color = if (selected) MagicViolet.copy(alpha = 0.70f) else SoftGold.copy(alpha = 0.20f),
+                                        shape = RoundedCornerShape(9.dp),
+                                    ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = destination.label,
+                                tint = if (selected) WoodBrownDark else itemColor,
+                                modifier = Modifier.size(if (selected) 19.dp else 17.dp),
+                            )
+                        }
                     }
                     Text(
                         text = destination.label,
                         style = MaterialTheme.typography.labelMedium,
                         color = itemColor,
                         maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        softWrap = false,
                     )
                 }
             }
@@ -1131,6 +1480,89 @@ fun RewardSummaryChip(
     }
 }
 
+@Composable
+private fun FantasyActionMedallion(
+    onClick: () -> Unit,
+    dark: Boolean = false,
+) {
+    val shape = RoundedCornerShape(14.dp)
+    Box(
+        modifier =
+            Modifier
+                .size(42.dp)
+                .shadow(elevation = 4.dp, shape = shape, clip = false)
+                .clip(shape)
+                .background(if (dark) Brush.verticalGradient(listOf(MagicViolet, WoodBrownDark)) else taskodayGoldBrush())
+                .border(1.2.dp, SoftGold.copy(alpha = 0.88f), shape)
+                .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+            contentDescription = null,
+            tint = if (dark) SoftGold else WoodBrownDark,
+            modifier = Modifier.size(26.dp),
+        )
+    }
+}
+
+@Composable
+private fun FantasyInfoChip(
+    text: String,
+    accent: Color,
+    modifier: Modifier = Modifier,
+    dark: Boolean = false,
+) {
+    Row(
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(100.dp))
+                .background(if (dark) MagicViolet.copy(alpha = 0.32f) else ParchmentLight.copy(alpha = 0.76f))
+                .border(1.dp, accent.copy(alpha = 0.72f), RoundedCornerShape(100.dp))
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Star,
+            contentDescription = null,
+            tint = accent,
+            modifier = Modifier.size(12.dp),
+        )
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            color = if (dark) ParchmentCream else WoodBrownDark,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun CompactIconAction(
+    icon: ImageVector,
+    contentDescription: String,
+    tint: Color,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier =
+            Modifier
+                .size(28.dp)
+                .clip(CircleShape)
+                .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = Modifier.size(17.dp),
+        )
+    }
+}
+
 private fun toneColor(tone: NeonTone): Color =
     when (tone) {
         NeonTone.Cyan -> NeonCyan
@@ -1140,3 +1572,43 @@ private fun toneColor(tone: NeonTone): Color =
         NeonTone.Warning -> WarningGlow
         NeonTone.Danger -> DangerGlow
     }
+
+private fun taskodayReadableHeaderBrush(): Brush =
+    Brush.verticalGradient(
+        colors = listOf(WoodBrownDark, MagicViolet, NightBlue900),
+    )
+
+private fun taskodayReadablePanelBrush(tone: NeonTone): Brush =
+    Brush.verticalGradient(
+        colors =
+            when (tone) {
+                NeonTone.Violet,
+                NeonTone.Danger,
+                -> listOf(ParchmentLight, ParchmentCream, Color(0xFFE9D8F7))
+                NeonTone.Warning -> listOf(ParchmentLight, ParchmentCream, Color(0xFFFFE3AE))
+                NeonTone.Success -> listOf(ParchmentLight, ParchmentCream, Color(0xFFE6F0D0))
+                NeonTone.Blue,
+                NeonTone.Cyan,
+                -> listOf(ParchmentLight, ParchmentCream, Color(0xFFFFE7B1))
+            },
+    )
+
+private fun taskodayReadableButtonBrush(style: NeonButtonStyle, enabled: Boolean): Brush =
+    if (!enabled) {
+        Brush.verticalGradient(listOf(TextDimmed.copy(alpha = 0.30f), ParchmentCream.copy(alpha = 0.60f)))
+    } else {
+        when (style) {
+            NeonButtonStyle.Filled -> taskodayGoldBrush()
+            NeonButtonStyle.Outline -> Brush.verticalGradient(listOf(MagicViolet, WoodBrownDark))
+        }
+    }
+
+private fun taskodayQuestCardBrush(): Brush =
+    Brush.verticalGradient(
+        colors = listOf(WoodBrownDark, MagicViolet.copy(alpha = 0.98f), NightBlue900),
+    )
+
+private fun taskodayBottomNavBrush(): Brush =
+    Brush.verticalGradient(
+        colors = listOf(Color(0xFF15091E), CarvedWoodDark, Color(0xFF2A1238), Color(0xFF140817)),
+    )

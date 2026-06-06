@@ -146,6 +146,8 @@ object NestAssets {
     val InterfaceInventoryEmpty = NestAsset("asset_icon_inventaire_vide", R.drawable.asset_icon_inventaire_vide)
     val InterfaceNest = NestAsset("asset_icon_nid", R.drawable.asset_icon_nid)
     val InterfaceEggLocked = NestAsset("asset_icon_oeuf_verrouille", R.drawable.asset_icon_oeuf_verrouille)
+    val LogoTaskoday = NestAsset("asset_logo_taskoday", R.drawable.taskoday_reference_wordmark)
+    val SplashBackgroundTaskoday = NestAsset("asset_splash_background_taskoday", R.drawable.taskoday_world_background)
 
     val ItemFeatherQuill = NestAsset("asset_item_feather_quill", R.drawable.asset_item_feather_quill)
     val ItemGoldCoin = NestAsset("asset_item_gold_coin", R.drawable.asset_item_gold_coin)
@@ -226,6 +228,8 @@ object NestAssets {
             "oeuf_verrouille" to InterfaceEggLocked,
             "egg_locked" to InterfaceEggLocked,
             "wish_cave" to InterfaceNest,
+            "logo_taskoday" to LogoTaskoday,
+            "splash_background_taskoday" to SplashBackgroundTaskoday,
         )
 
     private val inventoryItemAssets =
