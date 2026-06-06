@@ -323,6 +323,7 @@ fun FantasyHeader(
     assetResId: Int = NestAssets.interfaceAsset("nid"),
     assetDescription: String? = "Le Nid",
     onAvatarClick: () -> Unit = {},
+    onBackClick: (() -> Unit)? = null,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -334,6 +335,12 @@ fun FantasyHeader(
             showNotification = false,
             onAvatarClick = onAvatarClick,
         )
+        if (onBackClick != null) {
+            FantasyCompactButton(
+                text = "Retour au Nid",
+                onClick = onBackClick,
+            )
+        }
         FantasyScreenHeader(
             title = title,
             subtitle = subtitle,
@@ -685,8 +692,10 @@ fun ChestCard(
                 if (!costLabel.isNullOrBlank()) {
                     Text(text = costLabel, style = MaterialTheme.typography.bodyMedium, color = InkMuted)
                 }
-                val waitingLabel = if (unopenedChests > 1) "coffres en attente" else "coffre en attente"
-                Text(text = "$unopenedChests $waitingLabel", style = MaterialTheme.typography.bodySmall, color = MossGreen)
+                if (unopenedChests > 0 || pointsRequired > 0) {
+                    val waitingLabel = if (unopenedChests > 1) "coffres en attente" else "coffre en attente"
+                    Text(text = "$unopenedChests $waitingLabel", style = MaterialTheme.typography.bodySmall, color = MossGreen)
+                }
             }
         }
         if (!actionLabel.isNullOrBlank() && onAction != null) {

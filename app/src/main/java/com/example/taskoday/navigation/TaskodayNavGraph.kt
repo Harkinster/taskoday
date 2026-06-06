@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -25,6 +26,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.taskoday.core.ui.component.fantasy.LocalTaskodayBrandClick
 import com.example.taskoday.core.ui.component.fantasy.TaskodayBottomBar
 import com.example.taskoday.core.ui.theme.BackgroundBottom
 import com.example.taskoday.core.ui.theme.BackgroundTop
@@ -156,44 +158,47 @@ fun TaskodayApp() {
         }
     }
 
-    Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(
-                    brush = Brush.verticalGradient(listOf(BackgroundTop, BackgroundBottom)),
-                ),
+    CompositionLocalProvider(
+        LocalTaskodayBrandClick provides { navigateToTopLevel(TaskodayDestination.Home) },
     ) {
-        Scaffold(
-            containerColor = Color.Transparent,
-            bottomBar = {
-                if (showBottomBar) {
-                    Box {
-                        TaskodayBottomBar(
-                            destinations = TopLevelDestinations,
-                            currentDestination = currentDestination,
-                            onNavigate = navigateToTopLevel,
-                        )
-                        QuickAddFab(
-                            uiState = quickAddUiState,
-                            onRefresh = quickAddViewModel::refresh,
-                            onCreateRoutine = openCreateRoutine,
-                            onCreateMission = openCreateMission,
-                            onCreateQuest = openCreateQuest,
-                            modifier =
-                                Modifier
-                                    .align(Alignment.TopEnd)
-                                    .padding(top = 8.dp, end = 10.dp),
-                        )
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(
+                        brush = Brush.verticalGradient(listOf(BackgroundTop, BackgroundBottom)),
+                    ),
+        ) {
+            Scaffold(
+                containerColor = Color.Transparent,
+                bottomBar = {
+                    if (showBottomBar) {
+                        Box {
+                            TaskodayBottomBar(
+                                destinations = TopLevelDestinations,
+                                currentDestination = currentDestination,
+                                onNavigate = navigateToTopLevel,
+                            )
+                            QuickAddFab(
+                                uiState = quickAddUiState,
+                                onRefresh = quickAddViewModel::refresh,
+                                onCreateRoutine = openCreateRoutine,
+                                onCreateMission = openCreateMission,
+                                onCreateQuest = openCreateQuest,
+                                modifier =
+                                    Modifier
+                                        .align(Alignment.TopEnd)
+                                        .padding(top = 8.dp, end = 10.dp),
+                            )
+                        }
                     }
-                }
-            },
-        ) { innerPadding ->
-            NavHost(
-                navController = navController,
-                startDestination = TaskodayDestination.Splash.route,
-                modifier = swipeModifier.padding(innerPadding),
-            ) {
+                },
+            ) { innerPadding ->
+                NavHost(
+                    navController = navController,
+                    startDestination = TaskodayDestination.Splash.route,
+                    modifier = swipeModifier.padding(innerPadding),
+                ) {
             composable(TaskodayDestination.Splash.route) {
                 val viewModel: AuthViewModel = hiltViewModel()
                 val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -265,7 +270,8 @@ fun TaskodayApp() {
                     onOpenInventory = { navController.navigate(TaskodayDestination.Inventory.route) },
                     onOpenEggs = { navController.navigate(TaskodayDestination.Eggs.route) },
                     onOpenDragons = { navController.navigate(TaskodayDestination.Dragons.route) },
-                    onOpenWishes = { navController.navigate(TaskodayDestination.Shop.route) },
+                    onOpenWishes = { navController.navigate(TaskodayDestination.Shop.createRoute(TaskodayDestination.Shop.SECTION_WISHES)) },
+                    onOpenChests = { navController.navigate(TaskodayDestination.Shop.createRoute(TaskodayDestination.Shop.SECTION_CHESTS)) },
                     onOpenScrolls = { navController.navigate(TaskodayDestination.Scrolls.route) },
                     onOpenProfile = navigateToProfile,
                 )
@@ -296,25 +302,51 @@ fun TaskodayApp() {
                 QuestsScreen(viewModel = viewModel, onOpenProfile = navigateToProfile)
             }
 
-            composable(TaskodayDestination.Shop.route) {
+            composable(
+                route = TaskodayDestination.Shop.route,
+                arguments =
+                    listOf(
+                        navArgument(TaskodayDestination.Shop.ARG_SECTION) {
+                            type = NavType.StringType
+                            defaultValue = TaskodayDestination.Shop.SECTION_WISHES
+                        },
+                    ),
+            ) { entry ->
                 val viewModel: ShopViewModel = hiltViewModel()
-                ShopScreen(viewModel = viewModel, onOpenProfile = navigateToProfile)
+                ShopScreen(
+                    viewModel = viewModel,
+                    initialSection = entry.arguments?.getString(TaskodayDestination.Shop.ARG_SECTION) ?: TaskodayDestination.Shop.SECTION_WISHES,
+                    onOpenProfile = navigateToProfile,
+                    onBackToNest = { navController.navigate(TaskodayDestination.Nest.route) { launchSingleTop = true } },
+                )
             }
 
             composable(TaskodayDestination.Inventory.route) {
-                InventoryScreen(onOpenProfile = navigateToProfile)
+                InventoryScreen(
+                    onOpenProfile = navigateToProfile,
+                    onBackToNest = { navController.navigate(TaskodayDestination.Nest.route) { launchSingleTop = true } },
+                )
             }
 
             composable(TaskodayDestination.Eggs.route) {
-                EggsScreen(onOpenProfile = navigateToProfile)
+                EggsScreen(
+                    onOpenProfile = navigateToProfile,
+                    onBackToNest = { navController.navigate(TaskodayDestination.Nest.route) { launchSingleTop = true } },
+                )
             }
 
             composable(TaskodayDestination.Dragons.route) {
-                DragonsScreen(onOpenProfile = navigateToProfile)
+                DragonsScreen(
+                    onOpenProfile = navigateToProfile,
+                    onBackToNest = { navController.navigate(TaskodayDestination.Nest.route) { launchSingleTop = true } },
+                )
             }
 
             composable(TaskodayDestination.Scrolls.route) {
-                ScrollsScreen(onOpenProfile = navigateToProfile)
+                ScrollsScreen(
+                    onOpenProfile = navigateToProfile,
+                    onBackToNest = { navController.navigate(TaskodayDestination.Nest.route) { launchSingleTop = true } },
+                )
             }
 
             composable(
@@ -380,6 +412,7 @@ fun TaskodayApp() {
             }
         }
     }
+}
 }
 
 private val MENU_SWIPE_THRESHOLD_DP = 90.dp

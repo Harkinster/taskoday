@@ -31,7 +31,13 @@ sealed class TaskodayDestination(
         TaskodayDestination(route = "quests", label = "Quête", icon = Icons.Outlined.AutoAwesome)
 
     data object Shop :
-        TaskodayDestination(route = "shop", label = "Caverne aux Souhaits", icon = Icons.Outlined.Redeem)
+        TaskodayDestination(route = "shop?section={section}", label = "Caverne", icon = Icons.Outlined.Redeem) {
+        const val ARG_SECTION: String = "section"
+        const val SECTION_WISHES: String = "wishes"
+        const val SECTION_CHESTS: String = "chests"
+
+        fun createRoute(section: String = SECTION_WISHES): String = "shop?section=$section"
+    }
 
     data object Inventory : TaskodayDestination(route = "inventory", label = "Inventaire")
 

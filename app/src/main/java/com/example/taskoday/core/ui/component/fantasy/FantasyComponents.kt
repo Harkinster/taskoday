@@ -33,6 +33,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -67,6 +68,8 @@ import com.example.taskoday.core.ui.theme.TextMuted
 import com.example.taskoday.core.ui.theme.WarningGlow
 import com.example.taskoday.core.ui.theme.WoodBrownDark
 import com.example.taskoday.core.ui.theme.taskodayWorldBackgroundBrush
+
+val LocalTaskodayBrandClick = staticCompositionLocalOf<(() -> Unit)?> { null }
 
 @Composable
 fun FantasyScreenBackground(
@@ -141,14 +144,16 @@ fun TaskodayBrand(
     modifier: Modifier = Modifier,
     compact: Boolean = false,
 ) {
+    val onClick = LocalTaskodayBrandClick.current
     val logoWidth = if (compact) 178.dp else 238.dp
     val logoHeight = if (compact) 102.dp else 136.dp
+    val brandModifier =
+        modifier
+            .width(logoWidth)
+            .height(logoHeight)
 
     Box(
-        modifier =
-            modifier
-                .width(logoWidth)
-                .height(logoHeight),
+        modifier = if (onClick != null) brandModifier.clickable(onClick = onClick) else brandModifier,
         contentAlignment = Alignment.CenterStart,
     ) {
         Image(

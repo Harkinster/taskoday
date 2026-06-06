@@ -24,6 +24,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -42,6 +43,7 @@ import com.example.taskoday.core.ui.component.fantasy.NestAssets
 import com.example.taskoday.core.ui.component.fantasy.NestStatCard
 import com.example.taskoday.core.ui.component.fantasy.ScrollCard
 import com.example.taskoday.core.ui.component.fantasy.WishCard
+import com.example.taskoday.core.ui.component.fantasy.ChestCard
 import com.example.taskoday.core.ui.theme.DangerGlow
 import com.example.taskoday.core.ui.theme.EmberOrange
 import com.example.taskoday.core.ui.theme.InkMuted
@@ -54,15 +56,22 @@ import com.example.taskoday.domain.model.PointsTransaction
 import com.example.taskoday.domain.model.Reward
 import com.example.taskoday.domain.model.RewardRedemptionRequest
 import com.example.taskoday.domain.model.RewardRequestStatus
+import kotlinx.coroutines.launch
 
 @Composable
 fun ShopScreen(
     viewModel: ShopViewModel,
+    initialSection: String,
     onOpenProfile: () -> Unit,
+    onBackToNest: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val spacing = MaterialTheme.spacing
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    var selectedSection by rememberSaveable(initialSection) {
+        mutableStateOf(if (initialSection == "chests") CaveSection.Chests else CaveSection.Wishes)
+    }
 
     LaunchedEffect(uiState.userMessage) {
         uiState.userMessage?.let {
@@ -107,98 +116,181 @@ fun ShopScreen(
             ) {
                 item {
                     FantasyHeader(
-                        title = "Caverne aux Souhaits",
-                        subtitle =
-                            if (uiState.isParent) {
-                                "Crée les Souhaits et valide les Parchemins."
-                            } else {
-                                "Transforme tes Flammèches en moments magiques."
-                            },
+                        title = "Caverne",
+                        subtitle = "Dépense tes Flammèches en Souhaits ou tes Cristaux en Coffres.",
                         assetResId = NestAssets.interfaceAsset("wish_cave"),
-                        assetDescription = "Caverne aux Souhaits",
+                        assetDescription = "Caverne",
                         onAvatarClick = onOpenProfile,
+                        onBackClick = onBackToNest,
                     )
                 }
 
                 item {
-                    NestStatCard(
-                        label = if (uiState.isParent) "Souhaits parent" else "Solde du Gardien",
-                        value = "${uiState.scalesBalance} Flammèches",
-                        assetResId = NestAssets.interfaceAsset("flammeche"),
-                        tone = FantasyTone.Ember,
+                    CaveSectionSelector(
+                        selected = selectedSection,
+                        onSelect = { selectedSection = it },
                     )
                 }
 
-                if (!uiState.hasRemoteSession) {
+                if (selectedSection == CaveSection.Wishes) {
+                    item {
+                        NestStatCard(
+                            label = if (uiState.isParent) "Souhaits parent" else "Solde du Gardien",
+                            value = "${uiState.scalesBalance} Flammèches",
+                            assetResId = NestAssets.interfaceAsset("flammeche"),
+                            tone = FantasyTone.Ember,
+                        )
+                    }
+
+                    if (!uiState.hasRemoteSession) {
+                        item {
+                            FantasyCard(tone = FantasyTone.Night) {
+                                Text(text = "Mode local", style = MaterialTheme.typography.titleMedium, color = WoodBrownDark)
+                                Text(
+                                    text = "Connecte un compte pour suivre les demandes et les Parchemins.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = InkMuted,
+                                )
+                            }
+                        }
+                    }
+
+                    if (uiState.isParent && uiState.hasRemoteSession) {
+                        item {
+                            ParentRewardCreator(
+                                isSubmitting = uiState.isSubmitting,
+                                onCreate = viewModel::createReward,
+                            )
+                        }
+                    }
+
+                    item { SectionTitle(text = "Souhaits disponibles") }
+
+                    if (uiState.rewards.isEmpty()) {
+                        item {
+                            EmptyCard(text = "Aucun Souhait pour le moment. La Caverne garde sa magie au chaud.")
+                        }
+                    } else {
+                        items(uiState.rewards, key = { reward -> reward.id }) { reward ->
+                            val alreadyRequested =
+                                uiState.requests.any { request ->
+                                    request.rewardId == reward.id &&
+                                        request.status in setOf(RewardRequestStatus.PENDING, RewardRequestStatus.APPROVED)
+                                }
+                            RewardRow(
+                                reward = reward,
+                                isParent = uiState.isParent,
+                                hasRemoteSession = uiState.hasRemoteSession,
+                                scalesBalance = uiState.scalesBalance,
+                                alreadyRequested = alreadyRequested,
+                                isSubmitting = uiState.isSubmitting,
+                                onRequest = { viewModel.requestReward(reward) },
+                            )
+                        }
+                    }
+
+                    item { SectionTitle(text = "Demandes et Parchemins") }
+
+                    if (uiState.requests.isEmpty()) {
+                        item {
+                            if (uiState.hasRemoteSession) {
+                                EmptyCard(text = "Aucun Parchemin pour le moment.")
+                            } else {
+                                LocalHistory(transactions = uiState.localTransactions)
+                            }
+                        }
+                    } else {
+                        items(uiState.requests, key = { request -> request.id }) { request ->
+                            RewardRequestRow(
+                                request = request,
+                                isParent = uiState.isParent,
+                                isSubmitting = uiState.isSubmitting,
+                                onApprove = { viewModel.approveRequest(request.id) },
+                                onRefuse = { viewModel.refuseRequest(request.id) },
+                                onUseCoupon = { couponId -> viewModel.useCoupon(couponId) },
+                            )
+                        }
+                    }
+                } else {
+                    item {
+                        NestStatCard(
+                            label = "Cristaux disponibles",
+                            value = "6 Cristaux",
+                            assetResId = NestAssets.interfaceAsset("crystal"),
+                            tone = FantasyTone.Violet,
+                        )
+                    }
                     item {
                         FantasyCard(tone = FantasyTone.Night) {
-                            Text(text = "Mode local", style = MaterialTheme.typography.titleMedium, color = WoodBrownDark)
+                            Text(text = "Coffres", style = MaterialTheme.typography.titleMedium, color = WoodBrownDark)
                             Text(
-                                text = "Connecte un compte pour suivre les demandes et les Parchemins.",
-                                style = MaterialTheme.typography.bodyMedium,
+                                text = "L'ouverture et les loots restent en aperçu tant qu'aucun branchement backend Coffres n'est disponible.",
+                                style = MaterialTheme.typography.bodySmall,
                                 color = InkMuted,
                             )
                         }
                     }
-                }
-
-                if (uiState.isParent && uiState.hasRemoteSession) {
-                    item {
-                        ParentRewardCreator(
-                            isSubmitting = uiState.isSubmitting,
-                            onCreate = viewModel::createReward,
-                        )
-                    }
-                }
-
-                item { SectionTitle(text = "Souhaits disponibles") }
-
-                if (uiState.rewards.isEmpty()) {
-                    item {
-                        EmptyCard(text = "Aucun Souhait pour le moment. La Caverne garde sa magie au chaud.")
-                    }
-                } else {
-                    items(uiState.rewards, key = { reward -> reward.id }) { reward ->
-                        val alreadyRequested =
-                            uiState.requests.any { request ->
-                                request.rewardId == reward.id &&
-                                    request.status in setOf(RewardRequestStatus.PENDING, RewardRequestStatus.APPROVED)
-                            }
-                        RewardRow(
-                            reward = reward,
-                            isParent = uiState.isParent,
-                            hasRemoteSession = uiState.hasRemoteSession,
-                            scalesBalance = uiState.scalesBalance,
-                            alreadyRequested = alreadyRequested,
-                            isSubmitting = uiState.isSubmitting,
-                            onRequest = { viewModel.requestReward(reward) },
-                        )
-                    }
-                }
-
-                item { SectionTitle(text = "Demandes et Parchemins") }
-
-                if (uiState.requests.isEmpty()) {
-                    item {
-                        if (uiState.hasRemoteSession) {
-                            EmptyCard(text = "Aucun Parchemin pour le moment.")
-                        } else {
-                            LocalHistory(transactions = uiState.localTransactions)
-                        }
-                    }
-                } else {
-                    items(uiState.requests, key = { request -> request.id }) { request ->
-                        RewardRequestRow(
-                            request = request,
-                            isParent = uiState.isParent,
-                            isSubmitting = uiState.isSubmitting,
-                            onApprove = { viewModel.approveRequest(request.id) },
-                            onRefuse = { viewModel.refuseRequest(request.id) },
-                            onUseCoupon = { couponId -> viewModel.useCoupon(couponId) },
+                    items(caveChests, key = { chest -> chest.rarity }) { chest ->
+                        ChestCard(
+                            points = 0,
+                            pointsRequired = 0,
+                            unopenedChests = 0,
+                            title = chest.title,
+                            costLabel = "${chest.cost} Cristaux • ${chest.hint}",
+                            actionLabel = "Aperçu",
+                            onAction = {
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("Aperçu uniquement : branchement backend Coffres à prévoir.")
+                                }
+                            },
+                            assetResId = NestAssets.chestAsset(chest.rarity),
+                            contentDescription = chest.title,
+                            rarity = chest.rarity,
                         )
                     }
                 }
             }
+        }
+    }
+}
+
+private enum class CaveSection(
+    val label: String,
+) {
+    Wishes("Souhaits"),
+    Chests("Coffres"),
+}
+
+private data class CaveChest(
+    val rarity: String,
+    val title: String,
+    val cost: Int,
+    val hint: String,
+)
+
+private val caveChests =
+    listOf(
+        CaveChest(rarity = "common", title = "Coffre commun", cost = 5, hint = "Loot courant"),
+        CaveChest(rarity = "rare", title = "Coffre rare", cost = 15, hint = "Chance de loot rare"),
+        CaveChest(rarity = "epic", title = "Coffre épique", cost = 40, hint = "Chance de loot épique"),
+    )
+
+@Composable
+private fun CaveSectionSelector(
+    selected: CaveSection,
+    onSelect: (CaveSection) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+    ) {
+        CaveSection.entries.forEach { section ->
+            FantasyButton(
+                text = section.label,
+                onClick = { onSelect(section) },
+                style = if (selected == section) FantasyButtonStyle.Filled else FantasyButtonStyle.Outline,
+                modifier = Modifier.weight(1f),
+            )
         }
     }
 }
