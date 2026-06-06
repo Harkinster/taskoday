@@ -385,14 +385,31 @@ def open_chest(db: Session, *, child_id: int, chest_id: int) -> dict:
         raise GamificationInvalidStateError()
 
     loot = loot_for_chest(chest.chest_type)
+    loot_gains = []
     for item_key, quantity in loot.items():
-        add_item(db, child_id=child_id, item_key=item_key, quantity=quantity)
+        item = add_item(db, child_id=child_id, item_key=item_key, quantity=quantity)
+        loot_gains.append(loot_gain_payload(item, quantity=quantity))
 
     granted_egg = None
     duplicate_compensation = None
     egg_key = egg_key_for_chest(chest.chest_type)
     if egg_key is not None:
         granted_egg, duplicate_compensation = grant_egg_or_compensation(db, child_id=child_id, egg_key=egg_key)
+        if duplicate_compensation is not None:
+            compensated_item = db.scalar(
+                select(ItemInventory).where(
+                    ItemInventory.child_id == child_id,
+                    ItemInventory.item_key == duplicate_compensation["item"]["key"],
+                )
+            )
+            if compensated_item is not None:
+                loot_gains.append(
+                    loot_gain_payload(
+                        compensated_item,
+                        quantity=duplicate_compensation["quantity_awarded"],
+                        is_duplicate_compensation=True,
+                    )
+                )
 
     chest.status = ChestStatus.OPENED
     chest.opened_at = datetime.now(timezone.utc)
@@ -404,9 +421,10 @@ def open_chest(db: Session, *, child_id: int, chest_id: int) -> dict:
 
     return {
         "chest": chest_payload(chest),
-        "loot": [item_payload(item) for item in get_items_by_keys(db, child_id, loot.keys())],
+        "loot": loot_gains,
         "granted_egg": child_egg_payload(granted_egg) if granted_egg else None,
         "duplicate_compensation": duplicate_compensation,
+        "inventory_after": build_inventory_payload(db, child_id),
         "progress": build_progress_payload(db, child_id),
     }
 
@@ -516,8 +534,10 @@ def evolve_egg(db: Session, *, child_id: int, egg_id: int) -> dict:
     child_egg = db.get(ChildEgg, egg_id)
     if child_egg is None or child_egg.child_id != child_id:
         raise GamificationNotFoundError()
-    if child_egg.status == ChildEggStatus.HATCHED or child_egg.egg_state == EGG_STATES[-1]:
+    if child_egg.status == ChildEggStatus.HATCHED:
         raise GamificationInvalidStateError()
+    if child_egg.egg_state == EGG_STATES[-1]:
+        return hatch_egg(db, child_id=child_id, egg_id=egg_id)
 
     consume_items(db, child_id=child_id, requirements={"fragment_oeuf": 1})
     next_index = EGG_STATES.index(child_egg.egg_state) + 1
@@ -529,6 +549,8 @@ def evolve_egg(db: Session, *, child_id: int, egg_id: int) -> dict:
     db.flush()
     return {
         "egg": child_egg_payload(child_egg),
+        "hatched": False,
+        "dragon": None,
         "inventory": build_inventory_payload(db, child_id),
     }
 
@@ -538,7 +560,7 @@ def hatch_egg(db: Session, *, child_id: int, egg_id: int) -> dict:
     child_egg = db.get(ChildEgg, egg_id)
     if child_egg is None or child_egg.child_id != child_id:
         raise GamificationNotFoundError()
-    if child_egg.status == ChildEggStatus.HATCHED:
+    if child_egg.status == ChildEggStatus.HATCHED or child_egg.egg_state != EGG_STATES[-1]:
         raise GamificationInvalidStateError()
 
     requirements = EGG_HATCH_REQUIREMENTS.get(child_egg.egg_key)
@@ -555,6 +577,7 @@ def hatch_egg(db: Session, *, child_id: int, egg_id: int) -> dict:
     db.flush()
     return {
         "egg": child_egg_payload(child_egg),
+        "hatched": True,
         "dragon": child_dragon_payload(dragon),
         "inventory": build_inventory_payload(db, child_id),
         "progress": build_progress_payload(db, child_id),
@@ -801,6 +824,17 @@ def item_payload(item: ItemInventory) -> dict:
         "rarity": metadata["rarity"],
         "category": metadata["category"],
         "quantity": item.quantity,
+    }
+
+
+def loot_gain_payload(item: ItemInventory, *, quantity: int, is_duplicate_compensation: bool = False) -> dict:
+    payload = item_payload(item)
+    return {
+        **payload,
+        "name": payload["title"],
+        "quantity": quantity,
+        "quantity_total": item.quantity,
+        "is_duplicate_compensation": is_duplicate_compensation,
     }
 
 

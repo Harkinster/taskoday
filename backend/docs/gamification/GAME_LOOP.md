@@ -10,3 +10,6 @@ Les taches donnent de l'XP Gardien, des Flammeches, des Cristaux et parfois un c
 
 Les Flammeches financent les Souhaits. Les Cristaux financent les coffres de la Caverne.
 Les objets de loot font evoluer les oeufs et dragons. Un dragon possede peut etre persiste comme compagnon actif.
+
+Un oeuf evolue d'une seule etape par appel: `sleeping`, `warm`, `glowing`, `cracked`, puis `hatching`.
+L'etat `hatching` est obligatoire avant la creation du dragon `baby`; posseder beaucoup de ressources ne permet jamais de sauter une etape.

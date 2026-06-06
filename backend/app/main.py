@@ -61,7 +61,7 @@ def create_application() -> FastAPI:
             elif detail:
                 message = detail
 
-        return _error_response(status.HTTP_400_BAD_REQUEST, message)
+        return _error_response(status.HTTP_422_UNPROCESSABLE_ENTITY, message)
 
     @application.exception_handler(Exception)
     async def generic_exception_handler(_: Request, __: Exception):

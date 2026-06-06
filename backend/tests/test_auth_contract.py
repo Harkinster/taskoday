@@ -65,7 +65,7 @@ def test_register_parent_returns_token_and_creates_family_membership(client: Tes
         db.close()
 
 
-def test_register_parent_missing_birth_date_returns_400(client: TestClient) -> None:
+def test_register_parent_missing_birth_date_returns_422(client: TestClient) -> None:
     response = client.post(
         "/api/v1/auth/register-parent",
         json={
@@ -74,7 +74,7 @@ def test_register_parent_missing_birth_date_returns_400(client: TestClient) -> N
             "family_name": "Famille Martin",
         },
     )
-    assert response.status_code == 400
+    assert response.status_code == 422
 
 
 def test_register_child_accepts_birth_date_and_returns_token_schema(client: TestClient) -> None:
@@ -99,7 +99,7 @@ def test_register_child_accepts_birth_date_and_returns_token_schema(client: Test
         db.close()
 
 
-def test_register_child_invalid_birth_date_returns_400(client: TestClient) -> None:
+def test_register_child_invalid_birth_date_returns_422(client: TestClient) -> None:
     response = client.post(
         "/api/v1/auth/register-child",
         json={
@@ -109,7 +109,7 @@ def test_register_child_invalid_birth_date_returns_400(client: TestClient) -> No
             "birth_date": "03-07-2014",
         },
     )
-    assert response.status_code == 400
+    assert response.status_code == 422
 
 
 def test_login_uses_same_token_response_shape(client: TestClient) -> None:

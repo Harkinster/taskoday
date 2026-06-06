@@ -95,3 +95,9 @@ class ScaleTransactionResponse(BaseModel):
     transaction_type: ScaleTransactionType
     event_key: str
     created_at: datetime
+
+
+class ScrollsResponse(BaseModel):
+    child_id: int
+    scrolls: list[RewardCouponResponse]
+    requests: list[RewardRequestResponse]

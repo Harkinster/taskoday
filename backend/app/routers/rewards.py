@@ -6,6 +6,7 @@ from app.db.session import get_db
 from app.dependencies import ensure_child_access, ensure_parent_child_access, get_current_user, success_response
 from app.models.reward import ExternalReward, RewardCoupon, RewardRequest, RewardRequestStatus
 from app.models.user import User, UserRole
+from app.schemas.common import SuccessResponse
 from app.schemas.reward import (
     ExternalRewardResponse,
     RewardCouponResponse,
@@ -16,6 +17,7 @@ from app.schemas.reward import (
     RewardUpdateRequest,
     ScaleBalanceResponse,
     ScaleTransactionResponse,
+    ScrollsResponse,
 )
 from app.services.reward_service import (
     InsufficientScalesError,
@@ -257,7 +259,7 @@ def use_reward_coupon(
     return success_response(reward_request_response(db, reward_request).model_dump(mode="json"), message="Parchemin utilise.")
 
 
-@router.get("/children/{child_id}/scrolls")
+@router.get("/children/{child_id}/scrolls", response_model=SuccessResponse[ScrollsResponse])
 def list_child_scrolls(
     child_id: int,
     limit: int = Query(default=100, ge=1, le=500),

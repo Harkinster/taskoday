@@ -6,6 +6,16 @@ from app.dependencies import ensure_child_access, get_current_user, success_resp
 from app.models.gamification import ChestInventory
 from app.models.task import TaskType
 from app.models.user import User
+from app.schemas.common import SuccessResponse
+from app.schemas.gamification import (
+    ActiveCompanionResponse,
+    BestiaryResponse,
+    ChestCatalogResponse,
+    CrystalBalanceResponse,
+    EggEvolutionResponse,
+    InventoryResponse,
+    OpenCatalogChestResponse,
+)
 from app.services.gamification_service import (
     GamificationInvalidStateError,
     GamificationNotFoundError,
@@ -69,13 +79,16 @@ def get_child_chests(child_id: int, db: Session = Depends(get_db), current_user:
     return success_response({"child_id": child_id, "chests": [chest_payload(chest) for chest in chests]})
 
 
-@router.get("/children/{child_id}/chests/catalog")
+@router.get("/children/{child_id}/chests/catalog", response_model=SuccessResponse[ChestCatalogResponse])
 def get_child_chest_catalog(child_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     ensure_child_access(db, current_user, child_id)
     return success_response(build_chest_catalog_payload(db, child_id))
 
 
-@router.post("/children/{child_id}/chests/catalog/{catalog_id}/open")
+@router.post(
+    "/children/{child_id}/chests/catalog/{catalog_id}/open",
+    response_model=SuccessResponse[OpenCatalogChestResponse],
+)
 def open_child_catalog_chest(
     child_id: int,
     catalog_id: str,
@@ -116,13 +129,13 @@ def open_child_chest(
     return success_response(payload, message="Coffre ouvert.")
 
 
-@router.get("/children/{child_id}/inventory")
+@router.get("/children/{child_id}/inventory", response_model=SuccessResponse[InventoryResponse])
 def get_child_inventory(child_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     ensure_child_access(db, current_user, child_id)
     return success_response(build_inventory_payload(db, child_id))
 
 
-@router.get("/children/{child_id}/crystals")
+@router.get("/children/{child_id}/crystals", response_model=SuccessResponse[CrystalBalanceResponse])
 def get_child_crystals(child_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     ensure_child_access(db, current_user, child_id)
     wallet = get_or_create_wallet(db, child_id)
@@ -135,7 +148,7 @@ def get_child_eggs(child_id: int, db: Session = Depends(get_db), current_user: U
     return success_response(build_eggs_payload(db, child_id))
 
 
-@router.post("/children/{child_id}/eggs/{egg_id}/evolve")
+@router.post("/children/{child_id}/eggs/{egg_id}/evolve", response_model=SuccessResponse[EggEvolutionResponse])
 def evolve_child_egg(
     child_id: int,
     egg_id: int,
@@ -150,7 +163,7 @@ def evolve_child_egg(
     except InsufficientItemsError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Objets insuffisants: {exc.missing_items}.") from exc
     except GamificationInvalidStateError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Oeuf deja pret a eclore.") from exc
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Oeuf deja eclos ou non evolutif.") from exc
 
     db.commit()
     return success_response(payload, message="Oeuf evolue.")
@@ -171,7 +184,7 @@ def hatch_child_egg(
     except InsufficientItemsError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Objets insuffisants: {exc.missing_items}.") from exc
     except GamificationInvalidStateError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Oeuf non incubable.") from exc
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="L'oeuf doit etre a l'etat hatching.") from exc
 
     db.commit()
     return success_response(payload, message="Oeuf eclos.")
@@ -183,8 +196,14 @@ def get_child_dragons(child_id: int, db: Session = Depends(get_db), current_user
     return success_response(build_dragons_payload(db, child_id))
 
 
-@router.post("/children/{child_id}/dragons/{dragon_id}/activate")
-@router.post("/children/{child_id}/dragons/{dragon_id}/companion")
+@router.post(
+    "/children/{child_id}/dragons/{dragon_id}/activate",
+    response_model=SuccessResponse[ActiveCompanionResponse],
+)
+@router.post(
+    "/children/{child_id}/dragons/{dragon_id}/companion",
+    response_model=SuccessResponse[ActiveCompanionResponse],
+)
 def activate_child_dragon(
     child_id: int,
     dragon_id: int,
@@ -201,7 +220,7 @@ def activate_child_dragon(
     return success_response(payload, message="Compagnon actif mis a jour.")
 
 
-@router.get("/children/{child_id}/bestiary")
+@router.get("/children/{child_id}/bestiary", response_model=SuccessResponse[BestiaryResponse])
 def get_child_bestiary(child_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     ensure_child_access(db, current_user, child_id)
     return success_response(build_bestiary_payload(db, child_id))

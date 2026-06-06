@@ -93,6 +93,27 @@ def _item_quantity(items, item_key: str) -> int:
     return 0
 
 
+def _loot_item(loot, item_key: str) -> dict:
+    return next(item for item in loot if item["key"] == item_key)
+
+
+def _open_unopened_rare_chests(client, child_token: str, child_id: int) -> list[dict]:
+    chests = client.get(
+        f"/api/v1/children/{child_id}/chests",
+        headers={"Authorization": f"Bearer {child_token}"},
+    ).json()["data"]["chests"]
+    opened = []
+    for chest in chests:
+        if chest["type"] == "rare" and chest["status"] == "unopened":
+            response = client.post(
+                f"/api/v1/children/{child_id}/chests/{chest['id']}/open",
+                headers={"Authorization": f"Bearer {child_token}"},
+            )
+            assert response.status_code == 200
+            opened.append(response.json()["data"])
+    return opened
+
+
 def test_task_completion_adds_guardian_xp_flammeches_and_chest_progress(client) -> None:
     parent_token, child_token, child_id = _setup_family(client, "progress")
 
@@ -121,35 +142,61 @@ def test_task_completion_adds_guardian_xp_flammeches_and_chest_progress(client) 
     assert flammeches.json()["data"]["balance"] == 22
 
 
-def test_open_chest_adds_items_hatch_consumes_items_and_dragon_evolves(client) -> None:
+def test_egg_evolves_one_state_at_a_time_before_hatching_and_dragon_evolution(client) -> None:
     parent_token, child_token, child_id = _setup_family(client, "loot")
-    _create_and_complete_quest(client, parent_token, child_token, child_id)
+    for _ in range(4):
+        _create_and_complete_quest(client, parent_token, child_token, child_id)
 
-    chests = client.get(f"/api/v1/children/{child_id}/chests", headers={"Authorization": f"Bearer {child_token}"})
-    rare_chest = next(chest for chest in chests.json()["data"]["chests"] if chest["type"] == "rare")
-
-    opened = client.post(
-        f"/api/v1/children/{child_id}/chests/{rare_chest['id']}/open",
-        headers={"Authorization": f"Bearer {child_token}"},
-    )
-    assert opened.status_code == 200
-    assert opened.json()["data"]["granted_egg"]["egg_key"] == "oeuf_braise"
+    opened = _open_unopened_rare_chests(client, child_token, child_id)
+    assert len(opened) == 4
+    assert opened[0]["granted_egg"]["egg_key"] == "oeuf_braise"
 
     inventory = client.get(f"/api/v1/children/{child_id}/inventory", headers={"Authorization": f"Bearer {child_token}"})
     items = inventory.json()["data"]["items"]
-    assert _item_quantity(items, "pomme_dragon") == 8
-    assert _item_quantity(items, "petit_cristal") == 6
-    assert _item_quantity(items, "rune_ancienne") == 3
+    assert _item_quantity(items, "fragment_oeuf") == 4
 
     eggs = client.get(f"/api/v1/children/{child_id}/eggs", headers={"Authorization": f"Bearer {child_token}"})
     egg_id = eggs.json()["data"]["eggs"][0]["id"]
-    hatched = client.post(
+
+    premature_hatch = client.post(
         f"/api/v1/children/{child_id}/eggs/{egg_id}/hatch",
         headers={"Authorization": f"Bearer {child_token}"},
     )
+    assert premature_hatch.status_code == 400
+    assert "hatching" in premature_hatch.json()["error"]["message"]
+
+    for expected_state, expected_next_state in [
+        ("warm", "glowing"),
+        ("glowing", "cracked"),
+        ("cracked", "hatching"),
+        ("hatching", None),
+    ]:
+        evolved = client.post(
+            f"/api/v1/children/{child_id}/eggs/{egg_id}/evolve",
+            headers={"Authorization": f"Bearer {child_token}"},
+        )
+        assert evolved.status_code == 200
+        payload = evolved.json()["data"]
+        assert payload["egg"]["state"] == expected_state
+        assert payload["egg"]["next_state"] == expected_next_state
+        assert payload["hatched"] is False
+        assert payload["dragon"] is None
+
+    hatched = client.post(
+        f"/api/v1/children/{child_id}/eggs/{egg_id}/evolve",
+        headers={"Authorization": f"Bearer {child_token}"},
+    )
     assert hatched.status_code == 200
+    assert hatched.json()["data"]["hatched"] is True
     assert hatched.json()["data"]["dragon"]["dragon_key"] == "dragon_braise"
     assert hatched.json()["data"]["dragon"]["stage"] == "baby"
+
+    already_hatched = client.post(
+        f"/api/v1/children/{child_id}/eggs/{egg_id}/evolve",
+        headers={"Authorization": f"Bearer {child_token}"},
+    )
+    assert already_hatched.status_code == 400
+    assert "deja eclos" in already_hatched.json()["error"]["message"]
 
     dragons = client.get(f"/api/v1/children/{child_id}/dragons", headers={"Authorization": f"Bearer {child_token}"})
     dragon_id = dragons.json()["data"]["dragons"][0]["id"]
@@ -161,9 +208,7 @@ def test_open_chest_adds_items_hatch_consumes_items_and_dragon_evolves(client) -
     assert evolved.json()["data"]["dragon"]["stage"] == "young"
 
     remaining = evolved.json()["data"]["inventory"]["items"]
-    assert _item_quantity(remaining, "pomme_dragon") == 0
-    assert _item_quantity(remaining, "petit_cristal") == 0
-    assert _item_quantity(remaining, "rune_ancienne") == 1
+    assert _item_quantity(remaining, "fragment_oeuf") == 0
 
 
 def test_wish_alias_approval_spends_flammeches_and_creates_scroll(client) -> None:
@@ -265,6 +310,17 @@ def test_paid_chest_updates_inventory_compensates_duplicate_and_builds_bestiary(
     assert paid_payload["granted_egg"] is None
     assert paid_payload["duplicate_compensation"]["reason"] == "duplicate_egg_family"
     assert paid_payload["duplicate_compensation"]["item"]["key"] == "essence_braise"
+    assert paid_payload["inventory_after"]["currencies"]["crystals"] == 1
+
+    apple_loot = _loot_item(paid_payload["loot"], "pomme_dragon")
+    assert apple_loot["quantity"] == 8
+    assert apple_loot["quantity_total"] == 16
+    assert apple_loot["is_duplicate_compensation"] is False
+
+    compensation_loot = _loot_item(paid_payload["loot"], "essence_braise")
+    assert compensation_loot["quantity"] == 5
+    assert compensation_loot["quantity_total"] == 5
+    assert compensation_loot["is_duplicate_compensation"] is True
 
     inventory = client.get(
         f"/api/v1/children/{child_id}/inventory",
@@ -274,6 +330,7 @@ def test_paid_chest_updates_inventory_compensates_duplicate_and_builds_bestiary(
     inventory_payload = inventory.json()["data"]
     assert inventory_payload["currencies"] == {"flammeches": flammeches_before, "crystals": 1}
     assert _item_quantity(inventory_payload["items"], "essence_braise") == 5
+    assert paid_payload["inventory_after"] == inventory_payload
 
     scrolls = client.get(
         f"/api/v1/children/{child_id}/scrolls",
@@ -283,20 +340,25 @@ def test_paid_chest_updates_inventory_compensates_duplicate_and_builds_bestiary(
     assert scrolls.json()["data"]["scrolls"] == []
     assert scrolls.json()["data"]["requests"] == []
 
+    for _ in range(2):
+        _create_and_complete_quest(client, parent_token, child_token, child_id)
+    _open_unopened_rare_chests(client, child_token, child_id)
+
     eggs = client.get(
         f"/api/v1/children/{child_id}/eggs",
         headers={"Authorization": f"Bearer {child_token}"},
     ).json()["data"]["eggs"]
     egg_id = eggs[0]["id"]
-    evolved_egg = client.post(
-        f"/api/v1/children/{child_id}/eggs/{egg_id}/evolve",
-        headers={"Authorization": f"Bearer {child_token}"},
-    )
-    assert evolved_egg.status_code == 200
-    assert evolved_egg.json()["data"]["egg"]["state"] == "warm"
+    for expected_state in ["warm", "glowing", "cracked", "hatching"]:
+        evolved_egg = client.post(
+            f"/api/v1/children/{child_id}/eggs/{egg_id}/evolve",
+            headers={"Authorization": f"Bearer {child_token}"},
+        )
+        assert evolved_egg.status_code == 200
+        assert evolved_egg.json()["data"]["egg"]["state"] == expected_state
 
     hatched = client.post(
-        f"/api/v1/children/{child_id}/eggs/{egg_id}/hatch",
+        f"/api/v1/children/{child_id}/eggs/{egg_id}/evolve",
         headers={"Authorization": f"Bearer {child_token}"},
     )
     assert hatched.status_code == 200
@@ -328,3 +390,21 @@ def test_paid_chest_updates_inventory_compensates_duplicate_and_builds_bestiary(
     assert braise["dragon_owned"] is True
     assert braise["active_companion"] is True
     assert braise["current_dragon_stage"] == "baby"
+
+
+def test_main_gamification_openapi_responses_have_schemas(client) -> None:
+    openapi = client.app.openapi()
+    endpoints = [
+        ("get", "/api/v1/children/{child_id}/crystals"),
+        ("get", "/api/v1/children/{child_id}/chests/catalog"),
+        ("post", "/api/v1/children/{child_id}/chests/catalog/{catalog_id}/open"),
+        ("get", "/api/v1/children/{child_id}/inventory"),
+        ("get", "/api/v1/children/{child_id}/bestiary"),
+        ("post", "/api/v1/children/{child_id}/eggs/{egg_id}/evolve"),
+        ("post", "/api/v1/children/{child_id}/dragons/{dragon_id}/activate"),
+        ("get", "/api/v1/children/{child_id}/scrolls"),
+    ]
+
+    for method, path in endpoints:
+        schema = openapi["paths"][path][method]["responses"]["200"]["content"]["application/json"]["schema"]
+        assert schema
