@@ -8,6 +8,8 @@ import com.example.taskoday.domain.model.RewardRequestStatus
 import com.example.taskoday.domain.repository.AuthRepository
 import com.example.taskoday.domain.repository.PointsRepository
 import com.example.taskoday.domain.repository.RewardRepository
+import com.example.taskoday.data.repository.NestRepository
+import com.example.taskoday.data.repository.toRemoteUserMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,6 +26,7 @@ class ShopViewModel
         private val rewardRepository: RewardRepository,
         private val pointsRepository: PointsRepository,
         private val authRepository: AuthRepository,
+        private val nestRepository: NestRepository,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(ShopUiState())
         val uiState: StateFlow<ShopUiState> = _uiState.asStateFlow()
@@ -77,11 +80,13 @@ class ShopViewModel
                 rewardRepository
                     .fetchRemoteShopSnapshot()
                     .onSuccess { snapshot ->
+                        val chestCatalog = nestRepository.getChestCatalog().getOrNull()
                         _uiState.update {
                             it.copy(
                                 rewards = snapshot.rewards,
                                 scalesBalance = snapshot.scalesBalance,
                                 requests = snapshot.requests,
+                                chestCatalog = chestCatalog,
                                 hasRemoteSession = true,
                                 isParent = isParent,
                                 isLoading = false,
@@ -95,6 +100,31 @@ class ShopViewModel
                                 isParent = isParent,
                                 isLoading = false,
                                 userMessage = error.toUserMessage(),
+                            )
+                        }
+                    }
+            }
+        }
+
+        fun openChest(catalogId: String) {
+            viewModelScope.launch {
+                _uiState.update { it.copy(isSubmitting = true, lastOpenedChest = null) }
+                nestRepository
+                    .openCatalogChest(catalogId)
+                    .onSuccess { result ->
+                        _uiState.update {
+                            it.copy(
+                                isSubmitting = false,
+                                lastOpenedChest = result,
+                                userMessage = "${result.chest.name} ouvert : ${result.loot.sumOf { loot -> loot.quantity }} objets gagnés.",
+                            )
+                        }
+                        refreshRemoteData()
+                    }.onFailure { error ->
+                        _uiState.update {
+                            it.copy(
+                                isSubmitting = false,
+                                userMessage = error.toRemoteUserMessage("Impossible d'ouvrir ce coffre."),
                             )
                         }
                     }
@@ -187,4 +217,4 @@ class ShopViewModel
         }
     }
 
-private fun Throwable.toUserMessage(): String = message ?: "Erreur Caverne aux Souhaits."
+private fun Throwable.toUserMessage(): String = toRemoteUserMessage("Erreur Caverne.")

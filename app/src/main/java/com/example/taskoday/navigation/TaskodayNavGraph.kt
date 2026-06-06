@@ -41,6 +41,7 @@ import com.example.taskoday.features.gamification.DragonsScreen
 import com.example.taskoday.features.gamification.EggsScreen
 import com.example.taskoday.features.gamification.InventoryScreen
 import com.example.taskoday.features.gamification.NestScreen
+import com.example.taskoday.features.gamification.NestViewModel
 import com.example.taskoday.features.gamification.ScrollsScreen
 import com.example.taskoday.features.home.HomeScreen
 import com.example.taskoday.features.home.HomeViewModel
@@ -266,7 +267,9 @@ fun TaskodayApp() {
             }
 
             composable(TaskodayDestination.Nest.route) {
+                val viewModel: NestViewModel = hiltViewModel()
                 NestScreen(
+                    viewModel = viewModel,
                     onOpenInventory = { navController.navigate(TaskodayDestination.Inventory.route) },
                     onOpenEggs = { navController.navigate(TaskodayDestination.Eggs.route) },
                     onOpenDragons = { navController.navigate(TaskodayDestination.Dragons.route) },
@@ -322,28 +325,36 @@ fun TaskodayApp() {
             }
 
             composable(TaskodayDestination.Inventory.route) {
+                val viewModel: NestViewModel = hiltViewModel()
                 InventoryScreen(
+                    viewModel = viewModel,
                     onOpenProfile = navigateToProfile,
                     onBackToNest = { navController.navigate(TaskodayDestination.Nest.route) { launchSingleTop = true } },
                 )
             }
 
             composable(TaskodayDestination.Eggs.route) {
+                val viewModel: NestViewModel = hiltViewModel()
                 EggsScreen(
+                    viewModel = viewModel,
                     onOpenProfile = navigateToProfile,
                     onBackToNest = { navController.navigate(TaskodayDestination.Nest.route) { launchSingleTop = true } },
                 )
             }
 
             composable(TaskodayDestination.Dragons.route) {
+                val viewModel: NestViewModel = hiltViewModel()
                 DragonsScreen(
+                    viewModel = viewModel,
                     onOpenProfile = navigateToProfile,
                     onBackToNest = { navController.navigate(TaskodayDestination.Nest.route) { launchSingleTop = true } },
                 )
             }
 
             composable(TaskodayDestination.Scrolls.route) {
+                val viewModel: NestViewModel = hiltViewModel()
                 ScrollsScreen(
+                    viewModel = viewModel,
                     onOpenProfile = navigateToProfile,
                     onBackToNest = { navController.navigate(TaskodayDestination.Nest.route) { launchSingleTop = true } },
                 )

@@ -215,32 +215,53 @@ fun ShopScreen(
                     item {
                         NestStatCard(
                             label = "Cristaux disponibles",
-                            value = "6 Cristaux",
+                            value = "${uiState.chestCatalog?.crystalsBalance ?: 6} Cristaux",
                             assetResId = NestAssets.interfaceAsset("crystal"),
                             tone = FantasyTone.Violet,
                         )
                     }
-                    item {
-                        FantasyCard(tone = FantasyTone.Night) {
-                            Text(text = "Coffres", style = MaterialTheme.typography.titleMedium, color = WoodBrownDark)
-                            Text(
-                                text = "L'ouverture et les loots restent en aperçu tant qu'aucun branchement backend Coffres n'est disponible.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = InkMuted,
-                            )
+                    uiState.lastOpenedChest?.let { result ->
+                        item {
+                            OpenedChestResultCard(result = result)
                         }
                     }
-                    items(caveChests, key = { chest -> chest.rarity }) { chest ->
+                    if (!uiState.hasRemoteSession || uiState.chestCatalog == null) {
+                        item {
+                            FantasyCard(tone = FantasyTone.Night) {
+                                Text(text = "Coffres", style = MaterialTheme.typography.titleMedium, color = WoodBrownDark)
+                                Text(
+                                    text = "Aperçu local. Connecte un compte enfant pour ouvrir les coffres avec tes Cristaux.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = InkMuted,
+                                )
+                            }
+                        }
+                    }
+                    val displayedChests =
+                        uiState.chestCatalog?.chests?.map { chest ->
+                            CaveChest(
+                                id = chest.id,
+                                rarity = chest.rarity,
+                                title = chest.name,
+                                cost = chest.crystalCost,
+                                hint = chest.possibleRewards.joinToString(", "),
+                            )
+                        } ?: caveChests
+                    items(displayedChests, key = { chest -> chest.id }) { chest ->
                         ChestCard(
                             points = 0,
                             pointsRequired = 0,
                             unopenedChests = 0,
                             title = chest.title,
                             costLabel = "${chest.cost} Cristaux • ${chest.hint}",
-                            actionLabel = "Aperçu",
+                            actionLabel = if (uiState.hasRemoteSession && uiState.chestCatalog != null) "Ouvrir" else "Aperçu",
                             onAction = {
-                                scope.launch {
-                                    snackbarHostState.showSnackbar("Aperçu uniquement : branchement backend Coffres à prévoir.")
+                                if (uiState.hasRemoteSession && uiState.chestCatalog != null) {
+                                    viewModel.openChest(chest.id)
+                                } else {
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar("Connecte un compte enfant pour ouvrir ce coffre.")
+                                    }
                                 }
                             },
                             assetResId = NestAssets.chestAsset(chest.rarity),
@@ -262,6 +283,7 @@ private enum class CaveSection(
 }
 
 private data class CaveChest(
+    val id: String,
     val rarity: String,
     val title: String,
     val cost: Int,
@@ -270,10 +292,32 @@ private data class CaveChest(
 
 private val caveChests =
     listOf(
-        CaveChest(rarity = "common", title = "Coffre commun", cost = 5, hint = "Loot courant"),
-        CaveChest(rarity = "rare", title = "Coffre rare", cost = 15, hint = "Chance de loot rare"),
-        CaveChest(rarity = "epic", title = "Coffre épique", cost = 40, hint = "Chance de loot épique"),
+        CaveChest(id = "common", rarity = "common", title = "Coffre commun", cost = 5, hint = "Loot courant"),
+        CaveChest(id = "rare", rarity = "rare", title = "Coffre rare", cost = 15, hint = "Chance de loot rare"),
+        CaveChest(id = "epic", rarity = "epic", title = "Coffre épique", cost = 40, hint = "Chance de loot épique"),
     )
+
+@Composable
+private fun OpenedChestResultCard(result: com.example.taskoday.data.remote.dto.OpenCatalogChestDto) {
+    FantasyCard(tone = FantasyTone.Gold) {
+        Text(text = "${result.chest.name} ouvert", style = MaterialTheme.typography.titleMedium, color = WoodBrownDark)
+        Text(
+            text = "${result.crystalsSpent} Cristaux dépensés • ${result.crystalsBalance} restants",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MagicViolet,
+        )
+        result.loot.forEach { loot ->
+            Text(
+                text = "+${loot.quantity} ${loot.title}${if (loot.isDuplicateCompensation) " (compensation)" else ""}",
+                style = MaterialTheme.typography.bodySmall,
+                color = InkMuted,
+            )
+        }
+        result.grantedEgg?.let { egg ->
+            Text(text = "Nouvel œuf : ${egg.title}", style = MaterialTheme.typography.bodyMedium, color = MossGreen)
+        }
+    }
+}
 
 @Composable
 private fun CaveSectionSelector(

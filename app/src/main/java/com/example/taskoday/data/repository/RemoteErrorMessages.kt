@@ -6,14 +6,17 @@ import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import retrofit2.HttpException
 
-internal fun Throwable.toRemoteUserMessage(fallback: String = "Erreur reseau."): String =
+fun Throwable.toRemoteUserMessage(fallback: String = "Erreur reseau."): String =
     when (this) {
         is UnknownHostException, is ConnectException -> "Serveur indisponible."
         is SocketTimeoutException -> "Requête expirée."
         is HttpException ->
             when (code()) {
+                400 -> "Cette action n'est pas possible pour le moment."
                 401 -> "Session expiree."
                 403 -> "Action non autorisee."
+                404 -> "Element introuvable."
+                422 -> "Certaines informations sont invalides."
                 else -> "Erreur API (${code()})."
             }
 

@@ -8,6 +8,7 @@ import com.example.taskoday.data.remote.auth.SecureTokenStorage
 import com.example.taskoday.data.remote.auth.TokenStorage
 import com.example.taskoday.data.remote.auth.UnauthorizedInterceptor
 import com.example.taskoday.data.remote.children.ChildrenApi
+import com.example.taskoday.data.remote.gamification.NestApi
 import com.example.taskoday.data.remote.missions.MissionsApi
 import com.example.taskoday.data.remote.pairing.PairingApi
 import com.example.taskoday.data.remote.planning.PlanningApi
@@ -91,6 +92,10 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideChildrenApi(apiClient: ApiClient): ChildrenApi = apiClient.create(ChildrenApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideNestApi(apiClient: ApiClient): NestApi = apiClient.create(NestApi::class.java)
 
     @Provides
     @Singleton
