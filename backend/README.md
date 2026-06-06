@@ -70,13 +70,19 @@ Procedure complete : voir `DEPLOYMENT_UBUNTU.md`.
 - `POST /api/v1/quests/{quest_id}/complete`
 - `GET /api/v1/children/{child_id}/progress`
 - `GET /api/v1/children/{child_id}/flammeches`
+- `GET /api/v1/children/{child_id}/crystals`
 - `GET /api/v1/children/{child_id}/chests`
+- `GET /api/v1/children/{child_id}/chests/catalog`
+- `POST /api/v1/children/{child_id}/chests/catalog/{catalog_id}/open`
 - `POST /api/v1/children/{child_id}/chests/{chest_id}/open`
 - `GET /api/v1/children/{child_id}/inventory`
 - `GET /api/v1/children/{child_id}/eggs`
+- `POST /api/v1/children/{child_id}/eggs/{egg_id}/evolve`
 - `POST /api/v1/children/{child_id}/eggs/{egg_id}/hatch`
 - `GET /api/v1/children/{child_id}/dragons`
 - `POST /api/v1/children/{child_id}/dragons/{dragon_id}/evolve`
+- `POST /api/v1/children/{child_id}/dragons/{dragon_id}/activate`
+- `GET /api/v1/children/{child_id}/bestiary`
 - `GET /api/v1/children/{child_id}/scales`
 - `GET /api/v1/children/{child_id}/scales/history`
 - `GET /api/v1/children/{child_id}/rewards`
@@ -96,17 +102,20 @@ Procedure complete : voir `DEPLOYMENT_UBUNTU.md`.
 - `GET /api/v1/children/{child_id}/profile`
 - `GET /api/v1/children/{child_id}/xp-history`
 
-## XP, Ecailles et recompenses externes
+## Boucle du Nid et recompenses externes
 
 - L'XP n'est jamais depensee. Elle sert uniquement a la progression du profil enfant, du dragon et du sanctuaire.
-- Les Ecailles sont la monnaie de la Caverne aux Souhaits.
-- Une routine completee rapporte 5 XP, 2 Ecailles et 1 point coffre.
-- Une mission completee rapporte 15 XP, 6 Ecailles et 3 points coffre.
-- Une quete completee rapporte 30 XP, 12 Ecailles et un coffre rare.
+- Les Flammeches sont la monnaie des Souhaits. Les noms techniques legacy `scales` et `cost_scales` restent compatibles.
+- Les Cristaux sont la monnaie des coffres de la Caverne.
+- Une routine completee rapporte 5 XP, 2 Flammeches, 1 Cristal et 1 point coffre.
+- Une mission completee rapporte 15 XP, 6 Flammeches, 3 Cristaux et 3 points coffre.
+- Une quete completee rapporte 30 XP, 12 Flammeches, 6 Cristaux et un coffre rare.
+- Les coffres achetes coutent 3/8/15 Cristaux pour les raretes commune/rare/epique.
+- Un doublon d'oeuf est converti en 5 essences de famille, ou en fragments generiques si l'essence n'existe pas.
 - Une recompense est creee par un parent pour un enfant.
-- L'enfant peut creer une demande si son solde d'Ecailles couvre le cout.
+- L'enfant peut creer une demande si son solde de Flammeches couvre le cout.
 - Le parent peut accepter, refuser ou expirer une demande.
-- L'acceptation retire les Ecailles et cree un Parchemin.
+- L'acceptation retire les Flammeches et cree un Parchemin.
 - Un Parchemin approuve peut ensuite etre marque comme utilise.
 - Statuts de demande: `pending`, `approved`, `refused`, `used`, `expired`.
 - Statuts de Parchemin: `available`, `used`, `expired`, `cancelled`.

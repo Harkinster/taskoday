@@ -4,8 +4,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import settings
-from app.db.base import Base
-from app.db.session import engine
 from app.routers import auth, children, families, gamification, missions, pairing, profile, quests, rewards, routines
 
 
@@ -45,10 +43,6 @@ def create_application() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-
-    @application.on_event("startup")
-    def on_startup() -> None:
-        Base.metadata.create_all(bind=engine)
 
     @application.exception_handler(HTTPException)
     async def http_exception_handler(_: Request, exc: HTTPException):

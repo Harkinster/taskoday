@@ -29,6 +29,8 @@ alembic heads
 alembic upgrade head
 ```
 
+Le serveur ne modifie pas le schema au demarrage. Appliquer les migrations explicitement apres validation de la base cible.
+
 ## Lancement serveur
 
 ```bash
@@ -72,13 +74,19 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 - `GET /api/v1/children/{child_id}/progress`
 - `GET /api/v1/children/{child_id}/flammeches`
 - `GET /api/v1/children/{child_id}/flammeches/history`
+- `GET /api/v1/children/{child_id}/crystals`
 - `GET /api/v1/children/{child_id}/chests`
+- `GET /api/v1/children/{child_id}/chests/catalog`
+- `POST /api/v1/children/{child_id}/chests/catalog/{catalog_id}/open`
 - `POST /api/v1/children/{child_id}/chests/{chest_id}/open`
 - `GET /api/v1/children/{child_id}/inventory`
 - `GET /api/v1/children/{child_id}/eggs`
+- `POST /api/v1/children/{child_id}/eggs/{egg_id}/evolve`
 - `POST /api/v1/children/{child_id}/eggs/{egg_id}/hatch`
 - `GET /api/v1/children/{child_id}/dragons`
 - `POST /api/v1/children/{child_id}/dragons/{dragon_id}/evolve`
+- `POST /api/v1/children/{child_id}/dragons/{dragon_id}/activate`
+- `GET /api/v1/children/{child_id}/bestiary`
 - `GET /api/v1/children/{child_id}/wishes`
 - `POST /api/v1/children/{child_id}/wishes`
 - `PATCH /api/v1/rewards/{reward_id}`
@@ -97,10 +105,14 @@ Un parent cree son compte avec `register-parent`. Un enfant cree son compte avec
 
 Il n'y a pas de `POST /api/v1/children` dans le backend actif.
 
-## Ecailles et souhaits
+## Nid, monnaies et souhaits
 
 - L'XP n'est jamais depensee.
-- Les Ecailles servent uniquement aux recompenses externes creees par les parents.
+- Les Flammeches servent uniquement aux Souhaits crees par les parents.
+- Les Cristaux servent uniquement aux coffres achetes dans la Caverne.
+- L'Inventaire regroupe monnaies, objets et coffres possedes non ouverts.
+- Le Bestiaire regroupe les etats d'oeuf et les stades de dragon par famille.
+- Les Parchemins suivent les Souhaits approuves; les Cristaux ne creent jamais de Parchemin.
 - Les champs techniques `scales_balance` et `cost_scales` restent des noms de compatibilite API.
 - Les routes canoniques cote app sont `wishes`, `wish-requests` et `scrolls`.
 - Les routes `scales`, `rewards` et `reward-coupons` restent exposees comme alias backend de compatibilite.

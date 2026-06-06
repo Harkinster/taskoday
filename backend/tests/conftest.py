@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Generator
 
@@ -5,6 +6,12 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
+
+# Never let the test suite load the database configured in the application .env.
+os.environ["DATABASE_URL"] = os.environ.get(
+    "TASKODAY_TEST_DATABASE_URL",
+    "sqlite+pysqlite:///./taskoday_test.db",
+)
 
 from app.db.base import Base
 from app.db.session import get_db

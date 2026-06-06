@@ -271,10 +271,12 @@ def list_child_scrolls(
         .order_by(desc(RewardCoupon.created_at), desc(RewardCoupon.id))
         .limit(limit)
     ).all()
+    requests = list_reward_requests_for_child(db, child_id=child_id, limit=limit)
     return success_response(
         {
             "child_id": child_id,
             "scrolls": [reward_coupon_response(coupon).model_dump(mode="json") for coupon in coupons],
+            "requests": [reward_request_response(db, item).model_dump(mode="json") for item in requests],
         }
     )
 

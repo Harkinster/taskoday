@@ -1,8 +1,4 @@
-from sqlalchemy.orm import DeclarativeBase
-
-
-class Base(DeclarativeBase):
-    pass
+from app.db.declarative import Base
 
 
 # Import explicite des modeles pour que SQLAlchemy/Alembic detecte les tables.

@@ -4,12 +4,13 @@ from datetime import datetime
 from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base
+from app.db.declarative import Base
 
 
 class ChestType(str, enum.Enum):
     SIMPLE = "simple"
     RARE = "rare"
+    EPIC = "epic"
 
 
 class ChestStatus(str, enum.Enum):
@@ -27,6 +28,9 @@ class ChildEggStatus(str, enum.Enum):
 class DragonStage(str, enum.Enum):
     BABY = "baby"
     YOUNG = "young"
+    MEDIUM = "medium"
+    LARGE = "large"
+    LEGENDARY = "legendary"
     GUARDIAN = "guardian"
 
 
@@ -51,6 +55,7 @@ class ChildWallet(Base):
 
     child_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     flammeches_balance: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    crystals_balance: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -104,6 +109,8 @@ class ChildEgg(Base):
     child_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     egg_key: Mapped[str] = mapped_column(ForeignKey("eggs.key", ondelete="CASCADE"), nullable=False, index=True)
     status: Mapped[ChildEggStatus] = mapped_column(Enum(ChildEggStatus), default=ChildEggStatus.AVAILABLE, nullable=False)
+    egg_state: Mapped[str] = mapped_column(String(20), default="sleeping", nullable=False)
+    progress: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     obtained_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     hatched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
@@ -124,6 +131,8 @@ class ChildDragon(Base):
     child_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     dragon_key: Mapped[str] = mapped_column(ForeignKey("dragons.key", ondelete="CASCADE"), nullable=False, index=True)
     stage: Mapped[DragonStage] = mapped_column(Enum(DragonStage), default=DragonStage.BABY, nullable=False)
+    progress: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    active_companion: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
     unlocked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
