@@ -2,6 +2,7 @@ package com.example.taskoday.di
 
 import com.example.taskoday.BuildConfig
 import com.example.taskoday.data.remote.ApiClient
+import com.example.taskoday.data.remote.ApiPathPrefixInterceptor
 import com.example.taskoday.data.remote.auth.AuthApi
 import com.example.taskoday.data.remote.auth.AuthHeaderInterceptor
 import com.example.taskoday.data.remote.auth.SecureTokenStorage
@@ -23,6 +24,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 import okhttp3.OkHttpClient
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -51,13 +53,20 @@ object NetworkModule {
 
     @Provides
     @Singleton
+    fun provideApiPathPrefixInterceptor(baseUrl: String): ApiPathPrefixInterceptor =
+        ApiPathPrefixInterceptor(baseUrl.toHttpUrl())
+
+    @Provides
+    @Singleton
     fun provideOkHttpClient(
+        apiPathPrefixInterceptor: ApiPathPrefixInterceptor,
         authHeaderInterceptor: AuthHeaderInterceptor,
         unauthorizedInterceptor: UnauthorizedInterceptor,
         loggingInterceptor: HttpLoggingInterceptor,
     ): OkHttpClient =
         OkHttpClient
             .Builder()
+            .addInterceptor(apiPathPrefixInterceptor)
             .addInterceptor(authHeaderInterceptor)
             .addInterceptor(unauthorizedInterceptor)
             .addInterceptor(loggingInterceptor)

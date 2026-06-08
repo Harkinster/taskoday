@@ -16,7 +16,7 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
-        buildConfigField("String", "TASKODAY_BASE_URL", "\"https://harkserv.ddns.net/taskoday-api/api/v1/\"")
+        buildConfigField("String", "TASKODAY_BASE_URL", "\"https://harkserv.ddns.net/taskoday-api/\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
