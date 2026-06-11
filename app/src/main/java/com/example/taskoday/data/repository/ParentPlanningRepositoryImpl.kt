@@ -35,7 +35,7 @@ class ParentPlanningRepositoryImpl
                 )
             }
 
-        override suspend fun getSelectedChildId(): Long? = authRepository.getActiveChildId()
+        override suspend fun getSelectedChildId(): Long? = authRepository.getActiveChildId(forceRefresh = true)
 
         override fun setSelectedChildId(childId: Long) {
             authRepository.setActiveChildId(childId)

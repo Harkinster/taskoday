@@ -417,9 +417,14 @@ private fun ChildrenSelector(
     val spacing = MaterialTheme.spacing
     if (children.isEmpty()) {
         Text(
-            text = "Aucun enfant disponible pour ce parent.",
+            text = "Créer un enfant",
+            color = StarWhite,
+            style = MaterialTheme.typography.titleSmall,
+        )
+        Text(
+            text = "Crée un compte enfant, puis associe-le depuis le Profil avec son code temporaire.",
             color = TextMuted,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodySmall,
         )
         return
     }

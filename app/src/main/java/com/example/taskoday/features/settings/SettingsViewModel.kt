@@ -2,6 +2,8 @@ package com.example.taskoday.features.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.taskoday.domain.model.AuthenticatedUser
+import com.example.taskoday.domain.model.ChildProfile
 import com.example.taskoday.domain.model.ChildProfileDashboard
 import com.example.taskoday.domain.repository.AuthRepository
 import com.example.taskoday.domain.repository.ChildrenRepository
@@ -46,6 +48,20 @@ class SettingsViewModel
 
         fun selectFamily(familyId: Long) {
             _uiState.update { it.copy(selectedFamilyId = familyId, pairingErrorMessage = null, pairingSuccessMessage = null) }
+        }
+
+        fun selectActiveChild(childId: Long) {
+            val state = _uiState.value
+            if (!state.isParentUser || state.pairedChildren.none { child -> child.id == childId }) return
+
+            authRepository.setActiveChildId(childId)
+            _uiState.update {
+                it.copy(
+                    activeChildId = childId,
+                    profileErrorMessage = null,
+                )
+            }
+            refreshProfile()
         }
 
         fun fetchOrGeneratePairingCode() {
@@ -157,18 +173,23 @@ class SettingsViewModel
                 }
 
                 val refreshedChildren = runCatching { childrenRepository.fetchChildren() }.getOrDefault(emptyList())
-                if (refreshedChildren.isNotEmpty()) {
-                    authRepository.setActiveChildId(refreshedChildren.first().id)
-                }
+                val activeChildId =
+                    authRepository
+                        .getActiveChildId()
+                        ?.takeIf { childId -> refreshedChildren.any { child -> child.id == childId } }
+                        ?: refreshedChildren.firstOrNull()?.id
+                activeChildId?.let(authRepository::setActiveChildId)
 
                 _uiState.update {
                     it.copy(
                         isPairingBusy = false,
                         pairedChildren = refreshedChildren,
+                        activeChildId = activeChildId,
                         pairingSuccessMessage = "Enfant associe avec succes.",
                         pairingErrorMessage = null,
                     )
                 }
+                refreshProfile()
             }
         }
 
@@ -197,6 +218,7 @@ class SettingsViewModel
                         successStat = "0%",
                         xpHistoryTokens = emptyList(),
                         pairedChildren = emptyList(),
+                        activeChildId = null,
                         pairingCode = null,
                         pairingCodeExpiresAt = null,
                         isPairingBusy = false,
@@ -218,17 +240,12 @@ class SettingsViewModel
                         ?.takeIf { familyIds.contains(it) }
                         ?: if (familyIds.size == 1) familyIds.first() else familyIds.firstOrNull()
 
+                val activeChildResult = runCatching { authRepository.getActiveChildId(forceRefresh = true) }
+                val activeChildId = activeChildResult.getOrNull()
                 val dashboardResult = runCatching { profileRepository.fetchActiveChildDashboard() }
                 val dashboard = dashboardResult.getOrNull()
                 val profile = dashboard?.profile
-                val profileName = profile?.displayName?.ifBlank { null } ?: me?.email?.substringBefore('@') ?: "Profil local"
-                val profileSubtitle =
-                    when {
-                        profile != null && !profile.birthDate.isNullOrBlank() -> "Naissance: ${profile.birthDate}"
-                        profile != null && !profile.email.isNullOrBlank() -> profile.email
-                        me != null -> me.email
-                        else -> "Mode hors-ligne"
-                    }
+                val identity = resolveProfileIdentity(me = me, childProfile = profile)
                 val xp = dashboard?.stats?.totalXp ?: 0
                 val level = (xp / XP_PER_LEVEL) + 1
                 val levelXp = xp % XP_PER_LEVEL
@@ -244,10 +261,10 @@ class SettingsViewModel
                         isParentUser = isParent,
                         familyIds = familyIds,
                         selectedFamilyId = preferredFamilyId,
-                        profileName = profileName,
-                        profileSubtitle = profileSubtitle,
-                        profileEmail = profile?.email ?: me?.email.orEmpty(),
-                        profileInitials = initialsFrom(profileName),
+                        profileName = identity.name,
+                        profileSubtitle = identity.subtitle,
+                        profileEmail = identity.email,
+                        profileInitials = initialsFrom(identity.name),
                         totalXp = xp,
                         level = level,
                         levelXp = levelXp,
@@ -258,7 +275,13 @@ class SettingsViewModel
                         successStat = "${dashboard?.stats?.successRatePercent ?: 0}%",
                         xpHistoryTokens = xpHistoryTokensFrom(dashboard),
                         pairedChildren = children,
-                        profileErrorMessage = (dashboardResult.exceptionOrNull() ?: meResult.exceptionOrNull())?.toMessage(),
+                        activeChildId = activeChildId,
+                        profileErrorMessage =
+                            (
+                                dashboardResult.exceptionOrNull()
+                                    ?: activeChildResult.exceptionOrNull()
+                                    ?: meResult.exceptionOrNull()
+                            )?.toMessage(),
                     )
                 }
             }
@@ -266,6 +289,48 @@ class SettingsViewModel
     }
 
 private const val XP_PER_LEVEL: Int = 1000
+
+internal data class ProfileIdentity(
+    val name: String,
+    val email: String,
+    val subtitle: String,
+)
+
+internal fun resolveProfileIdentity(
+    me: AuthenticatedUser?,
+    childProfile: ChildProfile?,
+): ProfileIdentity {
+    val accountEmail = me?.email?.trim()?.takeIf { it.isNotEmpty() }
+    val isParent = me?.role.equals("PARENT", ignoreCase = true)
+    val email = accountEmail ?: childProfile?.email?.trim().orEmpty()
+    val roleLabel =
+        when {
+            me?.role.equals("PARENT", ignoreCase = true) -> "Parent"
+            me?.role.equals("CHILD", ignoreCase = true) -> "Enfant"
+            childProfile?.role.equals("CHILD", ignoreCase = true) -> "Enfant"
+            else -> null
+        }
+    val name =
+        if (isParent) {
+            email.ifBlank { "Compte parent" }
+        } else {
+            childProfile
+                ?.displayName
+                ?.trim()
+                ?.takeIf { it.isNotEmpty() }
+                ?: email.ifBlank { "Profil" }
+        }
+    val subtitle =
+        listOfNotNull(roleLabel, email.takeIf { it.isNotBlank() })
+            .joinToString(" • ")
+            .ifBlank { "Compte connecté" }
+
+    return ProfileIdentity(
+        name = name,
+        email = email,
+        subtitle = subtitle,
+    )
+}
 
 private fun missionStatFrom(dashboard: ChildProfileDashboard?): String =
     dashboard?.stats?.let { "${it.missionsCompleted}/${it.missionsTotal}" } ?: "0/0"

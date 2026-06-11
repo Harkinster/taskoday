@@ -149,6 +149,15 @@ fun SettingsScreen(
                     )
                 }
 
+                if (uiState.isParentUser) {
+                    item {
+                        ActiveChildCard(
+                            uiState = uiState,
+                            onSelectChild = viewModel::selectActiveChild,
+                        )
+                    }
+                }
+
                 if (!uiState.profileErrorMessage.isNullOrBlank()) {
                     item {
                         NeonCard(tone = NeonTone.Warning) {
@@ -310,6 +319,62 @@ fun SettingsScreen(
                 onLogoutConfirmed()
             },
         )
+    }
+}
+
+@Composable
+private fun ActiveChildCard(
+    uiState: SettingsUiState,
+    onSelectChild: (Long) -> Unit,
+) {
+    val activeChild = uiState.pairedChildren.firstOrNull { child -> child.id == uiState.activeChildId }
+
+    NeonCard(tone = if (uiState.pairedChildren.isEmpty()) NeonTone.Warning else NeonTone.Cyan) {
+        if (uiState.pairedChildren.isEmpty()) {
+            Text(
+                text = "Créer un enfant",
+                style = MaterialTheme.typography.titleMedium,
+                color = StarWhite,
+            )
+            Text(
+                text = "Crée un compte enfant, puis associe-le ici avec son code temporaire.",
+                style = MaterialTheme.typography.bodySmall,
+                color = TextMuted,
+            )
+            return@NeonCard
+        }
+
+        Text(
+            text = "Enfant actif",
+            style = MaterialTheme.typography.titleMedium,
+            color = StarWhite,
+        )
+        Text(
+            text = activeChild?.displayName ?: "Sélectionne un enfant",
+            style = MaterialTheme.typography.bodyMedium,
+            color = NeonCyan,
+        )
+
+        if (uiState.pairedChildren.size > 1) {
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                uiState.pairedChildren.forEach { child ->
+                    FilterChip(
+                        selected = child.id == uiState.activeChildId,
+                        onClick = { onSelectChild(child.id) },
+                        label = { Text(child.displayName) },
+                    )
+                }
+            }
+        } else {
+            Text(
+                text = uiState.pairedChildren.first().email,
+                style = MaterialTheme.typography.bodySmall,
+                color = TextMuted,
+            )
+        }
     }
 }
 

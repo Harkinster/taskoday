@@ -88,7 +88,16 @@ class AuthRepositoryImpl
             }
 
             val children = childrenApi.getChildren().data
-            val selectedChildId = children.firstOrNull()?.id ?: return null
+            if (children.isEmpty()) {
+                tokenStorage.clearActiveChildId()
+                return null
+            }
+            val storedChildId = tokenStorage.getActiveChildId()
+            val selectedChildId =
+                storedChildId
+                    ?.takeIf { childId -> children.any { child -> child.id == childId } }
+                    ?: children.firstOrNull()?.id
+                    ?: return null
             tokenStorage.saveActiveChildId(selectedChildId)
             return selectedChildId
         }
