@@ -149,6 +149,12 @@ fun SettingsScreen(
                     )
                 }
 
+                if (!uiState.isParentUser) {
+                    item {
+                        LogoutActionCard(onClick = { showLogoutConfirmation = true })
+                    }
+                }
+
                 if (uiState.isParentUser) {
                     item {
                         ActiveChildCard(
@@ -185,15 +191,9 @@ fun SettingsScreen(
                     }
                 }
 
-                item {
-                    NeonCard(tone = NeonTone.Danger) {
-                        ProfileActionRow(
-                            icon = Icons.AutoMirrored.Outlined.Logout,
-                            title = "Déconnexion",
-                            subtitle = "Quitter ce compte ou changer de compte.",
-                            modifier = Modifier.testTag(TaskodayTestTags.ProfileLogoutAction),
-                            onClick = { showLogoutConfirmation = true },
-                        )
+                if (uiState.isParentUser) {
+                    item {
+                        LogoutActionCard(onClick = { showLogoutConfirmation = true })
                     }
                 }
 
@@ -318,6 +318,19 @@ fun SettingsScreen(
                 showLogoutConfirmation = false
                 onLogoutConfirmed()
             },
+        )
+    }
+}
+
+@Composable
+private fun LogoutActionCard(onClick: () -> Unit) {
+    NeonCard(tone = NeonTone.Danger) {
+        ProfileActionRow(
+            icon = Icons.AutoMirrored.Outlined.Logout,
+            title = "Déconnexion",
+            subtitle = "Quitter ce compte ou changer de compte.",
+            modifier = Modifier.testTag(TaskodayTestTags.ProfileLogoutAction),
+            onClick = onClick,
         )
     }
 }
