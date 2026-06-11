@@ -77,7 +77,6 @@ import com.example.taskoday.data.remote.dto.InventoryItemDto
 fun NestScreen(
     viewModel: NestViewModel,
     onOpenInventory: () -> Unit,
-    onOpenEggs: () -> Unit,
     onOpenDragons: () -> Unit,
     onOpenWishes: () -> Unit,
     onOpenChests: () -> Unit,
@@ -160,27 +159,9 @@ fun NestScreen(
         item {
             NestHubTiles(
                 onOpenInventory = onOpenInventory,
-                onOpenEggs = onOpenEggs,
                 onOpenDragons = onOpenDragons,
                 onOpenScrolls = onOpenScrolls,
                 onOpenWishes = onOpenWishes,
-            )
-        }
-        item {
-            BestiaryPreviewCard(
-                dragons = dragons,
-                eggs = eggs,
-                activeCompanionKey = activeCompanionKey,
-                followedEggKey = followedEggKey,
-                onSelectDragon = { dragon ->
-                    dragon.id?.let(viewModel::activateDragon) ?: run { activeCompanionKey = dragon.key }
-                },
-                onSelectEgg = { egg ->
-                    followedEggKey = egg.key
-                    activeCompanionKey = ""
-                },
-                onOpenDragons = onOpenDragons,
-                onOpenEggs = onOpenEggs,
             )
         }
         followedEgg?.let { egg ->
@@ -477,13 +458,6 @@ private fun NestCurrencyBar(
                 onClick = onOpenChests,
             )
         }
-        Text(
-            text = "Flammèches pour les Souhaits • Cristaux pour les Coffres",
-            style = MaterialTheme.typography.labelMedium,
-            color = ParchmentLight,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
     }
 }
 
@@ -701,7 +675,6 @@ private fun ActiveNestDisplayCard(
 @Composable
 private fun NestHubTiles(
     onOpenInventory: () -> Unit,
-    onOpenEggs: () -> Unit,
     onOpenDragons: () -> Unit,
     onOpenScrolls: () -> Unit,
     onOpenWishes: () -> Unit,
@@ -749,14 +722,6 @@ private fun NestHubTiles(
                 onClick = onOpenScrolls,
             )
         }
-        NestHubTile(
-            title = "Œufs",
-            subtitle = "Suivi des éclosions",
-            assetResId = NestAssets.eggAsset("pyron", "glowing"),
-            tone = FantasyTone.Gold,
-            modifier = Modifier.fillMaxWidth(),
-            onClick = onOpenEggs,
-        )
     }
 }
 

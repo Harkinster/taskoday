@@ -28,7 +28,7 @@ import com.example.taskoday.core.ui.component.fantasy.NeonButtonStyle
 import com.example.taskoday.core.ui.component.fantasy.NeonCard
 import com.example.taskoday.core.ui.component.fantasy.NeonTone
 import com.example.taskoday.core.ui.component.fantasy.ProgressHeroCard
-import com.example.taskoday.core.ui.component.fantasy.TaskodayHeader
+import com.example.taskoday.core.ui.component.fantasy.TaskodayTopBar
 import com.example.taskoday.core.ui.theme.NeonCyan
 import com.example.taskoday.core.ui.theme.SoftGold
 import com.example.taskoday.core.ui.theme.StarWhite
@@ -85,10 +85,10 @@ fun TasksScreen(
                 verticalArrangement = Arrangement.spacedBy(spacing.medium),
             ) {
                 item {
-                    TaskodayHeader(
-                        title = "Mission",
-                        subtitle = "Des actions du quotidien, des victoires concrètes.",
+                    TaskodayTopBar(
                         avatarInitials = "AB",
+                        compact = true,
+                        showNotification = false,
                         onAvatarClick = onOpenProfile,
                     )
                 }

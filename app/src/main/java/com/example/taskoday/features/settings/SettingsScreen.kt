@@ -1,6 +1,7 @@
 package com.example.taskoday.features.settings
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,6 +19,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Notifications
@@ -39,10 +41,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.taskoday.core.ui.component.fantasy.FantasyScreenBackground
 import com.example.taskoday.core.ui.component.fantasy.NeonButton
+import com.example.taskoday.core.ui.component.fantasy.NeonButtonStyle
 import com.example.taskoday.core.ui.component.fantasy.NeonCard
 import com.example.taskoday.core.ui.component.fantasy.NeonTone
 import com.example.taskoday.core.ui.component.fantasy.ProfileHeroCard
@@ -51,6 +56,7 @@ import com.example.taskoday.core.ui.component.fantasy.TaskodayHeader
 import com.example.taskoday.core.ui.component.fantasy.TaskodayRewardItem
 import com.example.taskoday.core.ui.component.fantasy.TaskodayStatItem
 import com.example.taskoday.core.ui.component.fantasy.StatsCard
+import com.example.taskoday.core.ui.testing.TaskodayTestTags
 import com.example.taskoday.core.ui.theme.ArcaneViolet
 import com.example.taskoday.core.ui.theme.NeonCyan
 import com.example.taskoday.core.ui.theme.StarWhite
@@ -61,10 +67,12 @@ import com.example.taskoday.core.ui.theme.spacing
 fun SettingsScreen(
     viewModel: SettingsViewModel,
     onOpenParentMode: () -> Unit = {},
+    onLogoutConfirmed: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val spacing = MaterialTheme.spacing
     var pairingCodeInput by rememberSaveable { mutableStateOf("") }
+    var showLogoutConfirmation by rememberSaveable { mutableStateOf(false) }
 
     val xp = uiState.totalXp
     val level = uiState.level
@@ -164,6 +172,18 @@ fun SettingsScreen(
                             icon = Icons.Outlined.Image,
                             title = "Modifier la photo",
                             subtitle = "Choisis un nouvel avatar.",
+                        )
+                    }
+                }
+
+                item {
+                    NeonCard(tone = NeonTone.Danger) {
+                        ProfileActionRow(
+                            icon = Icons.AutoMirrored.Outlined.Logout,
+                            title = "Déconnexion",
+                            subtitle = "Quitter ce compte ou changer de compte.",
+                            modifier = Modifier.testTag(TaskodayTestTags.ProfileLogoutAction),
+                            onClick = { showLogoutConfirmation = true },
                         )
                     }
                 }
@@ -278,6 +298,59 @@ fun SettingsScreen(
                         }
                     }
                 }
+            }
+        }
+    }
+
+    if (showLogoutConfirmation) {
+        LogoutConfirmationDialog(
+            onDismiss = { showLogoutConfirmation = false },
+            onConfirm = {
+                showLogoutConfirmation = false
+                onLogoutConfirmed()
+            },
+        )
+    }
+}
+
+@Composable
+private fun LogoutConfirmationDialog(
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        NeonCard(
+            modifier = Modifier.fillMaxWidth(),
+            tone = NeonTone.Danger,
+        ) {
+            Text(
+                text = "Déconnexion",
+                style = MaterialTheme.typography.titleLarge,
+                color = StarWhite,
+            )
+            Text(
+                text = "Se déconnecter de ce compte ?",
+                style = MaterialTheme.typography.bodyMedium,
+                color = TextMuted,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                NeonButton(
+                    text = "Annuler",
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f),
+                    style = NeonButtonStyle.Outline,
+                )
+                NeonButton(
+                    text = "Se déconnecter",
+                    onClick = onConfirm,
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .testTag(TaskodayTestTags.ProfileLogoutConfirm),
+                )
             }
         }
     }
@@ -420,9 +493,15 @@ private fun ProfileActionRow(
     icon: ImageVector,
     title: String,
     subtitle: String,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+                .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

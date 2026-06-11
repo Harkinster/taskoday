@@ -281,7 +281,7 @@ fun NeonCard(
                     shape = shape,
                 ),
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
+        Canvas(modifier = Modifier.matchParentSize()) {
             drawCircle(
                 color = GlowHalo.copy(alpha = 0.11f),
                 radius = size.minDimension * 0.60f,
@@ -1304,6 +1304,7 @@ fun FantasyBottomNavigation(
     currentDestination: NavDestination?,
     onNavigate: (TaskodayDestination) -> Unit,
     modifier: Modifier = Modifier,
+    attentionDestinationRoutes: Set<String> = emptySet(),
 ) {
     val shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp)
     Box(
@@ -1381,6 +1382,17 @@ fun FantasyBottomNavigation(
                                 tint = if (selected) WoodBrownDark else itemColor,
                                 modifier = Modifier.size(if (selected) 19.dp else 17.dp),
                             )
+                            if (destination.route in attentionDestinationRoutes) {
+                                Box(
+                                    modifier =
+                                        Modifier
+                                            .align(Alignment.TopEnd)
+                                            .size(7.dp)
+                                            .clip(RoundedCornerShape(100.dp))
+                                            .background(WarningGlow)
+                                            .border(1.dp, WoodBrownDark, RoundedCornerShape(100.dp)),
+                                )
+                            }
                         }
                     }
                     Text(

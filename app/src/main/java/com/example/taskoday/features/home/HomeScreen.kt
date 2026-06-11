@@ -37,11 +37,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.taskoday.core.ui.component.fantasy.FantasyButton
-import com.example.taskoday.core.ui.component.fantasy.FantasyButtonStyle
 import com.example.taskoday.core.ui.component.fantasy.FantasyAssetBubble
 import com.example.taskoday.core.ui.component.fantasy.FantasyCard
-import com.example.taskoday.core.ui.component.fantasy.FantasyHeader
 import com.example.taskoday.core.ui.component.fantasy.FantasyProgressBar
 import com.example.taskoday.core.ui.component.fantasy.FantasyScreenBackground
 import com.example.taskoday.core.ui.component.fantasy.FantasyStateCard
@@ -49,6 +46,7 @@ import com.example.taskoday.core.ui.component.fantasy.FantasyTone
 import com.example.taskoday.core.ui.component.fantasy.NestAssets
 import com.example.taskoday.core.ui.component.fantasy.RewardToast
 import com.example.taskoday.core.ui.component.fantasy.RoutineItemRow
+import com.example.taskoday.core.ui.component.fantasy.TaskodayTopBar
 import com.example.taskoday.core.ui.theme.EmberOrange
 import com.example.taskoday.core.ui.theme.InkMuted
 import com.example.taskoday.core.ui.theme.MossGreen
@@ -67,7 +65,6 @@ import kotlinx.coroutines.launch
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
-    onOpenTasks: () -> Unit,
     onOpenTask: (Long) -> Unit,
     onOpenProfile: () -> Unit,
 ) {
@@ -84,7 +81,6 @@ fun HomeScreen(
             uiState.tasksForDay.filter { it.task.id > 0L }
         }
     val routinesForDay = visibleTasksForDay.filter { it.task.isDaily }
-    val missionsForDay = visibleTasksForDay.filter { !it.task.isDaily }
     val planningItems = buildPlanningItems(routinesForDay)
     val completedCount = planningItems.count { it.isCompleted }
     val progress = if (planningItems.isEmpty()) 0f else completedCount.toFloat() / planningItems.size.toFloat()
@@ -132,11 +128,10 @@ fun HomeScreen(
                 verticalArrangement = Arrangement.spacedBy(spacing.medium),
             ) {
                 item {
-                    FantasyHeader(
-                        title = "Routine",
-                        subtitle = "Le Gardien avance pas à pas avec ses routines.",
-                        assetResId = NestAssets.interfaceAsset("nid"),
-                        assetDescription = null,
+                    TaskodayTopBar(
+                        avatarInitials = "AB",
+                        compact = true,
+                        showNotification = false,
                         onAvatarClick = onOpenProfile,
                     )
                 }
@@ -167,15 +162,6 @@ fun HomeScreen(
                             },
                         badgeLabel = "${uiState.pointsBalance} Flammèches",
                     )
-                }
-
-                if (missionsForDay.isNotEmpty()) {
-                    item {
-                        MissionsAvailableCard(
-                            missionCount = missionsForDay.size,
-                            onOpenMissions = onOpenTasks,
-                        )
-                    }
                 }
 
                 if (uiState.usingRemoteData) {
@@ -288,34 +274,6 @@ private fun RoutineDateHeader(
                 imageVector = Icons.Outlined.CalendarMonth,
                 contentDescription = "Calendrier",
                 tint = SoftGold,
-            )
-        }
-    }
-}
-
-@Composable
-private fun MissionsAvailableCard(
-    missionCount: Int,
-    onOpenMissions: () -> Unit,
-) {
-    FantasyCard(tone = FantasyTone.Violet) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xSmall)) {
-                Text(text = "Missions disponibles", style = MaterialTheme.typography.titleMedium, color = WoodBrownDark)
-                Text(
-                    text = "$missionCount mission${if (missionCount > 1) "s" else ""} à faire",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = InkMuted,
-                )
-            }
-            FantasyButton(
-                text = "Voir les missions",
-                onClick = onOpenMissions,
-                style = FantasyButtonStyle.Outline,
             )
         }
     }

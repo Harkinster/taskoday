@@ -13,11 +13,13 @@ fun TaskodayBottomBar(
     currentDestination: NavDestination?,
     onNavigate: (TaskodayDestination) -> Unit,
     modifier: Modifier = Modifier,
+    attentionDestinationRoutes: Set<String> = emptySet(),
 ) {
     FantasyBottomNavigation(
         destinations = destinations,
         currentDestination = currentDestination,
         onNavigate = onNavigate,
         modifier = modifier.padding(horizontal = 0.dp),
+        attentionDestinationRoutes = attentionDestinationRoutes,
     )
 }

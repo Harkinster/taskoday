@@ -182,6 +182,17 @@ class AuthViewModel
             }
         }
 
+        fun logout() {
+            authRepository.clearSession()
+            _uiState.value =
+                AuthUiState(
+                    isCheckingSession = false,
+                    isAuthenticated = false,
+                    isLocalMode = false,
+                    currentUser = null,
+                )
+        }
+
         fun clearError() {
             _uiState.update { it.copy(errorMessage = null) }
         }

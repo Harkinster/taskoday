@@ -10,6 +10,8 @@ object TaskodayTestTags {
     const val NavSettings: String = "nav_settings"
 
     const val TasksAddFab: String = "tasks_add_fab"
+    const val ProfileLogoutAction: String = "profile_logout_action"
+    const val ProfileLogoutConfirm: String = "profile_logout_confirm"
 
     const val TaskEditTitleField: String = "task_edit_title_field"
     const val TaskEditDescriptionField: String = "task_edit_description_field"

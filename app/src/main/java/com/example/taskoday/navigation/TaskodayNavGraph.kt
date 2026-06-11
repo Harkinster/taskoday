@@ -271,7 +271,6 @@ fun TaskodayApp() {
                 NestScreen(
                     viewModel = viewModel,
                     onOpenInventory = { navController.navigate(TaskodayDestination.Inventory.route) },
-                    onOpenEggs = { navController.navigate(TaskodayDestination.Eggs.route) },
                     onOpenDragons = { navController.navigate(TaskodayDestination.Dragons.route) },
                     onOpenWishes = { navController.navigate(TaskodayDestination.Shop.createRoute(TaskodayDestination.Shop.SECTION_WISHES)) },
                     onOpenChests = { navController.navigate(TaskodayDestination.Shop.createRoute(TaskodayDestination.Shop.SECTION_CHESTS)) },
@@ -284,7 +283,6 @@ fun TaskodayApp() {
                 val viewModel: HomeViewModel = hiltViewModel()
                 HomeScreen(
                     viewModel = viewModel,
-                    onOpenTasks = { navigateToTopLevel(TaskodayDestination.Tasks) },
                     onOpenTask = { taskId -> navController.navigate(TaskodayDestination.TaskDetail.createRoute(taskId)) },
                     onOpenProfile = navigateToProfile,
                 )
@@ -396,9 +394,19 @@ fun TaskodayApp() {
 
             composable(TaskodayDestination.Settings.route) {
                 val viewModel: SettingsViewModel = hiltViewModel()
+                val authViewModel: AuthViewModel = hiltViewModel()
                 SettingsScreen(
                     viewModel = viewModel,
                     onOpenParentMode = { navController.navigate(TaskodayDestination.ParentPlanning.createRoute()) },
+                    onLogoutConfirmed = {
+                        authViewModel.logout()
+                        navController.navigate(TaskodayDestination.Login.route) {
+                            popUpTo(navController.graph.id) {
+                                inclusive = true
+                            }
+                            launchSingleTop = true
+                        }
+                    },
                 )
             }
 

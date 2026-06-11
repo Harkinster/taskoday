@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -49,10 +48,7 @@ import com.example.taskoday.core.ui.component.fantasy.NeonCard
 import com.example.taskoday.core.ui.component.fantasy.NeonTone
 import com.example.taskoday.core.ui.component.fantasy.ProgressHeroCard
 import com.example.taskoday.core.ui.component.fantasy.QuestCard
-import com.example.taskoday.core.ui.component.fantasy.QuestLevelBadge
-import com.example.taskoday.core.ui.component.fantasy.TaskodayDragonWatermark
 import com.example.taskoday.core.ui.component.fantasy.TaskodayHeader
-import com.example.taskoday.core.ui.component.fantasy.XpProgressBar
 import com.example.taskoday.core.ui.theme.MagicViolet
 import com.example.taskoday.core.ui.theme.NeonCyan
 import com.example.taskoday.core.ui.theme.ParchmentLight
@@ -65,8 +61,6 @@ import com.example.taskoday.core.ui.theme.spacing
 import com.example.taskoday.domain.model.DayPart
 import com.example.taskoday.domain.model.QuestForDay
 
-private const val XP_PER_LEVEL: Int = 1000
-
 @Composable
 fun QuestsScreen(
     viewModel: QuestsViewModel,
@@ -76,9 +70,6 @@ fun QuestsScreen(
     val spacing = MaterialTheme.spacing
     val completedCount = uiState.quests.count { it.isCompletedForDay }
     val questProgress = if (uiState.quests.isEmpty()) 0f else completedCount.toFloat() / uiState.quests.size.toFloat()
-    val level = (uiState.pointsBalance / XP_PER_LEVEL) + 1
-    val levelXp = uiState.pointsBalance % XP_PER_LEVEL
-    val levelProgress = levelXp.toFloat() / XP_PER_LEVEL.toFloat()
 
     var formTitle by rememberSaveable { mutableStateOf("") }
     var formDescription by rememberSaveable { mutableStateOf("") }
@@ -149,25 +140,17 @@ fun QuestsScreen(
                 }
 
                 item {
-                    QuestAdventureProgressCard(
-                        level = level,
-                        levelXp = levelXp,
-                        levelProgress = levelProgress,
-                    )
-                }
-
-                item {
                     ProgressHeroCard(
-                        title = "Quêtes du jour",
+                        title = "Quête du jour",
                         completed = completedCount,
                         total = uiState.quests.size,
                         progress = questProgress,
-                        subtitle = "Continue pour gagner de l XP.",
+                        subtitle = "Progression des quêtes du jour.",
                         accent = NeonTone.Cyan,
                     )
                 }
 
-                if (uiState.canCreateQuest) {
+                if (uiState.canCreateQuest && editingQuestId != null) {
                     item {
                         QuestFormCard(
                             formTitle = formTitle,
@@ -315,66 +298,6 @@ private fun DateControlsCard(
                     tint = NeonCyan,
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun QuestAdventureProgressCard(
-    level: Int,
-    levelXp: Int,
-    levelProgress: Float,
-) {
-    val shape = RoundedCornerShape(22.dp)
-    Box(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clip(shape)
-                .background(Brush.verticalGradient(listOf(WoodBrownDark, MagicViolet, Color(0xFF241235))))
-                .border(1.6.dp, SoftGold.copy(alpha = 0.86f), shape)
-                .padding(13.dp),
-    ) {
-        TaskodayDragonWatermark(
-            modifier =
-                Modifier
-                    .size(132.dp)
-                    .align(Alignment.TopEnd),
-        )
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                QuestLevelBadge(
-                    level = level,
-                    modifier = Modifier.size(66.dp),
-                )
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(3.dp),
-                ) {
-                    Text(
-                        text = "Ton aventure continue !",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = SoftGold,
-                        maxLines = 1,
-                    )
-                    Text(
-                        text = "Encore ${XP_PER_LEVEL - levelXp} XP pour passer au niveau ${level + 1}.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = ParchmentLight,
-                        maxLines = 2,
-                    )
-                }
-            }
-            XpProgressBar(progress = levelProgress, modifier = Modifier.fillMaxWidth())
-            Text(
-                text = "$levelXp / $XP_PER_LEVEL XP",
-                style = MaterialTheme.typography.bodySmall,
-                color = SoftGold,
-            )
         }
     }
 }
