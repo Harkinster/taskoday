@@ -107,8 +107,26 @@ class ShopViewModel
         }
 
         fun openChest(catalogId: String) {
+            val currentState = _uiState.value
+            if (currentState.isSubmitting) return
+
+            val chestCatalog = currentState.chestCatalog
+            val selectedChest = chestCatalog?.chests?.firstOrNull { chest -> chest.id == catalogId }
+            if (selectedChest != null && chestCatalog.crystalsBalance < selectedChest.crystalCost) {
+                _uiState.update {
+                    it.copy(
+                        userMessage =
+                            missingCrystalsMessage(
+                                crystalsBalance = chestCatalog.crystalsBalance,
+                                crystalCost = selectedChest.crystalCost,
+                            ),
+                    )
+                }
+                return
+            }
+
+            _uiState.update { it.copy(isSubmitting = true, lastOpenedChest = null) }
             viewModelScope.launch {
-                _uiState.update { it.copy(isSubmitting = true, lastOpenedChest = null) }
                 nestRepository
                     .openCatalogChest(catalogId)
                     .onSuccess { result ->
@@ -124,7 +142,7 @@ class ShopViewModel
                         _uiState.update {
                             it.copy(
                                 isSubmitting = false,
-                                userMessage = error.toRemoteUserMessage("Impossible d'ouvrir ce coffre."),
+                                userMessage = error.toChestOpenUserMessage(),
                             )
                         }
                     }

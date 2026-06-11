@@ -671,6 +671,7 @@ fun ChestCard(
     title: String = "Coffre du Gardien",
     costLabel: String? = null,
     actionLabel: String? = null,
+    actionEnabled: Boolean = true,
     onAction: (() -> Unit)? = null,
 ) {
     val progress = if (pointsRequired <= 0) 0f else points.toFloat() / pointsRequired.toFloat()
@@ -704,6 +705,7 @@ fun ChestCard(
                 onClick = onAction,
                 style = FantasyButtonStyle.Outline,
                 modifier = Modifier.fillMaxWidth(),
+                enabled = actionEnabled,
             )
         }
     }

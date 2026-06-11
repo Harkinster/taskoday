@@ -248,15 +248,24 @@ fun ShopScreen(
                             )
                         } ?: caveChests
                     items(displayedChests, key = { chest -> chest.id }) { chest ->
+                        val hasRemoteCatalog = uiState.hasRemoteSession && uiState.chestCatalog != null
+                        val actionState =
+                            chestActionState(
+                                crystalsBalance = uiState.chestCatalog?.crystalsBalance,
+                                crystalCost = chest.cost,
+                                hasRemoteCatalog = hasRemoteCatalog,
+                                isSubmitting = uiState.isSubmitting,
+                            )
                         ChestCard(
                             points = 0,
                             pointsRequired = 0,
                             unopenedChests = 0,
                             title = chest.title,
-                            costLabel = "${chest.cost} Cristaux • ${chest.hint}",
-                            actionLabel = if (uiState.hasRemoteSession && uiState.chestCatalog != null) "Ouvrir" else "Aperçu",
+                            costLabel = "${actionState.balanceLabel} • ${chest.hint}",
+                            actionLabel = actionState.label,
+                            actionEnabled = actionState.enabled,
                             onAction = {
-                                if (uiState.hasRemoteSession && uiState.chestCatalog != null) {
+                                if (hasRemoteCatalog) {
                                     viewModel.openChest(chest.id)
                                 } else {
                                     scope.launch {
