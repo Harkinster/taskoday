@@ -54,15 +54,16 @@ class RoutinesRepositoryImpl
                 .filter { it.isActive }
                 .forEach { routine ->
                     val dayPart = routine.toDayPart()
+                    val localTaskId = RemotePlanningIdCodec.encodeTaskId(PlanningItemType.ROUTINE, routine.id)
                     val task =
                         Task(
-                            id = RemotePlanningIdCodec.encodeTaskId(PlanningItemType.ROUTINE, routine.id),
+                            id = localTaskId,
                             title = routine.title,
                             emoji = "\uD83D\uDD01",
                             description = routine.description,
                             dueDate = DateTimeUtils.epochMillisAtHour(DateTimeUtils.toLocalDate(dayStartMillis), dayPart.defaultHour()),
                             priority = TaskPriority.NORMAL,
-                            status = TaskStatus.TODO,
+                            status = if (routine.completed) TaskStatus.DONE else TaskStatus.TODO,
                             taskType = TaskType.DAILY,
                             dayPart = dayPart,
                             scheduledDate = null,
@@ -72,6 +73,11 @@ class RoutinesRepositoryImpl
                             updatedAt = now,
                         )
                     taskRepository.upsertTask(task)
+                    taskRepository.setTaskCheckedForDay(
+                        taskId = localTaskId,
+                        dayStartMillis = dayStartMillis,
+                        checked = routine.completed,
+                    )
                 }
 
             return RoutinesSyncResult(usedRemoteData = true)

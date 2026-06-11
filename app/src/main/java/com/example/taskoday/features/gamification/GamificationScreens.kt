@@ -45,6 +45,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.taskoday.core.ui.component.fantasy.EggProgressCard
+import com.example.taskoday.core.ui.component.fantasy.ChestCard
 import com.example.taskoday.core.ui.component.fantasy.FantasyAssetBubble
 import com.example.taskoday.core.ui.component.fantasy.FantasyBadge
 import com.example.taskoday.core.ui.component.fantasy.FantasyButton
@@ -156,6 +157,18 @@ fun NestScreen(
                 progress = ((progress?.guardian?.xp ?: 50) % 100) / 100f,
             )
         }
+        progress?.chestProgress?.let { chestProgress ->
+            item {
+                ChestCard(
+                    points = chestProgress.points,
+                    pointsRequired = chestProgress.pointsRequired,
+                    unopenedChests = chestProgress.unopenedChests,
+                    title = "Progression du prochain coffre",
+                    assetResId = NestAssets.chestAsset("common"),
+                    contentDescription = "Progression coffre",
+                )
+            }
+        }
         item {
             NestHubTiles(
                 onOpenInventory = onOpenInventory,
@@ -196,18 +209,6 @@ fun InventoryScreen(
     val inventoryItems =
         if (uiState.hasRemoteSession) {
             buildList {
-                uiState.inventory?.currencies?.forEach { (key, quantity) ->
-                    add(
-                        LootUiItem(
-                            key = key,
-                            title = if (key == "flammeches") "Flammèches" else "Cristaux",
-                            rarityLabel = "monnaie",
-                            quantity = quantity,
-                            assetResId = NestAssets.interfaceAsset(if (key == "flammeches") "flammeche" else "crystal"),
-                            usageLabel = "Monnaie du Nid",
-                        ),
-                    )
-                }
                 uiState.inventory?.items?.mapTo(this) { it.toUiItem() }
                 uiState.inventory?.chests?.mapTo(this) { it.toUiItem() }
             }
@@ -903,7 +904,7 @@ private fun FamilyBestiaryCard(
     onEvolveEgg: () -> Unit,
     onEvolveDragon: () -> Unit,
 ) {
-    FantasyCard(tone = if (dragon.active) FantasyTone.Gold else FantasyTone.Violet, contentPadding = PaddingValues(12.dp)) {
+    FantasyCard(tone = if (dragon.active) FantasyTone.Gold else FantasyTone.Violet, contentPadding = PaddingValues(10.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -912,7 +913,7 @@ private fun FamilyBestiaryCard(
             FantasyAssetBubble(
                 assetResId = dragon.assetResId,
                 contentDescription = dragon.contentDescription,
-                size = 62.dp,
+                size = 54.dp,
             )
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(text = dragon.title, style = MaterialTheme.typography.titleMedium, color = WoodBrownDark)
@@ -968,7 +969,7 @@ private fun FamilyBestiaryCard(
                 text = "Œuf : ${dragon.eggStatesLabel}",
                 style = MaterialTheme.typography.bodySmall,
                 color = InkMuted,
-                maxLines = 2,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
@@ -977,7 +978,7 @@ private fun FamilyBestiaryCard(
                 text = "Dragon : ${dragon.dragonStagesLabel}",
                 style = MaterialTheme.typography.bodySmall,
                 color = InkMuted,
-                maxLines = 2,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
@@ -1176,11 +1177,11 @@ private fun EggDto.toUiItem(): EggUiItem {
     return EggUiItem(
         key = eggKey,
         title = title,
-        status = state,
+        status = state.toFantasyStateLabel(),
         requirements = requirementsLabel,
         progress = progressPercent.coerceIn(0, 100) / 100f,
         assetResId = NestAssets.eggAsset(family.toVisualFamily(), state),
-        contentDescription = "$title, état $state",
+        contentDescription = "$title, état ${state.toFantasyStateLabel()}",
         materialLabel = "$progressPercent% de progression",
         actionLabel = if (state == "hatching") "Faire éclore" else "Évoluer",
         id = id,
@@ -1193,10 +1194,10 @@ private fun DragonDto.toUiItem(): DragonUiItem {
     return DragonUiItem(
         key = dragonKey,
         title = title,
-        stage = stage,
-        nextStep = nextEvolution?.let { "Évolution disponible" } ?: "Stade actuel : $stage",
+        stage = stage.toFantasyStateLabel(),
+        nextStep = nextEvolution?.let { "Évolution disponible" } ?: "Stade actuel : ${stage.toFantasyStateLabel()}",
         assetResId = NestAssets.dragonAsset(family.toVisualFamily(), stage),
-        contentDescription = "$title, stade $stage",
+        contentDescription = "$title, stade ${stage.toFantasyStateLabel()}",
         active = activeCompanion,
         progress = progressPercent.coerceIn(0, 100) / 100f,
         id = id,
@@ -1208,16 +1209,16 @@ private fun BestiaryFamilyDto.toDragonUiItem(dragon: DragonDto?): DragonUiItem =
     DragonUiItem(
         key = "dragon_$familyId",
         title = familyName,
-        stage = currentDragonStage ?: "Non découvert",
+        stage = currentDragonStage?.toFantasyStateLabel() ?: "Non découvert",
         nextStep = if (dragonOwned) "Progression de la famille : $progressPercent%" else "Fais éclore l'œuf de cette famille.",
         assetResId = NestAssets.dragonAsset(familyId.toVisualFamily(), currentDragonStage ?: "baby"),
-        contentDescription = "$familyName, ${currentDragonStage ?: "verrouillé"}",
+        contentDescription = "$familyName, ${currentDragonStage?.toFantasyStateLabel() ?: "verrouillé"}",
         active = activeCompanion,
         progress = progressPercent.coerceIn(0, 100) / 100f,
         id = dragon?.id,
         discovered = discovered,
-        eggStatesLabel = eggStates.joinToString(" • ") { "${it.state} ${if (it.unlocked) "✓" else "—"}" },
-        dragonStagesLabel = dragonStages.joinToString(" • ") { "${it.state} ${if (it.unlocked) "✓" else "—"}" },
+        eggStatesLabel = eggStates.joinToString(" • ") { "${it.state.toFantasyStateLabel()} ${if (it.unlocked) "✓" else "—"}" },
+        dragonStagesLabel = dragonStages.joinToString(" • ") { "${it.state.toFantasyStateLabel()} ${if (it.unlocked) "✓" else "—"}" },
         artifactOwned = legendaryArtifact.owned,
         artifactRequired = legendaryArtifact.required,
         canEvolve = dragon?.nextEvolution != null,
@@ -1227,12 +1228,12 @@ private fun BestiaryFamilyDto.toEggUiItem(egg: EggDto?): EggUiItem =
     EggUiItem(
         key = "oeuf_$familyId",
         title = "Œuf $familyName",
-        status = currentEggState ?: "Verrouillé",
+        status = currentEggState?.toFantasyStateLabel() ?: "Verrouillé",
         requirements = if (eggOwned) "Progression de la famille : $progressPercent%" else "Œuf non découvert",
         progress = progressPercent.coerceIn(0, 100) / 100f,
         assetResId = NestAssets.eggAsset(familyId.toVisualFamily(), currentEggState ?: "sleeping"),
         locked = !eggOwned,
-        contentDescription = "Œuf $familyName, ${currentEggState ?: "verrouillé"}",
+        contentDescription = "Œuf $familyName, ${currentEggState?.toFantasyStateLabel() ?: "verrouillé"}",
         materialLabel = "$progressPercent% de progression",
         actionLabel = if (eggOwned) "Évoluer" else null,
         id = egg?.id,
@@ -1245,6 +1246,21 @@ private fun String.toVisualFamily(): String =
         "lunaire" -> "lunarys"
         "racine" -> "sylvyn"
         else -> lowercase()
+    }
+
+internal fun String.toFantasyStateLabel(): String =
+    when (lowercase()) {
+        "sleeping" -> "Endormi"
+        "warm" -> "Tiède"
+        "glowing" -> "Lumineux"
+        "cracked" -> "Fissuré"
+        "hatching" -> "Éclosion"
+        "baby" -> "Bébé"
+        "young" -> "Jeune"
+        "medium" -> "Adulte"
+        "large" -> "Grand"
+        "legendary" -> "Légendaire"
+        else -> replaceFirstChar { first -> first.uppercase() }
     }
 
 private val sampleLoot =

@@ -118,8 +118,15 @@ data class QuestUpdateRequestDto(
     val isActive: Boolean? = null,
 )
 
+data class ChildStatsCountDto(
+    @SerializedName("completed")
+    val completed: Int? = null,
+    @SerializedName("total")
+    val total: Int? = null,
+)
+
 data class ChildStatsDto(
-    @SerializedName("total_xp")
+    @SerializedName(value = "total_xp", alternate = ["xp"])
     val totalXp: Int? = null,
     @SerializedName("missions_completed")
     val missionsCompleted: Int? = null,
@@ -133,6 +140,12 @@ data class ChildStatsDto(
     val streakDays: Int? = null,
     @SerializedName("success_rate_percent")
     val successRatePercent: Int? = null,
+    @SerializedName("routines")
+    val routines: ChildStatsCountDto? = null,
+    @SerializedName("missions")
+    val missions: ChildStatsCountDto? = null,
+    @SerializedName("quests")
+    val quests: ChildStatsCountDto? = null,
 )
 
 data class XpHistoryItemDto(

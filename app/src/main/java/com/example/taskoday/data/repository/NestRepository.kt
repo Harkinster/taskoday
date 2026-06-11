@@ -50,8 +50,11 @@ class NestRepository
                 )
             }
 
-        suspend fun getChestCatalog(): Result<ChestCatalogDto> =
-            runCatching { nestApi.getChestCatalog(activeChildId()).data }
+    suspend fun getChestCatalog(): Result<ChestCatalogDto> =
+        runCatching { nestApi.getChestCatalog(activeChildId()).data }
+
+    suspend fun getProgress(): Result<NestProgressDto> =
+        runCatching { nestApi.getProgress(activeChildId()).data }
 
         suspend fun openCatalogChest(catalogId: String): Result<OpenCatalogChestDto> =
             runCatching { nestApi.openCatalogChest(activeChildId(), catalogId).data }

@@ -160,7 +160,7 @@ fun HomeScreen(
                             } else {
                                 "Chaque geste nourrit Le Nid."
                             },
-                        badgeLabel = "${uiState.pointsBalance} Flammèches",
+                        badgeLabel = "${uiState.remoteFlammeches ?: uiState.pointsBalance} Flammèches",
                     )
                 }
 

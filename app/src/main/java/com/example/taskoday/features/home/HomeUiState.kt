@@ -9,6 +9,7 @@ data class HomeUiState(
     val tasksForDay: List<TaskForDay> = emptyList(),
     val questsForDay: List<QuestForDay> = emptyList(),
     val pointsBalance: Int = 0,
+    val remoteFlammeches: Int? = null,
     val usingRemoteData: Boolean = false,
     val isLoading: Boolean = true,
     val errorMessage: String? = null,

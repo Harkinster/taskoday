@@ -102,13 +102,13 @@ private fun ChildResponseDto.toProfileDto(): ChildProfileResponseDto =
         role = role,
     )
 
-private fun ChildStatsDto.toDomain(): ChildStats =
+internal fun ChildStatsDto.toDomain(): ChildStats =
     ChildStats(
         totalXp = totalXp ?: 0,
-        missionsCompleted = missionsCompleted ?: 0,
-        missionsTotal = missionsTotal ?: 0,
-        questsCompleted = questsCompleted ?: 0,
-        questsTotal = questsTotal ?: 0,
+        missionsCompleted = missions?.completed ?: missionsCompleted ?: 0,
+        missionsTotal = missions?.total ?: missionsTotal ?: 0,
+        questsCompleted = quests?.completed ?: questsCompleted ?: 0,
+        questsTotal = quests?.total ?: questsTotal ?: 0,
         streakDays = streakDays ?: 0,
         successRatePercent = successRatePercent ?: 0,
     )

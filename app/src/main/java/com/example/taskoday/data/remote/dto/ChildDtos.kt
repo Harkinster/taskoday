@@ -59,6 +59,8 @@ data class RoutineItemDto(
     val pointsReward: Int? = null,
     @SerializedName("is_active")
     val isActive: Boolean = true,
+    @SerializedName(value = "completed", alternate = ["is_completed"])
+    val completed: Boolean = false,
     @SerializedName("created_at")
     val createdAt: String? = null,
     @SerializedName("updated_at")

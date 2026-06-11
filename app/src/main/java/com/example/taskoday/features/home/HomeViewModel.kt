@@ -3,6 +3,7 @@ package com.example.taskoday.features.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.taskoday.core.util.DateTimeUtils
+import com.example.taskoday.data.repository.NestRepository
 import com.example.taskoday.data.repository.RemotePlanningIdCodec
 import com.example.taskoday.domain.model.PointsSourceType
 import com.example.taskoday.domain.model.QuestForDay
@@ -32,6 +33,7 @@ class HomeViewModel
         private val questRepository: QuestRepository,
         private val pointsRepository: PointsRepository,
         private val planningSyncRepository: PlanningSyncRepository,
+        private val nestRepository: NestRepository,
     ) : ViewModel() {
         private val selectedDay = MutableStateFlow(DateTimeUtils.startOfDayMillis())
 
@@ -84,9 +86,16 @@ class HomeViewModel
                 selectedDay.collect { dayStart ->
                     _uiState.update { it.copy(isLoading = true) }
                     val syncResult = planningSyncRepository.syncDay(dayStart)
+                    val remoteFlammeches =
+                        if (syncResult.usedRemoteData) {
+                            nestRepository.getProgress().getOrNull()?.wallet?.flammeches
+                        } else {
+                            null
+                        }
                     _uiState.update {
                         it.copy(
                             usingRemoteData = syncResult.usedRemoteData,
+                            remoteFlammeches = remoteFlammeches,
                             errorMessage = syncResult.errorMessage,
                         )
                     }

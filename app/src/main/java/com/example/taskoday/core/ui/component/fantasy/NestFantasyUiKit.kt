@@ -692,7 +692,7 @@ fun ChestCard(
                 if (!costLabel.isNullOrBlank()) {
                     Text(text = costLabel, style = MaterialTheme.typography.bodyMedium, color = InkMuted)
                 }
-                if (unopenedChests > 0 || pointsRequired > 0) {
+                if (unopenedChests > 0) {
                     val waitingLabel = if (unopenedChests > 1) "coffres en attente" else "coffre en attente"
                     Text(text = "$unopenedChests $waitingLabel", style = MaterialTheme.typography.bodySmall, color = MossGreen)
                 }
