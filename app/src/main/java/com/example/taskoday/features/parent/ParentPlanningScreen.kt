@@ -31,6 +31,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -63,11 +64,13 @@ import com.example.taskoday.domain.model.DayPart
 import com.example.taskoday.domain.model.ParentChild
 import com.example.taskoday.domain.model.PlanningFormType
 import java.time.LocalDate
+import kotlinx.coroutines.delay
 
 @Composable
 fun ParentPlanningScreen(
     viewModel: ParentPlanningViewModel,
     onBack: () -> Unit,
+    onCreated: (PlanningFormType) -> Unit,
     initialFormType: PlanningFormType = PlanningFormType.ROUTINE,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -81,6 +84,14 @@ fun ParentPlanningScreen(
     var routineWeekdays by rememberSaveable { mutableStateOf(setOf<Int>()) }
     var missionDate by rememberSaveable { mutableStateOf(LocalDate.now()) }
     val selectedChild = uiState.children.firstOrNull { child -> child.id == uiState.selectedChildId }
+
+    LaunchedEffect(uiState.createdFormType) {
+        uiState.createdFormType?.let { createdType ->
+            delay(CREATION_CONFIRMATION_DELAY_MILLIS)
+            viewModel.consumeCreationResult()
+            onCreated(createdType)
+        }
+    }
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -145,17 +156,17 @@ fun ParentPlanningScreen(
 
                 item {
                     NeonCard(tone = NeonTone.Blue) {
-                        SectionTitle("Choisir un enfant")
-                        ChildrenSelector(
-                            children = uiState.children,
-                            selectedChildId = uiState.selectedChildId,
-                            onSelect = viewModel::selectChild,
-                        )
+                        SectionTitle(if (uiState.children.size == 1) "Enfant ciblé" else "Choisir un enfant")
+                        if (uiState.children.size == 1 && selectedChild != null) {
+                            SelectedChildSummary(selectedChild)
+                        } else {
+                            ChildrenSelector(
+                                children = uiState.children,
+                                selectedChildId = uiState.selectedChildId,
+                                onSelect = viewModel::selectChild,
+                            )
+                        }
                     }
-                }
-
-                item {
-                    ParentChildOverviewCard(childName = selectedChild?.displayName)
                 }
 
                 item {
@@ -180,7 +191,7 @@ fun ParentPlanningScreen(
                                 title = it
                                 viewModel.clearMessages()
                             },
-                            label = { Text("Titre") },
+                            label = { Text("Titre obligatoire") },
                             singleLine = true,
                             colors = fantasyTextFieldColors(),
                             modifier = Modifier.fillMaxWidth(),
@@ -282,7 +293,12 @@ fun ParentPlanningScreen(
                         }
 
                         NeonButton(
-                            text = if (uiState.isSubmitting) "Envoi..." else "Ajouter",
+                            text =
+                                when {
+                                    uiState.createdFormType != null -> "Créé"
+                                    uiState.isSubmitting -> "Envoi..."
+                                    else -> "Ajouter"
+                                },
                             onClick = {
                                 val parsedPoints = pointsText.toIntOrNull() ?: defaultPoints(formType)
                                 when (formType) {
@@ -313,7 +329,11 @@ fun ParentPlanningScreen(
                                         )
                                 }
                             },
-                            enabled = !uiState.isSubmitting && uiState.selectedChildId != null,
+                            enabled =
+                                !uiState.isSubmitting &&
+                                    uiState.createdFormType == null &&
+                                    uiState.selectedChildId != null &&
+                                    title.isNotBlank(),
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
@@ -372,39 +392,10 @@ private fun SectionTitle(text: String) {
 }
 
 @Composable
-private fun ParentChildOverviewCard(childName: String?) {
-    NeonCard(tone = NeonTone.Cyan) {
-        SectionTitle(childName?.let { "Vue de $it" } ?: "Sélectionne un enfant")
-        Text(
-            text = "Routines, missions, quêtes et progression rapide seront affichées ici dès que les données seront branchées.",
-            style = MaterialTheme.typography.bodySmall,
-            color = TextMuted,
-        )
-        ParentEmptyLine(title = "Routine", message = "Rien de prévu pour cette routine.")
-        ParentEmptyLine(title = "Mission", message = "Aucune mission pour le moment.")
-        ParentEmptyLine(title = "Quête", message = "Aucune quête active.")
-        ParentEmptyLine(title = "Progression", message = "Le Nid attend les prochaines réussites du Gardien.")
-    }
-}
-
-@Composable
-private fun ParentEmptyLine(
-    title: String,
-    message: String,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(text = title, style = MaterialTheme.typography.labelLarge, color = NeonCyanSoft)
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodySmall,
-            color = TextMuted,
-            textAlign = TextAlign.End,
-            modifier = Modifier.weight(1f),
-        )
+private fun SelectedChildSummary(child: ParentChild) {
+    SelectableCard(selected = true) {
+        Text(child.displayName, style = MaterialTheme.typography.titleSmall, color = StarWhite)
+        Text(child.email, style = MaterialTheme.typography.bodySmall, color = TextMuted)
     }
 }
 
@@ -585,3 +576,5 @@ private fun defaultPoints(formType: PlanningFormType): Int =
         PlanningFormType.MISSION -> 2
         PlanningFormType.QUEST -> 3
     }
+
+private const val CREATION_CONFIRMATION_DELAY_MILLIS = 700L

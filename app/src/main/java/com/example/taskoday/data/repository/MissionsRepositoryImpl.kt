@@ -42,7 +42,7 @@ class MissionsRepositoryImpl
                 taskRepository.clearRemoteMissionCache()
                 val now = System.currentTimeMillis()
                 missions
-                    .filter { it.isActive }
+                    .filter { it.isActive != false }
                     .forEach { mission ->
                         taskRepository.upsertTask(mission.toTask(now))
                     }

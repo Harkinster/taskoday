@@ -20,7 +20,7 @@ data class MissionItemDto(
     @SerializedName("points_reward")
     val pointsReward: Int? = null,
     @SerializedName("is_active")
-    val isActive: Boolean = true,
+    val isActive: Boolean? = null,
     @SerializedName("is_completed")
     val isCompleted: Boolean? = null,
     @SerializedName("created_at")
@@ -79,7 +79,7 @@ data class QuestItemDto(
     @SerializedName("status")
     val status: String? = null,
     @SerializedName("is_active")
-    val isActive: Boolean = true,
+    val isActive: Boolean? = null,
     @SerializedName("is_completed")
     val isCompleted: Boolean? = null,
     @SerializedName("created_at")

@@ -38,7 +38,7 @@ class QuestsRepositoryImpl
                 questRepository.clearRemoteCache()
                 val now = System.currentTimeMillis()
                 quests
-                    .filter { it.isActive }
+                    .filter { it.isActive != false }
                     .forEach { dto ->
                         val quest = dto.toDomain(now)
                         questRepository.upsertQuest(quest)
@@ -134,7 +134,7 @@ private fun QuestItemDto.toDomain(nowMillis: Long): Quest =
         description = description,
         emoji = "\u2B50",
         pointsReward = xpReward ?: pointsReward ?: 3,
-        isActive = isActive && !status.equals("completed", ignoreCase = true),
+        isActive = isActive != false && !status.equals("completed", ignoreCase = true),
         dayPart = runCatching { DayPart.valueOf(dayPart.orEmpty()) }.getOrDefault(DayPart.APRES_MIDI),
         createdAt = nowMillis,
         updatedAt = nowMillis,

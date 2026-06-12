@@ -2,8 +2,11 @@ package com.example.taskoday.features.parent
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.taskoday.core.util.DateTimeUtils
 import com.example.taskoday.domain.model.DayPart
+import com.example.taskoday.domain.model.PlanningFormType
 import com.example.taskoday.domain.repository.ParentPlanningRepository
+import com.example.taskoday.domain.repository.PlanningSyncRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.IOException
 import java.net.ConnectException
@@ -23,6 +26,7 @@ class ParentPlanningViewModel
     @Inject
     constructor(
         private val parentPlanningRepository: ParentPlanningRepository,
+        private val planningSyncRepository: PlanningSyncRepository,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(ParentPlanningUiState())
         val uiState: StateFlow<ParentPlanningUiState> = _uiState.asStateFlow()
@@ -44,7 +48,10 @@ class ParentPlanningViewModel
                         )
                     } else {
                         val children = parentPlanningRepository.fetchChildren()
-                        val selected = parentPlanningRepository.getSelectedChildId() ?: children.firstOrNull()?.id
+                        val storedChildId = parentPlanningRepository.getSelectedChildId()
+                        val selected =
+                            storedChildId?.takeIf { id -> children.any { child -> child.id == id } }
+                                ?: children.singleOrNull()?.id
                         selected?.let { parentPlanningRepository.setSelectedChildId(it) }
                         ParentPlanningUiState(
                             isLoading = false,
@@ -84,7 +91,7 @@ class ParentPlanningViewModel
                 _uiState.update { it.copy(errorMessage = "Le titre de la routine est requis.") }
                 return
             }
-            submitAction {
+            submitAction(PlanningFormType.ROUTINE) {
                 parentPlanningRepository.createRoutine(
                     childId = childId,
                     title = title,
@@ -109,7 +116,7 @@ class ParentPlanningViewModel
                 _uiState.update { it.copy(errorMessage = "Le titre de la mission est requis.") }
                 return
             }
-            submitAction {
+            submitAction(PlanningFormType.MISSION) {
                 parentPlanningRepository.createMission(
                     childId = childId,
                     title = title,
@@ -133,7 +140,7 @@ class ParentPlanningViewModel
                 _uiState.update { it.copy(errorMessage = "Le titre de la quête est requis.") }
                 return
             }
-            submitAction {
+            submitAction(PlanningFormType.QUEST) {
                 parentPlanningRepository.createQuest(
                     childId = childId,
                     title = title,
@@ -149,15 +156,25 @@ class ParentPlanningViewModel
             _uiState.update { it.copy(successMessage = null, errorMessage = null) }
         }
 
-        private fun submitAction(action: suspend () -> String) {
+        fun consumeCreationResult() {
+            _uiState.update { it.copy(createdFormType = null) }
+        }
+
+        private fun submitAction(
+            formType: PlanningFormType,
+            action: suspend () -> String,
+        ) {
             _uiState.update { it.copy(isSubmitting = true, successMessage = null, errorMessage = null) }
             viewModelScope.launch {
                 runCatching { action() }
                     .onSuccess { success ->
+                        val syncResult = planningSyncRepository.syncDay(DateTimeUtils.startOfDayMillis())
                         _uiState.update {
                             it.copy(
                                 isSubmitting = false,
                                 successMessage = success,
+                                errorMessage = syncResult.errorMessage,
+                                createdFormType = formType,
                             )
                         }
                     }.onFailure { throwable ->

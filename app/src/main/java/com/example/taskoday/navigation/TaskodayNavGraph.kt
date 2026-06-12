@@ -425,6 +425,7 @@ fun TaskodayApp() {
                 ParentPlanningScreen(
                     viewModel = viewModel,
                     onBack = { navController.popBackStack() },
+                    onCreated = { navController.popBackStack() },
                     initialFormType = initialFormType,
                 )
             }
