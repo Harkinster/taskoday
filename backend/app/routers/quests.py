@@ -143,19 +143,16 @@ def complete_quest(quest_id: int, db: Session = Depends(get_db), current_user: U
             )
         ).scalars().first()
         if not completion:
-            db.add(
-                TaskCompletion(
-                    task_type=TaskType.QUEST,
-                    task_id=quest.id,
-                    child_id=quest.child_id,
-                    completed_by_user_id=current_user.id,
-                )
-            )
-            award = award_task_completion(
-                db,
-                child_id=quest.child_id,
+            completion = TaskCompletion(
                 task_type=TaskType.QUEST,
                 task_id=quest.id,
+                child_id=quest.child_id,
+                completed_by_user_id=current_user.id,
+            )
+            db.add(completion)
+            award = award_task_completion(
+                db,
+                completion=completion,
                 title=quest.title,
             )
 

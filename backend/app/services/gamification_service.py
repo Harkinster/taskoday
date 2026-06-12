@@ -21,7 +21,7 @@ from app.models.gamification import (
     GuardianProgress,
     ItemInventory,
 )
-from app.models.reward import ScaleTransactionType
+from app.models.reward import ScaleTransaction, ScaleTransactionType
 from app.models.task import Mission, Quest, Routine, TaskCompletion, TaskStatus, TaskType
 from app.models.xp import XpHistory
 from app.services.scales_service import create_scale_transaction_if_missing, get_scales_balance
@@ -179,6 +179,14 @@ class TaskReward:
     guaranteed_chest: ChestType | None = None
 
 
+@dataclass(frozen=True)
+class TaskRewardCycle:
+    xp_source_type: str
+    scale_event_key: str
+    chest_points_source_type: str
+    guaranteed_chest_source_type: str
+
+
 TASK_REWARDS = {
     TaskType.ROUTINE: TaskReward(guardian_xp=5, flammeches=2, crystals=1, chest_points=1),
     TaskType.MISSION: TaskReward(guardian_xp=15, flammeches=6, crystals=3, chest_points=3),
@@ -201,6 +209,10 @@ class GamificationNotFoundError(GamificationError):
 
 
 class GamificationInvalidStateError(GamificationError):
+    pass
+
+
+class TaskRewardRollbackError(GamificationError):
     pass
 
 
@@ -248,37 +260,95 @@ def get_or_create_wallet(db: Session, child_id: int) -> ChildWallet:
     return wallet
 
 
+def _completion_cycle_token(completion: TaskCompletion) -> str:
+    # Completion rows are deleted on uncomplete, so the stored timestamp is the durable cycle identity.
+    if completion.completed_at is None:
+        completion.completed_at = datetime.now(timezone.utc)
+    return completion.completed_at.strftime("%Y%m%d%H%M%S%f")
+
+
+def _reward_cycle(completion: TaskCompletion) -> TaskRewardCycle:
+    token = _completion_cycle_token(completion)
+    task_type = completion.task_type.value
+    return TaskRewardCycle(
+        xp_source_type=f"guardian_{task_type}:{token}",
+        scale_event_key=f"{task_type}:{completion.task_id}:completion:{token}",
+        chest_points_source_type=f"chest_points:{token}",
+        guaranteed_chest_source_type=f"{task_type}:{token}",
+    )
+
+
+def _legacy_reward_cycle(completion: TaskCompletion) -> TaskRewardCycle:
+    task_type = completion.task_type.value
+    return TaskRewardCycle(
+        xp_source_type=f"guardian_{task_type}",
+        scale_event_key=f"{task_type}:{completion.task_id}:completion",
+        chest_points_source_type="chest_points",
+        guaranteed_chest_source_type=task_type,
+    )
+
+
+def _cycle_xp_total(db: Session, *, completion: TaskCompletion, cycle: TaskRewardCycle) -> int:
+    return int(
+        db.scalar(
+            select(func.coalesce(func.sum(XpHistory.amount), 0)).where(
+                XpHistory.child_id == completion.child_id,
+                XpHistory.source_type == cycle.xp_source_type,
+                XpHistory.source_id == completion.task_id,
+            )
+        )
+        or 0
+    )
+
+
+def _active_reward_cycle(db: Session, *, completion: TaskCompletion, reward: TaskReward) -> TaskRewardCycle:
+    cycle = _reward_cycle(completion)
+    cycle_xp = _cycle_xp_total(db, completion=completion, cycle=cycle)
+    if cycle_xp == reward.guardian_xp:
+        return cycle
+    if cycle_xp != 0:
+        raise TaskRewardRollbackError("Le cycle de recompense courant est incoherent.")
+
+    legacy_cycle = _legacy_reward_cycle(completion)
+    if _cycle_xp_total(db, completion=completion, cycle=legacy_cycle) == reward.guardian_xp:
+        return legacy_cycle
+
+    raise TaskRewardRollbackError(
+        "Cette completion historique ne peut pas etre annulee automatiquement sans reconciliation."
+    )
+
+
 def award_task_completion(
     db: Session,
     *,
-    child_id: int,
-    task_type: TaskType,
-    task_id: int,
+    completion: TaskCompletion,
     title: str,
 ) -> dict:
+    if completion.completed_at is None:
+        completion.completed_at = datetime.now(timezone.utc)
+    db.add(completion)
+    db.flush()
+
+    child_id = completion.child_id
+    task_type = completion.task_type
+    task_id = completion.task_id
     ensure_catalog_seeded(db)
     progress = get_or_create_progress(db, child_id)
     reward = TASK_REWARDS[task_type]
-    source_type = f"guardian_{task_type.value}"
-    source_id = task_id
-
-    existing_xp = db.scalar(
-        select(XpHistory).where(
-            XpHistory.child_id == child_id,
-            XpHistory.source_type == source_type,
-            XpHistory.source_id == source_id,
-        )
-    )
-    if existing_xp is not None:
+    cycle = _reward_cycle(completion)
+    cycle_xp = _cycle_xp_total(db, completion=completion, cycle=cycle)
+    if cycle_xp == reward.guardian_xp:
         return {"awarded": False, "progress": build_progress_payload(db, child_id)}
+    if cycle_xp != 0:
+        raise GamificationInvalidStateError()
 
     profile, history = add_xp(
         db,
         child_id=child_id,
         amount=reward.guardian_xp,
         reason=f"{task_type.value}: {title}",
-        source_type=source_type,
-        source_id=source_id,
+        source_type=cycle.xp_source_type,
+        source_id=task_id,
     )
 
     create_scale_transaction_if_missing(
@@ -289,7 +359,7 @@ def award_task_completion(
         source_type=task_type.value,
         source_id=task_id,
         transaction_type=ScaleTransactionType.AWARD,
-        event_key=f"{task_type.value}:{task_id}:completion",
+        event_key=cycle.scale_event_key,
     )
 
     wallet = get_or_create_wallet(db, child_id)
@@ -304,7 +374,7 @@ def award_task_completion(
                 db,
                 child_id=child_id,
                 chest_type=ChestType.SIMPLE,
-                source_type="chest_points",
+                source_type=cycle.chest_points_source_type,
                 source_id=task_id,
             )
         )
@@ -315,7 +385,7 @@ def award_task_completion(
                 db,
                 child_id=child_id,
                 chest_type=reward.guaranteed_chest,
-                source_type=task_type.value,
+                source_type=cycle.guaranteed_chest_source_type,
                 source_id=task_id,
             )
         )
@@ -330,6 +400,110 @@ def award_task_completion(
         "crystals_awarded": reward.crystals,
         "chest_points_awarded": reward.chest_points,
         "granted_chests": [chest_payload(chest) for chest in granted_chests],
+        "progress": build_progress_payload(db, child_id),
+    }
+
+
+def revoke_task_completion(db: Session, *, completion: TaskCompletion, title: str) -> dict:
+    child_id = completion.child_id
+    task_type = completion.task_type
+    task_id = completion.task_id
+    reward = TASK_REWARDS[task_type]
+    cycle = _active_reward_cycle(db, completion=completion, reward=reward)
+
+    award_transaction = db.scalar(
+        select(ScaleTransaction).where(
+            ScaleTransaction.child_id == child_id,
+            ScaleTransaction.source_type == task_type.value,
+            ScaleTransaction.source_id == task_id,
+            ScaleTransaction.transaction_type == ScaleTransactionType.AWARD,
+            ScaleTransaction.event_key == cycle.scale_event_key,
+        )
+    )
+    revoke_transaction = db.scalar(
+        select(ScaleTransaction).where(
+            ScaleTransaction.child_id == child_id,
+            ScaleTransaction.source_type == task_type.value,
+            ScaleTransaction.source_id == task_id,
+            ScaleTransaction.transaction_type == ScaleTransactionType.REVOKE,
+            ScaleTransaction.event_key == cycle.scale_event_key,
+        )
+    )
+    if award_transaction is None or award_transaction.amount != reward.flammeches or revoke_transaction is not None:
+        raise TaskRewardRollbackError("Le ledger Flammeches de cette completion ne permet pas un rollback sur.")
+
+    profile = db.scalar(select(ChildProfile).where(ChildProfile.user_id == child_id))
+    progress = get_or_create_progress(db, child_id)
+    wallet = get_or_create_wallet(db, child_id)
+    if profile is None or profile.xp < reward.guardian_xp or progress.guardian_xp < reward.guardian_xp:
+        raise TaskRewardRollbackError("Les XP attribues par cette completion ne sont plus disponibles.")
+    if wallet.flammeches_balance < reward.flammeches:
+        raise TaskRewardRollbackError("Les Flammeches attribuees par cette completion ont deja ete depensees.")
+    if wallet.crystals_balance < reward.crystals:
+        raise TaskRewardRollbackError("Les Cristaux attribues par cette completion ont deja ete depenses.")
+
+    generated_chests = list(
+        db.scalars(
+            select(ChestInventory).where(
+                ChestInventory.child_id == child_id,
+                ChestInventory.source_id == task_id,
+                ChestInventory.source_type.in_(
+                    [cycle.chest_points_source_type, cycle.guaranteed_chest_source_type]
+                ),
+            )
+        ).all()
+    )
+    if any(chest.status == ChestStatus.OPENED for chest in generated_chests):
+        raise TaskRewardRollbackError("Un coffre genere a deja ete ouvert; la completion reste active.")
+    # Legacy chest sources do not include the task type, so deleting them automatically could remove another task's chest.
+    if cycle == _legacy_reward_cycle(completion) and generated_chests:
+        raise TaskRewardRollbackError(
+            "Un coffre historique ne peut pas etre rattache sans ambiguite a cette completion."
+        )
+
+    chest_points_chests = sum(
+        chest.source_type == cycle.chest_points_source_type for chest in generated_chests
+    )
+    restored_chest_points = (
+        progress.chest_points - reward.chest_points + chest_points_chests * CHEST_POINTS_REQUIRED
+    )
+    if not 0 <= restored_chest_points < CHEST_POINTS_REQUIRED:
+        raise TaskRewardRollbackError("La progression coffre ne peut pas etre restauree sans recalcul global.")
+
+    profile, history = add_xp(
+        db,
+        child_id=child_id,
+        amount=-reward.guardian_xp,
+        reason=f"Annulation {task_type.value}: {title}",
+        source_type=cycle.xp_source_type,
+        source_id=task_id,
+    )
+    create_scale_transaction_if_missing(
+        db,
+        child_id=child_id,
+        amount=-reward.flammeches,
+        reason=f"Annulation {task_type.value}: {title}",
+        source_type=task_type.value,
+        source_id=task_id,
+        transaction_type=ScaleTransactionType.REVOKE,
+        event_key=cycle.scale_event_key,
+    )
+    wallet.crystals_balance -= reward.crystals
+    progress.guardian_xp = profile.xp
+    progress.chest_points = restored_chest_points
+    for chest in generated_chests:
+        db.delete(chest)
+
+    db.add(wallet)
+    db.add(progress)
+    db.flush()
+    return {
+        "revoked": True,
+        "guardian_xp_revoked": abs(history.amount),
+        "flammeches_revoked": reward.flammeches,
+        "crystals_revoked": reward.crystals,
+        "chest_points_revoked": reward.chest_points,
+        "removed_chests": len(generated_chests),
         "progress": build_progress_payload(db, child_id),
     }
 
@@ -1026,7 +1200,7 @@ def complete_task_by_id(
         db.add(completion)
         if task_type in {TaskType.MISSION, TaskType.QUEST}:
             item.status = TaskStatus.COMPLETED
-        award = award_task_completion(db, child_id=child_id, task_type=task_type, task_id=task_id, title=item.title)
+        award = award_task_completion(db, completion=completion, title=item.title)
     else:
         award = {"awarded": False, "progress": build_progress_payload(db, child_id)}
 

@@ -149,6 +149,56 @@ def test_task_completion_adds_guardian_xp_flammeches_and_chest_progress(client) 
     assert flammeches.json()["data"]["balance"] == 22
 
 
+def test_routine_uncomplete_rolls_back_unopened_chest_and_rejects_opened_chest(client) -> None:
+    parent_token, child_token, child_id = _setup_family(client, "routine-rollback")
+    headers = {"Authorization": f"Bearer {child_token}"}
+
+    _create_and_complete_mission(client, parent_token, child_token, child_id)
+    _create_and_complete_routine(client, parent_token, child_token, child_id, "Premier point")
+    routine_id = _create_and_complete_routine(client, parent_token, child_token, child_id, "Coffre genere")
+    uncomplete_path = f"/api/v1/routines/{routine_id}/uncomplete"
+    complete_path = f"/api/v1/routines/{routine_id}/complete"
+
+    progress = client.get(f"/api/v1/children/{child_id}/progress", headers=headers).json()["data"]
+    assert progress["guardian"]["xp"] == 25
+    assert progress["wallet"] == {"flammeches": 10, "crystals": 5}
+    assert progress["chest_progress"]["points"] == 0
+    assert progress["chest_progress"]["unopened_chests"] == 1
+
+    assert client.post(uncomplete_path, headers=headers).status_code == 200
+    rolled_back = client.get(f"/api/v1/children/{child_id}/progress", headers=headers).json()["data"]
+    assert rolled_back["guardian"]["xp"] == 20
+    assert rolled_back["wallet"] == {"flammeches": 8, "crystals": 4}
+    assert rolled_back["chest_progress"]["points"] == 4
+    assert rolled_back["chest_progress"]["unopened_chests"] == 0
+
+    assert client.post(complete_path, headers=headers).status_code == 200
+    recompleted = client.get(f"/api/v1/children/{child_id}/progress", headers=headers).json()["data"]
+    assert recompleted["guardian"]["xp"] == 25
+    assert recompleted["wallet"] == {"flammeches": 10, "crystals": 5}
+    assert recompleted["chest_progress"]["points"] == 0
+    assert recompleted["chest_progress"]["unopened_chests"] == 1
+
+    chests = client.get(f"/api/v1/children/{child_id}/chests", headers=headers).json()["data"]["chests"]
+    generated = next(chest for chest in chests if chest["status"] == "unopened")
+    opened = client.post(f"/api/v1/children/{child_id}/chests/{generated['id']}/open", headers=headers)
+    assert opened.status_code == 200
+
+    refused = client.post(uncomplete_path, headers=headers)
+    assert refused.status_code == 409
+    assert "coffre genere a deja ete ouvert" in refused.json()["error"]["message"].lower()
+
+    after_refusal = client.get(f"/api/v1/children/{child_id}/progress", headers=headers).json()["data"]
+    assert after_refusal["guardian"]["xp"] == 25
+    assert after_refusal["wallet"] == {"flammeches": 10, "crystals": 5}
+    assert after_refusal["chest_progress"]["points"] == 0
+    assert after_refusal["chest_progress"]["opened_chests"] == 1
+
+    routines = client.get(f"/api/v1/children/{child_id}/routines", headers=headers)
+    routine = next(item for item in routines.json()["data"] if item["id"] == routine_id)
+    assert routine["completed"] is True
+
+
 def test_egg_evolves_one_state_at_a_time_before_hatching_and_dragon_evolution(client) -> None:
     parent_token, child_token, child_id = _setup_family(client, "loot")
     for _ in range(4):

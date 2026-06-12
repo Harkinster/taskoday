@@ -7,15 +7,6 @@ from sqlalchemy.orm import Session
 
 from app.models.gamification import ChildWallet
 from app.models.reward import ScaleTransaction, ScaleTransactionType
-from app.models.task import TaskType
-
-
-def scales_for_task_type(task_type: TaskType) -> int:
-    if task_type == TaskType.ROUTINE:
-        return 2
-    if task_type == TaskType.MISSION:
-        return 6
-    return 12
 
 
 def get_scales_balance(db: Session, child_id: int) -> int:
@@ -102,45 +93,3 @@ def create_scale_transaction_if_missing(
     wallet.flammeches_balance += amount
     db.flush()
     return transaction
-
-
-def award_scales_for_task_if_missing(
-    db: Session,
-    *,
-    child_id: int,
-    task_type: TaskType,
-    task_id: int,
-    title: str,
-) -> ScaleTransaction | None:
-    amount = scales_for_task_type(task_type)
-    return create_scale_transaction_if_missing(
-        db,
-        child_id=child_id,
-        amount=amount,
-        reason=f"{task_type.value}: {title}",
-        source_type=task_type.value,
-        source_id=task_id,
-        transaction_type=ScaleTransactionType.AWARD,
-        event_key=f"{task_type.value}:{task_id}:completion",
-    )
-
-
-def revoke_scales_for_task_if_missing(
-    db: Session,
-    *,
-    child_id: int,
-    task_type: TaskType,
-    task_id: int,
-    title: str,
-) -> ScaleTransaction | None:
-    amount = -abs(scales_for_task_type(task_type))
-    return create_scale_transaction_if_missing(
-        db,
-        child_id=child_id,
-        amount=amount,
-        reason=f"Annulation {task_type.value}: {title}",
-        source_type=task_type.value,
-        source_id=task_id,
-        transaction_type=ScaleTransactionType.REVOKE,
-        event_key=f"{task_type.value}:{task_id}:completion",
-    )

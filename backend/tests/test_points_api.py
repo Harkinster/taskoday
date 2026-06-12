@@ -41,6 +41,15 @@ def _attach_child(client, parent_token: str, child_token: str) -> int:
     return response.json()["data"]["child_id"]
 
 
+def _progress(client, child_token: str, child_id: int) -> dict:
+    response = client.get(
+        f"{API}/children/{child_id}/progress",
+        headers={"Authorization": f"Bearer {child_token}"},
+    )
+    assert response.status_code == 200
+    return response.json()["data"]
+
+
 def test_currency_award_and_routine_revoke_rules(client) -> None:
     parent_token = _register_parent(client, "points.parent@example.com", "Famille Points")
     child_token = _register_child(client, "points.child@example.com", "Yuna")
@@ -119,6 +128,56 @@ def test_currency_award_and_routine_revoke_rules(client) -> None:
         headers={"Authorization": f"Bearer {child_token}"},
     )
     assert balance_2.json()["data"]["balance"] == 18
+
+
+def test_routine_completion_cycle_is_symmetric_and_idempotent(client) -> None:
+    parent_token = _register_parent(client, "points.cycle.parent@example.com", "Famille Cycle")
+    child_token = _register_child(client, "points.cycle.child@example.com", "Cycle")
+    child_id = _attach_child(client, parent_token, child_token)
+    headers = {"Authorization": f"Bearer {child_token}"}
+
+    routine = client.post(
+        f"{API}/children/{child_id}/routines",
+        headers={"Authorization": f"Bearer {parent_token}"},
+        json={"title": "Routine cycle", "repeat_type": "daily"},
+    )
+    assert routine.status_code == 200
+    routine_id = routine.json()["data"]["id"]
+    complete_path = f"{API}/routines/{routine_id}/complete"
+    uncomplete_path = f"{API}/routines/{routine_id}/uncomplete"
+
+    assert client.post(complete_path, headers=headers).status_code == 200
+    assert client.post(complete_path, headers=headers).status_code == 200
+    after_complete = _progress(client, child_token, child_id)
+    assert after_complete["guardian"]["xp"] == 5
+    assert after_complete["wallet"] == {"flammeches": 2, "crystals": 1}
+    assert after_complete["chest_progress"]["points"] == 1
+
+    assert client.post(uncomplete_path, headers=headers).status_code == 200
+    assert client.post(uncomplete_path, headers=headers).status_code == 200
+    after_uncomplete = _progress(client, child_token, child_id)
+    assert after_uncomplete["guardian"]["xp"] == 0
+    assert after_uncomplete["wallet"] == {"flammeches": 0, "crystals": 0}
+    assert after_uncomplete["chest_progress"]["points"] == 0
+
+    assert client.post(complete_path, headers=headers).status_code == 200
+    assert client.post(complete_path, headers=headers).status_code == 200
+    after_recomplete = _progress(client, child_token, child_id)
+    assert after_recomplete["guardian"]["xp"] == 5
+    assert after_recomplete["wallet"] == {"flammeches": 2, "crystals": 1}
+    assert after_recomplete["chest_progress"]["points"] == 1
+
+    routines = client.get(f"{API}/children/{child_id}/routines", headers=headers)
+    assert routines.status_code == 200
+    assert routines.json()["data"][0]["completed"] is True
+
+    history = client.get(f"{API}/children/{child_id}/flammeches/history", headers=headers)
+    assert history.status_code == 200
+    assert sorted(transaction["amount"] for transaction in history.json()["data"]["transactions"]) == [-2, 2, 2]
+
+    xp_history = client.get(f"{API}/children/{child_id}/xp-history", headers=headers)
+    assert xp_history.status_code == 200
+    assert sorted(event["amount"] for event in xp_history.json()["data"]) == [-5, 5, 5]
 
 
 def test_currency_access_control(client) -> None:

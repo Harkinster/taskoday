@@ -7,8 +7,7 @@ from app.dependencies import ensure_child_access, ensure_parent_child_access, ge
 from app.models.task import RepeatType, Routine, TaskCompletion, TaskType
 from app.models.user import User
 from app.schemas.task import RoutineCreateRequest, RoutineUpdateRequest
-from app.services.gamification_service import award_task_completion
-from app.services.scales_service import revoke_scales_for_task_if_missing
+from app.services.gamification_service import TaskRewardRollbackError, award_task_completion, revoke_task_completion
 
 router = APIRouter(tags=["routines"])
 
@@ -173,9 +172,7 @@ def complete_routine(routine_id: int, db: Session = Depends(get_db), current_use
         db.add(completion)
         award = award_task_completion(
             db,
-            child_id=routine.child_id,
-            task_type=TaskType.ROUTINE,
-            task_id=routine.id,
+            completion=completion,
             title=routine.title,
         )
         db.commit()
@@ -202,14 +199,12 @@ def uncomplete_routine(routine_id: int, db: Session = Depends(get_db), current_u
     ).scalars().first()
 
     if completion:
+        try:
+            revoke_task_completion(db, completion=completion, title=routine.title)
+        except TaskRewardRollbackError as exc:
+            db.rollback()
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
         db.delete(completion)
-        revoke_scales_for_task_if_missing(
-            db,
-            child_id=routine.child_id,
-            task_type=TaskType.ROUTINE,
-            task_id=routine.id,
-            title=routine.title,
-        )
         db.commit()
 
     return success_response({"routine_id": routine.id, "completed": False}, message="Routine devalidee.")
