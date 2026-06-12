@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.models.child import ChildProfile
@@ -133,7 +133,15 @@ CHEST_CATALOG = {
         "crystal_cost": 8,
         "description": "Un coffre rare pouvant reveler un oeuf de braise.",
         "chest_type": ChestType.RARE,
-        "possible_rewards": ["oeuf_braise", "fragment_oeuf", "rune_ancienne"],
+        "possible_rewards": [
+            "pomme_dragon",
+            "petit_cristal",
+            "pierre_chaude",
+            "rune_ancienne",
+            "fragment_oeuf",
+            "oeuf_braise",
+            "essence_braise",
+        ],
     },
     "epic": {
         "name": "Coffre epique",
@@ -141,7 +149,15 @@ CHEST_CATALOG = {
         "crystal_cost": 15,
         "description": "Un coffre epique pouvant reveler un oeuf lunaire.",
         "chest_type": ChestType.EPIC,
-        "possible_rewards": ["oeuf_lunaire", "essence_lunaire", "rune_ancienne", "artefact_lunaire"],
+        "possible_rewards": [
+            "pomme_dragon",
+            "petit_cristal",
+            "rune_ancienne",
+            "fragment_oeuf",
+            "artefact_lunaire",
+            "oeuf_lunaire",
+            "essence_lunaire",
+        ],
     },
 }
 
@@ -356,10 +372,19 @@ def open_catalog_chest(db: Session, *, child_id: int, catalog_id: str) -> dict:
 
     wallet = get_or_create_wallet(db, child_id)
     crystal_cost = catalog_entry["crystal_cost"]
-    if wallet.crystals_balance < crystal_cost:
+    debit = db.execute(
+        update(ChildWallet)
+        .where(
+            ChildWallet.child_id == child_id,
+            ChildWallet.crystals_balance >= crystal_cost,
+        )
+        .values(crystals_balance=ChildWallet.crystals_balance - crystal_cost)
+        .execution_options(synchronize_session=False)
+    )
+    db.refresh(wallet)
+    if debit.rowcount != 1:
         raise InsufficientCrystalsError(balance=wallet.crystals_balance, required=crystal_cost)
 
-    wallet.crystals_balance -= crystal_cost
     chest = create_chest(
         db,
         child_id=child_id,

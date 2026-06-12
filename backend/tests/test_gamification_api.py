@@ -1,3 +1,10 @@
+from concurrent.futures import ThreadPoolExecutor
+
+import pytest
+
+import app.services.gamification_service as gamification_service
+
+
 def _register_parent(client, email: str, family_name: str, password: str = "supersecret123") -> str:
     response = client.post(
         "/api/v1/auth/register-parent",
@@ -267,6 +274,28 @@ def test_chest_catalog_uses_crystals_and_rejects_insufficient_balance(client) ->
     assert [chest["id"] for chest in payload["chests"]] == ["common", "rare", "epic"]
     assert all(chest["crystal_cost"] > 0 for chest in payload["chests"])
     assert all(chest["possible_rewards"] for chest in payload["chests"])
+    possible_rewards = {chest["id"]: set(chest["possible_rewards"]) for chest in payload["chests"]}
+    assert possible_rewards == {
+        "common": {"pomme_dragon", "petit_cristal", "plume_douce"},
+        "rare": {
+            "pomme_dragon",
+            "petit_cristal",
+            "pierre_chaude",
+            "rune_ancienne",
+            "fragment_oeuf",
+            "oeuf_braise",
+            "essence_braise",
+        },
+        "epic": {
+            "pomme_dragon",
+            "petit_cristal",
+            "rune_ancienne",
+            "fragment_oeuf",
+            "artefact_lunaire",
+            "oeuf_lunaire",
+            "essence_lunaire",
+        },
+    }
 
     opened = client.post(
         f"/api/v1/children/{child_id}/chests/catalog/rare/open",
@@ -274,6 +303,68 @@ def test_chest_catalog_uses_crystals_and_rejects_insufficient_balance(client) ->
     )
     assert opened.status_code == 400
     assert "Cristaux insuffisants" in opened.json()["error"]["message"]
+
+
+def test_paid_chest_rolls_back_debit_when_opening_fails(client, monkeypatch) -> None:
+    parent_token, child_token, child_id = _setup_family(client, "chest-rollback")
+    _create_and_complete_mission(client, parent_token, child_token, child_id)
+
+    def fail_opening(*args, **kwargs):
+        raise RuntimeError("simulated opening failure")
+
+    monkeypatch.setattr(gamification_service, "open_chest", fail_opening)
+    with pytest.raises(RuntimeError, match="simulated opening failure"):
+        client.post(
+            f"/api/v1/children/{child_id}/chests/catalog/common/open",
+            headers={"Authorization": f"Bearer {child_token}"},
+        )
+
+    crystals = client.get(
+        f"/api/v1/children/{child_id}/crystals",
+        headers={"Authorization": f"Bearer {child_token}"},
+    )
+    inventory = client.get(
+        f"/api/v1/children/{child_id}/inventory",
+        headers={"Authorization": f"Bearer {child_token}"},
+    )
+    assert crystals.json()["data"]["balance"] == 3
+    assert inventory.json()["data"]["items"] == []
+    assert inventory.json()["data"]["chests"] == []
+
+
+def test_simultaneous_paid_chest_openings_are_atomic(client) -> None:
+    parent_token, child_token, child_id = _setup_family(client, "chest-concurrent")
+    _create_and_complete_mission(client, parent_token, child_token, child_id)
+    headers = {"Authorization": f"Bearer {child_token}"}
+    path = f"/api/v1/children/{child_id}/chests/catalog/common/open"
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        responses = list(executor.map(lambda _: client.post(path, headers=headers), range(2)))
+
+    assert sorted(response.status_code for response in responses) == [200, 400]
+    crystals = client.get(f"/api/v1/children/{child_id}/crystals", headers=headers)
+    inventory = client.get(f"/api/v1/children/{child_id}/inventory", headers=headers)
+    progress = client.get(f"/api/v1/children/{child_id}/progress", headers=headers)
+    assert crystals.json()["data"]["balance"] == 0
+    assert _item_quantity(inventory.json()["data"]["items"], "pomme_dragon") == 2
+    assert _item_quantity(inventory.json()["data"]["items"], "petit_cristal") == 1
+    assert _item_quantity(inventory.json()["data"]["items"], "plume_douce") == 1
+    assert progress.json()["data"]["chest_progress"]["opened_chests"] == 1
+
+    _create_and_complete_mission(client, parent_token, child_token, child_id)
+    _create_and_complete_mission(client, parent_token, child_token, child_id)
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        responses = list(executor.map(lambda _: client.post(path, headers=headers), range(2)))
+
+    assert [response.status_code for response in responses] == [200, 200]
+    crystals = client.get(f"/api/v1/children/{child_id}/crystals", headers=headers)
+    inventory = client.get(f"/api/v1/children/{child_id}/inventory", headers=headers)
+    progress = client.get(f"/api/v1/children/{child_id}/progress", headers=headers)
+    assert crystals.json()["data"]["balance"] == 0
+    assert _item_quantity(inventory.json()["data"]["items"], "pomme_dragon") == 6
+    assert _item_quantity(inventory.json()["data"]["items"], "petit_cristal") == 3
+    assert _item_quantity(inventory.json()["data"]["items"], "plume_douce") == 3
+    assert progress.json()["data"]["chest_progress"]["opened_chests"] == 3
 
 
 def test_paid_chest_updates_inventory_compensates_duplicate_and_builds_bestiary(client) -> None:
