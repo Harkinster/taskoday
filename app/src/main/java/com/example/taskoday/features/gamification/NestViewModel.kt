@@ -82,8 +82,18 @@ class NestViewModel
         }
 
         fun evolveEgg(eggId: Long) {
+            val currentState = _uiState.value
+            if (currentState.isSubmitting) return
+
+            val egg = currentState.eggs?.eggs.orEmpty().firstOrNull { it.id == eggId }
+            val actionState = eggEvolutionActionState(egg, currentState.inventory)
+            if (!actionState.enabled) {
+                _uiState.update { it.copy(userMessage = actionState.requirementsLabel) }
+                return
+            }
+
+            _uiState.update { it.copy(isSubmitting = true) }
             viewModelScope.launch {
-                _uiState.update { it.copy(isSubmitting = true) }
                 nestRepository
                     .evolveEgg(eggId)
                     .onSuccess { result ->

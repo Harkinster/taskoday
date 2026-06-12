@@ -43,6 +43,7 @@ import com.example.taskoday.core.ui.component.fantasy.NestAssets
 import com.example.taskoday.core.ui.component.fantasy.NestStatCard
 import com.example.taskoday.core.ui.component.fantasy.ScrollCard
 import com.example.taskoday.core.ui.component.fantasy.WishCard
+import com.example.taskoday.core.ui.format.toTaskodayDisplayLabel
 import com.example.taskoday.core.ui.component.fantasy.ChestCard
 import com.example.taskoday.core.ui.theme.DangerGlow
 import com.example.taskoday.core.ui.theme.EmberOrange
@@ -242,9 +243,9 @@ fun ShopScreen(
                             CaveChest(
                                 id = chest.id,
                                 rarity = chest.rarity,
-                                title = chest.name,
+                                title = "Coffre ${chest.rarity.toTaskodayDisplayLabel().lowercase()}",
                                 cost = chest.crystalCost,
-                                hint = chest.possibleRewards.joinToString(", "),
+                                hint = chest.possibleRewards.joinToString(", ") { reward -> reward.toTaskodayDisplayLabel() },
                             )
                         } ?: caveChests
                     items(displayedChests, key = { chest -> chest.id }) { chest ->

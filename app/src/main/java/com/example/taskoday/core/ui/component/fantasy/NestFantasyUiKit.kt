@@ -476,6 +476,7 @@ fun EggProgressCard(
     locked: Boolean = false,
     materialLabel: String? = null,
     actionLabel: String? = null,
+    actionEnabled: Boolean = true,
     onAction: (() -> Unit)? = null,
 ) {
     FantasyCard(modifier = modifier.fillMaxWidth(), tone = if (locked) FantasyTone.Night else FantasyTone.Gold) {
@@ -509,7 +510,7 @@ fun EggProgressCard(
                 onClick = onAction,
                 style = FantasyButtonStyle.Quiet,
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !locked,
+                enabled = !locked && actionEnabled,
             )
         }
     }

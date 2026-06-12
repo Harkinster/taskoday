@@ -234,6 +234,16 @@ object NestAssets {
 
     private val inventoryItemAssets =
         mapOf(
+            "pomme_dragon" to ItemPotion,
+            "petit_cristal" to InterfaceCristal,
+            "plume_douce" to ItemFeatherQuill,
+            "pierre_chaude" to ItemWoodLogs,
+            "rune_ancienne" to ItemStarCharm,
+            "fragment_oeuf" to InterfaceEggLocked,
+            "oeuf_braise" to EggPyronSleeping,
+            "essence_braise" to InterfaceFlammeche,
+            "oeuf_lunaire" to EggLunarysSleeping,
+            "essence_lunaire" to ItemStarCharm,
             "feather_quill" to ItemFeatherQuill,
             "gold_coin" to ItemGoldCoin,
             "lantern" to ItemLantern,
@@ -244,6 +254,19 @@ object NestAssets {
             "sealed_letter" to ItemSealedLetter,
             "star_charm" to ItemStarCharm,
             "wood_logs" to ItemWoodLogs,
+        )
+
+    private val inventoryCategoryAssets =
+        mapOf(
+            "material" to ItemWoodLogs,
+            "crystal" to InterfaceCristal,
+            "feather" to ItemFeatherQuill,
+            "rune" to ItemStarCharm,
+            "artifact" to ItemStarCharm,
+            "fragment" to InterfaceEggLocked,
+            "egg" to InterfaceEggLocked,
+            "consumable" to ItemPotion,
+            "essence" to InterfaceFlammeche,
         )
 
     // Remplacer ces fallbacks par les assets reels `asset_artifact_{dragon}_legendary` quand disponibles.
@@ -273,8 +296,13 @@ object NestAssets {
     fun inventoryItemAsset(type: String): Int =
         inventoryItemAssets[type.normalizeAssetKey()]?.resId ?: InterfaceCristal.resId
 
-    fun itemAsset(itemKey: String): Int =
-        inventoryItemAsset(itemKey)
+    fun itemAsset(
+        itemKey: String,
+        category: String = "",
+    ): Int =
+        inventoryItemAssets[itemKey.normalizeAssetKey()]?.resId
+            ?: inventoryCategoryAssets[category.normalizeAssetKey()]?.resId
+            ?: InterfaceInventoryEmpty.resId
 
     fun artifactAsset(dragonKey: String): Int =
         legendaryArtifactAssets[dragonKey.normalizeAssetKey()]?.resId ?: ItemStarCharm.resId
