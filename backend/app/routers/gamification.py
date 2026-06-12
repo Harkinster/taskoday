@@ -13,6 +13,7 @@ from app.schemas.gamification import (
     ChestCatalogResponse,
     CrystalBalanceResponse,
     EggEvolutionResponse,
+    EggsResponse,
     InventoryResponse,
     OpenCatalogChestResponse,
 )
@@ -142,7 +143,7 @@ def get_child_crystals(child_id: int, db: Session = Depends(get_db), current_use
     return success_response({"child_id": child_id, "balance": wallet.crystals_balance, "currency": "crystals"})
 
 
-@router.get("/children/{child_id}/eggs")
+@router.get("/children/{child_id}/eggs", response_model=SuccessResponse[EggsResponse])
 def get_child_eggs(child_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     ensure_child_access(db, current_user, child_id)
     return success_response(build_eggs_payload(db, child_id))

@@ -188,6 +188,19 @@ def test_egg_evolves_one_state_at_a_time_before_hatching_and_dragon_evolution(cl
         assert payload["egg"]["next_state"] == expected_next_state
         assert payload["hatched"] is False
         assert payload["dragon"] is None
+        if expected_state == "hatching":
+            assert payload["egg"]["requirements"] == {
+                "pomme_dragon": 3,
+                "petit_cristal": 2,
+                "pierre_chaude": 1,
+            }
+            assert {resource["item_key"] for resource in payload["egg"]["required_resources"]} == {
+                "pomme_dragon",
+                "petit_cristal",
+                "pierre_chaude",
+            }
+        else:
+            assert payload["egg"]["requirements"] == {"fragment_oeuf": 1}
 
     hatched = client.post(
         f"/api/v1/children/{child_id}/eggs/{egg_id}/evolve",
@@ -197,6 +210,9 @@ def test_egg_evolves_one_state_at_a_time_before_hatching_and_dragon_evolution(cl
     assert hatched.json()["data"]["hatched"] is True
     assert hatched.json()["data"]["dragon"]["dragon_key"] == "dragon_braise"
     assert hatched.json()["data"]["dragon"]["stage"] == "baby"
+    assert hatched.json()["data"]["egg"]["requirements"] == {}
+    assert hatched.json()["data"]["egg"]["required_resources"] == []
+    assert hatched.json()["data"]["egg"]["can_evolve"] is False
 
     already_hatched = client.post(
         f"/api/v1/children/{child_id}/eggs/{egg_id}/evolve",
@@ -216,6 +232,64 @@ def test_egg_evolves_one_state_at_a_time_before_hatching_and_dragon_evolution(cl
 
     remaining = evolved.json()["data"]["inventory"]["items"]
     assert _item_quantity(remaining, "fragment_oeuf") == 0
+
+
+def test_egg_contract_exposes_next_action_requirements_and_real_progress(client) -> None:
+    parent_token, child_token, child_id = _setup_family(client, "egg-contract")
+    _create_and_complete_quest(client, parent_token, child_token, child_id)
+    opened = _open_unopened_rare_chests(client, child_token, child_id)
+    assert len(opened) == 1
+
+    sleeping_egg = client.get(
+        f"/api/v1/children/{child_id}/eggs",
+        headers={"Authorization": f"Bearer {child_token}"},
+    ).json()["data"]["eggs"][0]
+    assert sleeping_egg["state"] == sleeping_egg["current_state"] == "sleeping"
+    assert sleeping_egg["progress_percent"] == 0
+    assert sleeping_egg["next_state"] == "warm"
+    assert sleeping_egg["requirements"] == {"fragment_oeuf": 1}
+    assert sleeping_egg["required_resources"] == [
+        {
+            "item_key": "fragment_oeuf",
+            "title": "Fragment d'oeuf",
+            "owned_quantity": 1,
+            "required_quantity": 1,
+            "is_satisfied": True,
+        }
+    ]
+    assert sleeping_egg["can_evolve"] is True
+
+    evolved = client.post(
+        f"/api/v1/children/{child_id}/eggs/{sleeping_egg['id']}/evolve",
+        headers={"Authorization": f"Bearer {child_token}"},
+    )
+    assert evolved.status_code == 200
+    assert evolved.json()["data"]["egg"]["state"] == "warm"
+
+    warm_egg = client.get(
+        f"/api/v1/children/{child_id}/eggs",
+        headers={"Authorization": f"Bearer {child_token}"},
+    ).json()["data"]["eggs"][0]
+    assert warm_egg["state"] == warm_egg["current_state"] == "warm"
+    assert warm_egg["progress_percent"] == 25
+    assert warm_egg["next_state"] == "glowing"
+    assert warm_egg["requirements"] == {"fragment_oeuf": 1}
+    assert warm_egg["required_resources"][0]["owned_quantity"] == 0
+    assert warm_egg["required_resources"][0]["required_quantity"] == 1
+    assert warm_egg["required_resources"][0]["is_satisfied"] is False
+    assert warm_egg["can_evolve"] is False
+
+    bestiary = client.get(
+        f"/api/v1/children/{child_id}/bestiary",
+        headers={"Authorization": f"Bearer {child_token}"},
+    ).json()["data"]
+    braise = next(family for family in bestiary["families"] if family["family_id"] == "braise")
+    assert braise["progress_percent"] == 25
+    assert braise["egg_progress_percent"] == 25
+    assert braise["next_egg_state"] == "glowing"
+    assert braise["required_resources"] == warm_egg["required_resources"]
+    assert braise["can_evolve"] is False
+    assert braise["egg"] == warm_egg
 
 
 def test_wish_alias_approval_spends_flammeches_and_creates_scroll(client) -> None:

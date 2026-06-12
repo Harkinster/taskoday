@@ -49,6 +49,14 @@ class InventoryResponse(BaseModel):
     chests: list[ChestResponse]
 
 
+class RequiredResourceResponse(BaseModel):
+    item_key: str
+    title: str
+    owned_quantity: int
+    required_quantity: int
+    is_satisfied: bool
+
+
 class EggResponse(BaseModel):
     id: int
     child_id: int
@@ -56,12 +64,22 @@ class EggResponse(BaseModel):
     title: str
     status: str
     state: str
+    current_state: str
+    current_state_label: str
     progress_percent: int
     next_state: str | None
+    next_state_label: str | None
+    required_resources: list[RequiredResourceResponse]
+    can_evolve: bool
     asset_key: str
     obtained_at: str | None
     hatched_at: str | None
     requirements: dict[str, int]
+
+
+class EggsResponse(BaseModel):
+    child_id: int
+    eggs: list[EggResponse]
 
 
 class DragonResponse(BaseModel):
@@ -142,6 +160,11 @@ class BestiaryFamilyResponse(BaseModel):
     active_companion: bool
     legendary_unlocked: bool
     progress_percent: int
+    egg_progress_percent: int | None
+    next_egg_state: str | None
+    required_resources: list[RequiredResourceResponse]
+    can_evolve: bool
+    egg: EggResponse | None
     egg_asset_key: str
     dragon_asset_key: str
     egg_states: list[StateUnlockResponse]

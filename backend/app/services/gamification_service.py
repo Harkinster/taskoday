@@ -73,6 +73,14 @@ DRAGON_CATALOG = {family["dragon_key"]: f"Dragon {family['name'].lower()}" for f
 EGG_STATES = ("sleeping", "warm", "glowing", "cracked", "hatching")
 DRAGON_STAGES = ("baby", "young", "medium", "large", "legendary")
 
+EGG_STATE_LABELS = {
+    "sleeping": "Endormi",
+    "warm": "Tiède",
+    "glowing": "Lumineux",
+    "cracked": "Fissuré",
+    "hatching": "Prêt à éclore",
+}
+
 EGG_HATCH_REQUIREMENTS = {
     "oeuf_braise": {
         "pomme_dragon": 3,
@@ -447,7 +455,7 @@ def open_chest(db: Session, *, child_id: int, chest_id: int) -> dict:
     return {
         "chest": chest_payload(chest),
         "loot": loot_gains,
-        "granted_egg": child_egg_payload(granted_egg) if granted_egg else None,
+        "granted_egg": child_egg_payload(db, granted_egg) if granted_egg else None,
         "duplicate_compensation": duplicate_compensation,
         "inventory_after": build_inventory_payload(db, child_id),
         "progress": build_progress_payload(db, child_id),
@@ -573,7 +581,7 @@ def evolve_egg(db: Session, *, child_id: int, egg_id: int) -> dict:
     db.add(child_egg)
     db.flush()
     return {
-        "egg": child_egg_payload(child_egg),
+        "egg": child_egg_payload(db, child_egg),
         "hatched": False,
         "dragon": None,
         "inventory": build_inventory_payload(db, child_id),
@@ -601,7 +609,7 @@ def hatch_egg(db: Session, *, child_id: int, egg_id: int) -> dict:
     db.add(child_egg)
     db.flush()
     return {
-        "egg": child_egg_payload(child_egg),
+        "egg": child_egg_payload(db, child_egg),
         "hatched": True,
         "dragon": child_dragon_payload(dragon),
         "inventory": build_inventory_payload(db, child_id),
@@ -748,7 +756,7 @@ def build_eggs_payload(db: Session, child_id: int) -> dict:
     eggs = list(db.scalars(select(ChildEgg).where(ChildEgg.child_id == child_id).order_by(ChildEgg.id.asc())).all())
     return {
         "child_id": child_id,
-        "eggs": [child_egg_payload(egg) for egg in eggs],
+        "eggs": [child_egg_payload(db, egg) for egg in eggs],
     }
 
 
@@ -784,6 +792,7 @@ def build_bestiary_payload(db: Session, child_id: int) -> dict:
         egg_state = egg.egg_state if egg else None
         dragon_stage = dragon.stage.value if dragon else None
         artifact_key = family["legendary_artifact"]
+        egg_payload = child_egg_payload(db, egg, items=items) if egg else None
         families.append(
             {
                 "family_id": family_id,
@@ -797,6 +806,11 @@ def build_bestiary_payload(db: Session, child_id: int) -> dict:
                 "active_companion": bool(dragon and dragon.active_companion),
                 "legendary_unlocked": bool(dragon and dragon.stage == DragonStage.LEGENDARY),
                 "progress_percent": bestiary_progress_percent(egg, dragon),
+                "egg_progress_percent": egg.progress if egg else None,
+                "next_egg_state": egg_payload["next_state"] if egg_payload else None,
+                "required_resources": egg_payload["required_resources"] if egg_payload else [],
+                "can_evolve": egg_payload["can_evolve"] if egg_payload else False,
+                "egg": egg_payload,
                 "egg_asset_key": f"egg_{family_id}_{egg_state or 'locked'}",
                 "dragon_asset_key": f"dragon_{family_id}_{dragon_stage or 'locked'}",
                 "egg_states": state_unlocks(EGG_STATES, egg_state),
@@ -863,8 +877,25 @@ def loot_gain_payload(item: ItemInventory, *, quantity: int, is_duplicate_compen
     }
 
 
-def child_egg_payload(egg: ChildEgg) -> dict:
+def child_egg_payload(db: Session, egg: ChildEgg, *, items: dict[str, int] | None = None) -> dict:
     current_index = EGG_STATES.index(egg.egg_state)
+    next_state = EGG_STATES[current_index + 1] if current_index + 1 < len(EGG_STATES) else None
+    requirements = egg_next_action_requirements(egg)
+    if items is None:
+        items = {
+            item.item_key: item.quantity
+            for item in db.scalars(select(ItemInventory).where(ItemInventory.child_id == egg.child_id)).all()
+        }
+    required_resources = [
+        {
+            "item_key": item_key,
+            "title": ITEM_CATALOG.get(item_key, {"title": item_key})["title"],
+            "owned_quantity": items.get(item_key, 0),
+            "required_quantity": required_quantity,
+            "is_satisfied": items.get(item_key, 0) >= required_quantity,
+        }
+        for item_key, required_quantity in requirements.items()
+    ]
     return {
         "id": egg.id,
         "child_id": egg.child_id,
@@ -872,13 +903,28 @@ def child_egg_payload(egg: ChildEgg) -> dict:
         "title": EGG_CATALOG.get(egg.egg_key, egg.egg_key),
         "status": egg.status.value,
         "state": egg.egg_state,
+        "current_state": egg.egg_state,
+        "current_state_label": EGG_STATE_LABELS[egg.egg_state],
         "progress_percent": egg.progress,
-        "next_state": EGG_STATES[current_index + 1] if current_index + 1 < len(EGG_STATES) else None,
+        "next_state": next_state,
+        "next_state_label": EGG_STATE_LABELS[next_state] if next_state else None,
+        "required_resources": required_resources,
+        "can_evolve": egg.status != ChildEggStatus.HATCHED
+        and bool(requirements)
+        and all(resource["is_satisfied"] for resource in required_resources),
         "asset_key": f"{egg.egg_key}_{egg.egg_state}",
         "obtained_at": egg.obtained_at.isoformat() if egg.obtained_at else None,
         "hatched_at": egg.hatched_at.isoformat() if egg.hatched_at else None,
-        "requirements": EGG_HATCH_REQUIREMENTS.get(egg.egg_key, {}),
+        "requirements": requirements,
     }
+
+
+def egg_next_action_requirements(egg: ChildEgg) -> dict[str, int]:
+    if egg.status == ChildEggStatus.HATCHED:
+        return {}
+    if egg.egg_state == EGG_STATES[-1]:
+        return EGG_HATCH_REQUIREMENTS.get(egg.egg_key, {})
+    return {"fragment_oeuf": 1}
 
 
 def child_dragon_payload(dragon: ChildDragon) -> dict:
@@ -937,7 +983,7 @@ def bestiary_progress_percent(egg: ChildEgg | None, dragon: ChildDragon | None) 
             return 100
         return 50 + int(DRAGON_STAGES.index(stage) / (len(DRAGON_STAGES) - 1) * 50)
     if egg is not None:
-        return int(EGG_STATES.index(egg.egg_state) / (len(EGG_STATES) - 1) * 50)
+        return egg.progress
     return 0
 
 
