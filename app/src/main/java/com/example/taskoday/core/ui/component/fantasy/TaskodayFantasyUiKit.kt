@@ -34,6 +34,7 @@ import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -62,6 +63,7 @@ import com.example.taskoday.R
 import com.example.taskoday.core.ui.theme.ArcaneViolet
 import com.example.taskoday.core.ui.theme.CarvedWoodDark
 import com.example.taskoday.core.ui.theme.DangerGlow
+import com.example.taskoday.core.ui.theme.EmberOrange
 import com.example.taskoday.core.ui.theme.GlowHalo
 import com.example.taskoday.core.ui.theme.MagicViolet
 import com.example.taskoday.core.ui.theme.NeonBlue
@@ -542,6 +544,10 @@ fun RoutineItemRow(
     done: Boolean,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
+    statusLabel: String? = null,
+    rewardLabel: String? = null,
+    actionEnabled: Boolean = true,
+    isSubmitting: Boolean = false,
     onClick: (() -> Unit)? = null,
     onToggleDone: () -> Unit,
 ) {
@@ -603,6 +609,23 @@ fun RoutineItemRow(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+            if (!rewardLabel.isNullOrBlank()) {
+                Text(
+                    text = rewardLabel,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = EmberOrange,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        if (!statusLabel.isNullOrBlank()) {
+            Text(
+                text = statusLabel,
+                style = MaterialTheme.typography.labelMedium,
+                color = if (done) SuccessGlow else EmberOrange,
+                maxLines = 1,
+            )
         }
         Box(
             modifier =
@@ -614,10 +637,16 @@ fun RoutineItemRow(
                         color = if (done) SuccessGlow else ArcaneViolet,
                         shape = CircleShape,
                     )
-                    .clickable(onClick = onToggleDone),
+                    .clickable(enabled = actionEnabled, onClick = onToggleDone),
             contentAlignment = Alignment.Center,
         ) {
-            if (done) {
+            if (isSubmitting) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    color = MagicViolet,
+                    strokeWidth = 2.dp,
+                )
+            } else if (done) {
                 Icon(
                     imageVector = Icons.Outlined.Check,
                     contentDescription = null,

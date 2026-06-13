@@ -1,6 +1,7 @@
 package com.example.taskoday.data.remote.dto
 
 import com.google.gson.Gson
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -30,5 +31,28 @@ class PlanningItemContractDtosTest {
 
         assertNull(quest.isActive)
         assertFalse(quest.isActive == false)
+    }
+
+    @Test
+    fun completionReadsAwardFromBackendContract() {
+        val completion =
+            gson.fromJson(
+                """
+                {
+                  "routine_id": 42,
+                  "completed": true,
+                  "award": {
+                    "guardian_xp_awarded": 5,
+                    "flammeches_awarded": 2,
+                    "crystals_awarded": 1
+                  }
+                }
+                """.trimIndent(),
+                RemoteCompletionResponseDto::class.java,
+            )
+
+        assertEquals(5, completion.award?.guardianXpAwarded)
+        assertEquals(2, completion.award?.flammechesAwarded)
+        assertEquals(1, completion.award?.crystalsAwarded)
     }
 }

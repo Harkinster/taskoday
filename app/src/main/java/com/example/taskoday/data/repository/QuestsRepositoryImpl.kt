@@ -1,6 +1,7 @@
 package com.example.taskoday.data.repository
 
 import android.util.Log
+import com.example.taskoday.core.util.DateTimeUtils
 import com.example.taskoday.data.remote.dto.QuestCreateRequestDto
 import com.example.taskoday.data.remote.dto.QuestItemDto
 import com.example.taskoday.data.remote.dto.QuestUpdateRequestDto
@@ -42,6 +43,11 @@ class QuestsRepositoryImpl
                     .forEach { dto ->
                         val quest = dto.toDomain(now)
                         questRepository.upsertQuest(quest)
+                        questRepository.setQuestCompletedForDay(
+                            questId = quest.id,
+                            dayStartMillis = DateTimeUtils.startOfDayMillis(),
+                            completed = dto.isCompleted == true || dto.status.equals("completed", ignoreCase = true),
+                        )
                     }
                 QuestsSyncResult(usedRemoteData = true)
             }.getOrElse { error ->
@@ -134,7 +140,7 @@ private fun QuestItemDto.toDomain(nowMillis: Long): Quest =
         description = description,
         emoji = "\u2B50",
         pointsReward = xpReward ?: pointsReward ?: 3,
-        isActive = isActive != false && !status.equals("completed", ignoreCase = true),
+        isActive = isActive != false,
         dayPart = runCatching { DayPart.valueOf(dayPart.orEmpty()) }.getOrDefault(DayPart.APRES_MIDI),
         createdAt = nowMillis,
         updatedAt = nowMillis,

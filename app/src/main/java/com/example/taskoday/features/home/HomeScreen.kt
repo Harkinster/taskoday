@@ -20,16 +20,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -55,11 +51,12 @@ import com.example.taskoday.core.ui.theme.WoodBrownDark
 import com.example.taskoday.core.ui.theme.spacing
 import com.example.taskoday.core.util.DateTimeUtils
 import com.example.taskoday.domain.model.DayPart
+import com.example.taskoday.domain.model.PlanningItemType
+import com.example.taskoday.domain.model.QuestForDay
 import com.example.taskoday.domain.model.TaskForDay
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,8 +68,6 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val spacing = MaterialTheme.spacing
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
-    val snackbarHostState = remember { SnackbarHostState() }
-    val coroutineScope = rememberCoroutineScope()
 
     val visibleTasksForDay =
         if (uiState.usingRemoteData) {
@@ -80,11 +75,16 @@ fun HomeScreen(
         } else {
             uiState.tasksForDay.filter { it.task.id > 0L }
         }
-    val routinesForDay = visibleTasksForDay.filter { it.task.isDaily }
-    val planningItems = buildPlanningItems(routinesForDay)
+    val visibleQuestsForDay =
+        if (uiState.usingRemoteData) {
+            uiState.questsForDay.filter { it.quest.id < 0L }
+        } else {
+            uiState.questsForDay.filter { it.quest.id > 0L }
+        }
+    val planningItems = buildPlanningItems(visibleTasksForDay, visibleQuestsForDay)
     val completedCount = planningItems.count { it.isCompleted }
     val progress = if (planningItems.isEmpty()) 0f else completedCount.toFloat() / planningItems.size.toFloat()
-    val sections = buildSections(planningItems)
+    val sections = buildActionSections(planningItems)
 
     val selectedDate =
         if (uiState.selectedDayStartMillis == 0L) {
@@ -96,7 +96,6 @@ fun HomeScreen(
     Scaffold(
         containerColor = Color.Transparent,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
     ) { innerPadding ->
         FantasyScreenBackground(
             modifier =
@@ -150,34 +149,27 @@ fun HomeScreen(
 
                 item {
                     DailyProgressCard(
-                        title = "Routines du jour",
+                        title = "Actions du jour",
                         completed = completedCount,
                         total = planningItems.size,
                         progress = progress,
                         subtitle =
                             if (planningItems.isEmpty()) {
-                                "Rien de prévu pour cette routine."
+                                "Rien de prévu aujourd'hui."
                             } else {
-                                "Chaque geste nourrit Le Nid."
+                                "Chaque action nourrit Le Nid."
                             },
-                        badgeLabel = "${uiState.remoteFlammeches ?: uiState.pointsBalance} Flammèches",
+                        badgeLabel = walletSummaryLabel(uiState),
                     )
                 }
 
-                if (uiState.usingRemoteData) {
+                uiState.completionFeedback?.let { feedback ->
                     item {
-                        FantasyCard(tone = FantasyTone.Night) {
-                            Text(
-                                text = "Mode synchronisé",
-                                style = MaterialTheme.typography.titleSmall,
-                                color = WoodBrownDark,
-                            )
-                            Text(
-                                text = "Les routines viennent du backend.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = InkMuted,
-                            )
-                        }
+                        RewardToast(
+                            message = feedbackMessage(feedback),
+                            tone = FantasyTone.Gold,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
                     }
                 }
 
@@ -190,8 +182,8 @@ fun HomeScreen(
                 if (planningItems.isEmpty()) {
                     item {
                         FantasyStateCard(
-                            title = "Routine vide",
-                            message = "Rien de prévu pour cette routine.",
+                            title = "Journée libre",
+                            message = "Aucune routine, mission ou quête aujourd'hui.",
                             assetResId = NestAssets.interfaceAsset("nid"),
                             assetDescription = null,
                             tone = FantasyTone.Moss,
@@ -199,20 +191,19 @@ fun HomeScreen(
                     }
                 } else {
                     sections.filter { section -> section.items.isNotEmpty() }.forEach { section ->
-                        item(key = "section-${section.dayPart.name}") {
-                            DayPartCard(
+                        item(key = "section-${section.itemType.name}") {
+                            TodayActionSection(
                                 section = section,
                                 onOpenTask = onOpenTask,
                                 onToggleCheck = { item, checked ->
                                     item.taskForDay?.let { taskForDay ->
                                         viewModel.setTaskChecked(taskForDay, checked)
                                     }
-                                    if (checked) {
-                                        coroutineScope.launch {
-                                            snackbarHostState.showSnackbar(POSITIVE_MESSAGES.random())
-                                        }
+                                    item.questForDay?.let { questForDay ->
+                                        viewModel.setQuestChecked(questForDay, checked)
                                     }
                                 },
+                                pendingCompletionKeys = uiState.pendingCompletionKeys,
                             )
                         }
                     }
@@ -304,10 +295,11 @@ private fun DailyProgressCard(
 }
 
 @Composable
-private fun DayPartCard(
+private fun TodayActionSection(
     section: HomeSection,
     onOpenTask: (Long) -> Unit,
     onToggleCheck: (HomePlanningItem, Boolean) -> Unit,
+    pendingCompletionKeys: Set<String>,
 ) {
     val doneCount = section.items.count { it.isCompleted }
 
@@ -323,12 +315,12 @@ private fun DayPartCard(
                 modifier = Modifier.weight(1f),
             ) {
                 FantasyAssetBubble(
-                    assetResId = dayPartAsset(section.dayPart),
-                    contentDescription = section.dayPart.label(),
+                    assetResId = actionTypeAsset(section.itemType),
+                    contentDescription = section.title,
                     size = 34.dp,
                 )
                 Text(
-                    text = section.dayPart.label(),
+                    text = section.title,
                     style = MaterialTheme.typography.titleLarge,
                     color = WoodBrownDark,
                     maxLines = 1,
@@ -340,16 +332,8 @@ private fun DayPartCard(
                 color = EmberOrange,
             )
         }
-        if (section.items.isEmpty()) {
-            Text(
-                text = "Rien de prévu pour ce moment.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = InkMuted,
-            )
-            return@FantasyCard
-        }
-
         section.items.forEach { item ->
+            val isSubmitting = pendingCompletionKeys.contains(item.key)
             val openTaskAction =
                 item.taskForDay?.task
                     ?.takeIf { task -> task.id > 0L }
@@ -359,74 +343,109 @@ private fun DayPartCard(
                 title = item.title,
                 emoji = item.emoji,
                 done = item.isCompleted,
-                subtitle = formatPlanningTime(item),
+                subtitle = item.description ?: "${item.dayPart.label()} • ${formatPlanningTime(item)}",
+                statusLabel =
+                    when {
+                        isSubmitting -> "Validation..."
+                        item.isCompleted -> "Terminé"
+                        else -> "À faire"
+                    },
+                rewardLabel = "Récompense : ${item.reward.compactLabel()}",
+                actionEnabled = !item.isCompleted && !isSubmitting,
+                isSubmitting = isSubmitting,
                 onClick = openTaskAction,
-                onToggleDone = { onToggleCheck(item, !item.isCompleted) },
+                onToggleDone = { onToggleCheck(item, true) },
             )
         }
     }
 }
 
 private data class HomeSection(
-    val dayPart: DayPart,
+    val itemType: PlanningItemType,
+    val title: String,
     val tone: FantasyTone,
     val items: List<HomePlanningItem>,
 )
 
 private data class HomePlanningItem(
     val key: String,
+    val itemType: PlanningItemType,
     val dayPart: DayPart,
     val title: String,
+    val description: String?,
     val emoji: String,
     val dueDate: Long?,
     val isCompleted: Boolean,
+    val reward: com.example.taskoday.domain.model.CompletionReward,
     val taskForDay: TaskForDay? = null,
+    val questForDay: QuestForDay? = null,
 )
 
-private fun buildPlanningItems(tasks: List<TaskForDay>): List<HomePlanningItem> =
-    tasks
-        .map { item ->
+private fun buildPlanningItems(
+    tasks: List<TaskForDay>,
+    quests: List<QuestForDay>,
+): List<HomePlanningItem> {
+    val taskItems =
+        tasks.map { item ->
+            val itemType = if (item.task.isDaily) PlanningItemType.ROUTINE else PlanningItemType.MISSION
             HomePlanningItem(
-                key = "routine-${item.task.id}",
+                key = "${itemType.apiValue}-${item.task.id}",
+                itemType = itemType,
                 dayPart = item.task.dayPart,
                 title = item.task.title,
+                description = item.task.description,
                 emoji = item.task.emoji,
                 dueDate = item.task.dueDate,
                 isCompleted = item.isCompleted,
+                reward = rewardPreviewFor(itemType),
                 taskForDay = item,
             )
-        }.sortedBy { it.dueDate ?: Long.MAX_VALUE }
-
-private fun buildSections(items: List<HomePlanningItem>): List<HomeSection> {
-    val tones =
-        mapOf(
-            DayPart.MATIN to FantasyTone.Gold,
-            DayPart.MATINEE to FantasyTone.Moss,
-            DayPart.MIDI to FantasyTone.Wood,
-            DayPart.APRES_MIDI to FantasyTone.Ember,
-            DayPart.SOIR to FantasyTone.Violet,
-            DayPart.SOIREE to FantasyTone.Night,
-        )
-    return DayPart.entries.map { dayPart ->
-        HomeSection(
-            dayPart = dayPart,
-            tone = tones.getValue(dayPart),
-            items = items.filter { it.dayPart == dayPart },
-        )
-    }
+        }
+    val questItems =
+        quests.map { item ->
+            HomePlanningItem(
+                key = "quest-${item.quest.id}",
+                itemType = PlanningItemType.QUEST,
+                dayPart = item.quest.dayPart,
+                title = item.quest.title,
+                description = item.quest.description,
+                emoji = item.quest.emoji,
+                dueDate = null,
+                isCompleted = item.isCompletedForDay,
+                reward = rewardPreviewFor(PlanningItemType.QUEST),
+                questForDay = item,
+            )
+        }
+    return (taskItems + questItems).sortedWith(compareBy<HomePlanningItem> { it.itemType.ordinal }.thenBy { it.dueDate ?: Long.MAX_VALUE })
 }
 
-private fun dayPartAsset(dayPart: DayPart): Int =
-    when (dayPart) {
-        DayPart.MATIN,
-        DayPart.MATINEE,
-        -> NestAssets.interfaceAsset("flammeche")
-        DayPart.MIDI,
-        DayPart.APRES_MIDI,
-        -> NestAssets.interfaceAsset("crystal")
-        DayPart.SOIR,
-        DayPart.SOIREE,
-        -> NestAssets.interfaceAsset("nid")
+private fun buildActionSections(items: List<HomePlanningItem>): List<HomeSection> =
+    listOf(
+        HomeSection(
+            itemType = PlanningItemType.ROUTINE,
+            title = "Routines",
+            tone = FantasyTone.Moss,
+            items = items.filter { it.itemType == PlanningItemType.ROUTINE },
+        ),
+        HomeSection(
+            itemType = PlanningItemType.MISSION,
+            title = "Missions",
+            tone = FantasyTone.Gold,
+            items = items.filter { it.itemType == PlanningItemType.MISSION },
+        ),
+        HomeSection(
+            itemType = PlanningItemType.QUEST,
+            title = "Quêtes",
+            tone = FantasyTone.Violet,
+            items = items.filter { it.itemType == PlanningItemType.QUEST },
+        ),
+    )
+
+private fun actionTypeAsset(itemType: PlanningItemType): Int =
+    when (itemType) {
+        PlanningItemType.ROUTINE -> NestAssets.interfaceAsset("flammeche")
+        PlanningItemType.MISSION -> NestAssets.interfaceAsset("crystal")
+        PlanningItemType.QUEST -> NestAssets.interfaceAsset("nid")
     }
 
 private fun formatPlanningTime(item: HomePlanningItem): String {
@@ -448,10 +467,22 @@ private fun datePickerSelectionToDayStartMillis(selectedUtcMillis: Long): Long {
     return DateTimeUtils.startOfDayMillis(selectedDate)
 }
 
-private val POSITIVE_MESSAGES: List<String> =
-    listOf(
-        "Bravo !",
-        "Excellent travail !",
-        "Routine validée !",
-        "Continue ton aventure !",
-    )
+private fun walletSummaryLabel(uiState: HomeUiState): String =
+    if (uiState.usingRemoteData) {
+        listOfNotNull(
+            uiState.remoteXp?.let { "$it XP" },
+            uiState.remoteFlammeches?.let { "$it Flammèches" },
+            uiState.remoteCrystals?.let { "$it Cristaux" },
+        ).joinToString(" • ")
+    } else {
+        "${uiState.pointsBalance} points"
+    }
+
+private fun feedbackMessage(feedback: CompletionFeedback): String {
+    val rewardLabel = feedback.reward?.compactLabel().orEmpty()
+    return if (rewardLabel.isBlank()) {
+        "Bravo ! ${feedback.actionTitle} est terminée."
+    } else {
+        "Bravo ! $rewardLabel"
+    }
+}

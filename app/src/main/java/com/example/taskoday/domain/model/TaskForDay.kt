@@ -5,5 +5,5 @@ data class TaskForDay(
     val isChecked: Boolean,
 ) {
     val isCompleted: Boolean
-        get() = isChecked
+        get() = isChecked || task.status == TaskStatus.DONE
 }

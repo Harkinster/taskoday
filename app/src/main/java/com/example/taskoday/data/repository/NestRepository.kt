@@ -16,6 +16,8 @@ import com.example.taskoday.data.remote.gamification.NestApi
 import com.example.taskoday.domain.repository.AuthRepository
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 
 data class NestSnapshot(
     val progress: NestProgressDto,
@@ -34,7 +36,14 @@ class NestRepository
         private val nestApi: NestApi,
         private val authRepository: AuthRepository,
     ) {
+        private val _progressChanges = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+        val progressChanges = _progressChanges.asSharedFlow()
+
         fun hasRemoteSession(): Boolean = !authRepository.getAccessToken().isNullOrBlank()
+
+        fun notifyProgressChanged() {
+            _progressChanges.tryEmit(Unit)
+        }
 
         suspend fun loadSnapshot(): Result<NestSnapshot> =
             runCatching {
@@ -50,11 +59,11 @@ class NestRepository
                 )
             }
 
-    suspend fun getChestCatalog(): Result<ChestCatalogDto> =
-        runCatching { nestApi.getChestCatalog(activeChildId()).data }
+        suspend fun getChestCatalog(): Result<ChestCatalogDto> =
+            runCatching { nestApi.getChestCatalog(activeChildId()).data }
 
-    suspend fun getProgress(): Result<NestProgressDto> =
-        runCatching { nestApi.getProgress(activeChildId()).data }
+        suspend fun getProgress(): Result<NestProgressDto> =
+            runCatching { nestApi.getProgress(activeChildId()).data }
 
         suspend fun openCatalogChest(catalogId: String): Result<OpenCatalogChestDto> =
             runCatching { nestApi.openCatalogChest(activeChildId(), catalogId).data }

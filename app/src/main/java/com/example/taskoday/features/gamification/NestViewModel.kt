@@ -43,7 +43,16 @@ class NestViewModel
         val uiState: StateFlow<NestUiState> = _uiState.asStateFlow()
 
         init {
+            observeProgressChanges()
             refresh()
+        }
+
+        private fun observeProgressChanges() {
+            viewModelScope.launch {
+                nestRepository.progressChanges.collect {
+                    refresh()
+                }
+            }
         }
 
         fun refresh() {

@@ -1,6 +1,7 @@
 package com.example.taskoday.data.repository
 
 import com.example.taskoday.data.remote.planning.PlanningApi
+import com.example.taskoday.domain.model.CompletionReward
 import com.example.taskoday.domain.model.PlanningItemType
 import com.example.taskoday.domain.model.RemotePlanningRef
 import com.example.taskoday.domain.repository.MissionsRepository
@@ -39,26 +40,38 @@ class PlanningSyncRepositoryImpl
             )
         }
 
-        override suspend fun setCompletion(dayStartMillis: Long, remoteRef: RemotePlanningRef, completed: Boolean): Result<Unit> =
+        override suspend fun setCompletion(
+            dayStartMillis: Long,
+            remoteRef: RemotePlanningRef,
+            completed: Boolean,
+        ): Result<CompletionReward?> =
             runCatching {
-                when (remoteRef.itemType) {
-                    PlanningItemType.ROUTINE -> {
-                        if (completed) {
-                            planningApi.completeRoutine(remoteRef.remoteItemId)
-                        } else {
-                            planningApi.uncompleteRoutine(remoteRef.remoteItemId)
+                val response =
+                    when (remoteRef.itemType) {
+                        PlanningItemType.ROUTINE -> {
+                            if (completed) {
+                                planningApi.completeRoutine(remoteRef.remoteItemId).data
+                            } else {
+                                planningApi.uncompleteRoutine(remoteRef.remoteItemId).data
+                            }
+                        }
+
+                        PlanningItemType.MISSION -> {
+                            require(completed) { "La devalidation distante des missions n'est pas disponible." }
+                            planningApi.completeMission(remoteRef.remoteItemId).data
+                        }
+
+                        PlanningItemType.QUEST -> {
+                            require(completed) { "La dévalidation distante des quêtes n'est pas disponible." }
+                            planningApi.completeQuest(remoteRef.remoteItemId).data
                         }
                     }
-
-                    PlanningItemType.MISSION -> {
-                        require(completed) { "La devalidation distante des missions n'est pas disponible." }
-                        planningApi.completeMission(remoteRef.remoteItemId)
-                    }
-
-                    PlanningItemType.QUEST -> {
-                        require(completed) { "La dévalidation distante des quêtes n'est pas disponible." }
-                        planningApi.completeQuest(remoteRef.remoteItemId)
-                    }
+                response.award?.let { award ->
+                    CompletionReward(
+                        xp = award.guardianXpAwarded,
+                        flammeches = award.flammechesAwarded,
+                        crystals = award.crystalsAwarded,
+                    )
                 }
-            }.map {}
+            }
     }

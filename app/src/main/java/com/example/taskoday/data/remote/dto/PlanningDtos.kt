@@ -125,4 +125,15 @@ data class RemoteCompletionResponseDto(
     val questId: Long? = null,
     @SerializedName("completed")
     val completed: Boolean = true,
+    @SerializedName("award")
+    val award: CompletionAwardDto? = null,
+)
+
+data class CompletionAwardDto(
+    @SerializedName("guardian_xp_awarded")
+    val guardianXpAwarded: Int = 0,
+    @SerializedName("flammeches_awarded")
+    val flammechesAwarded: Int = 0,
+    @SerializedName("crystals_awarded")
+    val crystalsAwarded: Int = 0,
 )

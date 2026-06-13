@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.taskoday.core.util.DateTimeUtils
 import com.example.taskoday.data.repository.NestRepository
 import com.example.taskoday.data.repository.RemotePlanningIdCodec
+import com.example.taskoday.domain.model.CompletionReward
+import com.example.taskoday.domain.model.PlanningItemType
 import com.example.taskoday.domain.model.PointsSourceType
 import com.example.taskoday.domain.model.QuestForDay
 import com.example.taskoday.domain.model.TaskForDay
@@ -86,16 +88,18 @@ class HomeViewModel
                 selectedDay.collect { dayStart ->
                     _uiState.update { it.copy(isLoading = true) }
                     val syncResult = planningSyncRepository.syncDay(dayStart)
-                    val remoteFlammeches =
+                    val remoteProgress =
                         if (syncResult.usedRemoteData) {
-                            nestRepository.getProgress().getOrNull()?.wallet?.flammeches
+                            nestRepository.getProgress().getOrNull()
                         } else {
                             null
                         }
                     _uiState.update {
                         it.copy(
                             usingRemoteData = syncResult.usedRemoteData,
-                            remoteFlammeches = remoteFlammeches,
+                            remoteXp = remoteProgress?.guardian?.xp,
+                            remoteFlammeches = remoteProgress?.wallet?.flammeches,
+                            remoteCrystals = remoteProgress?.wallet?.crystals,
                             errorMessage = syncResult.errorMessage,
                         )
                     }
@@ -142,16 +146,20 @@ class HomeViewModel
 
         fun setTaskChecked(item: TaskForDay, checked: Boolean) {
             val dayStart = selectedDay.value
+            val itemType = if (item.task.isDaily) PlanningItemType.ROUTINE else PlanningItemType.MISSION
+            val completionKey = "${itemType.apiValue}-${item.task.id}"
+            if (!beginCompletion(completionKey)) return
             viewModelScope.launch {
                 val remoteRef = RemotePlanningIdCodec.decodeTaskId(item.task.id)
+                var reward: CompletionReward? = null
                 if (remoteRef != null) {
                     val remoteResult = planningSyncRepository.setCompletion(dayStart, remoteRef, checked)
                     if (remoteResult.isFailure) {
-                        _uiState.update { state ->
-                            state.copy(errorMessage = remoteResult.exceptionOrNull()?.message ?: "Erreur reseau.")
-                        }
+                        failCompletion(completionKey, remoteResult.exceptionOrNull()?.message ?: "Erreur reseau.")
                         return@launch
                     }
+                    reward = remoteResult.getOrNull()
+                    planningSyncRepository.syncDay(dayStart)
                 }
 
                 taskRepository.setTaskCheckedForDay(
@@ -160,30 +168,51 @@ class HomeViewModel
                     checked = checked,
                 )
                 applyTaskPoints(item = item, dayStart = dayStart, checked = checked)
+                finishCompletion(
+                    completionKey = completionKey,
+                    actionTitle = item.task.title,
+                    reward = reward ?: rewardPreviewFor(itemType).takeIf { remoteRef == null },
+                    checked = checked,
+                    refreshNest = remoteRef != null,
+                )
             }
         }
 
         fun setQuestChecked(item: QuestForDay, checked: Boolean) {
             val dayStart = selectedDay.value
+            val completionKey = "quest-${item.quest.id}"
+            if (!beginCompletion(completionKey)) return
             viewModelScope.launch {
                 val remoteRef = RemotePlanningIdCodec.decodeQuestId(item.quest.id)
+                var reward: CompletionReward? = null
                 if (remoteRef != null) {
                     val remoteResult = planningSyncRepository.setCompletion(dayStart, remoteRef, checked)
                     if (remoteResult.isFailure) {
-                        _uiState.update { state ->
-                            state.copy(errorMessage = remoteResult.exceptionOrNull()?.message ?: "Erreur reseau.")
-                        }
+                        failCompletion(completionKey, remoteResult.exceptionOrNull()?.message ?: "Erreur reseau.")
                         return@launch
                     }
+                    reward = remoteResult.getOrNull()
+                    planningSyncRepository.syncDay(dayStart)
                 }
 
                 questRepository.setQuestCompletedForDay(item.quest.id, dayStart, checked)
                 applyQuestPoints(item = item, dayStart = dayStart, checked = checked)
+                finishCompletion(
+                    completionKey = completionKey,
+                    actionTitle = item.quest.title,
+                    reward = reward ?: rewardPreviewFor(PlanningItemType.QUEST).takeIf { remoteRef == null },
+                    checked = checked,
+                    refreshNest = remoteRef != null,
+                )
             }
         }
 
         fun clearError() {
             _uiState.update { it.copy(errorMessage = null) }
+        }
+
+        fun clearCompletionFeedback() {
+            _uiState.update { it.copy(completionFeedback = null) }
         }
 
         fun selectDay(dayStartMillis: Long) {
@@ -229,6 +258,50 @@ class HomeViewModel
                 )
             } else {
                 pointsRepository.revokeForQuest(item.quest.id, dayStart)
+            }
+        }
+
+        private fun beginCompletion(completionKey: String): Boolean {
+            if (_uiState.value.pendingCompletionKeys.contains(completionKey)) return false
+            _uiState.update {
+                it.copy(
+                    pendingCompletionKeys = it.pendingCompletionKeys + completionKey,
+                    completionFeedback = null,
+                    errorMessage = null,
+                )
+            }
+            return true
+        }
+
+        private fun failCompletion(
+            completionKey: String,
+            message: String,
+        ) {
+            _uiState.update {
+                it.copy(
+                    pendingCompletionKeys = it.pendingCompletionKeys - completionKey,
+                    errorMessage = message,
+                )
+            }
+        }
+
+        private suspend fun finishCompletion(
+            completionKey: String,
+            actionTitle: String,
+            reward: CompletionReward?,
+            checked: Boolean,
+            refreshNest: Boolean,
+        ) {
+            val progress = if (refreshNest) nestRepository.getProgress().getOrNull() else null
+            if (refreshNest) nestRepository.notifyProgressChanged()
+            _uiState.update {
+                it.copy(
+                    pendingCompletionKeys = it.pendingCompletionKeys - completionKey,
+                    completionFeedback = CompletionFeedback(actionTitle, reward).takeIf { checked },
+                    remoteXp = progress?.guardian?.xp ?: it.remoteXp,
+                    remoteFlammeches = progress?.wallet?.flammeches ?: it.remoteFlammeches,
+                    remoteCrystals = progress?.wallet?.crystals ?: it.remoteCrystals,
+                )
             }
         }
     }

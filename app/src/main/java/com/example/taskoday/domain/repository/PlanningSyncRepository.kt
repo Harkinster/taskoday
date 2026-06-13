@@ -1,5 +1,6 @@
 package com.example.taskoday.domain.repository
 
+import com.example.taskoday.domain.model.CompletionReward
 import com.example.taskoday.domain.model.RemotePlanningRef
 
 data class PlanningSyncResult(
@@ -10,5 +11,5 @@ data class PlanningSyncResult(
 interface PlanningSyncRepository {
     suspend fun syncDay(dayStartMillis: Long): PlanningSyncResult
 
-    suspend fun setCompletion(dayStartMillis: Long, remoteRef: RemotePlanningRef, completed: Boolean): Result<Unit>
+    suspend fun setCompletion(dayStartMillis: Long, remoteRef: RemotePlanningRef, completed: Boolean): Result<CompletionReward?>
 }
