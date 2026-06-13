@@ -13,6 +13,8 @@ import com.example.taskoday.domain.model.TaskForDay
 import com.example.taskoday.domain.repository.PlanningSyncRepository
 import com.example.taskoday.domain.repository.PointsRepository
 import com.example.taskoday.domain.repository.QuestRepository
+import com.example.taskoday.domain.repository.AuthRepository
+import com.example.taskoday.domain.repository.RoutinesRepository
 import com.example.taskoday.domain.repository.TaskRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -36,6 +38,8 @@ class HomeViewModel
         private val pointsRepository: PointsRepository,
         private val planningSyncRepository: PlanningSyncRepository,
         private val nestRepository: NestRepository,
+        private val authRepository: AuthRepository,
+        private val routinesRepository: RoutinesRepository,
     ) : ViewModel() {
         private val selectedDay = MutableStateFlow(DateTimeUtils.startOfDayMillis())
 
@@ -52,8 +56,22 @@ class HomeViewModel
         init {
             observeHomeData()
             observeRemoteSync()
+            resolveCanManageActions()
             cleanupOldChecks()
             observeDayRollover()
+        }
+
+        private fun resolveCanManageActions() {
+            if (authRepository.getAccessToken().isNullOrBlank()) {
+                _uiState.update { it.copy(canManageActions = true) }
+                return
+            }
+            viewModelScope.launch {
+                val canManage =
+                    runCatching { authRepository.fetchMe().role.equals("PARENT", ignoreCase = true) }
+                        .getOrDefault(false)
+                _uiState.update { it.copy(canManageActions = canManage) }
+            }
         }
 
         @OptIn(ExperimentalCoroutinesApi::class)
@@ -204,6 +222,41 @@ class HomeViewModel
                     checked = checked,
                     refreshNest = remoteRef != null,
                 )
+            }
+        }
+
+        fun deleteRoutine(item: TaskForDay) {
+            if (!_uiState.value.canManageActions || !item.task.isDaily) return
+            val key = "routine-${item.task.id}"
+            if (_uiState.value.pendingManagementKeys.contains(key)) return
+            _uiState.update {
+                it.copy(
+                    pendingManagementKeys = it.pendingManagementKeys + key,
+                    errorMessage = null,
+                )
+            }
+            viewModelScope.launch {
+                val remoteRef = RemotePlanningIdCodec.decodeTaskId(item.task.id)
+                if (remoteRef?.itemType == PlanningItemType.ROUTINE) {
+                    val result = routinesRepository.deleteRoutine(item.task.id)
+                    if (result.isFailure) {
+                        _uiState.update {
+                            it.copy(
+                                pendingManagementKeys = it.pendingManagementKeys - key,
+                                errorMessage = result.exceptionOrNull()?.message ?: "Suppression impossible.",
+                            )
+                        }
+                        return@launch
+                    }
+                }
+                taskRepository.deleteTask(item.task.id)
+                if (remoteRef != null) planningSyncRepository.syncDay(selectedDay.value)
+                _uiState.update {
+                    it.copy(
+                        pendingManagementKeys = it.pendingManagementKeys - key,
+                        successMessage = "Routine désactivée.",
+                    )
+                }
             }
         }
 

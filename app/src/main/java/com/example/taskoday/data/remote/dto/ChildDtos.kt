@@ -66,3 +66,10 @@ data class RoutineItemDto(
     @SerializedName("updated_at")
     val updatedAt: String? = null,
 )
+
+data class RoutineUpdateRequestDto(
+    @SerializedName("title")
+    val title: String? = null,
+    @SerializedName("description")
+    val description: String? = null,
+)

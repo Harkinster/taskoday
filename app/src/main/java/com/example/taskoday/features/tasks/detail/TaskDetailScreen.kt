@@ -22,11 +22,15 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.taskoday.core.ui.component.PlaceholderScreen
+import com.example.taskoday.core.ui.component.fantasy.FantasyConfirmationDialog
 import com.example.taskoday.core.ui.testing.TaskodayTestTags
 import com.example.taskoday.core.ui.theme.spacing
 import com.example.taskoday.core.util.DateTimeUtils
@@ -41,6 +45,7 @@ fun TaskDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val spacing = MaterialTheme.spacing
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.isDeleted) {
         if (uiState.isDeleted) {
@@ -180,7 +185,7 @@ fun TaskDetailScreen(
 
             if (uiState.canManageTask) {
                 OutlinedButton(
-                    onClick = viewModel::deleteTask,
+                    onClick = { showDeleteConfirmation = true },
                     modifier = Modifier.fillMaxWidth().testTag(TaskodayTestTags.TaskDetailDeleteButton),
                 ) {
                     Icon(
@@ -192,5 +197,24 @@ fun TaskDetailScreen(
                 }
             }
         }
+    }
+
+    if (showDeleteConfirmation) {
+        val task = uiState.task
+        FantasyConfirmationDialog(
+            title = if (task?.isDaily == true) "Désactiver la routine" else "Supprimer la mission",
+            message =
+                if (task?.isDaily == true) {
+                    "Désactiver « ${task.title} » ? Elle ne sera plus proposée à l'enfant."
+                } else {
+                    "Supprimer « ${task?.title.orEmpty()} » ? Cette action est définitive."
+                },
+            confirmLabel = if (task?.isDaily == true) "Désactiver" else "Supprimer",
+            onDismiss = { showDeleteConfirmation = false },
+            onConfirm = {
+                showDeleteConfirmation = false
+                viewModel.deleteTask()
+            },
+        )
     }
 }

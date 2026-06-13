@@ -16,12 +16,16 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.taskoday.core.ui.component.fantasy.FantasyScreenBackground
+import com.example.taskoday.core.ui.component.fantasy.FantasyConfirmationDialog
 import com.example.taskoday.core.ui.component.fantasy.MissionCard
 import com.example.taskoday.core.ui.component.fantasy.NeonButton
 import com.example.taskoday.core.ui.component.fantasy.NeonButtonStyle
@@ -55,6 +59,7 @@ fun TasksScreen(
     val todoTasks = uiState.tasks.filter { it.status == TaskStatus.TODO }
     val inProgressTasks = uiState.tasks.filter { it.status == TaskStatus.IN_PROGRESS }
     val doneTasks = uiState.tasks.filter { it.status == TaskStatus.DONE }
+    var pendingDeleteTask by remember { mutableStateOf<Task?>(null) }
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -147,7 +152,7 @@ fun TasksScreen(
                         manageableTaskIds = uiState.manageableTaskIds,
                         onTaskClick = onTaskClick,
                         onEditTask = onEditTask,
-                        onDeleteTask = viewModel::deleteTask,
+                        onDeleteTask = { pendingDeleteTask = it },
                         onMarkTaskDone = viewModel::markTaskAsDone,
                         )
                     }
@@ -161,7 +166,7 @@ fun TasksScreen(
                         manageableTaskIds = uiState.manageableTaskIds,
                         onTaskClick = onTaskClick,
                         onEditTask = onEditTask,
-                        onDeleteTask = viewModel::deleteTask,
+                        onDeleteTask = { pendingDeleteTask = it },
                         onMarkTaskDone = viewModel::markTaskAsDone,
                         )
                     }
@@ -175,13 +180,26 @@ fun TasksScreen(
                         manageableTaskIds = uiState.manageableTaskIds,
                         onTaskClick = onTaskClick,
                         onEditTask = onEditTask,
-                        onDeleteTask = viewModel::deleteTask,
+                        onDeleteTask = { pendingDeleteTask = it },
                         onMarkTaskDone = viewModel::markTaskAsDone,
                         )
                     }
                 }
             }
         }
+    }
+
+    pendingDeleteTask?.let { task ->
+        FantasyConfirmationDialog(
+            title = "Supprimer la mission",
+            message = "Supprimer « ${task.title} » ? Cette action est définitive.",
+            confirmLabel = "Supprimer",
+            onDismiss = { pendingDeleteTask = null },
+            onConfirm = {
+                pendingDeleteTask = null
+                viewModel.deleteTask(task.id)
+            },
+        )
     }
 }
 
@@ -192,7 +210,7 @@ private fun MissionSection(
     manageableTaskIds: Set<Long>,
     onTaskClick: (Long) -> Unit,
     onEditTask: (Long) -> Unit,
-    onDeleteTask: (Long) -> Unit,
+    onDeleteTask: (Task) -> Unit,
     onMarkTaskDone: (Long) -> Unit,
 ) {
     Column(
@@ -230,7 +248,7 @@ private fun MissionSection(
                 onClick = { onTaskClick(task.id) },
                 onToggleDone = { if (!done) onMarkTaskDone(task.id) },
                 onEdit = if (canManageTask) ({ onEditTask(task.id) }) else null,
-                onDelete = if (canManageTask) ({ onDeleteTask(task.id) }) else null,
+                onDelete = if (canManageTask) ({ onDeleteTask(task) }) else null,
             )
         }
     }

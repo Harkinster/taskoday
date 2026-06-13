@@ -9,6 +9,7 @@ import com.example.taskoday.domain.model.Task
 import com.example.taskoday.domain.model.TaskStatus
 import com.example.taskoday.domain.repository.AuthRepository
 import com.example.taskoday.domain.repository.MissionsRepository
+import com.example.taskoday.domain.repository.RoutinesRepository
 import com.example.taskoday.domain.repository.TaskRepository
 import com.example.taskoday.navigation.TaskodayDestination
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -31,6 +32,7 @@ class TaskDetailViewModel
         savedStateHandle: SavedStateHandle,
         private val taskRepository: TaskRepository,
         private val missionsRepository: MissionsRepository,
+        private val routinesRepository: RoutinesRepository,
         private val authRepository: AuthRepository,
     ) : ViewModel() {
         private val taskId: Long = savedStateHandle[TaskodayDestination.TaskDetail.ARG_TASK_ID] ?: -1L
@@ -117,9 +119,15 @@ class TaskDetailViewModel
                     if (remoteResult.isFailure) {
                         val error = remoteResult.exceptionOrNull()
                         _uiState.update { it.copy(errorMessage = error?.toMessage() ?: "Erreur backend.") }
-                        if (error is HttpException && error.code() == 403) {
-                            return@launch
-                        }
+                        return@launch
+                    }
+                }
+                if (remoteRef?.itemType == PlanningItemType.ROUTINE) {
+                    val remoteResult = routinesRepository.deleteRoutine(id)
+                    if (remoteResult.isFailure) {
+                        val error = remoteResult.exceptionOrNull()
+                        _uiState.update { it.copy(errorMessage = error?.toMessage() ?: "Erreur backend.") }
+                        return@launch
                     }
                 }
                 taskRepository.deleteTask(id)

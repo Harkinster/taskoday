@@ -165,6 +165,7 @@ fun TaskEditScreen(
                 Switch(
                     checked = uiState.isRoutine,
                     onCheckedChange = viewModel::onRoutineChanged,
+                    enabled = uiState.canChangeTaskType,
                 )
             }
 

@@ -99,7 +99,7 @@ class TasksViewModel
                         _uiState.update {
                             it.copy(errorMessage = error?.toMessage() ?: "Erreur backend.")
                         }
-                        if (error.isForbidden()) return@launch
+                        return@launch
                     }
                 }
                 taskRepository.updateTaskStatus(taskId = taskId, status = TaskStatus.DONE)

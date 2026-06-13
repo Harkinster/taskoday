@@ -26,6 +26,7 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -35,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.taskoday.core.ui.component.fantasy.FantasyAssetBubble
 import com.example.taskoday.core.ui.component.fantasy.FantasyCard
+import com.example.taskoday.core.ui.component.fantasy.FantasyConfirmationDialog
 import com.example.taskoday.core.ui.component.fantasy.FantasyProgressBar
 import com.example.taskoday.core.ui.component.fantasy.FantasyScreenBackground
 import com.example.taskoday.core.ui.component.fantasy.FantasyStateCard
@@ -63,11 +65,13 @@ import java.time.ZoneOffset
 fun HomeScreen(
     viewModel: HomeViewModel,
     onOpenTask: (Long) -> Unit,
+    onEditTask: (Long) -> Unit,
     onOpenProfile: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val spacing = MaterialTheme.spacing
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
+    var pendingDeleteRoutine by remember { mutableStateOf<TaskForDay?>(null) }
 
     val visibleTasksForDay =
         if (uiState.usingRemoteData) {
@@ -173,6 +177,12 @@ fun HomeScreen(
                     }
                 }
 
+                uiState.successMessage?.let { message ->
+                    item {
+                        RewardToast(message = message, tone = FantasyTone.Moss)
+                    }
+                }
+
                 if (!uiState.errorMessage.isNullOrBlank()) {
                     item {
                         RewardToast(message = "Alerte réseau : ${uiState.errorMessage.orEmpty()}", tone = FantasyTone.Ember)
@@ -195,6 +205,8 @@ fun HomeScreen(
                             TodayActionSection(
                                 section = section,
                                 onOpenTask = onOpenTask,
+                                onEditTask = onEditTask,
+                                onRequestDeleteRoutine = { pendingDeleteRoutine = it },
                                 onToggleCheck = { item, checked ->
                                     item.taskForDay?.let { taskForDay ->
                                         viewModel.setTaskChecked(taskForDay, checked)
@@ -204,6 +216,8 @@ fun HomeScreen(
                                     }
                                 },
                                 pendingCompletionKeys = uiState.pendingCompletionKeys,
+                                pendingManagementKeys = uiState.pendingManagementKeys,
+                                canManageActions = uiState.canManageActions,
                             )
                         }
                     }
@@ -241,6 +255,19 @@ fun HomeScreen(
         ) {
             DatePicker(state = datePickerState, showModeToggle = false)
         }
+    }
+
+    pendingDeleteRoutine?.let { routine ->
+        FantasyConfirmationDialog(
+            title = "Désactiver la routine",
+            message = "Désactiver « ${routine.task.title} » ? Elle ne sera plus proposée à l'enfant.",
+            confirmLabel = "Désactiver",
+            onDismiss = { pendingDeleteRoutine = null },
+            onConfirm = {
+                pendingDeleteRoutine = null
+                viewModel.deleteRoutine(routine)
+            },
+        )
     }
 }
 
@@ -298,8 +325,12 @@ private fun DailyProgressCard(
 private fun TodayActionSection(
     section: HomeSection,
     onOpenTask: (Long) -> Unit,
+    onEditTask: (Long) -> Unit,
+    onRequestDeleteRoutine: (TaskForDay) -> Unit,
     onToggleCheck: (HomePlanningItem, Boolean) -> Unit,
     pendingCompletionKeys: Set<String>,
+    pendingManagementKeys: Set<String>,
+    canManageActions: Boolean,
 ) {
     val doneCount = section.items.count { it.isCompleted }
 
@@ -334,6 +365,7 @@ private fun TodayActionSection(
         }
         section.items.forEach { item ->
             val isSubmitting = pendingCompletionKeys.contains(item.key)
+            val isManaging = pendingManagementKeys.contains(item.key)
             val openTaskAction =
                 item.taskForDay?.task
                     ?.takeIf { task -> task.id > 0L }
@@ -354,6 +386,14 @@ private fun TodayActionSection(
                 actionEnabled = !item.isCompleted && !isSubmitting,
                 isSubmitting = isSubmitting,
                 onClick = openTaskAction,
+                onEdit =
+                    item.taskForDay
+                        ?.takeIf { canManageActions && item.itemType == PlanningItemType.ROUTINE && !isManaging }
+                        ?.let { taskForDay -> { onEditTask(taskForDay.task.id) } },
+                onDelete =
+                    item.taskForDay
+                        ?.takeIf { canManageActions && item.itemType == PlanningItemType.ROUTINE && !isManaging }
+                        ?.let { taskForDay -> { onRequestDeleteRoutine(taskForDay) } },
                 onToggleDone = { onToggleCheck(item, true) },
             )
         }

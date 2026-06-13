@@ -21,6 +21,7 @@ data class TaskEditUiState(
     val routineDays: Set<Int> = emptySet(),
     val projectId: Long? = null,
     val isRoutine: Boolean = false,
+    val canChangeTaskType: Boolean = true,
     val projects: List<Project> = emptyList(),
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,

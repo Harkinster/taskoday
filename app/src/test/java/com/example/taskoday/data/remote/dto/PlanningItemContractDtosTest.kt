@@ -55,4 +55,22 @@ class PlanningItemContractDtosTest {
         assertEquals(2, completion.award?.flammechesAwarded)
         assertEquals(1, completion.award?.crystalsAwarded)
     }
+
+    @Test
+    fun routineUpdateSendsOnlySupportedManagementFields() {
+        val json =
+            gson.toJson(
+                RoutineUpdateRequestDto(
+                    title = "Routine modifiée",
+                    description = "Description parent",
+                ),
+            )
+
+        assertEquals(
+            """{"title":"Routine modifiée","description":"Description parent"}""",
+            json,
+        )
+        assertFalse(json.contains("day_part"))
+        assertFalse(json.contains("points_reward"))
+    }
 }

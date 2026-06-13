@@ -19,8 +19,11 @@ data class HomeUiState(
     val remoteFlammeches: Int? = null,
     val remoteCrystals: Int? = null,
     val usingRemoteData: Boolean = false,
+    val canManageActions: Boolean = false,
     val pendingCompletionKeys: Set<String> = emptySet(),
+    val pendingManagementKeys: Set<String> = emptySet(),
     val completionFeedback: CompletionFeedback? = null,
     val isLoading: Boolean = true,
+    val successMessage: String? = null,
     val errorMessage: String? = null,
 )

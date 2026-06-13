@@ -8,9 +8,13 @@ import com.example.taskoday.data.remote.dto.MissionCreateResponseDto
 import com.example.taskoday.data.remote.dto.QuestCreateResponseDto
 import com.example.taskoday.data.remote.dto.RemoteCompletionResponseDto
 import com.example.taskoday.data.remote.dto.RoutineCreateResponseDto
-import retrofit2.http.Path
+import com.example.taskoday.data.remote.dto.RoutineItemDto
+import com.example.taskoday.data.remote.dto.RoutineUpdateRequestDto
 import retrofit2.http.Body
+import retrofit2.http.DELETE
+import retrofit2.http.PATCH
 import retrofit2.http.POST
+import retrofit2.http.Path
 
 interface PlanningApi {
     @POST("children/{childId}/routines")
@@ -30,6 +34,17 @@ interface PlanningApi {
         @Path("childId") childId: Long,
         @Body payload: ChildQuestCreateRequestDto,
     ): ApiEnvelopeDto<QuestCreateResponseDto>
+
+    @PATCH("routines/{routineId}")
+    suspend fun updateRoutine(
+        @Path("routineId") routineId: Long,
+        @Body payload: RoutineUpdateRequestDto,
+    ): ApiEnvelopeDto<RoutineItemDto>
+
+    @DELETE("routines/{routineId}")
+    suspend fun deleteRoutine(
+        @Path("routineId") routineId: Long,
+    )
 
     @POST("routines/{routineId}/complete")
     suspend fun completeRoutine(

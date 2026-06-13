@@ -3,6 +3,8 @@ package com.example.taskoday.data.repository
 import com.example.taskoday.core.util.DateTimeUtils
 import com.example.taskoday.data.remote.children.ChildrenApi
 import com.example.taskoday.data.remote.dto.RoutineItemDto
+import com.example.taskoday.data.remote.dto.RoutineUpdateRequestDto
+import com.example.taskoday.data.remote.planning.PlanningApi
 import com.example.taskoday.domain.model.DayPart
 import com.example.taskoday.domain.model.PlanningItemType
 import com.example.taskoday.domain.model.Task
@@ -26,6 +28,7 @@ class RoutinesRepositoryImpl
     constructor(
         private val authRepository: AuthRepository,
         private val childrenApi: ChildrenApi,
+        private val planningApi: PlanningApi,
         private val taskRepository: TaskRepository,
     ) : RoutinesRepository {
         override suspend fun syncRoutinesForDay(dayStartMillis: Long): RoutinesSyncResult {
@@ -82,6 +85,34 @@ class RoutinesRepositoryImpl
 
             return RoutinesSyncResult(usedRemoteData = true)
         }
+
+        override suspend fun updateRoutineFromTask(localTaskId: Long, task: Task): Result<Task> =
+            runCatching {
+                val remoteRef = RemotePlanningIdCodec.decodeTaskId(localTaskId)
+                require(remoteRef?.itemType == PlanningItemType.ROUTINE) { "Identifiant routine invalide." }
+                val updated =
+                    planningApi.updateRoutine(
+                        routineId = remoteRef.remoteItemId,
+                        payload =
+                            RoutineUpdateRequestDto(
+                                title = task.title.trim(),
+                                description = task.description,
+                            ),
+                    ).data
+                task.copy(
+                    id = localTaskId,
+                    title = updated.title,
+                    description = updated.description,
+                    updatedAt = System.currentTimeMillis(),
+                )
+            }
+
+        override suspend fun deleteRoutine(localTaskId: Long): Result<Unit> =
+            runCatching {
+                val remoteRef = RemotePlanningIdCodec.decodeTaskId(localTaskId)
+                require(remoteRef?.itemType == PlanningItemType.ROUTINE) { "Identifiant routine invalide." }
+                planningApi.deleteRoutine(remoteRef.remoteItemId)
+            }
     }
 
 private fun RoutineItemDto.toDayPart(): DayPart = runCatching { DayPart.valueOf(dayPart.orEmpty()) }.getOrDefault(DayPart.MATIN)

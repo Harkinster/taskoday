@@ -549,6 +549,8 @@ fun RoutineItemRow(
     actionEnabled: Boolean = true,
     isSubmitting: Boolean = false,
     onClick: (() -> Unit)? = null,
+    onEdit: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null,
     onToggleDone: () -> Unit,
 ) {
     Row(
@@ -626,6 +628,36 @@ fun RoutineItemRow(
                 color = if (done) SuccessGlow else EmberOrange,
                 maxLines = 1,
             )
+        }
+        if (onEdit != null || onDelete != null) {
+            Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
+                onEdit?.let { editAction ->
+                    IconButton(
+                        onClick = editAction,
+                        modifier = Modifier.size(28.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Edit,
+                            contentDescription = "Modifier",
+                            tint = ArcaneViolet,
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
+                }
+                onDelete?.let { deleteAction ->
+                    IconButton(
+                        onClick = deleteAction,
+                        modifier = Modifier.size(28.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Delete,
+                            contentDescription = "Supprimer",
+                            tint = DangerGlow,
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
+                }
+            }
         }
         Box(
             modifier =

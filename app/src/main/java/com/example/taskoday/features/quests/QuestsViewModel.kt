@@ -264,16 +264,10 @@ class QuestsViewModel
                 }
 
                 val error = remoteResult.exceptionOrNull()
-                if (error.isForbidden()) {
-                    _uiState.update { it.copy(isSubmittingQuest = false, errorMessage = "Action non autorisee.") }
-                    return@launch
-                }
-
-                questRepository.upsertQuest(updatedQuest)
                 _uiState.update {
                     it.copy(
                         isSubmittingQuest = false,
-                        errorMessage = "Serveur indisponible, modification locale appliquee.",
+                        errorMessage = error?.toMessage() ?: "Modification impossible.",
                     )
                 }
             }
@@ -295,19 +289,15 @@ class QuestsViewModel
                 val remoteResult = questsRepository.deleteQuest(questForDay.quest.id)
                 if (remoteResult.isFailure) {
                     val error = remoteResult.exceptionOrNull()
-                    if (error.isForbidden()) {
-                        _uiState.update { it.copy(isSubmittingQuest = false, errorMessage = "Action non autorisee.") }
-                        return@launch
-                    }
                     _uiState.update {
                         it.copy(
                             isSubmittingQuest = false,
-                            errorMessage = "Serveur indisponible, suppression locale appliquee.",
+                            errorMessage = error?.toMessage() ?: "Suppression impossible.",
                         )
                     }
-                } else {
-                    _uiState.update { it.copy(isSubmittingQuest = false) }
+                    return@launch
                 }
+                _uiState.update { it.copy(isSubmittingQuest = false) }
                 questRepository.deleteQuest(questForDay.quest.id)
             }
         }

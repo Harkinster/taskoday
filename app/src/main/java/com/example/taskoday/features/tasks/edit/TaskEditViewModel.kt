@@ -13,6 +13,7 @@ import com.example.taskoday.domain.model.TaskStatus
 import com.example.taskoday.domain.model.TaskType
 import com.example.taskoday.domain.repository.MissionsRepository
 import com.example.taskoday.domain.repository.ProjectRepository
+import com.example.taskoday.domain.repository.RoutinesRepository
 import com.example.taskoday.domain.repository.TaskRepository
 import com.example.taskoday.navigation.TaskodayDestination
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -33,6 +34,7 @@ class TaskEditViewModel
         private val taskRepository: TaskRepository,
         private val projectRepository: ProjectRepository,
         private val missionsRepository: MissionsRepository,
+        private val routinesRepository: RoutinesRepository,
     ) : ViewModel() {
         private val rawTaskIdArg: Long = savedStateHandle[TaskodayDestination.TaskEdit.ARG_TASK_ID] ?: -1L
         private val initialMode: String? = savedStateHandle[TaskodayDestination.TaskEdit.ARG_MODE]
@@ -104,6 +106,7 @@ class TaskEditViewModel
                         routineDays = task.routineDays,
                         projectId = task.projectId,
                         isRoutine = task.isRoutine,
+                        canChangeTaskType = RemotePlanningIdCodec.decodeTaskId(task.id) == null,
                         isLoading = false,
                     )
                 }
@@ -196,7 +199,13 @@ class TaskEditViewModel
 
                 val now = System.currentTimeMillis()
                 val existing = loadedTask
-                val normalizedTaskType = if (state.isRoutine) TaskType.DAILY else state.taskType
+                val remoteRef = existing?.let { RemotePlanningIdCodec.decodeTaskId(it.id) }
+                val normalizedTaskType =
+                    when (remoteRef?.itemType) {
+                        PlanningItemType.ROUTINE -> TaskType.DAILY
+                        PlanningItemType.MISSION -> TaskType.ONE_TIME
+                        else -> if (state.isRoutine) TaskType.DAILY else state.taskType
+                    }
                 val taskToSave =
                     Task(
                         id = existing?.id ?: 0L,
@@ -215,6 +224,9 @@ class TaskEditViewModel
                         createdAt = existing?.createdAt ?: now,
                         updatedAt = now,
                     )
+                val isRemoteEdit =
+                    existing != null &&
+                        (remoteRef?.itemType == PlanningItemType.MISSION || remoteRef?.itemType == PlanningItemType.ROUTINE)
 
                 val saveResult =
                     when {
@@ -224,8 +236,14 @@ class TaskEditViewModel
 
                         existing != null &&
                             normalizedTaskType == TaskType.ONE_TIME &&
-                            RemotePlanningIdCodec.decodeTaskId(existing.id)?.itemType == PlanningItemType.MISSION -> {
+                            remoteRef?.itemType == PlanningItemType.MISSION -> {
                             missionsRepository.updateMissionFromTask(existing.id, taskToSave)
+                        }
+
+                        existing != null &&
+                            normalizedTaskType == TaskType.DAILY &&
+                            remoteRef?.itemType == PlanningItemType.ROUTINE -> {
+                            routinesRepository.updateRoutineFromTask(existing.id, taskToSave)
                         }
 
                         else -> Result.success(taskToSave)
@@ -233,11 +251,16 @@ class TaskEditViewModel
 
                 if (saveResult.isFailure) {
                     val error = saveResult.exceptionOrNull()
-                    if (error is HttpException && error.code() == 403) {
+                    if (isRemoteEdit) {
                         _uiState.update {
                             it.copy(
                                 isSaving = false,
-                                errorMessage = "Action non autorisee.",
+                                errorMessage =
+                                    if (error is HttpException && error.code() == 403) {
+                                        "Action non autorisee."
+                                    } else {
+                                        "Modification impossible. Vérifie la connexion puis réessaie."
+                                    },
                             )
                         }
                         return@launch
@@ -254,7 +277,7 @@ class TaskEditViewModel
                         savedTaskId = resolvedSavedTaskId,
                         errorMessage =
                             if (saveResult.isFailure) {
-                                "Serveur indisponible, mission enregistree en local."
+                                "Serveur indisponible, modification non synchronisee."
                             } else {
                                 null
                             },

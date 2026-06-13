@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.taskoday.core.ui.component.fantasy.FantasyScreenBackground
+import com.example.taskoday.core.ui.component.fantasy.FantasyConfirmationDialog
 import com.example.taskoday.core.ui.component.fantasy.NeonButton
 import com.example.taskoday.core.ui.component.fantasy.NeonButtonStyle
 import com.example.taskoday.core.ui.component.fantasy.NeonCard
@@ -76,6 +77,7 @@ fun QuestsScreen(
     var formPoints by rememberSaveable { mutableStateOf("3") }
     var formDayPart by rememberSaveable { mutableStateOf(DayPart.APRES_MIDI) }
     var editingQuestId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var pendingDeleteQuestId by rememberSaveable { mutableStateOf<Long?>(null) }
 
     fun resetForm() {
         formTitle = ""
@@ -249,13 +251,29 @@ fun QuestsScreen(
                             canManage = uiState.canManageQuests,
                             onAction = { viewModel.setQuestCompleted(item, !checked) },
                             onEdit = if (uiState.canManageQuests) ({ startEdit(item) }) else null,
-                            onDelete = if (uiState.canManageQuests) ({ viewModel.deleteQuest(item) }) else null,
+                            onDelete = if (uiState.canManageQuests) ({ pendingDeleteQuestId = item.quest.id }) else null,
                         )
                     }
                 }
             }
         }
     }
+
+    pendingDeleteQuestId
+        ?.let { id -> uiState.quests.firstOrNull { it.quest.id == id } }
+        ?.let { item ->
+            FantasyConfirmationDialog(
+                title = "Supprimer la quête",
+                message = "Supprimer « ${item.quest.title} » ? Cette action est définitive.",
+                confirmLabel = "Supprimer",
+                confirmEnabled = !uiState.isSubmittingQuest,
+                onDismiss = { pendingDeleteQuestId = null },
+                onConfirm = {
+                    pendingDeleteQuestId = null
+                    viewModel.deleteQuest(item)
+                },
+            )
+        }
 }
 
 @Composable

@@ -5,6 +5,7 @@ import com.example.taskoday.data.remote.dto.ApiEnvelopeDto
 import com.example.taskoday.data.remote.dto.ChildProfileResponseDto
 import com.example.taskoday.data.remote.dto.ChildResponseDto
 import com.example.taskoday.data.remote.dto.RoutineItemDto
+import com.example.taskoday.data.remote.planning.PlanningApi
 import com.example.taskoday.domain.model.AuthSession
 import com.example.taskoday.domain.model.AuthenticatedUser
 import com.example.taskoday.domain.model.Task
@@ -12,6 +13,7 @@ import com.example.taskoday.domain.model.TaskForDay
 import com.example.taskoday.domain.model.TaskStatus
 import com.example.taskoday.domain.repository.AuthRepository
 import com.example.taskoday.domain.repository.TaskRepository
+import java.lang.reflect.Proxy
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
@@ -28,6 +30,7 @@ class RoutinesRepositoryImplTest {
                 RoutinesRepositoryImpl(
                     authRepository = FakeRoutineAuthRepository(),
                     childrenApi = FakeRoutineChildrenApi(completed = true),
+                    planningApi = unusedPlanningApi(),
                     taskRepository = taskRepository,
                 )
 
@@ -38,6 +41,14 @@ class RoutinesRepositoryImplTest {
             assertEquals(true, taskRepository.lastChecked)
         }
 }
+
+private fun unusedPlanningApi(): PlanningApi =
+    Proxy.newProxyInstance(
+        PlanningApi::class.java.classLoader,
+        arrayOf(PlanningApi::class.java),
+    ) { _, method, _ ->
+        error("PlanningApi.${method.name} should not be called in this test.")
+    } as PlanningApi
 
 private class FakeRoutineAuthRepository : AuthRepository {
     override suspend fun registerParent(email: String, password: String, familyName: String, birthDate: String): AuthSession = error("Not used")

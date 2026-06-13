@@ -284,6 +284,7 @@ fun TaskodayApp() {
                 HomeScreen(
                     viewModel = viewModel,
                     onOpenTask = { taskId -> navController.navigate(TaskodayDestination.TaskDetail.createRoute(taskId)) },
+                    onEditTask = { taskId -> navController.navigate(TaskodayDestination.TaskEdit.createRoute(taskId)) },
                     onOpenProfile = navigateToProfile,
                 )
             }
