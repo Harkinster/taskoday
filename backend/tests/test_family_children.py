@@ -80,6 +80,42 @@ def test_parent_can_manage_own_children(client) -> None:
     assert len(family_children.json()["data"]) == 2
 
 
+def test_parent_can_create_child_directly(client) -> None:
+    parent_token = _register_parent(client, "parent.direct@example.com", "Famille Direct")
+
+    created = client.post(
+        f"{API}/children",
+        headers={"Authorization": f"Bearer {parent_token}"},
+        json={"display_name": "Zoe Test"},
+    )
+    assert created.status_code == 201
+    created_payload = created.json()["data"]
+    assert created_payload["display_name"] == "Zoe Test"
+    assert created_payload["email"].endswith("@children.taskoday.app")
+    assert created_payload["xp"] == 0
+    assert created_payload["level"] == 1
+
+    children = client.get(f"{API}/children", headers={"Authorization": f"Bearer {parent_token}"})
+    assert children.status_code == 200
+    assert [child["id"] for child in children.json()["data"]] == [created_payload["id"]]
+    assert children.json()["data"][0] == created_payload
+
+    child_token = _register_child(client, "direct.child@example.com", "Child")
+    forbidden = client.post(
+        f"{API}/children",
+        headers={"Authorization": f"Bearer {child_token}"},
+        json={"display_name": "Nope"},
+    )
+    assert forbidden.status_code == 403
+
+    invalid = client.post(
+        f"{API}/children",
+        headers={"Authorization": f"Bearer {parent_token}"},
+        json={"display_name": "   "},
+    )
+    assert invalid.status_code == 422
+
+
 def test_parent_cannot_access_children_of_other_family(client) -> None:
     parent_a_token = _register_parent(client, "parent.a@example.com", "Famille A")
     parent_b_token = _register_parent(client, "parent.b@example.com", "Famille B")
