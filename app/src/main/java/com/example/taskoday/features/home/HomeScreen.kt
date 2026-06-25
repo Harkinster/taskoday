@@ -73,6 +73,7 @@ fun HomeScreen(
     onEditTask: (Long) -> Unit,
     onOpenProfile: () -> Unit,
     onAddAction: () -> Unit,
+    onOpenJournal: () -> Unit,
     onOpenWishes: () -> Unit,
     onOpenNest: () -> Unit,
 ) {
@@ -181,9 +182,14 @@ fun HomeScreen(
                     item {
                         ParentShortcutsCard(
                             onAddAction = onAddAction,
+                            onOpenJournal = onOpenJournal,
                             onOpenWishes = onOpenWishes,
                             onOpenNest = onOpenNest,
                         )
+                    }
+                } else if (uiState.usingRemoteData) {
+                    item {
+                        ChildJournalCard(onOpenJournal = onOpenJournal)
                     }
                 }
 
@@ -413,6 +419,7 @@ private fun ParentMetric(
 @Composable
 private fun ParentShortcutsCard(
     onAddAction: () -> Unit,
+    onOpenJournal: () -> Unit,
     onOpenWishes: () -> Unit,
     onOpenNest: () -> Unit,
 ) {
@@ -430,6 +437,12 @@ private fun ParentShortcutsCard(
             style = FantasyButtonStyle.Filled,
         )
         FantasyButton(
+            text = "Journal",
+            onClick = onOpenJournal,
+            modifier = Modifier.fillMaxWidth(),
+            style = FantasyButtonStyle.Outline,
+        )
+        FantasyButton(
             text = "Voir les souhaits",
             onClick = onOpenWishes,
             modifier = Modifier.fillMaxWidth(),
@@ -440,6 +453,30 @@ private fun ParentShortcutsCard(
             onClick = onOpenNest,
             modifier = Modifier.fillMaxWidth(),
             style = FantasyButtonStyle.Quiet,
+        )
+    }
+}
+
+@Composable
+private fun ChildJournalCard(onOpenJournal: () -> Unit) {
+    FantasyCard(tone = FantasyTone.Violet) {
+        Text(
+            text = "Mes dernieres reussites",
+            style = MaterialTheme.typography.titleMedium,
+            color = WoodBrownDark,
+            maxLines = 1,
+        )
+        Text(
+            text = "Retrouve les actions terminees et tes souhaits.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = InkMuted,
+            maxLines = 2,
+        )
+        FantasyButton(
+            text = "Ouvrir le journal",
+            onClick = onOpenJournal,
+            modifier = Modifier.fillMaxWidth(),
+            style = FantasyButtonStyle.Outline,
         )
     }
 }

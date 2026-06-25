@@ -33,6 +33,8 @@ import com.example.taskoday.core.ui.theme.BackgroundTop
 import com.example.taskoday.domain.model.PlanningFormType
 import com.example.taskoday.features.add.QuickAddFab
 import com.example.taskoday.features.add.QuickAddViewModel
+import com.example.taskoday.features.activity.ActivityJournalScreen
+import com.example.taskoday.features.activity.ActivityJournalViewModel
 import com.example.taskoday.features.auth.AuthViewModel
 import com.example.taskoday.features.auth.LoginScreen
 import com.example.taskoday.features.auth.RegisterParentScreen
@@ -287,8 +289,18 @@ fun TaskodayApp() {
                     onEditTask = { taskId -> navController.navigate(TaskodayDestination.TaskEdit.createRoute(taskId)) },
                     onOpenProfile = navigateToProfile,
                     onAddAction = { navController.navigate(TaskodayDestination.ParentPlanning.createRoute()) },
+                    onOpenJournal = { navController.navigate(TaskodayDestination.ActivityJournal.route) },
                     onOpenWishes = { navController.navigate(TaskodayDestination.Shop.createRoute(TaskodayDestination.Shop.SECTION_WISHES)) },
                     onOpenNest = { navigateToTopLevel(TaskodayDestination.Nest) },
+                )
+            }
+
+            composable(TaskodayDestination.ActivityJournal.route) {
+                val viewModel: ActivityJournalViewModel = hiltViewModel()
+                ActivityJournalScreen(
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() },
+                    onOpenProfile = navigateToProfile,
                 )
             }
 

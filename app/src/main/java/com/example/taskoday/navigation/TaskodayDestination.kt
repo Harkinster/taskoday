@@ -50,6 +50,8 @@ sealed class TaskodayDestination(
     data object Settings :
         TaskodayDestination(route = "settings", label = "Profil", icon = Icons.Outlined.Person)
 
+    data object ActivityJournal : TaskodayDestination(route = "activity_journal", label = "Journal")
+
     data object ParentPlanning : TaskodayDestination(route = "parent/planning?type={type}", label = "Mode parent") {
         const val ARG_TYPE: String = "type"
 
