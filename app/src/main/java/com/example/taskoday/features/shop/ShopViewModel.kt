@@ -288,13 +288,18 @@ class ShopViewModel
         }
 
         fun useCoupon(couponId: Long) {
-            if (_uiState.value.isSubmitting) return
+            val currentState = _uiState.value
+            if (currentState.isSubmitting) return
+            if (!currentState.isParent) {
+                _uiState.update { it.copy(userMessage = "Seul le parent peut marquer un souhait comme utilise.") }
+                return
+            }
+            _uiState.update { it.copy(isSubmitting = true) }
             viewModelScope.launch {
-                _uiState.update { it.copy(isSubmitting = true) }
                 rewardRepository
                     .useRemoteCoupon(couponId)
                     .onSuccess {
-                        _uiState.update { it.copy(isSubmitting = false, userMessage = "Parchemin utilise.") }
+                        _uiState.update { it.copy(isSubmitting = false, userMessage = "Souhait utilise.") }
                         refreshRemoteData()
                     }.onFailure { error ->
                         _uiState.update { it.copy(isSubmitting = false, userMessage = error.toUserMessage()) }

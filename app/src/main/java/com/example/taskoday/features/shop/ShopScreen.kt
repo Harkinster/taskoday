@@ -76,6 +76,7 @@ fun ShopScreen(
     }
     var rewardBeingEdited by remember { mutableStateOf<Reward?>(null) }
     var rewardPendingDeactivation by remember { mutableStateOf<Reward?>(null) }
+    var requestPendingUse by remember { mutableStateOf<RewardRedemptionRequest?>(null) }
 
     LaunchedEffect(uiState.userMessage) {
         uiState.userMessage?.let {
@@ -231,7 +232,7 @@ fun ShopScreen(
                                 isSubmitting = uiState.isSubmitting,
                                 onApprove = { viewModel.approveRequest(request.id) },
                                 onRefuse = { viewModel.refuseRequest(request.id) },
-                                onUseCoupon = { couponId -> viewModel.useCoupon(couponId) },
+                                onUseCoupon = { requestPendingUse = request },
                             )
                         }
                     }
@@ -319,6 +320,20 @@ fun ShopScreen(
                     rewardBeingEdited = null
                 }
                 viewModel.deactivateReward(reward.id)
+            },
+            confirmEnabled = !uiState.isSubmitting,
+        )
+    }
+
+    requestPendingUse?.let { request ->
+        FantasyConfirmationDialog(
+            title = "Marquer comme utilise",
+            message = "Marquer \"${request.rewardTitle}\" comme utilise ?",
+            confirmLabel = "Marquer utilise",
+            onDismiss = { requestPendingUse = null },
+            onConfirm = {
+                requestPendingUse = null
+                request.coupon?.let { coupon -> viewModel.useCoupon(coupon.id) }
             },
             confirmEnabled = !uiState.isSubmitting,
         )
@@ -717,7 +732,7 @@ private fun RewardRequestRow(
     isSubmitting: Boolean,
     onApprove: () -> Unit,
     onRefuse: () -> Unit,
-    onUseCoupon: (Long) -> Unit,
+    onUseCoupon: () -> Unit,
 ) {
     val spacing = MaterialTheme.spacing
     request.coupon?.let { coupon ->
@@ -728,8 +743,8 @@ private fun RewardRequestRow(
             assetResId = request.status.toScrollAssetRes(),
             contentDescription = "Parchemin ${request.status.displayLabel()}",
             onUse =
-                if (isParent && request.status == RewardRequestStatus.APPROVED) {
-                    { onUseCoupon(coupon.id) }
+                if (isParent && request.status == RewardRequestStatus.APPROVED && !isSubmitting) {
+                    onUseCoupon
                 } else {
                     null
                 },
