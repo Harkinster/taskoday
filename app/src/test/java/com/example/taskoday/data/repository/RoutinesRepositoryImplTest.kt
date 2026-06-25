@@ -2,6 +2,7 @@ package com.example.taskoday.data.repository
 
 import com.example.taskoday.data.remote.children.ChildrenApi
 import com.example.taskoday.data.remote.dto.ApiEnvelopeDto
+import com.example.taskoday.data.remote.dto.ChildCreateRequestDto
 import com.example.taskoday.data.remote.dto.ChildProfileResponseDto
 import com.example.taskoday.data.remote.dto.ChildResponseDto
 import com.example.taskoday.data.remote.dto.ChildUpdateRequestDto
@@ -67,6 +68,7 @@ private class FakeRoutineChildrenApi(
     private val completed: Boolean,
 ) : ChildrenApi {
     override suspend fun getChildren(): ApiEnvelopeDto<List<ChildResponseDto>> = error("Not used")
+    override suspend fun createChild(payload: ChildCreateRequestDto): ApiEnvelopeDto<ChildResponseDto> = error("Not used")
     override suspend fun getChild(childId: Long): ApiEnvelopeDto<ChildResponseDto> = error("Not used")
     override suspend fun getProfile(childId: Long): ApiEnvelopeDto<ChildProfileResponseDto> = error("Not used")
     override suspend fun updateChild(

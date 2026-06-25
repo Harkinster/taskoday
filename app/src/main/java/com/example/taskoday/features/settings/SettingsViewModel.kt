@@ -132,6 +132,73 @@ class SettingsViewModel
             }
         }
 
+        fun createChild(
+            displayName: String,
+            email: String?,
+            birthDate: String?,
+        ) {
+            val trimmedName = displayName.trim()
+            if (!_uiState.value.isParentUser) return
+            if (trimmedName.isBlank()) {
+                _uiState.update {
+                    it.copy(
+                        childManagementSuccessMessage = null,
+                        childManagementErrorMessage = "Saisis un nom d'enfant.",
+                    )
+                }
+                return
+            }
+            if (_uiState.value.isChildManagementBusy) return
+
+            viewModelScope.launch {
+                _uiState.update {
+                    it.copy(
+                        isChildManagementBusy = true,
+                        childManagementSuccessMessage = null,
+                        childManagementErrorMessage = null,
+                    )
+                }
+
+                runCatching {
+                    val createdChild =
+                        childrenRepository.createChild(
+                            displayName = trimmedName,
+                            email = email,
+                            birthDate = birthDate,
+                        )
+                    val refreshedChildren = childrenRepository.fetchChildren()
+                    createdChild to refreshedChildren
+                }.onSuccess { (createdChild, refreshedChildren) ->
+                    val mergedChildren =
+                        if (refreshedChildren.any { child -> child.id == createdChild.id }) {
+                            refreshedChildren
+                        } else {
+                            refreshedChildren + createdChild
+                        }
+                    authRepository.setActiveChildId(createdChild.id)
+
+                    _uiState.update {
+                        it.copy(
+                            isChildManagementBusy = false,
+                            pairedChildren = mergedChildren,
+                            activeChildId = createdChild.id,
+                            childManagementSuccessMessage = "${createdChild.displayName} a ete ajoute.",
+                            childManagementErrorMessage = null,
+                        )
+                    }
+                    refreshProfile()
+                }.onFailure { throwable ->
+                    _uiState.update {
+                        it.copy(
+                            isChildManagementBusy = false,
+                            childManagementSuccessMessage = null,
+                            childManagementErrorMessage = throwable.toChildManagementMessage(),
+                        )
+                    }
+                }
+            }
+        }
+
         fun clearChildManagementMessages() {
             _uiState.update {
                 it.copy(
@@ -468,6 +535,8 @@ private fun Throwable.toChildManagementMessage(): String =
                 401 -> "Session expiree, reconnecte-toi."
                 403 -> "Action non autorisee."
                 404 -> "Enfant introuvable."
+                409 -> "Impossible de creer l'enfant avec ces informations."
+                422 -> "Verifie le nom, l'email ou la date de naissance."
                 else -> "Erreur API (${code()})."
             }
 

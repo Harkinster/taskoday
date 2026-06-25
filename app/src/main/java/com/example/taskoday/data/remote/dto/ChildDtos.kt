@@ -40,6 +40,15 @@ data class ChildProfileResponseDto(
     val role: String? = null,
 )
 
+data class ChildCreateRequestDto(
+    @SerializedName("display_name")
+    val displayName: String,
+    @SerializedName("email")
+    val email: String? = null,
+    @SerializedName("birth_date")
+    val birthDate: String? = null,
+)
+
 data class ChildUpdateRequestDto(
     @SerializedName("display_name")
     val displayName: String? = null,

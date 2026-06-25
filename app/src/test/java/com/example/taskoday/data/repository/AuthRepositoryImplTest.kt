@@ -4,6 +4,7 @@ import com.example.taskoday.data.remote.auth.AuthApi
 import com.example.taskoday.data.remote.auth.TokenStorage
 import com.example.taskoday.data.remote.children.ChildrenApi
 import com.example.taskoday.data.remote.dto.ApiEnvelopeDto
+import com.example.taskoday.data.remote.dto.ChildCreateRequestDto
 import com.example.taskoday.data.remote.dto.ChildProfileResponseDto
 import com.example.taskoday.data.remote.dto.ChildResponseDto
 import com.example.taskoday.data.remote.dto.ChildUpdateRequestDto
@@ -145,6 +146,8 @@ private class FakeChildrenApi(
             success = true,
             data = children,
         )
+
+    override suspend fun createChild(payload: ChildCreateRequestDto): ApiEnvelopeDto<ChildResponseDto> = error("Not used")
 
     override suspend fun getChild(childId: Long): ApiEnvelopeDto<ChildResponseDto> = error("Not used")
 

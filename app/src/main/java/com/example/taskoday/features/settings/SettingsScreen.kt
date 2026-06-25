@@ -160,6 +160,7 @@ fun SettingsScreen(
                         ActiveChildCard(
                             uiState = uiState,
                             onSelectChild = viewModel::selectActiveChild,
+                            onCreateChild = viewModel::createChild,
                             onRenameChild = viewModel::renameChild,
                             onClearMessages = viewModel::clearChildManagementMessages,
                         )
@@ -341,10 +342,12 @@ private fun LogoutActionCard(onClick: () -> Unit) {
 private fun ActiveChildCard(
     uiState: SettingsUiState,
     onSelectChild: (Long) -> Unit,
+    onCreateChild: (String, String?, String?) -> Unit,
     onRenameChild: (Long, String) -> Unit,
     onClearMessages: () -> Unit,
 ) {
     val activeChild = uiState.pairedChildren.firstOrNull { child -> child.id == uiState.activeChildId }
+    var showCreateChildDialog by rememberSaveable { mutableStateOf(false) }
     var editingChildId by rememberSaveable { mutableStateOf<Long?>(null) }
     var editingChildName by rememberSaveable { mutableStateOf("") }
     val editingChild = uiState.pairedChildren.firstOrNull { child -> child.id == editingChildId }
@@ -357,45 +360,54 @@ private fun ActiveChildCard(
                 color = StarWhite,
             )
             Text(
-                text = "Crée un compte enfant depuis l'accueil, puis associe-le avec le code temporaire plus bas.",
+                text = "Ajoute directement un enfant à cette famille ou associe un compte existant plus bas.",
                 style = MaterialTheme.typography.bodySmall,
                 color = TextMuted,
             )
-            return@NeonCard
-        }
+        } else {
+            Text(
+                text = "Enfant actif",
+                style = MaterialTheme.typography.titleMedium,
+                color = StarWhite,
+            )
+            Text(
+                text = activeChild?.displayName ?: "Sélectionne un enfant",
+                style = MaterialTheme.typography.bodyMedium,
+                color = NeonCyan,
+            )
+            Text(
+                text = "Les données parent, actions, souhaits et Nid se rechargent avec cet enfant.",
+                style = MaterialTheme.typography.bodySmall,
+                color = TextMuted,
+            )
 
-        Text(
-            text = "Enfant actif",
-            style = MaterialTheme.typography.titleMedium,
-            color = StarWhite,
-        )
-        Text(
-            text = activeChild?.displayName ?: "Sélectionne un enfant",
-            style = MaterialTheme.typography.bodyMedium,
-            color = NeonCyan,
-        )
-        Text(
-            text = "Les données parent, actions, souhaits et Nid se rechargent avec cet enfant.",
-            style = MaterialTheme.typography.bodySmall,
-            color = TextMuted,
-        )
-
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            uiState.pairedChildren.forEach { child ->
-                ChildManagementRow(
-                    displayName = child.displayName,
-                    email = child.email,
-                    isActive = child.id == uiState.activeChildId,
-                    isBusy = uiState.isChildManagementBusy,
-                    onSelect = { onSelectChild(child.id) },
-                    onEdit = {
-                        editingChildId = child.id
-                        editingChildName = child.displayName
-                        onClearMessages()
-                    },
-                )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                uiState.pairedChildren.forEach { child ->
+                    ChildManagementRow(
+                        displayName = child.displayName,
+                        email = child.email,
+                        isActive = child.id == uiState.activeChildId,
+                        isBusy = uiState.isChildManagementBusy,
+                        onSelect = { onSelectChild(child.id) },
+                        onEdit = {
+                            editingChildId = child.id
+                            editingChildName = child.displayName
+                            onClearMessages()
+                        },
+                    )
+                }
             }
         }
+
+        NeonButton(
+            text = if (uiState.isChildManagementBusy) "Ajout..." else "Ajouter un enfant",
+            onClick = {
+                onClearMessages()
+                showCreateChildDialog = true
+            },
+            enabled = !uiState.isChildManagementBusy,
+            modifier = Modifier.fillMaxWidth(),
+        )
 
         if (!uiState.childManagementSuccessMessage.isNullOrBlank()) {
             Text(
@@ -411,6 +423,22 @@ private fun ActiveChildCard(
                 color = MaterialTheme.colorScheme.error,
             )
         }
+    }
+
+    if (showCreateChildDialog) {
+        CreateChildDialog(
+            isBusy = uiState.isChildManagementBusy,
+            onDismiss = {
+                if (!uiState.isChildManagementBusy) {
+                    showCreateChildDialog = false
+                }
+            },
+            onConfirm = { displayName, email, birthDate ->
+                onCreateChild(displayName, email, birthDate)
+                showCreateChildDialog = false
+            },
+            onClearMessages = onClearMessages,
+        )
     }
 
     editingChild?.let { child ->
@@ -471,6 +499,91 @@ private fun ActiveChildCard(
                         modifier = Modifier.weight(1f),
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CreateChildDialog(
+    isBusy: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: (String, String?, String?) -> Unit,
+    onClearMessages: () -> Unit,
+) {
+    var displayName by rememberSaveable { mutableStateOf("") }
+    var email by rememberSaveable { mutableStateOf("") }
+    var birthDate by rememberSaveable { mutableStateOf("") }
+
+    Dialog(onDismissRequest = onDismiss) {
+        NeonCard(
+            modifier = Modifier.fillMaxWidth(),
+            tone = NeonTone.Cyan,
+        ) {
+            Text(
+                text = "Ajouter un enfant",
+                style = MaterialTheme.typography.titleLarge,
+                color = StarWhite,
+            )
+            Text(
+                text = "Le compte sera lié directement à ce parent.",
+                style = MaterialTheme.typography.bodySmall,
+                color = TextMuted,
+            )
+            OutlinedTextField(
+                value = displayName,
+                onValueChange = {
+                    displayName = it
+                    onClearMessages()
+                },
+                label = { Text("Prénom / nom affiché") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = email,
+                onValueChange = {
+                    email = it
+                    onClearMessages()
+                },
+                label = { Text("Email optionnel") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = birthDate,
+                onValueChange = {
+                    birthDate = it
+                    onClearMessages()
+                },
+                label = { Text("Date de naissance optionnelle") },
+                placeholder = { Text("AAAA-MM-JJ") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                NeonButton(
+                    text = "Annuler",
+                    onClick = onDismiss,
+                    enabled = !isBusy,
+                    modifier = Modifier.weight(1f),
+                    style = NeonButtonStyle.Outline,
+                )
+                NeonButton(
+                    text = if (isBusy) "Création..." else "Créer",
+                    onClick = {
+                        onConfirm(
+                            displayName,
+                            email.trim().takeIf { it.isNotBlank() },
+                            birthDate.trim().takeIf { it.isNotBlank() },
+                        )
+                    },
+                    enabled = !isBusy && displayName.trim().isNotBlank(),
+                    modifier = Modifier.weight(1f),
+                )
             }
         }
     }
@@ -578,12 +691,12 @@ private fun ParentPairingCard(
 ) {
     NeonCard(tone = NeonTone.Blue) {
         Text(
-            text = "Ajouter un enfant",
+            text = "Associer par code",
             style = MaterialTheme.typography.titleMedium,
             color = StarWhite,
         )
         Text(
-            text = "Saisis le code temporaire fourni par le compte enfant pour l'ajouter a la famille.",
+            text = "Option secondaire : saisis le code temporaire fourni par un compte enfant existant.",
             style = MaterialTheme.typography.bodySmall,
             color = TextMuted,
         )

@@ -1,6 +1,8 @@
 package com.example.taskoday.data.repository
 
 import com.example.taskoday.data.remote.children.ChildrenApi
+import com.example.taskoday.data.remote.dto.ChildCreateRequestDto
+import com.example.taskoday.data.remote.dto.ChildResponseDto
 import com.example.taskoday.data.remote.dto.ChildUpdateRequestDto
 import com.example.taskoday.domain.model.ParentChild
 import com.example.taskoday.domain.repository.ChildrenRepository
@@ -15,12 +17,23 @@ class ChildrenRepositoryImpl
     ) : ChildrenRepository {
         override suspend fun fetchChildren(): List<ParentChild> =
             childrenApi.getChildren().data.map { child ->
-                ParentChild(
-                    id = child.id,
-                    displayName = child.displayName,
-                    email = child.email,
-                )
+                child.toDomain()
             }
+
+        override suspend fun createChild(
+            displayName: String,
+            email: String?,
+            birthDate: String?,
+        ): ParentChild =
+            childrenApi
+                .createChild(
+                    ChildCreateRequestDto(
+                        displayName = displayName.trim(),
+                        email = email?.trim()?.takeIf { it.isNotBlank() },
+                        birthDate = birthDate?.trim()?.takeIf { it.isNotBlank() },
+                    ),
+                ).data
+                .toDomain()
 
         override suspend fun updateChildDisplayName(
             childId: Long,
@@ -32,3 +45,10 @@ class ChildrenRepositoryImpl
             )
         }
     }
+
+private fun ChildResponseDto.toDomain(): ParentChild =
+    ParentChild(
+        id = id,
+        displayName = displayName,
+        email = email,
+    )
