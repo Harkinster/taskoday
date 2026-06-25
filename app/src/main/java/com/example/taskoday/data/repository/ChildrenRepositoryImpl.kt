@@ -1,6 +1,7 @@
 package com.example.taskoday.data.repository
 
 import com.example.taskoday.data.remote.children.ChildrenApi
+import com.example.taskoday.data.remote.dto.ChildUpdateRequestDto
 import com.example.taskoday.domain.model.ParentChild
 import com.example.taskoday.domain.repository.ChildrenRepository
 import javax.inject.Inject
@@ -20,4 +21,14 @@ class ChildrenRepositoryImpl
                     email = child.email,
                 )
             }
+
+        override suspend fun updateChildDisplayName(
+            childId: Long,
+            displayName: String,
+        ) {
+            childrenApi.updateChild(
+                childId = childId,
+                payload = ChildUpdateRequestDto(displayName = displayName.trim()),
+            )
+        }
     }

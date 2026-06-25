@@ -4,4 +4,9 @@ import com.example.taskoday.domain.model.ParentChild
 
 interface ChildrenRepository {
     suspend fun fetchChildren(): List<ParentChild>
+
+    suspend fun updateChildDisplayName(
+        childId: Long,
+        displayName: String,
+    )
 }

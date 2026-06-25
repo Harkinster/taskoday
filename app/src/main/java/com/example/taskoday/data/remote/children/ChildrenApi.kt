@@ -3,8 +3,12 @@ package com.example.taskoday.data.remote.children
 import com.example.taskoday.data.remote.dto.ApiEnvelopeDto
 import com.example.taskoday.data.remote.dto.ChildResponseDto
 import com.example.taskoday.data.remote.dto.ChildProfileResponseDto
+import com.example.taskoday.data.remote.dto.ChildUpdateRequestDto
+import com.example.taskoday.data.remote.dto.ChildUpdateResponseDto
 import com.example.taskoday.data.remote.dto.RoutineItemDto
+import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.PATCH
 import retrofit2.http.Path
 
 interface ChildrenApi {
@@ -25,4 +29,10 @@ interface ChildrenApi {
     suspend fun getRoutines(
         @Path("childId") childId: Long,
     ): ApiEnvelopeDto<List<RoutineItemDto>>
+
+    @PATCH("children/{childId}")
+    suspend fun updateChild(
+        @Path("childId") childId: Long,
+        @Body payload: ChildUpdateRequestDto,
+    ): ApiEnvelopeDto<ChildUpdateResponseDto>
 }

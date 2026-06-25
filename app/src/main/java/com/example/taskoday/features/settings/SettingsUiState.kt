@@ -29,5 +29,8 @@ data class SettingsUiState(
     val isPairingBusy: Boolean = false,
     val pairingSuccessMessage: String? = null,
     val pairingErrorMessage: String? = null,
+    val isChildManagementBusy: Boolean = false,
+    val childManagementSuccessMessage: String? = null,
+    val childManagementErrorMessage: String? = null,
     val profileErrorMessage: String? = null,
 )

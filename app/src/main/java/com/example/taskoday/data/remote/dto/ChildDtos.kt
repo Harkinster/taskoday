@@ -40,6 +40,24 @@ data class ChildProfileResponseDto(
     val role: String? = null,
 )
 
+data class ChildUpdateRequestDto(
+    @SerializedName("display_name")
+    val displayName: String? = null,
+)
+
+data class ChildUpdateResponseDto(
+    @SerializedName("id")
+    val id: Long,
+    @SerializedName("display_name")
+    val displayName: String,
+    @SerializedName("avatar_url")
+    val avatarUrl: String? = null,
+    @SerializedName("xp")
+    val xp: Int = 0,
+    @SerializedName("level")
+    val level: Int = 1,
+)
+
 data class RoutineItemDto(
     @SerializedName("id")
     val id: Long,

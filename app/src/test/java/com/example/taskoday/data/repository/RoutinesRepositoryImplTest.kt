@@ -4,6 +4,8 @@ import com.example.taskoday.data.remote.children.ChildrenApi
 import com.example.taskoday.data.remote.dto.ApiEnvelopeDto
 import com.example.taskoday.data.remote.dto.ChildProfileResponseDto
 import com.example.taskoday.data.remote.dto.ChildResponseDto
+import com.example.taskoday.data.remote.dto.ChildUpdateRequestDto
+import com.example.taskoday.data.remote.dto.ChildUpdateResponseDto
 import com.example.taskoday.data.remote.dto.RoutineItemDto
 import com.example.taskoday.data.remote.planning.PlanningApi
 import com.example.taskoday.domain.model.AuthSession
@@ -67,6 +69,10 @@ private class FakeRoutineChildrenApi(
     override suspend fun getChildren(): ApiEnvelopeDto<List<ChildResponseDto>> = error("Not used")
     override suspend fun getChild(childId: Long): ApiEnvelopeDto<ChildResponseDto> = error("Not used")
     override suspend fun getProfile(childId: Long): ApiEnvelopeDto<ChildProfileResponseDto> = error("Not used")
+    override suspend fun updateChild(
+        childId: Long,
+        payload: ChildUpdateRequestDto,
+    ): ApiEnvelopeDto<ChildUpdateResponseDto> = error("Not used")
 
     override suspend fun getRoutines(childId: Long): ApiEnvelopeDto<List<RoutineItemDto>> =
         ApiEnvelopeDto(

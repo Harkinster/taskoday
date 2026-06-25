@@ -55,13 +55,90 @@ class SettingsViewModel
             if (!state.isParentUser || state.pairedChildren.none { child -> child.id == childId }) return
 
             authRepository.setActiveChildId(childId)
+            val childName =
+                state.pairedChildren
+                    .firstOrNull { child -> child.id == childId }
+                    ?.displayName
+                    .orEmpty()
             _uiState.update {
                 it.copy(
                     activeChildId = childId,
+                    childManagementSuccessMessage =
+                        childName
+                            .takeIf { name -> name.isNotBlank() }
+                            ?.let { name -> "$name est l'enfant actif." },
+                    childManagementErrorMessage = null,
                     profileErrorMessage = null,
                 )
             }
             refreshProfile()
+        }
+
+        fun renameChild(
+            childId: Long,
+            displayName: String,
+        ) {
+            val trimmedName = displayName.trim()
+            val state = _uiState.value
+            if (!state.isParentUser || state.pairedChildren.none { child -> child.id == childId }) return
+            if (trimmedName.isBlank()) {
+                _uiState.update {
+                    it.copy(
+                        childManagementSuccessMessage = null,
+                        childManagementErrorMessage = "Saisis un nom d'enfant.",
+                    )
+                }
+                return
+            }
+
+            viewModelScope.launch {
+                _uiState.update {
+                    it.copy(
+                        isChildManagementBusy = true,
+                        childManagementSuccessMessage = null,
+                        childManagementErrorMessage = null,
+                    )
+                }
+
+                runCatching {
+                    childrenRepository.updateChildDisplayName(childId = childId, displayName = trimmedName)
+                    childrenRepository.fetchChildren()
+                }.onSuccess { refreshedChildren ->
+                    val activeChildId =
+                        _uiState.value.activeChildId
+                            ?.takeIf { currentId -> refreshedChildren.any { child -> child.id == currentId } }
+                            ?: refreshedChildren.firstOrNull()?.id
+                    activeChildId?.let(authRepository::setActiveChildId)
+
+                    _uiState.update {
+                        it.copy(
+                            isChildManagementBusy = false,
+                            pairedChildren = refreshedChildren,
+                            activeChildId = activeChildId,
+                            childManagementSuccessMessage = "Nom de l'enfant mis a jour.",
+                            childManagementErrorMessage = null,
+                        )
+                    }
+                    refreshProfile()
+                }.onFailure { throwable ->
+                    _uiState.update {
+                        it.copy(
+                            isChildManagementBusy = false,
+                            childManagementSuccessMessage = null,
+                            childManagementErrorMessage = throwable.toChildManagementMessage(),
+                        )
+                    }
+                }
+            }
+        }
+
+        fun clearChildManagementMessages() {
+            _uiState.update {
+                it.copy(
+                    childManagementSuccessMessage = null,
+                    childManagementErrorMessage = null,
+                )
+            }
         }
 
         fun fetchOrGeneratePairingCode() {
@@ -224,6 +301,9 @@ class SettingsViewModel
                         isPairingBusy = false,
                         pairingSuccessMessage = null,
                         pairingErrorMessage = null,
+                        isChildManagementBusy = false,
+                        childManagementSuccessMessage = null,
+                        childManagementErrorMessage = null,
                         profileErrorMessage = null,
                     )
                 }
@@ -378,4 +458,21 @@ private fun Throwable?.toPairingMessage(): String =
         is SocketTimeoutException -> "Le serveur ne repond pas a temps."
         is IOException -> "Erreur reseau, reessaie plus tard."
         else -> this?.message ?: "Erreur inconnue."
+    }
+
+private fun Throwable.toChildManagementMessage(): String =
+    when (this) {
+        is HttpException ->
+            when (code()) {
+                400 -> "Nom enfant invalide."
+                401 -> "Session expiree, reconnecte-toi."
+                403 -> "Action non autorisee."
+                404 -> "Enfant introuvable."
+                else -> "Erreur API (${code()})."
+            }
+
+        is UnknownHostException, is ConnectException -> "Reseau indisponible, impossible de modifier l'enfant."
+        is SocketTimeoutException -> "Le serveur ne repond pas a temps."
+        is IOException -> "Erreur reseau, reessaie plus tard."
+        else -> message ?: "Erreur inconnue."
     }
