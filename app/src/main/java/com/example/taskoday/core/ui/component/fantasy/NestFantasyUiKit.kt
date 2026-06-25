@@ -586,6 +586,7 @@ fun WishCard(
     supportingText: String? = null,
     assetResId: Int = NestAssets.interfaceAsset("flammeche"),
     contentDescription: String = "Flammèche",
+    actionLabel: String = "Faire un souhait",
     onMakeWish: (() -> Unit)? = null,
 ) {
     FantasyCard(modifier = modifier.fillMaxWidth(), tone = FantasyTone.Violet) {
@@ -614,7 +615,7 @@ fun WishCard(
         }
         if (onMakeWish != null) {
             FantasyButton(
-                text = "Faire un souhait",
+                text = actionLabel,
                 onClick = onMakeWish,
                 enabled = enabled,
                 modifier = Modifier.fillMaxWidth(),

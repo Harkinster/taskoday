@@ -100,6 +100,19 @@ data class RewardCreateRequestDto(
     val isActive: Boolean = true,
 )
 
+data class RewardUpdateRequestDto(
+    @SerializedName("title")
+    val title: String? = null,
+    @SerializedName("description")
+    val description: String? = null,
+    @SerializedName("cost_scales")
+    val costScales: Int? = null,
+    @SerializedName("emoji")
+    val emoji: String? = null,
+    @SerializedName("is_active")
+    val isActive: Boolean? = null,
+)
+
 data class RewardRequestCreateDto(
     @SerializedName("note")
     val note: String? = null,

@@ -7,6 +7,7 @@ import com.example.taskoday.data.remote.dto.RewardCreateRequestDto
 import com.example.taskoday.data.remote.dto.RewardRequestCreateDto
 import com.example.taskoday.data.remote.dto.RewardRequestDecisionDto
 import com.example.taskoday.data.remote.dto.RewardRequestDto
+import com.example.taskoday.data.remote.dto.RewardUpdateRequestDto
 import com.example.taskoday.data.remote.rewards.RewardsApi
 import com.example.taskoday.data.mapper.toDomain
 import com.example.taskoday.data.mapper.toEntity
@@ -35,10 +36,10 @@ class RewardRepositoryImpl
 
         override suspend fun upsertReward(reward: Reward): Long = rewardDao.upsert(reward.toEntity())
 
-        override suspend fun fetchRemoteShopSnapshot(): Result<RewardShopSnapshot> =
+        override suspend fun fetchRemoteShopSnapshot(includeInactiveRewards: Boolean): Result<RewardShopSnapshot> =
             runCatching {
                 val childId = activeChildId()
-                val rewardsData = rewardsApi.getRewards(childId).data
+                val rewardsData = rewardsApi.getRewards(childId, includeInactive = includeInactiveRewards).data
                 val requestsData = rewardsApi.getRewardRequests(childId).data
                 RewardShopSnapshot(
                     childId = childId,
@@ -52,6 +53,7 @@ class RewardRepositoryImpl
             title: String,
             description: String?,
             costScales: Int,
+            isActive: Boolean,
         ): Result<Reward> =
             runCatching {
                 val childId = activeChildId()
@@ -63,7 +65,40 @@ class RewardRepositoryImpl
                                 title = title.trim(),
                                 description = description?.trim()?.takeIf { it.isNotBlank() },
                                 costScales = costScales.coerceAtLeast(0),
+                                isActive = isActive,
                             ),
+                    ).data
+                    .toDomain()
+            }
+
+        override suspend fun updateRemoteReward(
+            rewardId: Long,
+            title: String,
+            description: String?,
+            costScales: Int,
+            isActive: Boolean,
+        ): Result<Reward> =
+            runCatching {
+                rewardsApi
+                    .updateReward(
+                        rewardId = rewardId,
+                        payload =
+                            RewardUpdateRequestDto(
+                                title = title.trim(),
+                                description = description?.trim()?.takeIf { it.isNotBlank() },
+                                costScales = costScales.coerceAtLeast(0),
+                                isActive = isActive,
+                            ),
+                    ).data
+                    .toDomain()
+            }
+
+        override suspend fun deactivateRemoteReward(rewardId: Long): Result<Reward> =
+            runCatching {
+                rewardsApi
+                    .updateReward(
+                        rewardId = rewardId,
+                        payload = RewardUpdateRequestDto(isActive = false),
                     ).data
                     .toDomain()
             }

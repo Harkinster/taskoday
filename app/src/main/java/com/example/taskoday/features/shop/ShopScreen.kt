@@ -35,6 +35,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.taskoday.core.ui.component.fantasy.FantasyButton
 import com.example.taskoday.core.ui.component.fantasy.FantasyButtonStyle
 import com.example.taskoday.core.ui.component.fantasy.FantasyCard
+import com.example.taskoday.core.ui.component.fantasy.FantasyConfirmationDialog
 import com.example.taskoday.core.ui.component.fantasy.FantasyHeader
 import com.example.taskoday.core.ui.component.fantasy.FantasyScreenBackground
 import com.example.taskoday.core.ui.component.fantasy.FantasyStateCard
@@ -73,6 +74,8 @@ fun ShopScreen(
     var selectedSection by rememberSaveable(initialSection) {
         mutableStateOf(if (initialSection == "chests") CaveSection.Chests else CaveSection.Wishes)
     }
+    var rewardBeingEdited by remember { mutableStateOf<Reward?>(null) }
+    var rewardPendingDeactivation by remember { mutableStateOf<Reward?>(null) }
 
     LaunchedEffect(uiState.userMessage) {
         uiState.userMessage?.let {
@@ -158,33 +161,53 @@ fun ShopScreen(
 
                     if (uiState.isParent && uiState.hasRemoteSession) {
                         item {
-                            ParentRewardCreator(
+                            ParentRewardEditor(
+                                reward = rewardBeingEdited,
                                 isSubmitting = uiState.isSubmitting,
                                 onCreate = viewModel::createReward,
+                                onUpdate = { rewardId, title, description, costScales, isActive ->
+                                    rewardBeingEdited = null
+                                    viewModel.updateReward(
+                                        rewardId = rewardId,
+                                        title = title,
+                                        description = description,
+                                        costScales = costScales,
+                                        isActive = isActive,
+                                    )
+                                },
+                                onCancelEdit = { rewardBeingEdited = null },
                             )
                         }
                     }
 
-                    item { SectionTitle(text = "Souhaits disponibles") }
+                    item { SectionTitle(text = if (uiState.isParent) "Catalogue des souhaits" else "Souhaits disponibles") }
 
-                    if (uiState.rewards.isEmpty()) {
+                    val displayedRewards =
+                        if (uiState.isParent) {
+                            uiState.rewards.sortedWith(compareBy<Reward> { !it.isActive }.thenBy { it.cost })
+                        } else {
+                            uiState.rewards.filter { it.isActive }
+                        }
+
+                    if (displayedRewards.isEmpty()) {
                         item {
                             EmptyCard(text = "Aucun Souhait pour le moment. La Caverne garde sa magie au chaud.")
                         }
                     } else {
-                        items(uiState.rewards, key = { reward -> reward.id }) { reward ->
-                            val alreadyRequested =
-                                uiState.requests.any { request ->
-                                    request.rewardId == reward.id &&
-                                        request.status in setOf(RewardRequestStatus.PENDING, RewardRequestStatus.APPROVED)
-                                }
-                            RewardRow(
+                        items(displayedRewards, key = { reward -> "wish-${reward.id}" }) { reward ->
+                            val latestRequest =
+                                uiState.requests
+                                    .filter { request -> request.rewardId == reward.id }
+                                    .maxByOrNull { request -> request.requestedAt.orEmpty() }
+                            ManagedRewardRow(
                                 reward = reward,
                                 isParent = uiState.isParent,
                                 hasRemoteSession = uiState.hasRemoteSession,
                                 scalesBalance = uiState.scalesBalance,
-                                alreadyRequested = alreadyRequested,
+                                latestRequest = latestRequest,
                                 isSubmitting = uiState.isSubmitting,
+                                onEdit = { rewardBeingEdited = reward },
+                                onDeactivate = { rewardPendingDeactivation = reward },
                                 onRequest = { viewModel.requestReward(reward) },
                             )
                         }
@@ -201,7 +224,7 @@ fun ShopScreen(
                             }
                         }
                     } else {
-                        items(uiState.requests, key = { request -> request.id }) { request ->
+                        items(uiState.requests, key = { request -> "request-${request.id}" }) { request ->
                             RewardRequestRow(
                                 request = request,
                                 isParent = uiState.isParent,
@@ -248,7 +271,7 @@ fun ShopScreen(
                                 hint = chest.possibleRewards.joinToString(", ") { reward -> reward.toTaskodayDisplayLabel() },
                             )
                         } ?: caveChests
-                    items(displayedChests, key = { chest -> chest.id }) { chest ->
+                    items(displayedChests, key = { chest -> "chest-${chest.id}" }) { chest ->
                         val hasRemoteCatalog = uiState.hasRemoteSession && uiState.chestCatalog != null
                         val actionState =
                             chestActionState(
@@ -282,6 +305,23 @@ fun ShopScreen(
                 }
             }
         }
+    }
+
+    rewardPendingDeactivation?.let { reward ->
+        FantasyConfirmationDialog(
+            title = "Desactiver le souhait",
+            message = "Desactiver « ${reward.title} » ? Il ne sera plus propose a l'enfant.",
+            confirmLabel = "Desactiver",
+            onDismiss = { rewardPendingDeactivation = null },
+            onConfirm = {
+                rewardPendingDeactivation = null
+                if (rewardBeingEdited?.id == reward.id) {
+                    rewardBeingEdited = null
+                }
+                viewModel.deactivateReward(reward.id)
+            },
+            confirmEnabled = !uiState.isSubmitting,
+        )
     }
 }
 
@@ -411,6 +451,99 @@ private fun ParentRewardCreator(
 }
 
 @Composable
+private fun ParentRewardEditor(
+    reward: Reward?,
+    isSubmitting: Boolean,
+    onCreate: (String, String?, Int, Boolean) -> Unit,
+    onUpdate: (Long, String, String?, Int, Boolean) -> Unit,
+    onCancelEdit: () -> Unit,
+) {
+    val spacing = MaterialTheme.spacing
+    val isEditing = reward != null
+    var title by rememberSaveable(reward?.id) { mutableStateOf(reward?.title.orEmpty()) }
+    var description by rememberSaveable(reward?.id) { mutableStateOf(reward?.description.orEmpty()) }
+    var costText by rememberSaveable(reward?.id) { mutableStateOf(reward?.cost?.toString().orEmpty()) }
+    var isActive by rememberSaveable(reward?.id) { mutableStateOf(reward?.isActive ?: true) }
+    val parsedCost = costText.toIntOrNull() ?: 0
+
+    FantasyCard(modifier = Modifier.fillMaxWidth(), tone = FantasyTone.Violet) {
+        Text(
+            text = if (isEditing) "Modifier le Souhait" else "Nouveau Souhait",
+            style = MaterialTheme.typography.titleMedium,
+            color = WoodBrownDark,
+        )
+        OutlinedTextField(
+            value = title,
+            onValueChange = { title = it },
+            label = { Text("Titre") },
+            singleLine = true,
+            colors = fantasyTextFieldColors(),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = description,
+            onValueChange = { description = it },
+            label = { Text("Description") },
+            colors = fantasyTextFieldColors(),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = costText,
+            onValueChange = { costText = it.filter { c -> c.isDigit() }.take(5) },
+            label = { Text("Cout en Flammeches") },
+            singleLine = true,
+            colors = fantasyTextFieldColors(),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(spacing.small),
+        ) {
+            FantasyButton(
+                text = if (isActive) "Actif" else "Inactif",
+                onClick = { isActive = !isActive },
+                style = if (isActive) FantasyButtonStyle.Filled else FantasyButtonStyle.Outline,
+                enabled = !isSubmitting,
+                modifier = Modifier.weight(1f),
+            )
+            if (isEditing) {
+                FantasyButton(
+                    text = "Annuler",
+                    onClick = onCancelEdit,
+                    style = FantasyButtonStyle.Outline,
+                    enabled = !isSubmitting,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+        FantasyButton(
+            text =
+                when {
+                    isSubmitting -> "Enregistrement..."
+                    isEditing -> "Mettre a jour"
+                    else -> "Creer le Souhait"
+                },
+            onClick = {
+                if (isEditing && reward != null) {
+                    onUpdate(reward.id, title, description, parsedCost, isActive)
+                } else {
+                    onCreate(title, description, parsedCost, isActive)
+                    title = ""
+                    description = ""
+                    costText = ""
+                    isActive = true
+                }
+            },
+            enabled = !isSubmitting && title.isNotBlank() && parsedCost > 0,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = spacing.xSmall),
+        )
+    }
+}
+
+@Composable
 private fun RewardRow(
     reward: Reward,
     isParent: Boolean,
@@ -438,6 +571,142 @@ private fun RewardRow(
         supportingText = supportingText,
         contentDescription = "Flammèche",
         onMakeWish = if (isParent) null else onRequest,
+    )
+}
+
+@Composable
+private fun ManagedRewardRow(
+    reward: Reward,
+    isParent: Boolean,
+    hasRemoteSession: Boolean,
+    scalesBalance: Int,
+    latestRequest: RewardRedemptionRequest?,
+    isSubmitting: Boolean,
+    onEdit: () -> Unit,
+    onDeactivate: () -> Unit,
+    onRequest: () -> Unit,
+) {
+    val requestState = wishDisplayState(
+        reward = reward,
+        latestRequest = latestRequest,
+        hasRemoteSession = hasRemoteSession,
+        scalesBalance = scalesBalance,
+        isSubmitting = isSubmitting,
+    )
+
+    WishCard(
+        title = "${reward.emoji} ${reward.title}",
+        description = reward.description ?: "Souhait cree par un parent.",
+        costLabel = "${scalesBalance.coerceAtLeast(0)} / ${reward.cost} Flammeches",
+        enabled = requestState.enabled && !isParent,
+        supportingText = if (isParent && !reward.isActive) "Inactif - invisible pour l'enfant." else requestState.supportingText,
+        contentDescription = "Flammeche",
+        actionLabel = requestState.actionLabel,
+        onMakeWish = if (isParent) null else onRequest,
+    )
+
+    if (isParent) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+        ) {
+            FantasyButton(
+                text = "Modifier",
+                onClick = onEdit,
+                enabled = !isSubmitting,
+                style = FantasyButtonStyle.Outline,
+                modifier = Modifier.weight(1f),
+            )
+            FantasyButton(
+                text = if (reward.isActive) "Desactiver" else "Inactif",
+                onClick = onDeactivate,
+                enabled = !isSubmitting && reward.isActive,
+                style = FantasyButtonStyle.Outline,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+private data class WishDisplayState(
+    val actionLabel: String,
+    val enabled: Boolean,
+    val supportingText: String?,
+)
+
+private fun wishDisplayState(
+    reward: Reward,
+    latestRequest: RewardRedemptionRequest?,
+    hasRemoteSession: Boolean,
+    scalesBalance: Int,
+    isSubmitting: Boolean,
+): WishDisplayState {
+    if (!hasRemoteSession) {
+        return WishDisplayState(
+            actionLabel = "Connexion requise",
+            enabled = false,
+            supportingText = "Connecte le compte enfant pour faire un souhait.",
+        )
+    }
+    if (!reward.isActive) {
+        return WishDisplayState(
+            actionLabel = "Indisponible",
+            enabled = false,
+            supportingText = "Ce souhait est inactif.",
+        )
+    }
+
+    when (latestRequest?.status) {
+        RewardRequestStatus.PENDING ->
+            return WishDisplayState(
+                actionLabel = "En attente parent",
+                enabled = false,
+                supportingText = "Demande envoyee, en attente de validation parent.",
+            )
+
+        RewardRequestStatus.APPROVED ->
+            return WishDisplayState(
+                actionLabel = "Accepte",
+                enabled = false,
+                supportingText = "Souhait accepte. Un parchemin est disponible.",
+            )
+
+        RewardRequestStatus.USED ->
+            return WishDisplayState(
+                actionLabel = "Utilise",
+                enabled = false,
+                supportingText = "Souhait deja utilise.",
+            )
+
+        RewardRequestStatus.REFUSED ->
+            return WishDisplayState(
+                actionLabel = if (scalesBalance >= reward.cost) "Redemander" else "Flammeches insuffisantes",
+                enabled = scalesBalance >= reward.cost && !isSubmitting,
+                supportingText = "Demande refusee. Le souhait peut etre redemande.",
+            )
+
+        RewardRequestStatus.EXPIRED ->
+            return WishDisplayState(
+                actionLabel = if (scalesBalance >= reward.cost) "Redemander" else "Flammeches insuffisantes",
+                enabled = scalesBalance >= reward.cost && !isSubmitting,
+                supportingText = "Le parchemin a expire.",
+            )
+
+        null -> Unit
+    }
+
+    if (scalesBalance < reward.cost) {
+        return WishDisplayState(
+            actionLabel = "Flammeches insuffisantes",
+            enabled = false,
+            supportingText = "Il manque encore ${reward.cost - scalesBalance} Flammeches pour ce Souhait.",
+        )
+    }
+
+    return WishDisplayState(
+        actionLabel = "Faire un souhait",
+        enabled = !isSubmitting,
+        supportingText = "Disponible.",
     )
 }
 

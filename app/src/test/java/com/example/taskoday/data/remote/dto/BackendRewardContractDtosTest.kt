@@ -50,4 +50,21 @@ class BackendRewardContractDtosTest {
         assertEquals(2, stats.missions?.total)
         assertEquals(2, stats.quests?.completed)
     }
+
+    @Test
+    fun `wish update request uses backend snake case contract`() {
+        val json =
+            gson.toJson(
+                RewardUpdateRequestDto(
+                    title = "Sortie cinema",
+                    description = "Samedi apres-midi",
+                    costScales = 12,
+                    isActive = false,
+                ),
+            )
+
+        assertTrue(json.contains("\"cost_scales\":12"))
+        assertTrue(json.contains("\"is_active\":false"))
+        assertTrue(json.contains("\"title\":\"Sortie cinema\""))
+    }
 }
