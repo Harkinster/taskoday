@@ -43,6 +43,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.taskoday.core.plan.TaskodayPlanFeature
+import com.example.taskoday.core.plan.TaskodayPlanPolicy
 import com.example.taskoday.core.ui.component.fantasy.FantasyScreenBackground
 import com.example.taskoday.core.ui.component.fantasy.NeonButton
 import com.example.taskoday.core.ui.component.fantasy.NeonButtonStyle
@@ -62,6 +64,7 @@ import com.example.taskoday.core.ui.theme.WarningGlow
 import com.example.taskoday.core.ui.theme.spacing
 import com.example.taskoday.domain.model.DayPart
 import com.example.taskoday.domain.model.ParentChild
+import com.example.taskoday.domain.model.ParentPlanUsage
 import com.example.taskoday.domain.model.PlanningFormType
 import java.time.LocalDate
 import kotlinx.coroutines.delay
@@ -84,6 +87,10 @@ fun ParentPlanningScreen(
     var routineWeekdays by rememberSaveable { mutableStateOf(setOf<Int>()) }
     var missionDate by rememberSaveable { mutableStateOf(LocalDate.now()) }
     val selectedChild = uiState.children.firstOrNull { child -> child.id == uiState.selectedChildId }
+    val selectedPlanFeature = formType.toPlanFeature()
+    val selectedPlanCount = uiState.planUsage.countFor(formType)
+    val selectedPlanLimitReached =
+        !TaskodayPlanPolicy.canCreate(selectedPlanFeature, selectedPlanCount)
 
     LaunchedEffect(uiState.createdFormType) {
         uiState.createdFormType?.let { createdType ->
@@ -285,6 +292,19 @@ fun ParentPlanningScreen(
                             modifier = Modifier.fillMaxWidth(),
                         )
 
+                        Text(
+                            text = TaskodayPlanPolicy.usageLabel(selectedPlanFeature, selectedPlanCount),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (selectedPlanLimitReached) WarningGlow else TextMuted,
+                        )
+                        if (selectedPlanLimitReached) {
+                            Text(
+                                text = TaskodayPlanPolicy.limitReachedMessage(),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = WarningGlow,
+                            )
+                        }
+
                         uiState.successMessage?.let {
                             Text(it, color = SuccessGlow, style = MaterialTheme.typography.bodyMedium)
                         }
@@ -333,6 +353,7 @@ fun ParentPlanningScreen(
                                 !uiState.isSubmitting &&
                                     uiState.createdFormType == null &&
                                     uiState.selectedChildId != null &&
+                                    !selectedPlanLimitReached &&
                                     title.isNotBlank(),
                             modifier = Modifier.fillMaxWidth(),
                         )
@@ -575,6 +596,20 @@ private fun defaultPoints(formType: PlanningFormType): Int =
         PlanningFormType.ROUTINE -> 1
         PlanningFormType.MISSION -> 2
         PlanningFormType.QUEST -> 3
+    }
+
+private fun PlanningFormType.toPlanFeature(): TaskodayPlanFeature =
+    when (this) {
+        PlanningFormType.ROUTINE -> TaskodayPlanFeature.Routine
+        PlanningFormType.MISSION -> TaskodayPlanFeature.Mission
+        PlanningFormType.QUEST -> TaskodayPlanFeature.Quest
+    }
+
+private fun ParentPlanUsage.countFor(formType: PlanningFormType): Int =
+    when (formType) {
+        PlanningFormType.ROUTINE -> activeRoutines
+        PlanningFormType.MISSION -> activeMissions
+        PlanningFormType.QUEST -> activeQuests
     }
 
 private const val CREATION_CONFIRMATION_DELAY_MILLIS = 700L

@@ -45,6 +45,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.taskoday.core.plan.TaskodayPlanFeature
+import com.example.taskoday.core.plan.TaskodayPlanPolicy
 import com.example.taskoday.core.ui.component.fantasy.FantasyScreenBackground
 import com.example.taskoday.core.ui.component.fantasy.NeonButton
 import com.example.taskoday.core.ui.component.fantasy.NeonButtonStyle
@@ -347,6 +349,7 @@ private fun ActiveChildCard(
     onClearMessages: () -> Unit,
 ) {
     val activeChild = uiState.pairedChildren.firstOrNull { child -> child.id == uiState.activeChildId }
+    val childLimitReached = !TaskodayPlanPolicy.canCreate(TaskodayPlanFeature.Child, uiState.pairedChildren.size)
     var showCreateChildDialog by rememberSaveable { mutableStateOf(false) }
     var editingChildId by rememberSaveable { mutableStateOf<Long?>(null) }
     var editingChildName by rememberSaveable { mutableStateOf("") }
@@ -399,13 +402,26 @@ private fun ActiveChildCard(
             }
         }
 
+        Text(
+            text = TaskodayPlanPolicy.usageLabel(TaskodayPlanFeature.Child, uiState.pairedChildren.size),
+            style = MaterialTheme.typography.bodySmall,
+            color = if (childLimitReached) MaterialTheme.colorScheme.error else TextMuted,
+        )
+        if (childLimitReached) {
+            Text(
+                text = TaskodayPlanPolicy.limitReachedMessage(),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+
         NeonButton(
             text = if (uiState.isChildManagementBusy) "Ajout..." else "Ajouter un enfant",
             onClick = {
                 onClearMessages()
                 showCreateChildDialog = true
             },
-            enabled = !uiState.isChildManagementBusy,
+            enabled = !uiState.isChildManagementBusy && !childLimitReached,
             modifier = Modifier.fillMaxWidth(),
         )
 

@@ -32,6 +32,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.taskoday.core.plan.TaskodayPlanFeature
+import com.example.taskoday.core.plan.TaskodayPlanPolicy
 import com.example.taskoday.core.ui.component.fantasy.FantasyButton
 import com.example.taskoday.core.ui.component.fantasy.FantasyButtonStyle
 import com.example.taskoday.core.ui.component.fantasy.FantasyCard
@@ -164,6 +166,7 @@ fun ShopScreen(
                         item {
                             ParentRewardEditor(
                                 reward = rewardBeingEdited,
+                                activeWishesCount = uiState.rewards.count { it.isActive },
                                 isSubmitting = uiState.isSubmitting,
                                 onCreate = viewModel::createReward,
                                 onUpdate = { rewardId, title, description, costScales, isActive ->
@@ -468,6 +471,7 @@ private fun ParentRewardCreator(
 @Composable
 private fun ParentRewardEditor(
     reward: Reward?,
+    activeWishesCount: Int,
     isSubmitting: Boolean,
     onCreate: (String, String?, Int, Boolean) -> Unit,
     onUpdate: (Long, String, String?, Int, Boolean) -> Unit,
@@ -480,6 +484,10 @@ private fun ParentRewardEditor(
     var costText by rememberSaveable(reward?.id) { mutableStateOf(reward?.cost?.toString().orEmpty()) }
     var isActive by rememberSaveable(reward?.id) { mutableStateOf(reward?.isActive ?: true) }
     val parsedCost = costText.toIntOrNull() ?: 0
+    val activeWishLimitReached =
+        !isEditing &&
+            isActive &&
+            !TaskodayPlanPolicy.canCreate(TaskodayPlanFeature.Wish, activeWishesCount)
 
     FantasyCard(modifier = Modifier.fillMaxWidth(), tone = FantasyTone.Violet) {
         Text(
@@ -531,6 +539,18 @@ private fun ParentRewardEditor(
                 )
             }
         }
+        Text(
+            text = TaskodayPlanPolicy.usageLabel(TaskodayPlanFeature.Wish, activeWishesCount),
+            style = MaterialTheme.typography.bodySmall,
+            color = if (activeWishLimitReached) DangerGlow else InkMuted,
+        )
+        if (activeWishLimitReached) {
+            Text(
+                text = TaskodayPlanPolicy.limitReachedMessage(),
+                style = MaterialTheme.typography.bodySmall,
+                color = DangerGlow,
+            )
+        }
         FantasyButton(
             text =
                 when {
@@ -549,7 +569,7 @@ private fun ParentRewardEditor(
                     isActive = true
                 }
             },
-            enabled = !isSubmitting && title.isNotBlank() && parsedCost > 0,
+            enabled = !isSubmitting && !activeWishLimitReached && title.isNotBlank() && parsedCost > 0,
             modifier =
                 Modifier
                     .fillMaxWidth()

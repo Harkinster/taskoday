@@ -2,6 +2,8 @@ package com.example.taskoday.features.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.taskoday.core.plan.TaskodayPlanFeature
+import com.example.taskoday.core.plan.TaskodayPlanPolicy
 import com.example.taskoday.domain.model.AuthenticatedUser
 import com.example.taskoday.domain.model.ChildProfile
 import com.example.taskoday.domain.model.ChildProfileDashboard
@@ -144,6 +146,15 @@ class SettingsViewModel
                     it.copy(
                         childManagementSuccessMessage = null,
                         childManagementErrorMessage = "Saisis un nom d'enfant.",
+                    )
+                }
+                return
+            }
+            if (!TaskodayPlanPolicy.canCreate(TaskodayPlanFeature.Child, _uiState.value.pairedChildren.size)) {
+                _uiState.update {
+                    it.copy(
+                        childManagementSuccessMessage = null,
+                        childManagementErrorMessage = TaskodayPlanPolicy.limitReachedMessage(),
                     )
                 }
                 return
