@@ -9,11 +9,14 @@ import com.example.taskoday.domain.model.CompletionReward
 import com.example.taskoday.domain.model.PlanningItemType
 import com.example.taskoday.domain.model.PointsSourceType
 import com.example.taskoday.domain.model.QuestForDay
+import com.example.taskoday.domain.model.RewardRequestStatus
 import com.example.taskoday.domain.model.TaskForDay
 import com.example.taskoday.domain.repository.PlanningSyncRepository
 import com.example.taskoday.domain.repository.PointsRepository
 import com.example.taskoday.domain.repository.QuestRepository
 import com.example.taskoday.domain.repository.AuthRepository
+import com.example.taskoday.domain.repository.ChildrenRepository
+import com.example.taskoday.domain.repository.RewardRepository
 import com.example.taskoday.domain.repository.RoutinesRepository
 import com.example.taskoday.domain.repository.TaskRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -39,6 +42,8 @@ class HomeViewModel
         private val planningSyncRepository: PlanningSyncRepository,
         private val nestRepository: NestRepository,
         private val authRepository: AuthRepository,
+        private val childrenRepository: ChildrenRepository,
+        private val rewardRepository: RewardRepository,
         private val routinesRepository: RoutinesRepository,
     ) : ViewModel() {
         private val selectedDay = MutableStateFlow(DateTimeUtils.startOfDayMillis())
@@ -63,14 +68,14 @@ class HomeViewModel
 
         private fun resolveCanManageActions() {
             if (authRepository.getAccessToken().isNullOrBlank()) {
-                _uiState.update { it.copy(canManageActions = true) }
+                _uiState.update { it.copy(canManageActions = true, isParentUser = false) }
                 return
             }
             viewModelScope.launch {
                 val canManage =
                     runCatching { authRepository.fetchMe().role.equals("PARENT", ignoreCase = true) }
                         .getOrDefault(false)
-                _uiState.update { it.copy(canManageActions = canManage) }
+                _uiState.update { it.copy(canManageActions = canManage, isParentUser = canManage) }
             }
         }
 
@@ -104,26 +109,95 @@ class HomeViewModel
         private fun observeRemoteSync() {
             viewModelScope.launch {
                 selectedDay.collect { dayStart ->
-                    _uiState.update { it.copy(isLoading = true) }
-                    val syncResult = planningSyncRepository.syncDay(dayStart)
-                    val remoteProgress =
-                        if (syncResult.usedRemoteData) {
-                            nestRepository.getProgress().getOrNull()
-                        } else {
-                            null
-                        }
-                    _uiState.update {
-                        it.copy(
-                            usingRemoteData = syncResult.usedRemoteData,
-                            remoteXp = remoteProgress?.guardian?.xp,
-                            remoteFlammeches = remoteProgress?.wallet?.flammeches,
-                            remoteCrystals = remoteProgress?.wallet?.crystals,
-                            errorMessage = syncResult.errorMessage,
-                        )
-                    }
+                    refreshDashboard(dayStart, showLoading = true)
                 }
             }
         }
+
+        fun refreshDashboard() {
+            viewModelScope.launch {
+                refreshDashboard(dayStart = selectedDay.value, showLoading = false)
+            }
+        }
+
+        private suspend fun refreshDashboard(
+            dayStart: Long,
+            showLoading: Boolean,
+        ) {
+            if (showLoading) {
+                _uiState.update { it.copy(isLoading = true) }
+            }
+            val syncResult = planningSyncRepository.syncDay(dayStart)
+            val isParent =
+                if (syncResult.usedRemoteData) {
+                    runCatching { authRepository.fetchMe().role.equals("PARENT", ignoreCase = true) }
+                        .getOrDefault(_uiState.value.isParentUser)
+                } else {
+                    false
+                }
+            val remoteProgress =
+                if (syncResult.usedRemoteData) {
+                    nestRepository.getProgress().getOrNull()
+                } else {
+                    null
+                }
+            val activeChildLabel =
+                if (syncResult.usedRemoteData && isParent) {
+                    resolveActiveChildLabel()
+                } else {
+                    null
+                }
+            val wishSummary =
+                if (syncResult.usedRemoteData && isParent) {
+                    fetchParentWishSummary()
+                } else {
+                    ParentWishSummary()
+                }
+
+            _uiState.update {
+                it.copy(
+                    usingRemoteData = syncResult.usedRemoteData,
+                    canManageActions = if (syncResult.usedRemoteData) isParent else it.canManageActions,
+                    isParentUser = isParent,
+                    activeChildLabel = activeChildLabel,
+                    remoteXp = remoteProgress?.guardian?.xp,
+                    remoteFlammeches = remoteProgress?.wallet?.flammeches,
+                    remoteCrystals = remoteProgress?.wallet?.crystals,
+                    pendingWishCount = wishSummary.pendingCount,
+                    availableScrollCount = wishSummary.availableScrollCount,
+                    errorMessage = syncResult.errorMessage,
+                )
+            }
+        }
+
+        private suspend fun resolveActiveChildLabel(): String? {
+            val activeChildId =
+                runCatching { authRepository.getActiveChildId(forceRefresh = true) }
+                    .getOrNull()
+                    ?: return null
+            val child =
+                runCatching { childrenRepository.fetchChildren() }
+                    .getOrDefault(emptyList())
+                    .firstOrNull { it.id == activeChildId }
+            return child?.displayName ?: "Enfant #$activeChildId"
+        }
+
+        private suspend fun fetchParentWishSummary(): ParentWishSummary =
+            rewardRepository
+                .fetchRemoteShopSnapshot(includeInactiveRewards = true)
+                .getOrNull()
+                ?.requests
+                ?.let { requests ->
+                    ParentWishSummary(
+                        pendingCount = requests.count { it.status == RewardRequestStatus.PENDING },
+                        availableScrollCount =
+                            requests.count {
+                                it.status == RewardRequestStatus.APPROVED &&
+                                    it.coupon?.status?.equals("used", ignoreCase = true) != true
+                            },
+                    )
+                }
+                ?: ParentWishSummary()
 
         private fun cleanupOldChecks() {
             viewModelScope.launch {
@@ -364,4 +438,9 @@ private data class HomeSnapshot(
     val tasks: List<TaskForDay>,
     val quests: List<QuestForDay>,
     val pointsBalance: Int,
+)
+
+private data class ParentWishSummary(
+    val pendingCount: Int = 0,
+    val availableScrollCount: Int = 0,
 )

@@ -286,6 +286,9 @@ fun TaskodayApp() {
                     onOpenTask = { taskId -> navController.navigate(TaskodayDestination.TaskDetail.createRoute(taskId)) },
                     onEditTask = { taskId -> navController.navigate(TaskodayDestination.TaskEdit.createRoute(taskId)) },
                     onOpenProfile = navigateToProfile,
+                    onAddAction = { navController.navigate(TaskodayDestination.ParentPlanning.createRoute()) },
+                    onOpenWishes = { navController.navigate(TaskodayDestination.Shop.createRoute(TaskodayDestination.Shop.SECTION_WISHES)) },
+                    onOpenNest = { navigateToTopLevel(TaskodayDestination.Nest) },
                 )
             }
 

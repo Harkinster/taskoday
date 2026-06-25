@@ -33,8 +33,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.taskoday.core.ui.component.fantasy.FantasyAssetBubble
+import com.example.taskoday.core.ui.component.fantasy.FantasyButton
+import com.example.taskoday.core.ui.component.fantasy.FantasyButtonStyle
 import com.example.taskoday.core.ui.component.fantasy.FantasyCard
 import com.example.taskoday.core.ui.component.fantasy.FantasyConfirmationDialog
 import com.example.taskoday.core.ui.component.fantasy.FantasyProgressBar
@@ -45,6 +49,7 @@ import com.example.taskoday.core.ui.component.fantasy.NestAssets
 import com.example.taskoday.core.ui.component.fantasy.RewardToast
 import com.example.taskoday.core.ui.component.fantasy.RoutineItemRow
 import com.example.taskoday.core.ui.component.fantasy.TaskodayTopBar
+import com.example.taskoday.core.ui.theme.CrystalBlue
 import com.example.taskoday.core.ui.theme.EmberOrange
 import com.example.taskoday.core.ui.theme.InkMuted
 import com.example.taskoday.core.ui.theme.MossGreen
@@ -67,11 +72,18 @@ fun HomeScreen(
     onOpenTask: (Long) -> Unit,
     onEditTask: (Long) -> Unit,
     onOpenProfile: () -> Unit,
+    onAddAction: () -> Unit,
+    onOpenWishes: () -> Unit,
+    onOpenNest: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val spacing = MaterialTheme.spacing
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
     var pendingDeleteRoutine by remember { mutableStateOf<TaskForDay?>(null) }
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.refreshDashboard()
+    }
 
     val visibleTasksForDay =
         if (uiState.usingRemoteData) {
@@ -87,6 +99,7 @@ fun HomeScreen(
         }
     val planningItems = buildPlanningItems(visibleTasksForDay, visibleQuestsForDay)
     val completedCount = planningItems.count { it.isCompleted }
+    val todoCount = planningItems.size - completedCount
     val progress = if (planningItems.isEmpty()) 0f else completedCount.toFloat() / planningItems.size.toFloat()
     val sections = buildActionSections(planningItems)
 
@@ -149,6 +162,29 @@ fun HomeScreen(
                             },
                         onOpenCalendar = { showDatePicker = true },
                     )
+                }
+
+                if (uiState.isParentUser && uiState.usingRemoteData) {
+                    item {
+                        ParentDashboardCard(
+                            childLabel = uiState.activeChildLabel ?: "Enfant selectionne",
+                            xp = uiState.remoteXp ?: 0,
+                            flammeches = uiState.remoteFlammeches ?: 0,
+                            crystals = uiState.remoteCrystals ?: 0,
+                            todoCount = todoCount,
+                            completedCount = completedCount,
+                            pendingWishCount = uiState.pendingWishCount,
+                            availableScrollCount = uiState.availableScrollCount,
+                        )
+                    }
+
+                    item {
+                        ParentShortcutsCard(
+                            onAddAction = onAddAction,
+                            onOpenWishes = onOpenWishes,
+                            onOpenNest = onOpenNest,
+                        )
+                    }
                 }
 
                 item {
@@ -294,6 +330,117 @@ private fun RoutineDateHeader(
                 tint = SoftGold,
             )
         }
+    }
+}
+
+@Composable
+private fun ParentDashboardCard(
+    childLabel: String,
+    xp: Int,
+    flammeches: Int,
+    crystals: Int,
+    todoCount: Int,
+    completedCount: Int,
+    pendingWishCount: Int,
+    availableScrollCount: Int,
+) {
+    FantasyCard(tone = FantasyTone.Violet) {
+        Text(
+            text = "Tableau de bord parent",
+            style = MaterialTheme.typography.titleLarge,
+            color = WoodBrownDark,
+            maxLines = 1,
+        )
+        Text(
+            text = childLabel,
+            style = MaterialTheme.typography.bodyMedium,
+            color = InkMuted,
+            maxLines = 1,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            ParentMetric(label = "XP", value = xp.toString(), color = MossGreen, modifier = Modifier.weight(1f))
+            ParentMetric(label = "Flammeches", value = flammeches.toString(), color = EmberOrange, modifier = Modifier.weight(1f))
+            ParentMetric(label = "Cristaux", value = crystals.toString(), color = CrystalBlue, modifier = Modifier.weight(1f))
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ParentMetric(label = "A faire", value = todoCount.toString(), color = EmberOrange, modifier = Modifier.weight(1f))
+            ParentMetric(label = "Terminees", value = completedCount.toString(), color = MossGreen, modifier = Modifier.weight(1f))
+        }
+        Text(
+            text = wishSummaryText(pendingWishCount, availableScrollCount),
+            style = MaterialTheme.typography.bodyMedium,
+            color = WoodBrownDark,
+            maxLines = 2,
+        )
+    }
+}
+
+@Composable
+private fun ParentMetric(
+    label: String,
+    value: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleLarge,
+            color = color,
+            maxLines = 1,
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = InkMuted,
+            maxLines = 1,
+        )
+    }
+}
+
+@Composable
+private fun ParentShortcutsCard(
+    onAddAction: () -> Unit,
+    onOpenWishes: () -> Unit,
+    onOpenNest: () -> Unit,
+) {
+    FantasyCard(tone = FantasyTone.Night) {
+        Text(
+            text = "Raccourcis parent",
+            style = MaterialTheme.typography.titleMedium,
+            color = WoodBrownDark,
+            maxLines = 1,
+        )
+        FantasyButton(
+            text = "Ajouter une action",
+            onClick = onAddAction,
+            modifier = Modifier.fillMaxWidth(),
+            style = FantasyButtonStyle.Filled,
+        )
+        FantasyButton(
+            text = "Voir les souhaits",
+            onClick = onOpenWishes,
+            modifier = Modifier.fillMaxWidth(),
+            style = FantasyButtonStyle.Outline,
+        )
+        FantasyButton(
+            text = "Voir Le Nid",
+            onClick = onOpenNest,
+            modifier = Modifier.fillMaxWidth(),
+            style = FantasyButtonStyle.Quiet,
+        )
     }
 }
 
@@ -516,6 +663,21 @@ private fun walletSummaryLabel(uiState: HomeUiState): String =
         ).joinToString(" • ")
     } else {
         "${uiState.pointsBalance} points"
+    }
+
+private fun wishSummaryText(
+    pendingWishCount: Int,
+    availableScrollCount: Int,
+): String =
+    when {
+        pendingWishCount > 0 && availableScrollCount > 0 ->
+            "$pendingWishCount souhait(s) en attente parent, $availableScrollCount parchemin(s) disponible(s)."
+        pendingWishCount > 0 ->
+            "$pendingWishCount souhait(s) en attente de validation parent."
+        availableScrollCount > 0 ->
+            "$availableScrollCount parchemin(s) accepte(s) disponible(s)."
+        else ->
+            "Aucune demande de souhait en attente."
     }
 
 private fun feedbackMessage(feedback: CompletionFeedback): String {
