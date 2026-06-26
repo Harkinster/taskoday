@@ -69,6 +69,7 @@ import java.time.ZoneOffset
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
+    isLocalChildMode: Boolean = false,
     onOpenTask: (Long) -> Unit,
     onEditTask: (Long) -> Unit,
     onOpenProfile: () -> Unit,
@@ -76,10 +77,13 @@ fun HomeScreen(
     onOpenJournal: () -> Unit,
     onOpenWishes: () -> Unit,
     onOpenNest: () -> Unit,
+    onEnterLocalChildMode: () -> Unit = {},
+    onExitLocalChildMode: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val spacing = MaterialTheme.spacing
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
+    var showReturnParentConfirmation by rememberSaveable { mutableStateOf(false) }
     var pendingDeleteRoutine by remember { mutableStateOf<TaskForDay?>(null) }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
@@ -103,6 +107,8 @@ fun HomeScreen(
     val todoCount = planningItems.size - completedCount
     val progress = if (planningItems.isEmpty()) 0f else completedCount.toFloat() / planningItems.size.toFloat()
     val sections = buildActionSections(planningItems)
+    val showParentDashboard = uiState.isParentUser && uiState.usingRemoteData && !isLocalChildMode
+    val canManageActions = uiState.canManageActions && !isLocalChildMode
 
     val selectedDate =
         if (uiState.selectedDayStartMillis == 0L) {
@@ -153,6 +159,15 @@ fun HomeScreen(
                     )
                 }
 
+                if (isLocalChildMode) {
+                    item {
+                        LocalChildModeCard(
+                            childLabel = uiState.activeChildLabel,
+                            onExit = { showReturnParentConfirmation = true },
+                        )
+                    }
+                }
+
                 item {
                     RoutineDateHeader(
                         dateLabel =
@@ -165,7 +180,7 @@ fun HomeScreen(
                     )
                 }
 
-                if (uiState.isParentUser && uiState.usingRemoteData) {
+                if (showParentDashboard) {
                     item {
                         ParentDashboardCard(
                             childLabel = uiState.activeChildLabel ?: "Enfant selectionne",
@@ -185,6 +200,7 @@ fun HomeScreen(
                             onOpenJournal = onOpenJournal,
                             onOpenWishes = onOpenWishes,
                             onOpenNest = onOpenNest,
+                            onEnterLocalChildMode = onEnterLocalChildMode,
                         )
                     }
                 } else if (uiState.usingRemoteData) {
@@ -259,7 +275,7 @@ fun HomeScreen(
                                 },
                                 pendingCompletionKeys = uiState.pendingCompletionKeys,
                                 pendingManagementKeys = uiState.pendingManagementKeys,
-                                canManageActions = uiState.canManageActions,
+                                canManageActions = canManageActions,
                             )
                         }
                     }
@@ -309,6 +325,44 @@ fun HomeScreen(
                 pendingDeleteRoutine = null
                 viewModel.deleteRoutine(routine)
             },
+        )
+    }
+
+    if (showReturnParentConfirmation) {
+        FantasyConfirmationDialog(
+            title = "Retour parent",
+            message = "Revenir au tableau de bord parent ?",
+            confirmLabel = "Retour parent",
+            onDismiss = { showReturnParentConfirmation = false },
+            onConfirm = {
+                showReturnParentConfirmation = false
+                onExitLocalChildMode()
+            },
+        )
+    }
+}
+
+@Composable
+private fun LocalChildModeCard(
+    childLabel: String?,
+    onExit: () -> Unit,
+) {
+    FantasyCard(tone = FantasyTone.Gold) {
+        Text(
+            text = "Mode enfant local",
+            style = MaterialTheme.typography.titleMedium,
+            color = WoodBrownDark,
+        )
+        Text(
+            text = childLabel?.let { "Tu joues avec $it sur cet appareil." } ?: "Tu joues avec l'enfant actif.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = InkMuted,
+        )
+        FantasyButton(
+            text = "Retour parent",
+            onClick = onExit,
+            style = FantasyButtonStyle.Outline,
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 }
@@ -422,6 +476,7 @@ private fun ParentShortcutsCard(
     onOpenJournal: () -> Unit,
     onOpenWishes: () -> Unit,
     onOpenNest: () -> Unit,
+    onEnterLocalChildMode: () -> Unit,
 ) {
     FantasyCard(tone = FantasyTone.Night) {
         Text(
@@ -453,6 +508,12 @@ private fun ParentShortcutsCard(
             onClick = onOpenNest,
             modifier = Modifier.fillMaxWidth(),
             style = FantasyButtonStyle.Quiet,
+        )
+        FantasyButton(
+            text = "Passer en mode enfant",
+            onClick = onEnterLocalChildMode,
+            modifier = Modifier.fillMaxWidth(),
+            style = FantasyButtonStyle.Outline,
         )
     }
 }

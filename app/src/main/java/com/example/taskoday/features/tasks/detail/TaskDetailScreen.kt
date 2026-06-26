@@ -40,12 +40,14 @@ import com.example.taskoday.domain.model.TaskStatus
 @Composable
 fun TaskDetailScreen(
     viewModel: TaskDetailViewModel,
+    isLocalChildMode: Boolean = false,
     onBack: () -> Unit,
     onEditTask: (Long) -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val spacing = MaterialTheme.spacing
     var showDeleteConfirmation by remember { mutableStateOf(false) }
+    val canManageTask = uiState.canManageTask && !isLocalChildMode
 
     LaunchedEffect(uiState.isDeleted) {
         if (uiState.isDeleted) {
@@ -73,7 +75,7 @@ fun TaskDetailScreen(
                 },
                 actions = {
                     uiState.task?.let { task ->
-                        if (uiState.canManageTask) {
+                        if (canManageTask) {
                             IconButton(
                                 onClick = { onEditTask(task.id) },
                                 modifier = Modifier.testTag(TaskodayTestTags.TaskDetailEditButton),
@@ -183,7 +185,7 @@ fun TaskDetailScreen(
                 Text(text = if (task.status == TaskStatus.DONE) "Rouvrir la tache" else "Marquer comme terminee")
             }
 
-            if (uiState.canManageTask) {
+            if (canManageTask) {
                 OutlinedButton(
                     onClick = { showDeleteConfirmation = true },
                     modifier = Modifier.fillMaxWidth().testTag(TaskodayTestTags.TaskDetailDeleteButton),

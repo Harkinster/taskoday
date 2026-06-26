@@ -46,6 +46,7 @@ import com.example.taskoday.core.ui.theme.spacing
 @Composable
 fun ActivityJournalScreen(
     viewModel: ActivityJournalViewModel,
+    isLocalChildMode: Boolean = false,
     onBack: () -> Unit,
     onOpenProfile: () -> Unit,
 ) {
@@ -107,7 +108,7 @@ fun ActivityJournalScreen(
                 }
 
                 item {
-                    ActivityJournalHeader(uiState)
+                    ActivityJournalHeader(uiState, isLocalChildMode = isLocalChildMode)
                 }
 
                 uiState.errorMessage?.let { message ->
@@ -137,10 +138,13 @@ fun ActivityJournalScreen(
 }
 
 @Composable
-private fun ActivityJournalHeader(uiState: ActivityJournalUiState) {
+private fun ActivityJournalHeader(
+    uiState: ActivityJournalUiState,
+    isLocalChildMode: Boolean,
+) {
     FantasyCard(tone = FantasyTone.Violet) {
         Text(
-            text = if (uiState.isParent) "Journal parent" else "Mes dernieres reussites",
+            text = if (uiState.isParent && !isLocalChildMode) "Journal parent" else "Mes dernieres reussites",
             style = MaterialTheme.typography.titleLarge,
             color = WoodBrownDark,
             maxLines = 1,

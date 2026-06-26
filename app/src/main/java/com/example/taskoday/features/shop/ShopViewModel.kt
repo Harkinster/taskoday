@@ -152,10 +152,13 @@ class ShopViewModel
             }
         }
 
-        fun requestReward(reward: Reward) {
+        fun requestReward(
+            reward: Reward,
+            allowParentLocalChildMode: Boolean = false,
+        ) {
             val currentState = uiState.value
             if (currentState.isSubmitting) return
-            if (currentState.isParent) {
+            if (currentState.isParent && !allowParentLocalChildMode) {
                 _uiState.update { it.copy(userMessage = "Le parent gere le catalogue, l'enfant fait la demande.") }
                 return
             }

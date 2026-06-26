@@ -66,6 +66,7 @@ import kotlinx.coroutines.launch
 fun ShopScreen(
     viewModel: ShopViewModel,
     initialSection: String,
+    isLocalChildMode: Boolean = false,
     onOpenProfile: () -> Unit,
     onBackToNest: () -> Unit,
 ) {
@@ -79,6 +80,7 @@ fun ShopScreen(
     var rewardBeingEdited by remember { mutableStateOf<Reward?>(null) }
     var rewardPendingDeactivation by remember { mutableStateOf<Reward?>(null) }
     var requestPendingUse by remember { mutableStateOf<RewardRedemptionRequest?>(null) }
+    val effectiveIsParent = uiState.isParent && !isLocalChildMode
 
     LaunchedEffect(uiState.userMessage) {
         uiState.userMessage?.let {
@@ -142,7 +144,7 @@ fun ShopScreen(
                 if (selectedSection == CaveSection.Wishes) {
                     item {
                         NestStatCard(
-                            label = if (uiState.isParent) "Souhaits parent" else "Solde du Gardien",
+                            label = if (effectiveIsParent) "Souhaits parent" else "Solde du Gardien",
                             value = "${uiState.scalesBalance} Flammèches",
                             assetResId = NestAssets.interfaceAsset("flammeche"),
                             tone = FantasyTone.Ember,
@@ -162,7 +164,7 @@ fun ShopScreen(
                         }
                     }
 
-                    if (uiState.isParent && uiState.hasRemoteSession) {
+                    if (effectiveIsParent && uiState.hasRemoteSession) {
                         item {
                             ParentRewardEditor(
                                 reward = rewardBeingEdited,
@@ -184,10 +186,10 @@ fun ShopScreen(
                         }
                     }
 
-                    item { SectionTitle(text = if (uiState.isParent) "Catalogue des souhaits" else "Souhaits disponibles") }
+                    item { SectionTitle(text = if (effectiveIsParent) "Catalogue des souhaits" else "Souhaits disponibles") }
 
                     val displayedRewards =
-                        if (uiState.isParent) {
+                        if (effectiveIsParent) {
                             uiState.rewards.sortedWith(compareBy<Reward> { !it.isActive }.thenBy { it.cost })
                         } else {
                             uiState.rewards.filter { it.isActive }
@@ -205,14 +207,14 @@ fun ShopScreen(
                                     .maxByOrNull { request -> request.requestedAt.orEmpty() }
                             ManagedRewardRow(
                                 reward = reward,
-                                isParent = uiState.isParent,
+                                isParent = effectiveIsParent,
                                 hasRemoteSession = uiState.hasRemoteSession,
                                 scalesBalance = uiState.scalesBalance,
                                 latestRequest = latestRequest,
                                 isSubmitting = uiState.isSubmitting,
                                 onEdit = { rewardBeingEdited = reward },
                                 onDeactivate = { rewardPendingDeactivation = reward },
-                                onRequest = { viewModel.requestReward(reward) },
+                                onRequest = { viewModel.requestReward(reward, allowParentLocalChildMode = isLocalChildMode) },
                             )
                         }
                     }
@@ -231,7 +233,7 @@ fun ShopScreen(
                         items(uiState.requests, key = { request -> "request-${request.id}" }) { request ->
                             RewardRequestRow(
                                 request = request,
-                                isParent = uiState.isParent,
+                                isParent = effectiveIsParent,
                                 isSubmitting = uiState.isSubmitting,
                                 onApprove = { viewModel.approveRequest(request.id) },
                                 onRefuse = { viewModel.refuseRequest(request.id) },

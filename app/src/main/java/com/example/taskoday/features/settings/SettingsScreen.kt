@@ -47,6 +47,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.taskoday.core.plan.TaskodayPlanFeature
 import com.example.taskoday.core.plan.TaskodayPlanPolicy
+import com.example.taskoday.core.ui.component.fantasy.FantasyConfirmationDialog
 import com.example.taskoday.core.ui.component.fantasy.FantasyScreenBackground
 import com.example.taskoday.core.ui.component.fantasy.NeonButton
 import com.example.taskoday.core.ui.component.fantasy.NeonButtonStyle
@@ -68,13 +69,17 @@ import com.example.taskoday.core.ui.theme.spacing
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel,
+    isLocalChildMode: Boolean = false,
     onOpenParentMode: () -> Unit = {},
+    onEnterLocalChildMode: () -> Unit = {},
+    onExitLocalChildMode: () -> Unit = {},
     onLogoutConfirmed: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val spacing = MaterialTheme.spacing
     var pairingCodeInput by rememberSaveable { mutableStateOf("") }
     var showLogoutConfirmation by rememberSaveable { mutableStateOf(false) }
+    var showReturnParentConfirmation by rememberSaveable { mutableStateOf(false) }
 
     val xp = uiState.totalXp
     val level = uiState.level
@@ -151,13 +156,21 @@ fun SettingsScreen(
                     )
                 }
 
-                if (!uiState.isParentUser) {
+                if (isLocalChildMode) {
+                    item {
+                        LocalChildModeSettingsCard(
+                            onReturnParent = { showReturnParentConfirmation = true },
+                        )
+                    }
+                }
+
+                if (!uiState.isParentUser && !isLocalChildMode) {
                     item {
                         LogoutActionCard(onClick = { showLogoutConfirmation = true })
                     }
                 }
 
-                if (uiState.isParentUser) {
+                if (uiState.isParentUser && !isLocalChildMode) {
                     item {
                         ActiveChildCard(
                             uiState = uiState,
@@ -165,6 +178,7 @@ fun SettingsScreen(
                             onCreateChild = viewModel::createChild,
                             onRenameChild = viewModel::renameChild,
                             onClearMessages = viewModel::clearChildManagementMessages,
+                            onEnterLocalChildMode = onEnterLocalChildMode,
                         )
                     }
                 }
@@ -181,46 +195,50 @@ fun SettingsScreen(
                     }
                 }
 
-                item {
-                    NeonCard(tone = NeonTone.Blue) {
-                        ProfileActionRow(
-                            icon = Icons.Outlined.Edit,
-                            title = "Modifier le profil",
-                            subtitle = "Nom, pseudo et biographie.",
-                        )
-                        ProfileActionRow(
-                            icon = Icons.Outlined.Image,
-                            title = "Modifier la photo",
-                            subtitle = "Choisis un nouvel avatar.",
-                        )
+                if (!isLocalChildMode) {
+                    item {
+                        NeonCard(tone = NeonTone.Blue) {
+                            ProfileActionRow(
+                                icon = Icons.Outlined.Edit,
+                                title = "Modifier le profil",
+                                subtitle = "Nom, pseudo et biographie.",
+                            )
+                            ProfileActionRow(
+                                icon = Icons.Outlined.Image,
+                                title = "Modifier la photo",
+                                subtitle = "Choisis un nouvel avatar.",
+                            )
+                        }
                     }
                 }
 
-                if (uiState.isParentUser) {
+                if (uiState.isParentUser && !isLocalChildMode) {
                     item {
                         LogoutActionCard(onClick = { showLogoutConfirmation = true })
                     }
                 }
 
-                item {
-                    NeonCard(tone = NeonTone.Violet) {
-                        Text(
-                            text = "Preferences",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = StarWhite,
-                        )
-                        SettingSwitchRow(
-                            icon = Icons.Outlined.Notifications,
-                            title = "Notifications",
-                            checked = uiState.notificationsEnabled,
-                            onCheckedChange = viewModel::setNotificationsEnabled,
-                        )
-                        SettingSwitchRow(
-                            icon = Icons.Outlined.Palette,
-                            title = "Couleurs dynamiques",
-                            checked = uiState.useDynamicColors,
-                            onCheckedChange = viewModel::setDynamicColors,
-                        )
+                if (!isLocalChildMode) {
+                    item {
+                        NeonCard(tone = NeonTone.Violet) {
+                            Text(
+                                text = "Preferences",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = StarWhite,
+                            )
+                            SettingSwitchRow(
+                                icon = Icons.Outlined.Notifications,
+                                title = "Notifications",
+                                checked = uiState.notificationsEnabled,
+                                onCheckedChange = viewModel::setNotificationsEnabled,
+                            )
+                            SettingSwitchRow(
+                                icon = Icons.Outlined.Palette,
+                                title = "Couleurs dynamiques",
+                                checked = uiState.useDynamicColors,
+                                onCheckedChange = viewModel::setDynamicColors,
+                            )
+                        }
                     }
                 }
 
@@ -266,7 +284,7 @@ fun SettingsScreen(
                     }
                 }
 
-                if (uiState.isParentUser) {
+                if (uiState.isParentUser && !isLocalChildMode) {
                     item {
                         ParentPairingCard(
                             uiState = uiState,
@@ -282,7 +300,7 @@ fun SettingsScreen(
                             onAttachChild = { viewModel.attachChildWithCode(pairingCodeInput) },
                         )
                     }
-                } else {
+                } else if (!isLocalChildMode) {
                     item {
                         ChildPairingCard(
                             uiState = uiState,
@@ -291,7 +309,7 @@ fun SettingsScreen(
                     }
                 }
 
-                if (uiState.isParentUser) {
+                if (uiState.isParentUser && !isLocalChildMode) {
                     item {
                         NeonCard(tone = NeonTone.Cyan) {
                             Text(
@@ -325,6 +343,19 @@ fun SettingsScreen(
             },
         )
     }
+
+    if (showReturnParentConfirmation) {
+        FantasyConfirmationDialog(
+            title = "Retour parent",
+            message = "Revenir au compte parent ?",
+            confirmLabel = "Retour parent",
+            onDismiss = { showReturnParentConfirmation = false },
+            onConfirm = {
+                showReturnParentConfirmation = false
+                onExitLocalChildMode()
+            },
+        )
+    }
 }
 
 @Composable
@@ -341,12 +372,35 @@ private fun LogoutActionCard(onClick: () -> Unit) {
 }
 
 @Composable
+private fun LocalChildModeSettingsCard(onReturnParent: () -> Unit) {
+    NeonCard(tone = NeonTone.Cyan) {
+        Text(
+            text = "Mode enfant local",
+            style = MaterialTheme.typography.titleMedium,
+            color = StarWhite,
+        )
+        Text(
+            text = "Les options parent sont masquees sur cet appareil.",
+            style = MaterialTheme.typography.bodySmall,
+            color = TextMuted,
+        )
+        NeonButton(
+            text = "Retour parent",
+            onClick = onReturnParent,
+            style = NeonButtonStyle.Outline,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+@Composable
 private fun ActiveChildCard(
     uiState: SettingsUiState,
     onSelectChild: (Long) -> Unit,
     onCreateChild: (String, String?, String?) -> Unit,
     onRenameChild: (Long, String) -> Unit,
     onClearMessages: () -> Unit,
+    onEnterLocalChildMode: () -> Unit,
 ) {
     val activeChild = uiState.pairedChildren.firstOrNull { child -> child.id == uiState.activeChildId }
     val childLimitReached = !TaskodayPlanPolicy.canCreate(TaskodayPlanFeature.Child, uiState.pairedChildren.size)
@@ -422,6 +476,14 @@ private fun ActiveChildCard(
                 showCreateChildDialog = true
             },
             enabled = !uiState.isChildManagementBusy && !childLimitReached,
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        NeonButton(
+            text = "Passer en mode enfant",
+            onClick = onEnterLocalChildMode,
+            enabled = !uiState.isChildManagementBusy && activeChild != null,
+            style = NeonButtonStyle.Outline,
             modifier = Modifier.fillMaxWidth(),
         )
 

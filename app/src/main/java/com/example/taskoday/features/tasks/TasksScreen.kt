@@ -46,6 +46,7 @@ import com.example.taskoday.domain.model.TaskStatus
 @Composable
 fun TasksScreen(
     viewModel: TasksViewModel,
+    isLocalChildMode: Boolean = false,
     onTaskClick: (Long) -> Unit,
     onEditTask: (Long) -> Unit,
     onOpenProfile: () -> Unit,
@@ -59,6 +60,7 @@ fun TasksScreen(
     val todoTasks = uiState.tasks.filter { it.status == TaskStatus.TODO }
     val inProgressTasks = uiState.tasks.filter { it.status == TaskStatus.IN_PROGRESS }
     val doneTasks = uiState.tasks.filter { it.status == TaskStatus.DONE }
+    val manageableTaskIds = if (isLocalChildMode) emptySet() else uiState.manageableTaskIds
     var pendingDeleteTask by remember { mutableStateOf<Task?>(null) }
 
     Scaffold(
@@ -149,7 +151,7 @@ fun TasksScreen(
                         MissionSection(
                         title = "À faire aujourd'hui",
                         tasks = todoTasks,
-                        manageableTaskIds = uiState.manageableTaskIds,
+                        manageableTaskIds = manageableTaskIds,
                         onTaskClick = onTaskClick,
                         onEditTask = onEditTask,
                         onDeleteTask = { pendingDeleteTask = it },
@@ -163,7 +165,7 @@ fun TasksScreen(
                         MissionSection(
                         title = "En cours",
                         tasks = inProgressTasks,
-                        manageableTaskIds = uiState.manageableTaskIds,
+                        manageableTaskIds = manageableTaskIds,
                         onTaskClick = onTaskClick,
                         onEditTask = onEditTask,
                         onDeleteTask = { pendingDeleteTask = it },
@@ -177,7 +179,7 @@ fun TasksScreen(
                         MissionSection(
                         title = "Terminées",
                         tasks = doneTasks,
-                        manageableTaskIds = uiState.manageableTaskIds,
+                        manageableTaskIds = manageableTaskIds,
                         onTaskClick = onTaskClick,
                         onEditTask = onEditTask,
                         onDeleteTask = { pendingDeleteTask = it },

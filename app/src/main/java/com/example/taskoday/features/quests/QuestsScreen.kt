@@ -65,6 +65,7 @@ import com.example.taskoday.domain.model.QuestForDay
 @Composable
 fun QuestsScreen(
     viewModel: QuestsViewModel,
+    isLocalChildMode: Boolean = false,
     onOpenProfile: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -78,6 +79,8 @@ fun QuestsScreen(
     var formDayPart by rememberSaveable { mutableStateOf(DayPart.APRES_MIDI) }
     var editingQuestId by rememberSaveable { mutableStateOf<Long?>(null) }
     var pendingDeleteQuestId by rememberSaveable { mutableStateOf<Long?>(null) }
+    val canManageQuests = uiState.canManageQuests && !isLocalChildMode
+    val canCreateQuest = uiState.canCreateQuest && !isLocalChildMode
 
     fun resetForm() {
         formTitle = ""
@@ -152,7 +155,7 @@ fun QuestsScreen(
                     )
                 }
 
-                if (uiState.canCreateQuest && editingQuestId != null) {
+                if (canCreateQuest && editingQuestId != null) {
                     item {
                         QuestFormCard(
                             formTitle = formTitle,
@@ -248,10 +251,10 @@ fun QuestsScreen(
                             actionLabel = if (checked) "Recuperer" else "Commencer",
                             dayPartLabel = item.quest.dayPart.label(),
                             done = checked,
-                            canManage = uiState.canManageQuests,
+                            canManage = canManageQuests,
                             onAction = { viewModel.setQuestCompleted(item, !checked) },
-                            onEdit = if (uiState.canManageQuests) ({ startEdit(item) }) else null,
-                            onDelete = if (uiState.canManageQuests) ({ pendingDeleteQuestId = item.quest.id }) else null,
+                            onEdit = if (canManageQuests) ({ startEdit(item) }) else null,
+                            onDelete = if (canManageQuests) ({ pendingDeleteQuestId = item.quest.id }) else null,
                         )
                     }
                 }
