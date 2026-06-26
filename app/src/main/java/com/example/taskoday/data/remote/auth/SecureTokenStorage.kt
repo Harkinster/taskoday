@@ -35,6 +35,14 @@ class SecureTokenStorage
             preferences.edit().remove(KEY_ACTIVE_CHILD_ID).apply()
         }
 
+        override fun hasParentPin(): Boolean = !preferences.getString(KEY_PARENT_PIN, null).isNullOrBlank()
+
+        override fun saveParentPin(pin: String) {
+            preferences.edit().putString(KEY_PARENT_PIN, pin).apply()
+        }
+
+        override fun verifyParentPin(pin: String): Boolean = preferences.getString(KEY_PARENT_PIN, null) == pin
+
         override fun clear() {
             preferences
                 .edit()
@@ -67,5 +75,6 @@ class SecureTokenStorage
             const val PREFS_NAME = "taskoday_secure_auth"
             const val KEY_ACCESS_TOKEN = "access_token"
             const val KEY_ACTIVE_CHILD_ID = "active_child_id"
+            const val KEY_PARENT_PIN = "parent_pin"
         }
     }

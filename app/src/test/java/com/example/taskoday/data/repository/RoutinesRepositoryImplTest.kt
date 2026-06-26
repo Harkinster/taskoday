@@ -61,6 +61,9 @@ private class FakeRoutineAuthRepository : AuthRepository {
     override fun getAccessToken(): String = "token"
     override suspend fun getActiveChildId(forceRefresh: Boolean): Long = 19L
     override fun setActiveChildId(childId: Long) = Unit
+    override fun hasParentPin(): Boolean = false
+    override fun saveParentPin(pin: String) = Unit
+    override fun verifyParentPin(pin: String): Boolean = false
     override fun clearSession() = Unit
 }
 

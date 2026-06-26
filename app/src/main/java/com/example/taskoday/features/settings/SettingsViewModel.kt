@@ -219,6 +219,40 @@ class SettingsViewModel
             }
         }
 
+        fun saveParentPin(pin: String) {
+            val trimmedPin = pin.trim()
+            if (!_uiState.value.isParentUser) return
+            if (!trimmedPin.matches(PARENT_PIN_REGEX)) {
+                _uiState.update {
+                    it.copy(
+                        parentPinSuccessMessage = null,
+                        parentPinErrorMessage = "Le PIN doit contenir 4 chiffres.",
+                    )
+                }
+                return
+            }
+
+            authRepository.saveParentPin(trimmedPin)
+            _uiState.update {
+                it.copy(
+                    hasParentPin = true,
+                    parentPinSuccessMessage = "PIN parent enregistre.",
+                    parentPinErrorMessage = null,
+                )
+            }
+        }
+
+        fun verifyParentPin(pin: String): Boolean = authRepository.verifyParentPin(pin.trim())
+
+        fun clearParentPinMessages() {
+            _uiState.update {
+                it.copy(
+                    parentPinSuccessMessage = null,
+                    parentPinErrorMessage = null,
+                )
+            }
+        }
+
         fun fetchOrGeneratePairingCode() {
             if (_uiState.value.isParentUser) return
             if (authRepository.getAccessToken().isNullOrBlank()) {
@@ -382,6 +416,9 @@ class SettingsViewModel
                         isChildManagementBusy = false,
                         childManagementSuccessMessage = null,
                         childManagementErrorMessage = null,
+                        hasParentPin = authRepository.hasParentPin(),
+                        parentPinSuccessMessage = null,
+                        parentPinErrorMessage = null,
                         profileErrorMessage = null,
                     )
                 }
@@ -434,6 +471,7 @@ class SettingsViewModel
                         xpHistoryTokens = xpHistoryTokensFrom(dashboard),
                         pairedChildren = children,
                         activeChildId = activeChildId,
+                        hasParentPin = authRepository.hasParentPin(),
                         profileErrorMessage =
                             (
                                 dashboardResult.exceptionOrNull()
@@ -447,6 +485,7 @@ class SettingsViewModel
     }
 
 private const val XP_PER_LEVEL: Int = 1000
+private val PARENT_PIN_REGEX = Regex("\\d{4}")
 
 internal data class ProfileIdentity(
     val name: String,

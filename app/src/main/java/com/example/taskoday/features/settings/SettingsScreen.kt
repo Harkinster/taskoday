@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.Logout
@@ -42,17 +43,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.taskoday.core.plan.TaskodayPlanFeature
 import com.example.taskoday.core.plan.TaskodayPlanPolicy
-import com.example.taskoday.core.ui.component.fantasy.FantasyConfirmationDialog
 import com.example.taskoday.core.ui.component.fantasy.FantasyScreenBackground
 import com.example.taskoday.core.ui.component.fantasy.NeonButton
 import com.example.taskoday.core.ui.component.fantasy.NeonButtonStyle
 import com.example.taskoday.core.ui.component.fantasy.NeonCard
 import com.example.taskoday.core.ui.component.fantasy.NeonTone
+import com.example.taskoday.core.ui.component.fantasy.PARENT_PIN_LENGTH
+import com.example.taskoday.core.ui.component.fantasy.ParentPinDialog
+import com.example.taskoday.core.ui.component.fantasy.ParentPinStatusMessage
 import com.example.taskoday.core.ui.component.fantasy.ProfileHeroCard
 import com.example.taskoday.core.ui.component.fantasy.RewardsCard
 import com.example.taskoday.core.ui.component.fantasy.TaskodayHeader
@@ -79,7 +84,8 @@ fun SettingsScreen(
     val spacing = MaterialTheme.spacing
     var pairingCodeInput by rememberSaveable { mutableStateOf("") }
     var showLogoutConfirmation by rememberSaveable { mutableStateOf(false) }
-    var showReturnParentConfirmation by rememberSaveable { mutableStateOf(false) }
+    var showReturnParentPinDialog by rememberSaveable { mutableStateOf(false) }
+    var returnParentPinError by rememberSaveable { mutableStateOf<String?>(null) }
 
     val xp = uiState.totalXp
     val level = uiState.level
@@ -159,7 +165,10 @@ fun SettingsScreen(
                 if (isLocalChildMode) {
                     item {
                         LocalChildModeSettingsCard(
-                            onReturnParent = { showReturnParentConfirmation = true },
+                            onReturnParent = {
+                                returnParentPinError = null
+                                showReturnParentPinDialog = true
+                            },
                         )
                     }
                 }
@@ -179,6 +188,17 @@ fun SettingsScreen(
                             onRenameChild = viewModel::renameChild,
                             onClearMessages = viewModel::clearChildManagementMessages,
                             onEnterLocalChildMode = onEnterLocalChildMode,
+                            hasParentPin = uiState.hasParentPin,
+                        )
+                    }
+
+                    item {
+                        ParentPinSettingsCard(
+                            hasParentPin = uiState.hasParentPin,
+                            successMessage = uiState.parentPinSuccessMessage,
+                            errorMessage = uiState.parentPinErrorMessage,
+                            onSavePin = viewModel::saveParentPin,
+                            onClearMessages = viewModel::clearParentPinMessages,
                         )
                     }
                 }
@@ -344,15 +364,23 @@ fun SettingsScreen(
         )
     }
 
-    if (showReturnParentConfirmation) {
-        FantasyConfirmationDialog(
+    if (showReturnParentPinDialog) {
+        ParentPinDialog(
             title = "Retour parent",
-            message = "Revenir au compte parent ?",
-            confirmLabel = "Retour parent",
-            onDismiss = { showReturnParentConfirmation = false },
-            onConfirm = {
-                showReturnParentConfirmation = false
-                onExitLocalChildMode()
+            message = "Saisis le PIN parent pour revenir au tableau de bord.",
+            errorMessage = returnParentPinError,
+            onDismiss = {
+                showReturnParentPinDialog = false
+                returnParentPinError = null
+            },
+            onConfirm = { pin ->
+                if (viewModel.verifyParentPin(pin)) {
+                    showReturnParentPinDialog = false
+                    returnParentPinError = null
+                    onExitLocalChildMode()
+                } else {
+                    returnParentPinError = "PIN incorrect."
+                }
             },
         )
     }
@@ -394,6 +422,145 @@ private fun LocalChildModeSettingsCard(onReturnParent: () -> Unit) {
 }
 
 @Composable
+private fun ParentPinSettingsCard(
+    hasParentPin: Boolean,
+    successMessage: String?,
+    errorMessage: String?,
+    onSavePin: (String) -> Unit,
+    onClearMessages: () -> Unit,
+) {
+    var showPinDialog by rememberSaveable { mutableStateOf(false) }
+
+    NeonCard(tone = if (hasParentPin) NeonTone.Cyan else NeonTone.Warning) {
+        Text(
+            text = "PIN parent local",
+            style = MaterialTheme.typography.titleMedium,
+            color = StarWhite,
+        )
+        ParentPinStatusMessage(hasParentPin = hasParentPin)
+        Text(
+            text = "Il protege le bouton Retour parent quand l'app est en mode enfant.",
+            style = MaterialTheme.typography.bodySmall,
+            color = TextMuted,
+        )
+        NeonButton(
+            text = if (hasParentPin) "Modifier le PIN" else "Definir un PIN",
+            onClick = {
+                onClearMessages()
+                showPinDialog = true
+            },
+            modifier = Modifier.fillMaxWidth(),
+            style = if (hasParentPin) NeonButtonStyle.Outline else NeonButtonStyle.Filled,
+        )
+        if (!successMessage.isNullOrBlank()) {
+            Text(
+                text = successMessage,
+                style = MaterialTheme.typography.bodySmall,
+                color = NeonCyan,
+            )
+        }
+        if (!errorMessage.isNullOrBlank()) {
+            Text(
+                text = errorMessage,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+    }
+
+    if (showPinDialog) {
+        SetParentPinDialog(
+            hasParentPin = hasParentPin,
+            onDismiss = { showPinDialog = false },
+            onSavePin = { pin ->
+                onSavePin(pin)
+                showPinDialog = false
+            },
+        )
+    }
+}
+
+@Composable
+private fun SetParentPinDialog(
+    hasParentPin: Boolean,
+    onDismiss: () -> Unit,
+    onSavePin: (String) -> Unit,
+) {
+    var pin by rememberSaveable { mutableStateOf("") }
+    var confirmation by rememberSaveable { mutableStateOf("") }
+    val pinsMatch = pin.length == PARENT_PIN_LENGTH && pin == confirmation
+
+    Dialog(onDismissRequest = onDismiss) {
+        NeonCard(
+            modifier = Modifier.fillMaxWidth(),
+            tone = NeonTone.Cyan,
+        ) {
+            Text(
+                text = if (hasParentPin) "Modifier le PIN" else "Definir un PIN",
+                style = MaterialTheme.typography.titleLarge,
+                color = StarWhite,
+            )
+            Text(
+                text = "Choisis un code a 4 chiffres pour proteger le retour parent.",
+                style = MaterialTheme.typography.bodySmall,
+                color = TextMuted,
+            )
+            ParentPinTextField(
+                value = pin,
+                onValueChange = { pin = it },
+                label = "Nouveau PIN",
+            )
+            ParentPinTextField(
+                value = confirmation,
+                onValueChange = { confirmation = it },
+                label = "Confirmer",
+            )
+            if (confirmation.isNotEmpty() && pin != confirmation) {
+                Text(
+                    text = "Les deux PIN ne correspondent pas.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                NeonButton(
+                    text = "Annuler",
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f),
+                    style = NeonButtonStyle.Outline,
+                )
+                NeonButton(
+                    text = "Enregistrer",
+                    onClick = { onSavePin(pin) },
+                    enabled = pinsMatch,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ParentPinTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = { input -> onValueChange(input.filter(Char::isDigit).take(PARENT_PIN_LENGTH)) },
+        label = { Text(label) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+        visualTransformation = PasswordVisualTransformation(),
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+@Composable
 private fun ActiveChildCard(
     uiState: SettingsUiState,
     onSelectChild: (Long) -> Unit,
@@ -401,6 +568,7 @@ private fun ActiveChildCard(
     onRenameChild: (Long, String) -> Unit,
     onClearMessages: () -> Unit,
     onEnterLocalChildMode: () -> Unit,
+    hasParentPin: Boolean,
 ) {
     val activeChild = uiState.pairedChildren.firstOrNull { child -> child.id == uiState.activeChildId }
     val childLimitReached = !TaskodayPlanPolicy.canCreate(TaskodayPlanFeature.Child, uiState.pairedChildren.size)
@@ -482,10 +650,17 @@ private fun ActiveChildCard(
         NeonButton(
             text = "Passer en mode enfant",
             onClick = onEnterLocalChildMode,
-            enabled = !uiState.isChildManagementBusy && activeChild != null,
+            enabled = !uiState.isChildManagementBusy && activeChild != null && hasParentPin,
             style = NeonButtonStyle.Outline,
             modifier = Modifier.fillMaxWidth(),
         )
+        if (!hasParentPin) {
+            Text(
+                text = "Definis un PIN parent avant d'activer le mode enfant.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
 
         if (!uiState.childManagementSuccessMessage.isNullOrBlank()) {
             Text(

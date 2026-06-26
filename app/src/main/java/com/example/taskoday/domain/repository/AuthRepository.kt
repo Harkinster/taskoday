@@ -28,5 +28,11 @@ interface AuthRepository {
 
     fun setActiveChildId(childId: Long)
 
+    fun hasParentPin(): Boolean
+
+    fun saveParentPin(pin: String)
+
+    fun verifyParentPin(pin: String): Boolean
+
     fun clearSession()
 }

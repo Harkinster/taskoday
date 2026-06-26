@@ -106,6 +106,14 @@ class AuthRepositoryImpl
             if (childId > 0L) tokenStorage.saveActiveChildId(childId)
         }
 
+        override fun hasParentPin(): Boolean = tokenStorage.hasParentPin()
+
+        override fun saveParentPin(pin: String) {
+            tokenStorage.saveParentPin(pin)
+        }
+
+        override fun verifyParentPin(pin: String): Boolean = tokenStorage.verifyParentPin(pin)
+
         override fun clearSession() {
             tokenStorage.clear()
         }

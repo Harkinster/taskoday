@@ -62,6 +62,7 @@ class HomeViewModel
             observeHomeData()
             observeRemoteSync()
             resolveCanManageActions()
+            refreshParentPinState()
             cleanupOldChecks()
             observeDayRollover()
         }
@@ -75,9 +76,21 @@ class HomeViewModel
                 val canManage =
                     runCatching { authRepository.fetchMe().role.equals("PARENT", ignoreCase = true) }
                         .getOrDefault(false)
-                _uiState.update { it.copy(canManageActions = canManage, isParentUser = canManage) }
+                _uiState.update {
+                    it.copy(
+                        canManageActions = canManage,
+                        isParentUser = canManage,
+                        hasParentPin = authRepository.hasParentPin(),
+                    )
+                }
             }
         }
+
+        fun refreshParentPinState() {
+            _uiState.update { it.copy(hasParentPin = authRepository.hasParentPin()) }
+        }
+
+        fun verifyParentPin(pin: String): Boolean = authRepository.verifyParentPin(pin.trim())
 
         @OptIn(ExperimentalCoroutinesApi::class)
         private fun observeHomeData() {
@@ -159,6 +172,7 @@ class HomeViewModel
                     usingRemoteData = syncResult.usedRemoteData,
                     canManageActions = if (syncResult.usedRemoteData) isParent else it.canManageActions,
                     isParentUser = isParent,
+                    hasParentPin = authRepository.hasParentPin(),
                     activeChildLabel = activeChildLabel,
                     remoteXp = remoteProgress?.guardian?.xp,
                     remoteFlammeches = remoteProgress?.wallet?.flammeches,

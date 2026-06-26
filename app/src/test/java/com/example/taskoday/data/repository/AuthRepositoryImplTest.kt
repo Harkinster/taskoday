@@ -90,6 +90,7 @@ class AuthRepositoryImplTest {
 private class MemoryTokenStorage(
     private var accessToken: String? = null,
     private var activeChildId: Long? = null,
+    private var parentPin: String? = null,
 ) : TokenStorage {
     override fun getAccessToken(): String? = accessToken
 
@@ -106,6 +107,14 @@ private class MemoryTokenStorage(
     override fun clearActiveChildId() {
         activeChildId = null
     }
+
+    override fun hasParentPin(): Boolean = !parentPin.isNullOrBlank()
+
+    override fun saveParentPin(pin: String) {
+        parentPin = pin
+    }
+
+    override fun verifyParentPin(pin: String): Boolean = parentPin == pin
 
     override fun clear() {
         accessToken = null

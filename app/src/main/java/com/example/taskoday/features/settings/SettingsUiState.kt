@@ -32,5 +32,8 @@ data class SettingsUiState(
     val isChildManagementBusy: Boolean = false,
     val childManagementSuccessMessage: String? = null,
     val childManagementErrorMessage: String? = null,
+    val hasParentPin: Boolean = false,
+    val parentPinSuccessMessage: String? = null,
+    val parentPinErrorMessage: String? = null,
     val profileErrorMessage: String? = null,
 )

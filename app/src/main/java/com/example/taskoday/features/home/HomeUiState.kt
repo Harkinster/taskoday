@@ -21,6 +21,7 @@ data class HomeUiState(
     val usingRemoteData: Boolean = false,
     val canManageActions: Boolean = false,
     val isParentUser: Boolean = false,
+    val hasParentPin: Boolean = false,
     val activeChildLabel: String? = null,
     val pendingWishCount: Int = 0,
     val availableScrollCount: Int = 0,

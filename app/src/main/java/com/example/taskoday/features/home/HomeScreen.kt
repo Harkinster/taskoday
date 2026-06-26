@@ -46,6 +46,7 @@ import com.example.taskoday.core.ui.component.fantasy.FantasyScreenBackground
 import com.example.taskoday.core.ui.component.fantasy.FantasyStateCard
 import com.example.taskoday.core.ui.component.fantasy.FantasyTone
 import com.example.taskoday.core.ui.component.fantasy.NestAssets
+import com.example.taskoday.core.ui.component.fantasy.ParentPinDialog
 import com.example.taskoday.core.ui.component.fantasy.RewardToast
 import com.example.taskoday.core.ui.component.fantasy.RoutineItemRow
 import com.example.taskoday.core.ui.component.fantasy.TaskodayTopBar
@@ -83,11 +84,13 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val spacing = MaterialTheme.spacing
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
-    var showReturnParentConfirmation by rememberSaveable { mutableStateOf(false) }
+    var showReturnParentPinDialog by rememberSaveable { mutableStateOf(false) }
+    var returnParentPinError by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingDeleteRoutine by remember { mutableStateOf<TaskForDay?>(null) }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.refreshDashboard()
+        viewModel.refreshParentPinState()
     }
 
     val visibleTasksForDay =
@@ -163,7 +166,10 @@ fun HomeScreen(
                     item {
                         LocalChildModeCard(
                             childLabel = uiState.activeChildLabel,
-                            onExit = { showReturnParentConfirmation = true },
+                            onExit = {
+                                returnParentPinError = null
+                                showReturnParentPinDialog = true
+                            },
                         )
                     }
                 }
@@ -201,6 +207,7 @@ fun HomeScreen(
                             onOpenWishes = onOpenWishes,
                             onOpenNest = onOpenNest,
                             onEnterLocalChildMode = onEnterLocalChildMode,
+                            canEnterLocalChildMode = uiState.hasParentPin,
                         )
                     }
                 } else if (uiState.usingRemoteData) {
@@ -328,15 +335,23 @@ fun HomeScreen(
         )
     }
 
-    if (showReturnParentConfirmation) {
-        FantasyConfirmationDialog(
+    if (showReturnParentPinDialog) {
+        ParentPinDialog(
             title = "Retour parent",
-            message = "Revenir au tableau de bord parent ?",
-            confirmLabel = "Retour parent",
-            onDismiss = { showReturnParentConfirmation = false },
-            onConfirm = {
-                showReturnParentConfirmation = false
-                onExitLocalChildMode()
+            message = "Saisis le PIN parent pour revenir au tableau de bord.",
+            errorMessage = returnParentPinError,
+            onDismiss = {
+                showReturnParentPinDialog = false
+                returnParentPinError = null
+            },
+            onConfirm = { pin ->
+                if (viewModel.verifyParentPin(pin)) {
+                    showReturnParentPinDialog = false
+                    returnParentPinError = null
+                    onExitLocalChildMode()
+                } else {
+                    returnParentPinError = "PIN incorrect."
+                }
             },
         )
     }
@@ -477,6 +492,7 @@ private fun ParentShortcutsCard(
     onOpenWishes: () -> Unit,
     onOpenNest: () -> Unit,
     onEnterLocalChildMode: () -> Unit,
+    canEnterLocalChildMode: Boolean,
 ) {
     FantasyCard(tone = FantasyTone.Night) {
         Text(
@@ -514,7 +530,16 @@ private fun ParentShortcutsCard(
             onClick = onEnterLocalChildMode,
             modifier = Modifier.fillMaxWidth(),
             style = FantasyButtonStyle.Outline,
+            enabled = canEnterLocalChildMode,
         )
+        if (!canEnterLocalChildMode) {
+            Text(
+                text = "Definis un PIN parent dans Profil avant le mode enfant.",
+                style = MaterialTheme.typography.bodySmall,
+                color = InkMuted,
+                maxLines = 2,
+            )
+        }
     }
 }
 

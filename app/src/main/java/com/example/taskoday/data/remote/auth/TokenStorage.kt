@@ -11,5 +11,11 @@ interface TokenStorage {
 
     fun clearActiveChildId()
 
+    fun hasParentPin(): Boolean
+
+    fun saveParentPin(pin: String)
+
+    fun verifyParentPin(pin: String): Boolean
+
     fun clear()
 }
