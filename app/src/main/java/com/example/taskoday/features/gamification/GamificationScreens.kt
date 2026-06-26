@@ -118,6 +118,12 @@ fun NestScreen(
         eggs.firstOrNull { egg -> !egg.locked && egg.key == followedEggKey }
             ?: eggs.firstOrNull { egg -> !egg.locked }
     val progress = uiState.progress
+    val hasEmptyNestProgress =
+        uiState.hasRemoteSession &&
+            progress != null &&
+            progress.guardian.xp == 0 &&
+            progress.wallet.flammeches == 0 &&
+            progress.wallet.crystals == 0
 
     GamificationScaffold {
         item {
@@ -140,11 +146,22 @@ fun NestScreen(
         }
         item {
             NestCurrencyBar(
-                flammeches = progress?.wallet?.flammeches ?: 20,
-                crystals = uiState.crystals?.balance ?: progress?.wallet?.crystals ?: 6,
+                flammeches = progress?.wallet?.flammeches ?: if (uiState.hasRemoteSession) 0 else 20,
+                crystals = uiState.crystals?.balance ?: progress?.wallet?.crystals ?: if (uiState.hasRemoteSession) 0 else 6,
                 onOpenWishes = onOpenWishes,
                 onOpenChests = onOpenChests,
             )
+        }
+        if (hasEmptyNestProgress) {
+            item {
+                FantasyStateCard(
+                    title = "Le Nid attend ses premières étincelles",
+                    message = "Commencez par une routine simple pour faire grandir ce refuge.",
+                    assetResId = NestAssets.interfaceAsset("nid"),
+                    assetDescription = null,
+                    tone = FantasyTone.Gold,
+                )
+            }
         }
         item {
             ActiveNestDisplayCard(
@@ -155,11 +172,12 @@ fun NestScreen(
             )
         }
         item {
+            val guardianXp = progress?.guardian?.xp ?: if (uiState.hasRemoteSession) 0 else 50
             GuardianProgressCard(
-                xp = progress?.guardian?.xp ?: 50,
+                xp = guardianXp,
                 levelName = progress?.nest?.name ?: "Nid paisible",
-                nextLevelLabel = "Niveau ${progress?.guardian?.level?.plus(1) ?: 2}",
-                progress = ((progress?.guardian?.xp ?: 50) % 100) / 100f,
+                nextLevelLabel = "Niveau ${progress?.guardian?.level?.plus(1) ?: if (uiState.hasRemoteSession) 1 else 2}",
+                progress = (guardianXp % 100) / 100f,
             )
         }
         progress?.chestProgress?.let { chestProgress ->
@@ -234,7 +252,7 @@ fun InventoryScreen(
             item {
                 FantasyStateCard(
                     title = "Inventaire vide",
-                    message = "Continue tes quêtes pour attirer de nouveaux trésors.",
+                    message = "Les objets trouvés dans les coffres apparaîtront ici.",
                     assetResId = NestAssets.interfaceAsset("inventory_empty"),
                     assetDescription = "Inventaire vide",
                 )
@@ -279,8 +297,8 @@ fun EggsScreen(
         if (eggs.isEmpty()) {
             item {
                 FantasyStateCard(
-                    title = "Aucun œuf découvert",
-                    message = "Ton Nid attend sa prochaine étincelle.",
+                    title = "Aucun œuf pour le moment",
+                    message = "Les œufs découverts apparaîtront ici, tranquillement.",
                     assetResId = NestAssets.interfaceAsset("egg_locked"),
                     assetDescription = "Œuf inconnu verrouillé",
                 )
@@ -525,8 +543,8 @@ private fun ActiveNestDisplayCard(
 ) {
     if (dragon == null && egg == null) {
         FantasyStateCard(
-            title = "Aucun compagnon actif",
-            message = "Découvre une famille puis choisis ton compagnon dans le Bestiaire.",
+            title = "Le Nid attend ses premières étincelles",
+            message = "Découvre un œuf ou un dragon pour choisir un compagnon.",
             assetResId = NestAssets.interfaceAsset("egg_locked"),
             assetDescription = "Compagnon à découvrir",
         )

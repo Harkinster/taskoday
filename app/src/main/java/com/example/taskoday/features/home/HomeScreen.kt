@@ -112,6 +112,13 @@ fun HomeScreen(
     val sections = buildActionSections(planningItems)
     val showParentDashboard = uiState.isParentUser && uiState.usingRemoteData && !isLocalChildMode
     val canManageActions = uiState.canManageActions && !isLocalChildMode
+    val emptyActionsTitle = if (showParentDashboard) "Aucune action pour l’instant" else "Rien à faire pour le moment"
+    val emptyActionsMessage =
+        if (showParentDashboard) {
+            "Ajoutez une routine, une mission ou une quête pour lancer la journée."
+        } else {
+            "Demande à ton parent d’ajouter une routine ou une mission."
+        }
     val parentOnboardingStep =
         if (showParentDashboard) {
             parentOnboardingStep(
@@ -244,7 +251,7 @@ fun HomeScreen(
                         progress = progress,
                         subtitle =
                             if (planningItems.isEmpty()) {
-                                "Rien de prévu aujourd'hui."
+                                emptyActionsTitle
                             } else {
                                 "Chaque action nourrit Le Nid."
                             },
@@ -276,13 +283,23 @@ fun HomeScreen(
 
                 if (planningItems.isEmpty()) {
                     item {
-                        FantasyStateCard(
-                            title = "Journée libre",
-                            message = "Aucune routine, mission ou quête aujourd'hui.",
-                            assetResId = NestAssets.interfaceAsset("nid"),
-                            assetDescription = null,
-                            tone = FantasyTone.Moss,
-                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(spacing.small)) {
+                            FantasyStateCard(
+                                title = emptyActionsTitle,
+                                message = emptyActionsMessage,
+                                assetResId = NestAssets.interfaceAsset("nid"),
+                                assetDescription = null,
+                                tone = FantasyTone.Moss,
+                            )
+                            if (showParentDashboard) {
+                                FantasyButton(
+                                    text = "Ajouter une action",
+                                    onClick = onAddAction,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    style = FantasyButtonStyle.Filled,
+                                )
+                            }
+                        }
                     }
                 } else {
                     sections.filter { section -> section.items.isNotEmpty() }.forEach { section ->

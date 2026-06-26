@@ -197,7 +197,14 @@ fun ShopScreen(
 
                     if (displayedRewards.isEmpty()) {
                         item {
-                            EmptyCard(text = "Aucun Souhait pour le moment. La Caverne garde sa magie au chaud.")
+                            EmptyCard(
+                                text =
+                                    if (effectiveIsParent) {
+                                        "Aucun souhait disponible pour le moment. Créez un souhait avec le formulaire ci-dessus."
+                                    } else {
+                                        "Aucun souhait disponible pour le moment. Demande à ton parent d’en créer un."
+                                    },
+                            )
                         }
                     } else {
                         items(displayedRewards, key = { reward -> "wish-${reward.id}" }) { reward ->
@@ -224,7 +231,7 @@ fun ShopScreen(
                     if (uiState.requests.isEmpty()) {
                         item {
                             if (uiState.hasRemoteSession) {
-                                EmptyCard(text = "Aucun Parchemin pour le moment.")
+                                EmptyCard(text = "Aucun parchemin pour le moment. Les souhaits acceptés apparaîtront ici.")
                             } else {
                                 LocalHistory(transactions = uiState.localTransactions)
                             }
@@ -844,7 +851,7 @@ private fun EmptyCard(text: String) {
 @Composable
 private fun LocalHistory(transactions: List<PointsTransaction>) {
     if (transactions.isEmpty()) {
-        EmptyCard(text = "Aucune demande.")
+        EmptyCard(text = "Aucune demande pour le moment.")
         return
     }
 

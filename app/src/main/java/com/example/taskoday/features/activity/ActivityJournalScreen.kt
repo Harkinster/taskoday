@@ -120,8 +120,8 @@ fun ActivityJournalScreen(
                 if (uiState.events.isEmpty()) {
                     item {
                         FantasyStateCard(
-                            title = "Journal calme",
-                            message = "Aucune action récente à afficher pour le moment.",
+                            title = "Aucune aventure pour le moment",
+                            message = "Les actions terminées et les souhaits apparaîtront ici.",
                             assetResId = NestAssets.interfaceAsset("nid"),
                             assetDescription = null,
                             tone = FantasyTone.Moss,
