@@ -112,6 +112,16 @@ fun HomeScreen(
     val sections = buildActionSections(planningItems)
     val showParentDashboard = uiState.isParentUser && uiState.usingRemoteData && !isLocalChildMode
     val canManageActions = uiState.canManageActions && !isLocalChildMode
+    val parentOnboardingStep =
+        if (showParentDashboard) {
+            parentOnboardingStep(
+                hasActiveChild = !uiState.activeChildLabel.isNullOrBlank(),
+                hasParentPin = uiState.hasParentPin,
+                hasAnyAction = planningItems.isNotEmpty(),
+            )
+        } else {
+            null
+        }
 
     val selectedDate =
         if (uiState.selectedDayStartMillis == 0L) {
@@ -198,6 +208,16 @@ fun HomeScreen(
                             pendingWishCount = uiState.pendingWishCount,
                             availableScrollCount = uiState.availableScrollCount,
                         )
+                    }
+
+                    parentOnboardingStep?.let { step ->
+                        item {
+                            ParentOnboardingCard(
+                                step = step,
+                                onOpenProfile = onOpenProfile,
+                                onAddAction = onAddAction,
+                            )
+                        }
                     }
 
                     item {
@@ -409,6 +429,46 @@ private fun RoutineDateHeader(
 }
 
 @Composable
+private fun ParentOnboardingCard(
+    step: ParentOnboardingStep,
+    onOpenProfile: () -> Unit,
+    onAddAction: () -> Unit,
+) {
+    FantasyCard(tone = FantasyTone.Gold) {
+        Text(
+            text = "Premiers pas",
+            style = MaterialTheme.typography.labelLarge,
+            color = EmberOrange,
+            maxLines = 1,
+        )
+        Text(
+            text = step.title,
+            style = MaterialTheme.typography.titleMedium,
+            color = WoodBrownDark,
+            maxLines = 2,
+        )
+        Text(
+            text = step.message,
+            style = MaterialTheme.typography.bodyMedium,
+            color = InkMuted,
+            maxLines = 2,
+        )
+        FantasyButton(
+            text = step.buttonLabel,
+            onClick =
+                when (step.action) {
+                    ParentOnboardingAction.AddAction -> onAddAction
+                    ParentOnboardingAction.AddChild,
+                    ParentOnboardingAction.DefinePin,
+                    -> onOpenProfile
+                },
+            modifier = Modifier.fillMaxWidth(),
+            style = FantasyButtonStyle.Filled,
+        )
+    }
+}
+
+@Composable
 private fun ParentDashboardCard(
     childLabel: String,
     xp: Int,
@@ -457,6 +517,52 @@ private fun ParentDashboardCard(
         )
     }
 }
+
+private data class ParentOnboardingStep(
+    val title: String,
+    val message: String,
+    val buttonLabel: String,
+    val action: ParentOnboardingAction,
+)
+
+private enum class ParentOnboardingAction {
+    AddChild,
+    DefinePin,
+    AddAction,
+}
+
+private fun parentOnboardingStep(
+    hasActiveChild: Boolean,
+    hasParentPin: Boolean,
+    hasAnyAction: Boolean,
+): ParentOnboardingStep? =
+    when {
+        !hasActiveChild ->
+            ParentOnboardingStep(
+                title = "Créez votre premier enfant",
+                message = "Ajoutez un profil enfant pour commencer à suivre ses routines.",
+                buttonLabel = "Ajouter un enfant",
+                action = ParentOnboardingAction.AddChild,
+            )
+
+        !hasParentPin ->
+            ParentOnboardingStep(
+                title = "Protégez le mode parent",
+                message = "Définissez un PIN local avant de prêter l’app en mode enfant.",
+                buttonLabel = "Définir un PIN",
+                action = ParentOnboardingAction.DefinePin,
+            )
+
+        !hasAnyAction ->
+            ParentOnboardingStep(
+                title = "Créez une première routine",
+                message = "Préparez une action simple à afficher dans Aujourd’hui.",
+                buttonLabel = "Ajouter une action",
+                action = ParentOnboardingAction.AddAction,
+            )
+
+        else -> null
+    }
 
 @Composable
 private fun ParentMetric(
