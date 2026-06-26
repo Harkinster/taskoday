@@ -24,8 +24,8 @@ object DragonVisualRegistry {
             DragonVisualFamily("phenor", "Phenor", "Phenix", "phoenix", "Reprise apres pause, perseverance, renaissance", "Orange, or, rouge doux"),
             DragonVisualFamily("lunarys", "Lunarys", "Lunaire", "lunar", "Routines du soir, calme, sommeil", "Bleu nuit, violet, dore doux"),
             DragonVisualFamily("pyron", "Pyron", "Braise", "ember", "Progression principale, motivation, flamme interieure", "Orange braise, noir chaud, dore"),
-            DragonVisualFamily("chronyx", "Chronyx", "Chronos", "chronos", "Regularite, series, patience, temps", "Dore, violet, brun ancien"),
-            DragonVisualFamily("ambrio", "Ambrio", "Coeur", "heart", "Entraide, famille, gentillesse, comportement positif", "Dore, rose doux, orange chaud"),
+            DragonVisualFamily("chronyx", "Chronyx", "Chronos", "chronos", "Régularité, séries, patience, temps", "Doré, violet, brun ancien"),
+            DragonVisualFamily("ambrio", "Ambrio", "Cœur", "heart", "Entraide, famille, gentillesse, comportement positif", "Doré, rose doux, orange chaud"),
             DragonVisualFamily("cristao", "Cristao", "Cristal", "crystal", "Devoirs, lecture, apprentissage, concentration", "Bleu cristallin, cyan, violet magique"),
         )
 

@@ -176,7 +176,7 @@ private fun QuickAddSelectionDialog(
                     onClick = onCreateMission,
                 )
                 QuickAddOption(
-                    label = "Quete",
+                    label = "Quête",
                     description = "Defi facultatif pour progresser.",
                     icon = Icons.Outlined.AutoAwesome,
                     enabled = uiState.canCreateQuest,
@@ -184,7 +184,7 @@ private fun QuickAddSelectionDialog(
                 )
                 if (uiState.hasRemoteSession && !uiState.isParent) {
                     Text(
-                        text = "Missions et quetes sont reservees au parent.",
+                        text = "Missions et quêtes sont réservées au parent.",
                         style = MaterialTheme.typography.bodySmall,
                         color = ParchmentCream.copy(alpha = 0.82f),
                     )

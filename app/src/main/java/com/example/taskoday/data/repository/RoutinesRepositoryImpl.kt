@@ -143,5 +143,5 @@ private fun Throwable.toMessage(): String =
         is UnknownHostException, is ConnectException -> "Serveur backend indisponible. Passage en mode local."
         is SocketTimeoutException -> "Requête routines expirée. Passage en mode local."
         is HttpException -> "Erreur backend (${code()}). Passage en mode local."
-        else -> message ?: "Erreur reseau. Passage en mode local."
+        else -> message ?: "Erreur réseau. Passage en mode local."
     }

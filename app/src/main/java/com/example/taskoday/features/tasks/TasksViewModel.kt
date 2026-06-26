@@ -145,11 +145,11 @@ private fun Throwable.toMessage(): String =
         is SocketTimeoutException -> "Requête expirée."
         is HttpException ->
             when (code()) {
-                403 -> "Action non autorisee."
+                403 -> "Action non autorisée."
                 else -> "Erreur API (${code()})."
             }
 
-        is IOException -> "Erreur reseau."
+        is IOException -> "Erreur réseau."
         else -> message ?: "Erreur inconnue."
     }
 

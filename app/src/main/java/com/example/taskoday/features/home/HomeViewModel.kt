@@ -261,7 +261,7 @@ class HomeViewModel
                 if (remoteRef != null) {
                     val remoteResult = planningSyncRepository.setCompletion(dayStart, remoteRef, checked)
                     if (remoteResult.isFailure) {
-                        failCompletion(completionKey, remoteResult.exceptionOrNull()?.message ?: "Erreur reseau.")
+                        failCompletion(completionKey, remoteResult.exceptionOrNull()?.message ?: "Erreur réseau.")
                         return@launch
                     }
                     reward = remoteResult.getOrNull()
@@ -294,7 +294,7 @@ class HomeViewModel
                 if (remoteRef != null) {
                     val remoteResult = planningSyncRepository.setCompletion(dayStart, remoteRef, checked)
                     if (remoteResult.isFailure) {
-                        failCompletion(completionKey, remoteResult.exceptionOrNull()?.message ?: "Erreur reseau.")
+                        failCompletion(completionKey, remoteResult.exceptionOrNull()?.message ?: "Erreur réseau.")
                         return@launch
                     }
                     reward = remoteResult.getOrNull()

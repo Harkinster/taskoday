@@ -212,8 +212,8 @@ fun RegisterParentScreen(
                         "Creation..."
                     } else {
                         when (selectedRole) {
-                            RegistrationRole.Parent -> "Creer mon compte parent"
-                            RegistrationRole.Child -> "Creer mon compte enfant"
+                            RegistrationRole.Parent -> "Créer mon compte parent"
+                            RegistrationRole.Child -> "Créer mon compte enfant"
                         }
                     },
                 )
@@ -224,7 +224,7 @@ fun RegisterParentScreen(
                 enabled = !uiState.isLoading,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("J'ai deja un compte")
+                Text("J'ai déjà un compte")
             }
 
             TextButton(

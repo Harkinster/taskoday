@@ -848,7 +848,7 @@ fun MissionCard(
                     if (editAction != null) {
                         CompactIconAction(
                             icon = Icons.Outlined.Edit,
-                            contentDescription = "Editer",
+                            contentDescription = "Éditer",
                             tint = WoodBrownDark.copy(alpha = 0.78f),
                             onClick = editAction,
                         )
@@ -1031,7 +1031,7 @@ fun QuestCard(
                     IconButton(onClick = onEdit) {
                         Icon(
                             imageVector = Icons.Outlined.Edit,
-                            contentDescription = "Editer",
+                            contentDescription = "Éditer",
                             tint = ParchmentLight,
                         )
                     }
@@ -1178,7 +1178,7 @@ private fun ReferenceQuestCard(
                     if (onEdit != null) {
                         CompactIconAction(
                             icon = Icons.Outlined.Edit,
-                            contentDescription = "Editer",
+                            contentDescription = "Éditer",
                             tint = ParchmentLight,
                             onClick = onEdit,
                         )

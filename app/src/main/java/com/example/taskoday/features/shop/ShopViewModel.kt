@@ -163,7 +163,7 @@ class ShopViewModel
                 return
             }
             if (currentState.requests.any { it.rewardId == reward.id && it.status == RewardRequestStatus.PENDING }) {
-                _uiState.update { it.copy(userMessage = "Demande deja en attente.") }
+                _uiState.update { it.copy(userMessage = "Demande déjà en attente.") }
                 return
             }
             if (currentState.scalesBalance < reward.cost) {
@@ -184,7 +184,7 @@ class ShopViewModel
                         _uiState.update { state ->
                             state.copy(
                                 isSubmitting = false,
-                                userMessage = "Demande envoyee.",
+                                userMessage = "Demande envoyée.",
                             )
                         }
                         refreshRemoteData()
@@ -216,7 +216,7 @@ class ShopViewModel
                         isActive = isActive,
                     )
                     .onSuccess {
-                        _uiState.update { it.copy(isSubmitting = false, userMessage = "Souhait cree.") }
+                        _uiState.update { it.copy(isSubmitting = false, userMessage = "Souhait créé.") }
                         refreshRemoteData()
                     }.onFailure { error ->
                         _uiState.update { it.copy(isSubmitting = false, userMessage = error.toUserMessage()) }
@@ -242,7 +242,7 @@ class ShopViewModel
                         costScales = costScales,
                         isActive = isActive,
                     ).onSuccess {
-                        _uiState.update { it.copy(isSubmitting = false, userMessage = "Souhait mis a jour.") }
+                        _uiState.update { it.copy(isSubmitting = false, userMessage = "Souhait mis à jour.") }
                         refreshRemoteData()
                     }.onFailure { error ->
                         _uiState.update { it.copy(isSubmitting = false, userMessage = error.toUserMessage()) }
@@ -257,7 +257,7 @@ class ShopViewModel
                 rewardRepository
                     .deactivateRemoteReward(rewardId)
                     .onSuccess {
-                        _uiState.update { it.copy(isSubmitting = false, userMessage = "Souhait desactive.") }
+                        _uiState.update { it.copy(isSubmitting = false, userMessage = "Souhait désactivé.") }
                         refreshRemoteData()
                     }.onFailure { error ->
                         _uiState.update { it.copy(isSubmitting = false, userMessage = error.toUserMessage()) }
@@ -285,9 +285,9 @@ class ShopViewModel
                     .onSuccess {
                         val message =
                             when (status) {
-                                RewardRequestStatus.APPROVED -> "Souhait valide."
-                                RewardRequestStatus.REFUSED -> "Souhait refuse."
-                                else -> "Demande mise a jour."
+                                RewardRequestStatus.APPROVED -> "Souhait validé."
+                                RewardRequestStatus.REFUSED -> "Souhait refusé."
+                                else -> "Demande mise à jour."
                             }
                         _uiState.update { it.copy(isSubmitting = false, userMessage = message) }
                         refreshRemoteData()
@@ -301,7 +301,7 @@ class ShopViewModel
             val currentState = _uiState.value
             if (currentState.isSubmitting) return
             if (!currentState.isParent) {
-                _uiState.update { it.copy(userMessage = "Seul le parent peut marquer un souhait comme utilise.") }
+                _uiState.update { it.copy(userMessage = "Seul le parent peut marquer un souhait comme utilisé.") }
                 return
             }
             _uiState.update { it.copy(isSubmitting = true) }
@@ -309,7 +309,7 @@ class ShopViewModel
                 rewardRepository
                     .useRemoteCoupon(couponId)
                     .onSuccess {
-                        _uiState.update { it.copy(isSubmitting = false, userMessage = "Souhait utilise.") }
+                        _uiState.update { it.copy(isSubmitting = false, userMessage = "Souhait utilisé.") }
                         refreshRemoteData()
                     }.onFailure { error ->
                         _uiState.update { it.copy(isSubmitting = false, userMessage = error.toUserMessage()) }
@@ -337,7 +337,7 @@ private fun Throwable.toWishUserMessage(): String {
             if (balances?.size == 2) {
                 return missingScalesMessage(scalesBalance = balances[0], requiredScales = balances[1])
             }
-            return "Flammeches insuffisantes."
+            return "Flammèches insuffisantes."
         }
     }
     return toUserMessage()
@@ -349,8 +349,8 @@ private fun missingScalesMessage(
 ): String {
     val missing = (requiredScales - scalesBalance).coerceAtLeast(0)
     return if (missing == 1) {
-        "Il te manque 1 Flammeche pour ce souhait."
+        "Il te manque 1 Flammèche pour ce souhait."
     } else {
-        "Il te manque $missing Flammeches pour ce souhait."
+        "Il te manque $missing Flammèches pour ce souhait."
     }
 }

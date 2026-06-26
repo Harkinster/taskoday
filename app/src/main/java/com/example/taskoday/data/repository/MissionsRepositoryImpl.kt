@@ -51,7 +51,7 @@ class MissionsRepositoryImpl
                 Log.w(TAG, "Impossible de synchroniser les missions", error)
                 MissionsSyncResult(
                     usedRemoteData = false,
-                    errorMessage = error.toRemoteUserMessage("Erreur reseau, fallback local."),
+                    errorMessage = error.toRemoteUserMessage("Erreur réseau, fallback local."),
                 )
             }
         }

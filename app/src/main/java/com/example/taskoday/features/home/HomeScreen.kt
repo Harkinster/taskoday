@@ -438,7 +438,7 @@ private fun ParentDashboardCard(
             verticalAlignment = Alignment.Top,
         ) {
             ParentMetric(label = "XP", value = xp.toString(), color = MossGreen, modifier = Modifier.weight(1f))
-            ParentMetric(label = "Flammeches", value = flammeches.toString(), color = EmberOrange, modifier = Modifier.weight(1f))
+            ParentMetric(label = "Flammèches", value = flammeches.toString(), color = EmberOrange, modifier = Modifier.weight(1f))
             ParentMetric(label = "Cristaux", value = crystals.toString(), color = CrystalBlue, modifier = Modifier.weight(1f))
         }
         Row(
@@ -446,8 +446,8 @@ private fun ParentDashboardCard(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            ParentMetric(label = "A faire", value = todoCount.toString(), color = EmberOrange, modifier = Modifier.weight(1f))
-            ParentMetric(label = "Terminees", value = completedCount.toString(), color = MossGreen, modifier = Modifier.weight(1f))
+            ParentMetric(label = "À faire", value = todoCount.toString(), color = EmberOrange, modifier = Modifier.weight(1f))
+            ParentMetric(label = "Terminées", value = completedCount.toString(), color = MossGreen, modifier = Modifier.weight(1f))
         }
         Text(
             text = wishSummaryText(pendingWishCount, availableScrollCount),
@@ -534,7 +534,7 @@ private fun ParentShortcutsCard(
         )
         if (!canEnterLocalChildMode) {
             Text(
-                text = "Definis un PIN parent dans Profil avant le mode enfant.",
+                text = "Définis un PIN parent dans Profil avant le mode enfant.",
                 style = MaterialTheme.typography.bodySmall,
                 color = InkMuted,
                 maxLines = 2,
@@ -547,13 +547,13 @@ private fun ParentShortcutsCard(
 private fun ChildJournalCard(onOpenJournal: () -> Unit) {
     FantasyCard(tone = FantasyTone.Violet) {
         Text(
-            text = "Mes dernieres reussites",
+            text = "Mes dernières réussites",
             style = MaterialTheme.typography.titleMedium,
             color = WoodBrownDark,
             maxLines = 1,
         )
         Text(
-            text = "Retrouve les actions terminees et tes souhaits.",
+            text = "Retrouve les actions terminées et tes souhaits.",
             style = MaterialTheme.typography.bodyMedium,
             color = InkMuted,
             maxLines = 2,

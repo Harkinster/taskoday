@@ -230,6 +230,6 @@ private fun Throwable.toMessage(): String =
         is UnknownHostException, is ConnectException -> "Serveur indisponible."
         is SocketTimeoutException -> "Requête expirée."
         is HttpException -> "Erreur backend (${code()})."
-        is IOException -> "Erreur reseau."
+        is IOException -> "Erreur réseau."
         else -> message ?: "Erreur inconnue."
     }

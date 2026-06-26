@@ -87,7 +87,7 @@ class SettingsViewModel
                 _uiState.update {
                     it.copy(
                         childManagementSuccessMessage = null,
-                        childManagementErrorMessage = "Saisis un nom d'enfant.",
+                        childManagementErrorMessage = "Saisis un nom d’enfant.",
                     )
                 }
                 return
@@ -117,7 +117,7 @@ class SettingsViewModel
                             isChildManagementBusy = false,
                             pairedChildren = refreshedChildren,
                             activeChildId = activeChildId,
-                            childManagementSuccessMessage = "Nom de l'enfant mis a jour.",
+                            childManagementSuccessMessage = "Nom de l’enfant mis à jour.",
                             childManagementErrorMessage = null,
                         )
                     }
@@ -145,7 +145,7 @@ class SettingsViewModel
                 _uiState.update {
                     it.copy(
                         childManagementSuccessMessage = null,
-                        childManagementErrorMessage = "Saisis un nom d'enfant.",
+                        childManagementErrorMessage = "Saisis un nom d’enfant.",
                     )
                 }
                 return
@@ -193,7 +193,7 @@ class SettingsViewModel
                             isChildManagementBusy = false,
                             pairedChildren = mergedChildren,
                             activeChildId = createdChild.id,
-                            childManagementSuccessMessage = "${createdChild.displayName} a ete ajoute.",
+                            childManagementSuccessMessage = "${createdChild.displayName} a été ajouté.",
                             childManagementErrorMessage = null,
                         )
                     }
@@ -236,7 +236,7 @@ class SettingsViewModel
             _uiState.update {
                 it.copy(
                     hasParentPin = true,
-                    parentPinSuccessMessage = "PIN parent enregistre.",
+                    parentPinSuccessMessage = "PIN parent enregistré.",
                     parentPinErrorMessage = null,
                 )
             }
@@ -291,7 +291,7 @@ class SettingsViewModel
                                 isPairingBusy = false,
                                 pairingCode = code.code,
                                 pairingCodeExpiresAt = code.expiresAt,
-                                pairingSuccessMessage = "Code parent genere.",
+                                pairingSuccessMessage = "Code parent généré.",
                             )
                         }
                     }.onFailure { throwable ->
@@ -307,7 +307,7 @@ class SettingsViewModel
 
         fun attachChildWithCode(code: String) {
             if (!_uiState.value.isParentUser) {
-                _uiState.update { it.copy(pairingErrorMessage = "Action non autorisee.", pairingSuccessMessage = null) }
+                _uiState.update { it.copy(pairingErrorMessage = "Action non autorisée.", pairingSuccessMessage = null) }
                 return
             }
             if (authRepository.getAccessToken().isNullOrBlank()) {
@@ -320,7 +320,7 @@ class SettingsViewModel
                 return
             }
             if (code.trim().isEmpty()) {
-                _uiState.update { it.copy(pairingErrorMessage = "Saisis un code d association.", pairingSuccessMessage = null) }
+                _uiState.update { it.copy(pairingErrorMessage = "Saisis un code d’association.", pairingSuccessMessage = null) }
                 return
             }
 
@@ -334,7 +334,7 @@ class SettingsViewModel
             if (familyIds.size > 1 && selectedFamilyId == null) {
                 _uiState.update {
                     it.copy(
-                        pairingErrorMessage = "Selectionne une famille avant d associer l enfant.",
+                        pairingErrorMessage = "Sélectionne une famille avant d’associer l’enfant.",
                         pairingSuccessMessage = null,
                     )
                 }
@@ -374,7 +374,7 @@ class SettingsViewModel
                         isPairingBusy = false,
                         pairedChildren = refreshedChildren,
                         activeChildId = activeChildId,
-                        pairingSuccessMessage = "Enfant associe avec succes.",
+                        pairingSuccessMessage = "Enfant associé avec succès.",
                         pairingErrorMessage = null,
                     )
                 }
@@ -554,10 +554,10 @@ private fun initialsFrom(value: String): String =
 
 private fun Throwable.toMessage(): String? =
     when (this) {
-        is UnknownHostException, is ConnectException -> "Serveur indisponible, profil local affiche."
-        is SocketTimeoutException -> "Serveur lent, profil local affiche."
-        is HttpException -> if (code() == 401) "Session expiree, reconnexion requise." else "Erreur API (${code()})."
-        is IOException -> "Erreur reseau, profil local affiche."
+        is UnknownHostException, is ConnectException -> "Serveur indisponible, profil local affiché."
+        is SocketTimeoutException -> "Serveur lent, profil local affiché."
+        is HttpException -> if (code() == 401) "Session expirée, reconnexion requise." else "Erreur API (${code()})."
+        is IOException -> "Erreur réseau, profil local affiché."
         else -> null
     }
 
@@ -565,15 +565,15 @@ private fun Throwable?.toPairingMessage(): String =
     when (this) {
         is HttpException ->
             when (code()) {
-                400 -> "Code invalide ou expire."
-                403 -> "Action non autorisee."
-                401 -> "Session expiree, reconnecte-toi."
+                400 -> "Code invalide ou expiré."
+                403 -> "Action non autorisée."
+                401 -> "Session expirée, reconnecte-toi."
                 else -> "Erreur API (${code()})."
             }
 
-        is UnknownHostException, is ConnectException -> "Reseau indisponible, impossible de contacter le serveur."
-        is SocketTimeoutException -> "Le serveur ne repond pas a temps."
-        is IOException -> "Erreur reseau, reessaie plus tard."
+        is UnknownHostException, is ConnectException -> "Réseau indisponible, impossible de contacter le serveur."
+        is SocketTimeoutException -> "Le serveur ne répond pas à temps."
+        is IOException -> "Erreur réseau, réessaie plus tard."
         else -> this?.message ?: "Erreur inconnue."
     }
 
@@ -582,16 +582,16 @@ private fun Throwable.toChildManagementMessage(): String =
         is HttpException ->
             when (code()) {
                 400 -> "Nom enfant invalide."
-                401 -> "Session expiree, reconnecte-toi."
-                403 -> "Action non autorisee."
+                401 -> "Session expirée, reconnecte-toi."
+                403 -> "Action non autorisée."
                 404 -> "Enfant introuvable."
-                409 -> "Impossible de creer l'enfant avec ces informations."
-                422 -> "Verifie le nom, l'email ou la date de naissance."
+                409 -> "Impossible de créer l’enfant avec ces informations."
+                422 -> "Vérifie le nom, l’email ou la date de naissance."
                 else -> "Erreur API (${code()})."
             }
 
-        is UnknownHostException, is ConnectException -> "Reseau indisponible, impossible de modifier l'enfant."
-        is SocketTimeoutException -> "Le serveur ne repond pas a temps."
-        is IOException -> "Erreur reseau, reessaie plus tard."
+        is UnknownHostException, is ConnectException -> "Réseau indisponible, impossible de modifier l’enfant."
+        is SocketTimeoutException -> "Le serveur ne répond pas à temps."
+        is IOException -> "Erreur réseau, réessaie plus tard."
         else -> message ?: "Erreur inconnue."
     }

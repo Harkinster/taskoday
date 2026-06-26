@@ -179,7 +179,7 @@ class QuestsViewModel
             pointsReward: Int,
         ) {
             if (!_uiState.value.canCreateQuest) {
-                _uiState.update { it.copy(errorMessage = "Action non autorisee.") }
+                _uiState.update { it.copy(errorMessage = "Action non autorisée.") }
                 return
             }
             if (title.isBlank()) {
@@ -209,7 +209,7 @@ class QuestsViewModel
 
                 val error = result.exceptionOrNull()
                 if (error.isForbidden()) {
-                    _uiState.update { it.copy(isSubmittingQuest = false, errorMessage = "Action non autorisee.") }
+                    _uiState.update { it.copy(isSubmittingQuest = false, errorMessage = "Action non autorisée.") }
                     return@launch
                 }
 
@@ -231,7 +231,7 @@ class QuestsViewModel
             pointsReward: Int,
         ) {
             if (!_uiState.value.canManageQuests) {
-                _uiState.update { it.copy(errorMessage = "Action non autorisee.") }
+                _uiState.update { it.copy(errorMessage = "Action non autorisée.") }
                 return
             }
             if (title.isBlank()) {
@@ -275,7 +275,7 @@ class QuestsViewModel
 
         fun deleteQuest(questForDay: QuestForDay) {
             if (!_uiState.value.canManageQuests) {
-                _uiState.update { it.copy(errorMessage = "Action non autorisee.") }
+                _uiState.update { it.copy(errorMessage = "Action non autorisée.") }
                 return
             }
 
@@ -313,11 +313,11 @@ private fun Throwable.toMessage(): String =
         is SocketTimeoutException -> "Requête expirée."
         is HttpException ->
             when (code()) {
-                403 -> "Action non autorisee."
+                403 -> "Action non autorisée."
                 else -> "Erreur API (${code()})."
             }
 
-        is IOException -> "Erreur reseau."
+        is IOException -> "Erreur réseau."
         else -> message ?: "Erreur inconnue."
     }
 

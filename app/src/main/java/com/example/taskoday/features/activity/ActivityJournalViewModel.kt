@@ -103,9 +103,9 @@ private fun RewardRedemptionRequest.toActivityItems(): List<ActivityJournalItem>
             id = "wish-requested-$id",
             sortKey = requestedAt.orEmpty(),
             dateLabel = formatDateLabel(requestedAt),
-            typeLabel = "Souhait demande",
+            typeLabel = "Souhait demandé",
             title = rewardTitle,
-            detail = "${costScales} Flammeches - En attente parent",
+            detail = "${costScales} Flammèches - En attente parent",
             kind = ActivityJournalKind.WISH_PENDING,
         )
 
@@ -117,7 +117,7 @@ private fun RewardRedemptionRequest.toActivityItems(): List<ActivityJournalItem>
                     id = "wish-approved-$id",
                     sortKey = decidedAt ?: coupon?.createdAt ?: requestedAt.orEmpty(),
                     dateLabel = formatDateLabel(decidedAt ?: coupon?.createdAt ?: requestedAt),
-                    typeLabel = "Souhait accepte",
+                    typeLabel = "Souhait accepté",
                     title = rewardTitle,
                     detail = coupon?.code?.let { "Parchemin disponible - $it" } ?: "Parchemin disponible",
                     kind = ActivityJournalKind.WISH_APPROVED,
@@ -127,9 +127,9 @@ private fun RewardRedemptionRequest.toActivityItems(): List<ActivityJournalItem>
                     id = "wish-refused-$id",
                     sortKey = decidedAt ?: requestedAt.orEmpty(),
                     dateLabel = formatDateLabel(decidedAt ?: requestedAt),
-                    typeLabel = "Souhait refuse",
+                    typeLabel = "Souhait refusé",
                     title = rewardTitle,
-                    detail = parentNote?.takeIf { it.isNotBlank() } ?: "Refuse par le parent",
+                    detail = parentNote?.takeIf { it.isNotBlank() } ?: "Refusé par le parent",
                     kind = ActivityJournalKind.WISH_REFUSED,
                 )
             RewardRequestStatus.USED ->
@@ -137,9 +137,9 @@ private fun RewardRedemptionRequest.toActivityItems(): List<ActivityJournalItem>
                     id = "wish-used-$id",
                     sortKey = coupon?.usedAt ?: decidedAt ?: requestedAt.orEmpty(),
                     dateLabel = formatDateLabel(coupon?.usedAt ?: decidedAt ?: requestedAt),
-                    typeLabel = "Souhait utilise",
+                    typeLabel = "Souhait utilisé",
                     title = rewardTitle,
-                    detail = "Parchemin utilise",
+                    detail = "Parchemin utilisé",
                     kind = ActivityJournalKind.WISH_USED,
                 )
             RewardRequestStatus.EXPIRED ->
@@ -147,9 +147,9 @@ private fun RewardRedemptionRequest.toActivityItems(): List<ActivityJournalItem>
                     id = "wish-expired-$id",
                     sortKey = expiresAt ?: decidedAt ?: requestedAt.orEmpty(),
                     dateLabel = formatDateLabel(expiresAt ?: decidedAt ?: requestedAt),
-                    typeLabel = "Souhait expire",
+                    typeLabel = "Souhait expiré",
                     title = rewardTitle,
-                    detail = "Demande expiree",
+                    detail = "Demande expirée",
                     kind = ActivityJournalKind.WISH_REFUSED,
                 )
         }

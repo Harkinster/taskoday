@@ -315,9 +315,9 @@ fun ShopScreen(
 
     rewardPendingDeactivation?.let { reward ->
         FantasyConfirmationDialog(
-            title = "Desactiver le souhait",
-            message = "Desactiver « ${reward.title} » ? Il ne sera plus propose a l'enfant.",
-            confirmLabel = "Desactiver",
+            title = "Désactiver le souhait",
+            message = "Désactiver « ${reward.title} » ? Il ne sera plus proposé à l’enfant.",
+            confirmLabel = "Désactiver",
             onDismiss = { rewardPendingDeactivation = null },
             onConfirm = {
                 rewardPendingDeactivation = null
@@ -332,9 +332,9 @@ fun ShopScreen(
 
     requestPendingUse?.let { request ->
         FantasyConfirmationDialog(
-            title = "Marquer comme utilise",
-            message = "Marquer \"${request.rewardTitle}\" comme utilise ?",
-            confirmLabel = "Marquer utilise",
+            title = "Marquer comme utilisé",
+            message = "Marquer \"${request.rewardTitle}\" comme utilisé ?",
+            confirmLabel = "Marquer utilisé",
             onDismiss = { requestPendingUse = null },
             onConfirm = {
                 requestPendingUse = null
@@ -515,7 +515,7 @@ private fun ParentRewardEditor(
         OutlinedTextField(
             value = costText,
             onValueChange = { costText = it.filter { c -> c.isDigit() }.take(5) },
-            label = { Text("Cout en Flammeches") },
+            label = { Text("Coût en Flammèches") },
             singleLine = true,
             colors = fantasyTextFieldColors(),
             modifier = Modifier.fillMaxWidth(),
@@ -557,8 +557,8 @@ private fun ParentRewardEditor(
             text =
                 when {
                     isSubmitting -> "Enregistrement..."
-                    isEditing -> "Mettre a jour"
-                    else -> "Creer le Souhait"
+                    isEditing -> "Mettre à jour"
+                    else -> "Créer le Souhait"
                 },
             onClick = {
                 if (isEditing && reward != null) {
@@ -633,11 +633,11 @@ private fun ManagedRewardRow(
 
     WishCard(
         title = "${reward.emoji} ${reward.title}",
-        description = reward.description ?: "Souhait cree par un parent.",
-        costLabel = "${scalesBalance.coerceAtLeast(0)} / ${reward.cost} Flammeches",
+        description = reward.description ?: "Souhait créé par un parent.",
+        costLabel = "${scalesBalance.coerceAtLeast(0)} / ${reward.cost} Flammèches",
         enabled = requestState.enabled && !isParent,
         supportingText = if (isParent && !reward.isActive) "Inactif - invisible pour l'enfant." else requestState.supportingText,
-        contentDescription = "Flammeche",
+        contentDescription = "Flammèche",
         actionLabel = requestState.actionLabel,
         onMakeWish = if (isParent) null else onRequest,
     )
@@ -655,7 +655,7 @@ private fun ManagedRewardRow(
                 modifier = Modifier.weight(1f),
             )
             FantasyButton(
-                text = if (reward.isActive) "Desactiver" else "Inactif",
+                text = if (reward.isActive) "Désactiver" else "Inactif",
                 onClick = onDeactivate,
                 enabled = !isSubmitting && reward.isActive,
                 style = FantasyButtonStyle.Outline,
@@ -698,35 +698,35 @@ private fun wishDisplayState(
             return WishDisplayState(
                 actionLabel = "En attente parent",
                 enabled = false,
-                supportingText = "Demande envoyee, en attente de validation parent.",
+                supportingText = "Demande envoyée, en attente de validation parent.",
             )
 
         RewardRequestStatus.APPROVED ->
             return WishDisplayState(
-                actionLabel = "Accepte",
+                actionLabel = "Accepté",
                 enabled = false,
-                supportingText = "Souhait accepte. Un parchemin est disponible.",
+                supportingText = "Souhait accepté. Un parchemin est disponible.",
             )
 
         RewardRequestStatus.USED ->
             return WishDisplayState(
-                actionLabel = "Utilise",
+                actionLabel = "Utilisé",
                 enabled = false,
-                supportingText = "Souhait deja utilise.",
+                supportingText = "Souhait déjà utilisé.",
             )
 
         RewardRequestStatus.REFUSED ->
             return WishDisplayState(
-                actionLabel = if (scalesBalance >= reward.cost) "Redemander" else "Flammeches insuffisantes",
+                actionLabel = if (scalesBalance >= reward.cost) "Redemander" else "Flammèches insuffisantes",
                 enabled = scalesBalance >= reward.cost && !isSubmitting,
-                supportingText = "Demande refusee. Le souhait peut etre redemande.",
+                supportingText = "Demande refusée. Le souhait peut être redemandé.",
             )
 
         RewardRequestStatus.EXPIRED ->
             return WishDisplayState(
-                actionLabel = if (scalesBalance >= reward.cost) "Redemander" else "Flammeches insuffisantes",
+                actionLabel = if (scalesBalance >= reward.cost) "Redemander" else "Flammèches insuffisantes",
                 enabled = scalesBalance >= reward.cost && !isSubmitting,
-                supportingText = "Le parchemin a expire.",
+                supportingText = "Le parchemin a expiré.",
             )
 
         null -> Unit
@@ -734,9 +734,9 @@ private fun wishDisplayState(
 
     if (scalesBalance < reward.cost) {
         return WishDisplayState(
-            actionLabel = "Flammeches insuffisantes",
+            actionLabel = "Flammèches insuffisantes",
             enabled = false,
-            supportingText = "Il manque encore ${reward.cost - scalesBalance} Flammeches pour ce Souhait.",
+            supportingText = "Il manque encore ${reward.cost - scalesBalance} Flammèches pour ce Souhait.",
         )
     }
 

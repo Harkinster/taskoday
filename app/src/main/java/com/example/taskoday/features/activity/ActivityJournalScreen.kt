@@ -121,7 +121,7 @@ fun ActivityJournalScreen(
                     item {
                         FantasyStateCard(
                             title = "Journal calme",
-                            message = "Aucune action recente a afficher pour le moment.",
+                            message = "Aucune action récente à afficher pour le moment.",
                             assetResId = NestAssets.interfaceAsset("nid"),
                             assetDescription = null,
                             tone = FantasyTone.Moss,
@@ -144,7 +144,7 @@ private fun ActivityJournalHeader(
 ) {
     FantasyCard(tone = FantasyTone.Violet) {
         Text(
-            text = if (uiState.isParent && !isLocalChildMode) "Journal parent" else "Mes dernieres reussites",
+            text = if (uiState.isParent && !isLocalChildMode) "Journal parent" else "Mes dernières réussites",
             style = MaterialTheme.typography.titleLarge,
             color = WoodBrownDark,
             maxLines = 1,
@@ -157,7 +157,7 @@ private fun ActivityJournalHeader(
             overflow = TextOverflow.Ellipsis,
         )
         Text(
-            text = "Actions, souhaits et parchemins recents.",
+            text = "Actions, souhaits et parchemins récents.",
             style = MaterialTheme.typography.bodyMedium,
             color = InkMuted,
             maxLines = 2,

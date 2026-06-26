@@ -257,7 +257,7 @@ class TaskEditViewModel
                                 isSaving = false,
                                 errorMessage =
                                     if (error is HttpException && error.code() == 403) {
-                                        "Action non autorisee."
+                                        "Action non autorisée."
                                     } else {
                                         "Modification impossible. Vérifie la connexion puis réessaie."
                                     },

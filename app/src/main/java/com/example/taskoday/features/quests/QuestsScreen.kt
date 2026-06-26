@@ -248,7 +248,7 @@ fun QuestsScreen(
                             emoji = item.quest.emoji,
                             xpLabel = "+${item.quest.pointsReward} XP",
                             progress = if (checked) 1f else 0.12f,
-                            actionLabel = if (checked) "Recuperer" else "Commencer",
+                            actionLabel = if (checked) "Récupérer" else "Commencer",
                             dayPartLabel = item.quest.dayPart.label(),
                             done = checked,
                             canManage = canManageQuests,
@@ -295,7 +295,7 @@ private fun DateControlsCard(
             IconButton(onClick = onPrevious) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                    contentDescription = "Jour precedent",
+                    contentDescription = "Jour précédent",
                     tint = StarWhite,
                 )
             }
@@ -315,7 +315,7 @@ private fun DateControlsCard(
             IconButton(onClick = onToday) {
                 Icon(
                     imageVector = Icons.Outlined.Today,
-                    contentDescription = "Aujourd hui",
+                    contentDescription = "Aujourd’hui",
                     tint = NeonCyan,
                 )
             }

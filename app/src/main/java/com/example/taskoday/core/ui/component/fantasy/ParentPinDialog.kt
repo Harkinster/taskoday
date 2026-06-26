@@ -24,7 +24,7 @@ import com.example.taskoday.core.ui.theme.spacing
 @Composable
 fun ParentPinDialog(
     title: String = "PIN parent",
-    message: String = "Saisis le PIN parent a 4 chiffres.",
+    message: String = "Saisis le PIN parent à 4 chiffres.",
     errorMessage: String? = null,
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit,
@@ -91,9 +91,9 @@ fun ParentPinStatusMessage(
     Text(
         text =
             if (hasParentPin) {
-                "PIN parent defini sur cet appareil."
+                "PIN parent défini sur cet appareil."
             } else {
-                "Aucun PIN parent defini. Definis un PIN avant le mode enfant."
+                "Aucun PIN parent défini. Définis un PIN avant le mode enfant."
             },
         style = MaterialTheme.typography.bodySmall,
         color = if (hasParentPin) NeonCyan else MaterialTheme.colorScheme.error,

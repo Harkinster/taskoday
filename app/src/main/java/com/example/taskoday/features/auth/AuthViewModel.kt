@@ -217,9 +217,9 @@ class AuthViewModel
 
 private fun Throwable.toMessage(): String =
     when (this) {
-        is UnknownHostException, is ConnectException -> "Serveur indisponible. Verifiez la configuration backend."
-        is SocketTimeoutException -> "Connexion au serveur expiree."
+        is UnknownHostException, is ConnectException -> "Serveur indisponible. Vérifiez la configuration backend."
+        is SocketTimeoutException -> "Connexion au serveur expirée."
         is HttpException -> "Erreur API (${code()})."
-        is IOException -> "Erreur reseau. Verifiez votre connexion."
+        is IOException -> "Erreur réseau. Vérifiez votre connexion."
         else -> message ?: "Erreur inconnue."
     }

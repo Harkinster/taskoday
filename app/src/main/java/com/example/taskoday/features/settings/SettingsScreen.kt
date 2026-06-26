@@ -103,7 +103,7 @@ fun SettingsScreen(
             TaskodayStatItem(label = "Missions", value = uiState.missionsStat),
             TaskodayStatItem(label = "Quêtes", value = uiState.questsStat),
             TaskodayStatItem(label = "Serie", value = uiState.streakStat),
-            TaskodayStatItem(label = "Succes", value = uiState.successStat),
+            TaskodayStatItem(label = "Succès", value = uiState.successStat),
         )
 
     val rewardItems =
@@ -145,7 +145,7 @@ fun SettingsScreen(
                 item {
                     TaskodayHeader(
                         title = "Profil",
-                        subtitle = "Gere ton profil et suis ta progression.",
+                        subtitle = "Gère ton profil et suis ta progression.",
                         avatarInitials = uiState.profileInitials,
                     )
                 }
@@ -242,7 +242,7 @@ fun SettingsScreen(
                     item {
                         NeonCard(tone = NeonTone.Violet) {
                             Text(
-                                text = "Preferences",
+                                text = "Préférences",
                                 style = MaterialTheme.typography.titleLarge,
                                 color = StarWhite,
                             )
@@ -439,7 +439,7 @@ private fun ParentPinSettingsCard(
         )
         ParentPinStatusMessage(hasParentPin = hasParentPin)
         Text(
-            text = "Il protege le bouton Retour parent quand l'app est en mode enfant.",
+            text = "Il protège le bouton Retour parent quand l'app est en mode enfant.",
             style = MaterialTheme.typography.bodySmall,
             color = TextMuted,
         )
@@ -501,7 +501,7 @@ private fun SetParentPinDialog(
                 color = StarWhite,
             )
             Text(
-                text = "Choisis un code a 4 chiffres pour proteger le retour parent.",
+                text = "Choisis un code à 4 chiffres pour protéger le retour parent.",
                 style = MaterialTheme.typography.bodySmall,
                 color = TextMuted,
             )
@@ -656,7 +656,7 @@ private fun ActiveChildCard(
         )
         if (!hasParentPin) {
             Text(
-                text = "Definis un PIN parent avant d'activer le mode enfant.",
+                text = "Définis un PIN parent avant d'activer le mode enfant.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
             )
@@ -708,7 +708,7 @@ private fun ActiveChildCard(
                 tone = NeonTone.Cyan,
             ) {
                 Text(
-                    text = "Modifier l'enfant",
+                    text = "Modifier l’enfant",
                     style = MaterialTheme.typography.titleLarge,
                     color = StarWhite,
                 )
@@ -991,7 +991,7 @@ private fun ParentPairingCard(
 
         if (uiState.pairedChildren.isNotEmpty()) {
             Text(
-                text = "Enfants associes: ${uiState.pairedChildren.size}",
+                text = "Enfants associés: ${uiState.pairedChildren.size}",
                 style = MaterialTheme.typography.bodySmall,
                 color = TextMuted,
             )
@@ -1025,7 +1025,7 @@ private fun ChildPairingCard(
             color = StarWhite,
         )
         Text(
-            text = "Ce code est temporaire. Donne-le a ton parent pour associer ton compte.",
+            text = "Ce code est temporaire. Donne-le à ton parent pour associer ton compte.",
             style = MaterialTheme.typography.bodySmall,
             color = TextMuted,
         )
@@ -1044,7 +1044,7 @@ private fun ChildPairingCard(
         }
         if (!uiState.pairingCodeExpiresAt.isNullOrBlank()) {
             Text(
-                text = "Expire le: ${uiState.pairingCodeExpiresAt}",
+                text = "Expire le : ${uiState.pairingCodeExpiresAt}",
                 style = MaterialTheme.typography.bodySmall,
                 color = TextMuted,
             )

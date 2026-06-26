@@ -159,7 +159,7 @@ fun LoginScreen(
                     colors = ButtonDefaults.textButtonColors(contentColor = MagicViolet),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("Creer un compte parent ou enfant")
+                    Text("Créer un compte parent ou enfant")
                 }
 
                 TextButton(

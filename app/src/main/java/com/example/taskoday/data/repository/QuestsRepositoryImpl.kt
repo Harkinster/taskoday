@@ -54,7 +54,7 @@ class QuestsRepositoryImpl
                 Log.w(TAG, "Impossible de synchroniser les quêtes", error)
                 QuestsSyncResult(
                     usedRemoteData = false,
-                    errorMessage = error.toRemoteUserMessage("Erreur reseau, fallback local."),
+                    errorMessage = error.toRemoteUserMessage("Erreur réseau, fallback local."),
                 )
             }
         }
@@ -72,7 +72,7 @@ class QuestsRepositoryImpl
         override suspend fun createQuest(quest: Quest): Result<Quest> =
             runCatching {
                 val me = authRepository.fetchMe()
-                require(me.role.equals("PARENT", ignoreCase = true)) { "Action non autorisee." }
+                require(me.role.equals("PARENT", ignoreCase = true)) { "Action non autorisée." }
                 val childId =
                     authRepository.getActiveChildId(forceRefresh = true)
                         ?: error("Aucun enfant actif pour créer la quête.")
@@ -97,7 +97,7 @@ class QuestsRepositoryImpl
         override suspend fun updateQuest(quest: Quest): Result<Quest> =
             runCatching {
                 val me = authRepository.fetchMe()
-                require(me.role.equals("PARENT", ignoreCase = true)) { "Action non autorisee." }
+                require(me.role.equals("PARENT", ignoreCase = true)) { "Action non autorisée." }
                 val remoteRef = RemotePlanningIdCodec.decodeQuestId(quest.id)
                 require(remoteRef?.itemType == PlanningItemType.QUEST) { "Identifiant quête invalide." }
                 val updated =
@@ -120,7 +120,7 @@ class QuestsRepositoryImpl
         override suspend fun deleteQuest(localQuestId: Long): Result<Unit> =
             runCatching {
                 val me = authRepository.fetchMe()
-                require(me.role.equals("PARENT", ignoreCase = true)) { "Action non autorisee." }
+                require(me.role.equals("PARENT", ignoreCase = true)) { "Action non autorisée." }
                 val remoteRef = RemotePlanningIdCodec.decodeQuestId(localQuestId)
                 require(remoteRef?.itemType == PlanningItemType.QUEST) { "Identifiant quête invalide." }
                 questsApi.deleteQuest(remoteRef.remoteItemId)

@@ -28,10 +28,10 @@ data class RewardCoupon(
 
 enum class RewardRequestStatus(val apiValue: String, val label: String) {
     PENDING("pending", "En attente"),
-    APPROVED("approved", "Approuvee"),
-    REFUSED("refused", "Refusee"),
-    USED("used", "Utilisee"),
-    EXPIRED("expired", "Expiree");
+    APPROVED("approved", "Approuvée"),
+    REFUSED("refused", "Refusée"),
+    USED("used", "Utilisé"),
+    EXPIRED("expired", "Expirée");
 
     companion object {
         fun fromApi(value: String): RewardRequestStatus =
