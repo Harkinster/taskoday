@@ -79,7 +79,7 @@ fun LoginScreen(
                 if (uiState.isCheckingSession) {
                     CircularProgressIndicator(color = MagicViolet, trackColor = ParchmentShadow.copy(alpha = 0.45f))
                     Text(
-                        text = "Verification de session...",
+                        text = "Vérification de session...",
                         modifier = Modifier.padding(top = spacing.small),
                         color = TextMuted,
                         style = MaterialTheme.typography.bodyMedium,
@@ -88,12 +88,12 @@ fun LoginScreen(
                 }
 
                 Text(
-                    text = "Connexion",
+                    text = "Bienvenue sur Taskoday",
                     style = MaterialTheme.typography.titleLarge,
                     color = WoodBrownDark,
                 )
                 Text(
-                    text = "Connectez-vous au backend Taskoday.",
+                    text = "Connectez-vous pour organiser les routines de votre enfant.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextMuted,
                 )
@@ -159,7 +159,7 @@ fun LoginScreen(
                     colors = ButtonDefaults.textButtonColors(contentColor = MagicViolet),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("Créer un compte parent ou enfant")
+                    Text("Créer mon compte parent")
                 }
 
                 TextButton(
@@ -168,7 +168,7 @@ fun LoginScreen(
                     colors = ButtonDefaults.textButtonColors(contentColor = MagicViolet),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("Continuer en mode local")
+                    Text("Découvrir sans compte")
                 }
             }
         }

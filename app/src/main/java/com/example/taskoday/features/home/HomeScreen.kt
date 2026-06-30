@@ -556,25 +556,25 @@ private fun parentOnboardingStep(
     when {
         !hasActiveChild ->
             ParentOnboardingStep(
-                title = "Créez votre premier enfant",
-                message = "Ajoutez un profil enfant pour commencer à suivre ses routines.",
-                buttonLabel = "Ajouter un enfant",
+                title = "Créer mon premier enfant",
+                message = "Ajoutez son prénom pour préparer ses routines et son Nid.",
+                buttonLabel = "Créer mon premier enfant",
                 action = ParentOnboardingAction.AddChild,
             )
 
         !hasParentPin ->
             ParentOnboardingStep(
-                title = "Protégez le mode parent",
-                message = "Définissez un PIN local avant de prêter l’app en mode enfant.",
-                buttonLabel = "Définir un PIN",
+                title = "Définir le PIN parent",
+                message = "Ce code protège le retour au tableau de bord parent.",
+                buttonLabel = "Définir le PIN parent",
                 action = ParentOnboardingAction.DefinePin,
             )
 
         !hasAnyAction ->
             ParentOnboardingStep(
-                title = "Créez une première routine",
-                message = "Préparez une action simple à afficher dans Aujourd’hui.",
-                buttonLabel = "Ajouter une action",
+                title = "Créer une première routine",
+                message = "Commencez par une action simple pour aujourd’hui.",
+                buttonLabel = "Créer une première routine",
                 action = ParentOnboardingAction.AddAction,
             )
 
@@ -657,7 +657,7 @@ private fun ParentShortcutsCard(
         )
         if (!canEnterLocalChildMode) {
             Text(
-                text = "Définis un PIN parent dans Profil avant le mode enfant.",
+                text = "Définissez le PIN parent dans Profil avant le mode enfant.",
                 style = MaterialTheme.typography.bodySmall,
                 color = InkMuted,
                 maxLines = 2,

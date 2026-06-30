@@ -52,7 +52,7 @@ fun RegisterParentScreen(
         }
     }
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Inscription") }) }) { innerPadding ->
+    Scaffold(topBar = { TopAppBar(title = { Text("Créer un compte") }) }) { innerPadding ->
         if (uiState.isCheckingSession) {
             Column(
                 modifier =
@@ -64,7 +64,7 @@ fun RegisterParentScreen(
             ) {
                 CircularProgressIndicator()
                 Text(
-                    text = "Verification de session...",
+                    text = "Vérification de session...",
                     modifier = Modifier.padding(top = spacing.small),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -81,7 +81,7 @@ fun RegisterParentScreen(
             verticalArrangement = Arrangement.spacedBy(spacing.medium),
         ) {
             Text(
-                text = "Choisis le type de compte a creer.",
+                text = "Pour commencer, créez un compte parent. Vous pourrez ajouter un enfant juste après.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -126,7 +126,7 @@ fun RegisterParentScreen(
                         parentBirthDate = it
                         viewModel.clearError()
                     },
-                    label = { Text("Date de naissance (YYYY-MM-DD)") },
+                    label = { Text("Date de naissance (ex. 2018-01-01)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -137,7 +137,7 @@ fun RegisterParentScreen(
                         childDisplayName = it
                         viewModel.clearError()
                     },
-                    label = { Text("Prenom de l enfant") },
+                    label = { Text("Prénom de l’enfant") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -148,7 +148,7 @@ fun RegisterParentScreen(
                         childBirthDate = it
                         viewModel.clearError()
                     },
-                    label = { Text("Date de naissance (YYYY-MM-DD)") },
+                    label = { Text("Date de naissance (ex. 2018-01-01)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -209,7 +209,7 @@ fun RegisterParentScreen(
             ) {
                 Text(
                     if (uiState.isLoading) {
-                        "Creation..."
+                        "Création..."
                     } else {
                         when (selectedRole) {
                             RegistrationRole.Parent -> "Créer mon compte parent"
@@ -232,7 +232,7 @@ fun RegisterParentScreen(
                 enabled = !uiState.isLoading,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Continuer en mode local")
+                Text("Découvrir sans compte")
             }
         }
     }

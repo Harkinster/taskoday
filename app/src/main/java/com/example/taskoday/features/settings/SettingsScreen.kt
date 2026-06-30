@@ -145,7 +145,7 @@ fun SettingsScreen(
                 item {
                     TaskodayHeader(
                         title = "Profil",
-                        subtitle = "Gère ton profil et suis ta progression.",
+                        subtitle = "Gérez votre famille et le mode enfant.",
                         avatarInitials = uiState.profileInitials,
                     )
                 }
@@ -444,7 +444,7 @@ private fun ParentPinSettingsCard(
             color = TextMuted,
         )
         NeonButton(
-            text = if (hasParentPin) "Modifier le PIN" else "Definir un PIN",
+            text = if (hasParentPin) "Modifier le PIN" else "Définir le PIN parent",
             onClick = {
                 onClearMessages()
                 showPinDialog = true
@@ -496,7 +496,7 @@ private fun SetParentPinDialog(
             tone = NeonTone.Cyan,
         ) {
             Text(
-                text = if (hasParentPin) "Modifier le PIN" else "Definir un PIN",
+                text = if (hasParentPin) "Modifier le PIN" else "Définir le PIN parent",
                 style = MaterialTheme.typography.titleLarge,
                 color = StarWhite,
             )
@@ -580,12 +580,12 @@ private fun ActiveChildCard(
     NeonCard(tone = if (uiState.pairedChildren.isEmpty()) NeonTone.Warning else NeonTone.Cyan) {
         if (uiState.pairedChildren.isEmpty()) {
             Text(
-                text = "Aucun enfant associé",
+                text = "Aucun enfant pour le moment",
                 style = MaterialTheme.typography.titleMedium,
                 color = StarWhite,
             )
             Text(
-                text = "Ajoute directement un enfant à cette famille ou associe un compte existant plus bas.",
+                text = "Créez votre premier enfant pour commencer à préparer ses routines.",
                 style = MaterialTheme.typography.bodySmall,
                 color = TextMuted,
             )
@@ -596,12 +596,12 @@ private fun ActiveChildCard(
                 color = StarWhite,
             )
             Text(
-                text = activeChild?.displayName ?: "Sélectionne un enfant",
+            text = activeChild?.displayName ?: "Sélectionne un enfant",
                 style = MaterialTheme.typography.bodyMedium,
                 color = NeonCyan,
             )
             Text(
-                text = "Les données parent, actions, souhaits et Nid se rechargent avec cet enfant.",
+                text = "Les actions, souhaits et le Nid se rechargent avec cet enfant.",
                 style = MaterialTheme.typography.bodySmall,
                 color = TextMuted,
             )
@@ -638,7 +638,14 @@ private fun ActiveChildCard(
         }
 
         NeonButton(
-            text = if (uiState.isChildManagementBusy) "Ajout..." else "Ajouter un enfant",
+            text =
+                if (uiState.isChildManagementBusy) {
+                    "Ajout..."
+                } else if (uiState.pairedChildren.isEmpty()) {
+                    "Créer mon premier enfant"
+                } else {
+                    "Ajouter un enfant"
+                },
             onClick = {
                 onClearMessages()
                 showCreateChildDialog = true
@@ -656,7 +663,7 @@ private fun ActiveChildCard(
         )
         if (!hasParentPin) {
             Text(
-                text = "Définis un PIN parent avant d'activer le mode enfant.",
+                text = "Définissez un PIN parent pour activer le mode enfant.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
             )
