@@ -76,6 +76,7 @@ fun ParentPlanningScreen(
     onBack: () -> Unit,
     onCreated: (PlanningFormType) -> Unit,
     initialFormType: PlanningFormType = PlanningFormType.ROUTINE,
+    onOpenPremium: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val spacing = MaterialTheme.spacing
@@ -311,6 +312,12 @@ fun ParentPlanningScreen(
                                 text = TaskodayPlanPolicy.limitReachedMessage(),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = WarningGlow,
+                            )
+                            NeonButton(
+                                text = "Voir Premium",
+                                onClick = onOpenPremium,
+                                modifier = Modifier.fillMaxWidth(),
+                                style = NeonButtonStyle.Outline,
                             )
                         }
 

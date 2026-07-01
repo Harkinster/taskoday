@@ -79,6 +79,7 @@ fun SettingsScreen(
     onEnterLocalChildMode: () -> Unit = {},
     onExitLocalChildMode: () -> Unit = {},
     onLogoutConfirmed: () -> Unit = {},
+    onOpenPremium: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val spacing = MaterialTheme.spacing
@@ -189,6 +190,7 @@ fun SettingsScreen(
                             onClearMessages = viewModel::clearChildManagementMessages,
                             onEnterLocalChildMode = onEnterLocalChildMode,
                             hasParentPin = uiState.hasParentPin,
+                            onOpenPremium = onOpenPremium,
                         )
                     }
 
@@ -257,6 +259,29 @@ fun SettingsScreen(
                                 title = "Couleurs dynamiques",
                                 checked = uiState.useDynamicColors,
                                 onCheckedChange = viewModel::setDynamicColors,
+                            )
+                        }
+                    }
+                }
+
+                if (uiState.isParentUser && !isLocalChildMode) {
+                    item {
+                        NeonCard(tone = NeonTone.Cyan) {
+                            Text(
+                                text = "Premium Taskoday",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = StarWhite,
+                            )
+                            Text(
+                                text = "Voir les limites gratuites et ce que Premium préparera.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextMuted,
+                            )
+                            NeonButton(
+                                text = "Voir Premium",
+                                onClick = onOpenPremium,
+                                modifier = Modifier.fillMaxWidth(),
+                                style = NeonButtonStyle.Outline,
                             )
                         }
                     }
@@ -569,6 +594,7 @@ private fun ActiveChildCard(
     onClearMessages: () -> Unit,
     onEnterLocalChildMode: () -> Unit,
     hasParentPin: Boolean,
+    onOpenPremium: () -> Unit,
 ) {
     val activeChild = uiState.pairedChildren.firstOrNull { child -> child.id == uiState.activeChildId }
     val childLimitReached = !TaskodayPlanPolicy.canCreate(TaskodayPlanFeature.Child, uiState.pairedChildren.size)
@@ -634,6 +660,12 @@ private fun ActiveChildCard(
                 text = TaskodayPlanPolicy.limitReachedMessage(),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
+            )
+            NeonButton(
+                text = "Voir Premium",
+                onClick = onOpenPremium,
+                modifier = Modifier.fillMaxWidth(),
+                style = NeonButtonStyle.Outline,
             )
         }
 

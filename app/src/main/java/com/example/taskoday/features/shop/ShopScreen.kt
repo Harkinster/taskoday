@@ -73,6 +73,7 @@ fun ShopScreen(
     isLocalChildMode: Boolean = false,
     onOpenProfile: () -> Unit,
     onBackToNest: () -> Unit,
+    onOpenPremium: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val spacing = MaterialTheme.spacing
@@ -186,6 +187,7 @@ fun ShopScreen(
                                     )
                                 },
                                 onCancelEdit = { rewardBeingEdited = null },
+                                onOpenPremium = onOpenPremium,
                             )
                         }
                     }
@@ -549,6 +551,7 @@ private fun ParentRewardEditor(
     onCreate: (String, String?, Int, Boolean) -> Unit,
     onUpdate: (Long, String, String?, Int, Boolean) -> Unit,
     onCancelEdit: () -> Unit,
+    onOpenPremium: () -> Unit,
 ) {
     val spacing = MaterialTheme.spacing
     val isEditing = reward != null
@@ -633,6 +636,12 @@ private fun ParentRewardEditor(
                 text = TaskodayPlanPolicy.limitReachedMessage(),
                 style = MaterialTheme.typography.bodySmall,
                 color = DangerGlow,
+            )
+            FantasyButton(
+                text = "Voir Premium",
+                onClick = onOpenPremium,
+                modifier = Modifier.fillMaxWidth(),
+                style = FantasyButtonStyle.Outline,
             )
         }
         FantasyButton(

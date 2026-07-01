@@ -52,6 +52,7 @@ import com.example.taskoday.features.home.HomeScreen
 import com.example.taskoday.features.home.HomeViewModel
 import com.example.taskoday.features.parent.ParentPlanningScreen
 import com.example.taskoday.features.parent.ParentPlanningViewModel
+import com.example.taskoday.features.premium.PremiumScreen
 import com.example.taskoday.features.quests.QuestsScreen
 import com.example.taskoday.features.quests.QuestsViewModel
 import com.example.taskoday.features.settings.SettingsScreen
@@ -93,6 +94,11 @@ fun TaskodayApp() {
     }
     val navigateToProfile: () -> Unit = {
         navController.navigate(TaskodayDestination.Settings.route) {
+            launchSingleTop = true
+        }
+    }
+    val navigateToPremium: () -> Unit = {
+        navController.navigate(TaskodayDestination.Premium.route) {
             launchSingleTop = true
         }
     }
@@ -360,6 +366,7 @@ fun TaskodayApp() {
                     isLocalChildMode = localChildMode,
                     onOpenProfile = navigateToProfile,
                     onBackToNest = { navController.navigate(TaskodayDestination.Nest.route) { launchSingleTop = true } },
+                    onOpenPremium = navigateToPremium,
                 )
             }
 
@@ -459,7 +466,12 @@ fun TaskodayApp() {
                             launchSingleTop = true
                         }
                     },
+                    onOpenPremium = navigateToPremium,
                 )
+            }
+
+            composable(TaskodayDestination.Premium.route) {
+                PremiumScreen(onBack = { navController.popBackStack() })
             }
 
             composable(
@@ -479,6 +491,7 @@ fun TaskodayApp() {
                     onBack = { navController.popBackStack() },
                     onCreated = { navController.popBackStack() },
                     initialFormType = initialFormType,
+                    onOpenPremium = navigateToPremium,
                 )
             }
             }
