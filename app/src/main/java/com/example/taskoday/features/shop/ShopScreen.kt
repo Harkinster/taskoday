@@ -1,5 +1,6 @@
 package com.example.taskoday.features.shop
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,7 +11,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -31,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.taskoday.core.plan.TaskodayPlanFeature
 import com.example.taskoday.core.plan.TaskodayPlanPolicy
@@ -478,6 +482,66 @@ private fun ParentRewardCreator(
 }
 
 @Composable
+private fun WishTemplateIdeas(
+    enabled: Boolean,
+    onSelect: (WishTemplate) -> Unit,
+) {
+    val spacing = MaterialTheme.spacing
+    Column(verticalArrangement = Arrangement.spacedBy(spacing.xSmall)) {
+        SectionTitle(text = "Idées de souhaits")
+        Text(
+            text = "Choisis une idée pour préremplir le formulaire, puis ajuste avant de valider.",
+            style = MaterialTheme.typography.bodySmall,
+            color = InkMuted,
+        )
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(spacing.small)) {
+            items(wishTemplates, key = { template -> template.title }) { template ->
+                WishTemplateCard(
+                    template = template,
+                    enabled = enabled,
+                    onClick = { onSelect(template) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun WishTemplateCard(
+    template: WishTemplate,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    FantasyCard(
+        modifier =
+            Modifier
+                .width(230.dp)
+                .clickable(enabled = enabled, onClick = onClick),
+        tone = FantasyTone.Gold,
+    ) {
+        Text(
+            text = template.title,
+            style = MaterialTheme.typography.titleSmall,
+            color = WoodBrownDark,
+            maxLines = 2,
+        )
+        Text(
+            text = "${template.cost} Flammèches",
+            style = MaterialTheme.typography.labelLarge,
+            color = EmberOrange,
+            maxLines = 1,
+        )
+        Text(
+            text = template.description,
+            style = MaterialTheme.typography.bodySmall,
+            color = InkMuted,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
 private fun ParentRewardEditor(
     reward: Reward?,
     activeWishesCount: Int,
@@ -504,6 +568,17 @@ private fun ParentRewardEditor(
             style = MaterialTheme.typography.titleMedium,
             color = WoodBrownDark,
         )
+        if (!isEditing) {
+            WishTemplateIdeas(
+                enabled = !isSubmitting && !activeWishLimitReached,
+                onSelect = { template ->
+                    title = template.title
+                    description = template.description
+                    costText = template.cost.toString()
+                    isActive = true
+                },
+            )
+        }
         OutlinedTextField(
             value = title,
             onValueChange = { title = it },
@@ -882,6 +957,51 @@ private fun LocalHistory(transactions: List<PointsTransaction>) {
         }
     }
 }
+
+private data class WishTemplate(
+    val title: String,
+    val description: String,
+    val cost: Int,
+)
+
+private val wishTemplates =
+    listOf(
+        WishTemplate(
+            title = "Choisir le dessert",
+            description = "Choisir le dessert du prochain repas.",
+            cost = 5,
+        ),
+        WishTemplate(
+            title = "15 minutes d’écran",
+            description = "Profiter de quinze minutes d’écran validées par le parent.",
+            cost = 8,
+        ),
+        WishTemplate(
+            title = "Choisir le repas du soir",
+            description = "Choisir le menu du dîner en famille.",
+            cost = 10,
+        ),
+        WishTemplate(
+            title = "Une histoire en plus",
+            description = "Ajouter une histoire au moment calme.",
+            cost = 6,
+        ),
+        WishTemplate(
+            title = "Activité spéciale avec papa/maman",
+            description = "Prévoir un moment choisi avec un parent.",
+            cost = 15,
+        ),
+        WishTemplate(
+            title = "Petit cadeau surprise",
+            description = "Recevoir une petite surprise choisie par le parent.",
+            cost = 20,
+        ),
+        WishTemplate(
+            title = "Soirée jeu de société",
+            description = "Organiser une partie en famille.",
+            cost = 12,
+        ),
+    )
 
 @Composable
 private fun fantasyTextFieldColors() =
