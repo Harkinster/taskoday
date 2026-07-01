@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -189,6 +190,14 @@ fun ParentPlanningScreen(
                                         PlanningFormType.MISSION -> "2"
                                         PlanningFormType.QUEST -> "3"
                                     }
+                            },
+                        )
+
+                        QuickActionIdeas(
+                            onSelect = { template ->
+                                title = template.title
+                                description = template.description
+                                viewModel.clearMessages()
                             },
                         )
 
@@ -480,6 +489,61 @@ private fun FormTypeSelector(
 }
 
 @Composable
+private fun QuickActionIdeas(onSelect: (QuickActionTemplate) -> Unit) {
+    val spacing = MaterialTheme.spacing
+    Column(verticalArrangement = Arrangement.spacedBy(spacing.xSmall)) {
+        SectionTitle("Idées rapides")
+        Text(
+            text = "Choisis une idée pour préremplir le formulaire, puis ajuste avant de valider.",
+            style = MaterialTheme.typography.bodySmall,
+            color = TextMuted,
+        )
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(spacing.small)) {
+            items(quickActionTemplates, key = { template -> template.title }) { template ->
+                QuickActionTemplateCard(
+                    template = template,
+                    onClick = { onSelect(template) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuickActionTemplateCard(
+    template: QuickActionTemplate,
+    onClick: () -> Unit,
+) {
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, NeonCyan.copy(alpha = 0.58f)),
+        colors = CardDefaults.cardColors(containerColor = SurfacePanel.copy(alpha = 0.72f)),
+        modifier =
+            Modifier
+                .width(220.dp)
+                .clickable(onClick = onClick),
+    ) {
+        Column(
+            modifier = Modifier.padding(MaterialTheme.spacing.small),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xSmall),
+        ) {
+            Text(
+                text = template.title,
+                style = MaterialTheme.typography.titleSmall,
+                color = StarWhite,
+                maxLines = 2,
+            )
+            Text(
+                text = template.description,
+                style = MaterialTheme.typography.bodySmall,
+                color = TextMuted,
+                maxLines = 3,
+            )
+        }
+    }
+}
+
+@Composable
 private fun DayPartSelector(
     selected: DayPart,
     onSelect: (DayPart) -> Unit,
@@ -611,5 +675,42 @@ private fun ParentPlanUsage.countFor(formType: PlanningFormType): Int =
         PlanningFormType.MISSION -> activeMissions
         PlanningFormType.QUEST -> activeQuests
     }
+
+private data class QuickActionTemplate(
+    val title: String,
+    val description: String,
+)
+
+private val quickActionTemplates =
+    listOf(
+        QuickActionTemplate(
+            title = "Brosser les dents",
+            description = "Se brosser les dents sans rappel.",
+        ),
+        QuickActionTemplate(
+            title = "Préparer le cartable",
+            description = "Mettre les affaires utiles pour demain.",
+        ),
+        QuickActionTemplate(
+            title = "Ranger la chambre",
+            description = "Remettre les jouets et vêtements à leur place.",
+        ),
+        QuickActionTemplate(
+            title = "Mettre le linge au panier",
+            description = "Déposer le linge sale au bon endroit.",
+        ),
+        QuickActionTemplate(
+            title = "Faire les devoirs",
+            description = "Terminer les devoirs prévus aujourd’hui.",
+        ),
+        QuickActionTemplate(
+            title = "Lire 10 minutes",
+            description = "Lire calmement pendant dix minutes.",
+        ),
+        QuickActionTemplate(
+            title = "Aider à mettre la table",
+            description = "Participer à la préparation du repas.",
+        ),
+    )
 
 private const val CREATION_CONFIRMATION_DELAY_MILLIS = 700L
