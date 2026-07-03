@@ -195,7 +195,7 @@ fun HomeScreen(
                     RoutineDateHeader(
                         dateLabel =
                             if (selectedDate == LocalDate.now()) {
-                                "Aujourd'hui — ${uiState.dateLabel}"
+                                "Aujourd’hui — ${uiState.dateLabel}"
                             } else {
                                 uiState.dateLabel
                             },
@@ -206,7 +206,7 @@ fun HomeScreen(
                 if (showParentDashboard) {
                     item {
                         ParentDashboardCard(
-                            childLabel = uiState.activeChildLabel ?: "Enfant selectionne",
+                            childLabel = uiState.activeChildLabel ?: "Enfant sélectionné",
                             xp = uiState.remoteXp ?: 0,
                             flammeches = uiState.remoteFlammeches ?: 0,
                             crystals = uiState.remoteCrystals ?: 0,

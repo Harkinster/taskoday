@@ -147,7 +147,7 @@ fun LoginScreen(
                 }
 
                 NeonButton(
-                    text = if (uiState.isLoading) "Connexion..." else "Se connecter",
+                    text = if (uiState.isLoading) "Connexion…" else "Se connecter",
                     onClick = { viewModel.login(email = email, password = password) },
                     enabled = !uiState.isLoading,
                     modifier = Modifier.fillMaxWidth(),

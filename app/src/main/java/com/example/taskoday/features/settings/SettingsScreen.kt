@@ -315,7 +315,7 @@ fun SettingsScreen(
                             )
                             Column {
                                 Text(
-                                    text = "Version de l application",
+                                    text = "Version de l’application",
                                     style = MaterialTheme.typography.titleSmall,
                                     color = StarWhite,
                                 )
@@ -781,7 +781,7 @@ private fun ActiveChildCard(
                         style = NeonButtonStyle.Outline,
                     )
                     NeonButton(
-                        text = if (uiState.isChildManagementBusy) "Enregistrement..." else "Enregistrer",
+                        text = if (uiState.isChildManagementBusy) "Enregistrement…" else "Enregistrer",
                         onClick = {
                             onRenameChild(child.id, editingChildName)
                             editingChildId = null
@@ -865,7 +865,7 @@ private fun CreateChildDialog(
                     style = NeonButtonStyle.Outline,
                 )
                 NeonButton(
-                    text = if (isBusy) "Création..." else "Créer",
+                    text = if (isBusy) "Création…" else "Créer",
                     onClick = {
                         onConfirm(
                             displayName,

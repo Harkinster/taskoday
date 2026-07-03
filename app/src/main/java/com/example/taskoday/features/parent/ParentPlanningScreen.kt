@@ -332,7 +332,7 @@ fun ParentPlanningScreen(
                             text =
                                 when {
                                     uiState.createdFormType != null -> "Créé"
-                                    uiState.isSubmitting -> "Envoi..."
+                                    uiState.isSubmitting -> "Envoi…"
                                     else -> "Ajouter"
                                 },
                             onClick = {

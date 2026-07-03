@@ -183,7 +183,7 @@ fun TaskEditScreen(
                     horizontalArrangement = Arrangement.spacedBy(spacing.small),
                 ) {
                     QuickDateChip(
-                        text = "Aujourd'hui",
+                        text = "Aujourd’hui",
                         selected = isSelectedDay(uiState.scheduledDate, LocalDate.now()),
                         onClick = { viewModel.onScheduledDateChanged(DateTimeUtils.startOfDayMillis(LocalDate.now())) },
                     )

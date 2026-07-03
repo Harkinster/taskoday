@@ -467,7 +467,7 @@ private fun ParentRewardCreator(
             modifier = Modifier.fillMaxWidth(),
         )
         FantasyButton(
-            text = if (isSubmitting) "Création..." else "Créer le Souhait",
+            text = if (isSubmitting) "Création…" else "Créer le souhait",
             onClick = {
                 onCreate(title, description, costText.toIntOrNull() ?: 0)
                 title = ""
@@ -647,9 +647,9 @@ private fun ParentRewardEditor(
         FantasyButton(
             text =
                 when {
-                    isSubmitting -> "Enregistrement..."
+                    isSubmitting -> "Enregistrement…"
                     isEditing -> "Mettre à jour"
-                    else -> "Créer le Souhait"
+                    else -> "Créer le souhait"
                 },
             onClick = {
                 if (isEditing && reward != null) {

@@ -150,7 +150,7 @@ private fun ActivityJournalHeader(
             maxLines = 1,
         )
         Text(
-            text = uiState.childLabel ?: "Enfant selectionne",
+            text = uiState.childLabel ?: "Enfant sélectionné",
             style = MaterialTheme.typography.bodyMedium,
             color = InkMuted,
             maxLines = 1,
