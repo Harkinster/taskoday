@@ -155,7 +155,7 @@ private fun QuickAddSelectionDialog(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = "Choisis le type d'action a creer.",
+                    text = "Choisis le type d’action à créer.",
                     style = MaterialTheme.typography.bodySmall,
                     color = ParchmentCream.copy(alpha = 0.92f),
                     maxLines = 2,
@@ -163,21 +163,21 @@ private fun QuickAddSelectionDialog(
                 )
                 QuickAddOption(
                     label = "Routine",
-                    description = "Habitude reguliere a suivre.",
+                    description = "Habitude régulière à suivre.",
                     icon = Icons.Outlined.Repeat,
                     enabled = uiState.canCreateRoutine,
                     onClick = onCreateRoutine,
                 )
                 QuickAddOption(
                     label = "Mission",
-                    description = "Objectif planifie par le parent.",
+                    description = "Objectif planifié par le parent.",
                     icon = Icons.Outlined.Flag,
                     enabled = uiState.canCreateMission,
                     onClick = onCreateMission,
                 )
                 QuickAddOption(
                     label = "Quête",
-                    description = "Defi facultatif pour progresser.",
+                    description = "Défi facultatif pour progresser.",
                     icon = Icons.Outlined.AutoAwesome,
                     enabled = uiState.canCreateQuest,
                     onClick = onCreateQuest,
