@@ -10,7 +10,7 @@ interface RewardRepository {
     fun observeActiveRewards(): Flow<List<Reward>>
     suspend fun getReward(rewardId: Long): Reward?
     suspend fun upsertReward(reward: Reward): Long
-    suspend fun fetchRemoteShopSnapshot(includeInactiveRewards: Boolean = false): Result<RewardShopSnapshot>
+    suspend fun fetchRemoteShopSnapshot(childId: Long? = null, includeInactiveRewards: Boolean = false): Result<RewardShopSnapshot>
     suspend fun createRemoteReward(
         title: String,
         description: String?,
@@ -26,7 +26,7 @@ interface RewardRepository {
     ): Result<Reward>
 
     suspend fun deactivateRemoteReward(rewardId: Long): Result<Reward>
-    suspend fun requestRemoteReward(rewardId: Long, note: String? = null): Result<RewardRedemptionRequest>
+    suspend fun requestRemoteReward(childId: Long, rewardId: Long, note: String? = null): Result<RewardRedemptionRequest>
     suspend fun decideRemoteRequest(requestId: Long, status: RewardRequestStatus): Result<RewardRedemptionRequest>
     suspend fun useRemoteCoupon(couponId: Long): Result<RewardRedemptionRequest>
 }

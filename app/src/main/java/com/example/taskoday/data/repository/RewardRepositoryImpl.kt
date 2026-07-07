@@ -36,13 +36,16 @@ class RewardRepositoryImpl
 
         override suspend fun upsertReward(reward: Reward): Long = rewardDao.upsert(reward.toEntity())
 
-        override suspend fun fetchRemoteShopSnapshot(includeInactiveRewards: Boolean): Result<RewardShopSnapshot> =
+        override suspend fun fetchRemoteShopSnapshot(
+            childId: Long?,
+            includeInactiveRewards: Boolean,
+        ): Result<RewardShopSnapshot> =
             runCatching {
-                val childId = activeChildId()
-                val rewardsData = rewardsApi.getRewards(childId, includeInactive = includeInactiveRewards).data
-                val requestsData = rewardsApi.getRewardRequests(childId).data
+                val targetChildId = childId ?: activeChildId()
+                val rewardsData = rewardsApi.getRewards(targetChildId, includeInactive = includeInactiveRewards).data
+                val requestsData = rewardsApi.getRewardRequests(targetChildId).data
                 RewardShopSnapshot(
-                    childId = childId,
+                    childId = targetChildId,
                     scalesBalance = rewardsData.scalesBalance,
                     rewards = rewardsData.rewards.map { it.toDomain() },
                     requests = requestsData.requests.map { it.toDomain() },
@@ -104,10 +107,12 @@ class RewardRepositoryImpl
             }
 
         override suspend fun requestRemoteReward(
+            childId: Long,
             rewardId: Long,
             note: String?,
         ): Result<RewardRedemptionRequest> =
             runCatching {
+                require(activeChildId() == childId) { "Aucun enfant sélectionné." }
                 rewardsApi
                     .requestReward(
                         rewardId = rewardId,
@@ -145,6 +150,7 @@ private fun ExternalRewardDto.toDomain(): Reward =
         cost = costScales,
         emoji = emoji?.takeIf { it.length <= 2 } ?: "\uD83C\uDF81",
         isActive = isActive,
+        childId = childId,
         createdAt = 0L,
         updatedAt = 0L,
     )

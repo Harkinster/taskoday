@@ -7,6 +7,7 @@ import com.example.taskoday.data.remote.dto.ChestCatalogDto
 import com.example.taskoday.data.remote.dto.OpenCatalogChestDto
 
 data class ShopUiState(
+    val activeChildId: Long? = null,
     val scalesBalance: Int = 0,
     val rewards: List<Reward> = emptyList(),
     val requests: List<RewardRedemptionRequest> = emptyList(),

@@ -7,6 +7,7 @@ data class Reward(
     val cost: Int,
     val emoji: String = "\uD83C\uDF81",
     val isActive: Boolean = true,
+    val childId: Long? = null,
     val createdAt: Long,
     val updatedAt: Long,
 )

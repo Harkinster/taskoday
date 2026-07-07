@@ -68,10 +68,10 @@ class ShopViewModel
             }
         }
 
-        fun refreshRemoteData() {
+        fun refreshRemoteData(childId: Long? = null) {
             val token = authRepository.getAccessToken()
             if (token.isNullOrBlank()) {
-                _uiState.update { it.copy(hasRemoteSession = false, isParent = false, isLoading = false) }
+                _uiState.update { it.copy(activeChildId = null, hasRemoteSession = false, isParent = false, isLoading = false) }
                 return
             }
 
@@ -81,11 +81,12 @@ class ShopViewModel
                     runCatching { authRepository.fetchMe().role.equals("PARENT", ignoreCase = true) }
                         .getOrDefault(false)
                 rewardRepository
-                    .fetchRemoteShopSnapshot(includeInactiveRewards = isParent)
+                    .fetchRemoteShopSnapshot(childId = childId, includeInactiveRewards = isParent)
                     .onSuccess { snapshot ->
                         val chestCatalog = nestRepository.getChestCatalog().getOrNull()
                         _uiState.update {
                             it.copy(
+                                activeChildId = snapshot.childId,
                                 rewards = snapshot.rewards,
                                 scalesBalance = snapshot.scalesBalance,
                                 requests = snapshot.requests,
@@ -140,7 +141,7 @@ class ShopViewModel
                                 userMessage = "${result.chest.name} ouvert : ${result.loot.sumOf { loot -> loot.quantity }} objets gagnes.",
                             )
                         }
-                        refreshRemoteData()
+                        refreshRemoteData(childId = currentState.activeChildId)
                     }.onFailure { error ->
                         _uiState.update {
                             it.copy(
@@ -158,6 +159,11 @@ class ShopViewModel
         ) {
             val currentState = uiState.value
             if (currentState.isSubmitting) return
+            val guard = wishRequestGuard(currentState, reward, allowParentLocalChildMode)
+            if (!guard.allowed) {
+                _uiState.update { it.copy(userMessage = guard.message) }
+                return
+            }
             if (currentState.isParent && !allowParentLocalChildMode) {
                 _uiState.update { it.copy(userMessage = "Le parent gere le catalogue, l'enfant fait la demande.") }
                 return
@@ -179,7 +185,7 @@ class ShopViewModel
 
                 _uiState.update { it.copy(isSubmitting = true) }
                 rewardRepository
-                    .requestRemoteReward(reward.id)
+                    .requestRemoteReward(childId = currentState.activeChildId ?: return@launch, rewardId = reward.id)
                     .onSuccess {
                         _uiState.update { state ->
                             state.copy(
@@ -343,7 +349,7 @@ private fun Throwable.toWishUserMessage(): String {
     return toUserMessage()
 }
 
-private fun missingScalesMessage(
+internal fun missingScalesMessage(
     scalesBalance: Int,
     requiredScales: Int,
 ): String {
