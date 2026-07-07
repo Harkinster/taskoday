@@ -151,24 +151,18 @@ fun TaskodayApp() {
             Modifier
         }
     val openCreateRoutine: () -> Unit = {
-        if (!localChildMode && quickAddUiState.hasRemoteSession && quickAddUiState.isParent) {
+        if (!localChildMode && quickAddUiState.canOpenQuickAdd) {
             navController.navigate(TaskodayDestination.ParentPlanning.createRoute("routine"))
-        } else {
-            navController.navigate(TaskodayDestination.TaskEdit.createRoutineRoute())
         }
     }
     val openCreateMission: () -> Unit = {
-        if (!localChildMode && quickAddUiState.hasRemoteSession && quickAddUiState.isParent) {
+        if (!localChildMode && quickAddUiState.canOpenQuickAdd) {
             navController.navigate(TaskodayDestination.ParentPlanning.createRoute("mission"))
-        } else {
-            navController.navigate(TaskodayDestination.TaskEdit.createMissionRoute())
         }
     }
     val openCreateQuest: () -> Unit = {
-        if (!localChildMode && quickAddUiState.hasRemoteSession && quickAddUiState.isParent) {
+        if (!localChildMode && quickAddUiState.canOpenQuickAdd) {
             navController.navigate(TaskodayDestination.ParentPlanning.createRoute("quest"))
-        } else {
-            navigateToTopLevel(TaskodayDestination.Quests)
         }
     }
 
@@ -193,7 +187,7 @@ fun TaskodayApp() {
                                 currentDestination = currentDestination,
                                 onNavigate = navigateToTopLevel,
                             )
-                            if (!localChildMode) {
+                            if (!localChildMode && quickAddUiState.canOpenQuickAdd) {
                                 QuickAddFab(
                                     uiState = quickAddUiState,
                                     onRefresh = quickAddViewModel::refresh,

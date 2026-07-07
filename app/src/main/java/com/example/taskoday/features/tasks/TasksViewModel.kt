@@ -9,6 +9,7 @@ import com.example.taskoday.domain.model.TaskStatus
 import com.example.taskoday.domain.repository.AuthRepository
 import com.example.taskoday.domain.repository.MissionsRepository
 import com.example.taskoday.domain.repository.TaskRepository
+import com.example.taskoday.features.planning.shouldApplyLocalCompletionAfterRemoteAttempt
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.IOException
 import java.net.ConnectException
@@ -33,6 +34,7 @@ class TasksViewModel
         private val _uiState = MutableStateFlow(TasksUiState())
         val uiState: StateFlow<TasksUiState> = _uiState.asStateFlow()
         private var canManageAllTasks = authRepository.getAccessToken().isNullOrBlank()
+        private val pendingCompletionTaskIds = mutableSetOf<Long>()
 
         init {
             observeTasks()
@@ -90,19 +92,22 @@ class TasksViewModel
         }
 
         fun markTaskAsDone(taskId: Long) {
+            if (!pendingCompletionTaskIds.add(taskId)) return
             viewModelScope.launch {
                 val remoteRef = RemotePlanningIdCodec.decodeTaskId(taskId)
                 if (remoteRef?.itemType == PlanningItemType.MISSION) {
                     val remoteResult = missionsRepository.completeMission(taskId)
-                    if (remoteResult.isFailure) {
+                    if (!shouldApplyLocalCompletionAfterRemoteAttempt(true, remoteResult.isSuccess)) {
                         val error = remoteResult.exceptionOrNull()
                         _uiState.update {
                             it.copy(errorMessage = error?.toMessage() ?: "Erreur backend.")
                         }
+                        pendingCompletionTaskIds.remove(taskId)
                         return@launch
                     }
                 }
                 taskRepository.updateTaskStatus(taskId = taskId, status = TaskStatus.DONE)
+                pendingCompletionTaskIds.remove(taskId)
             }
         }
 

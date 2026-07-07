@@ -182,9 +182,9 @@ private fun QuickAddSelectionDialog(
                     enabled = uiState.canCreateQuest,
                     onClick = onCreateQuest,
                 )
-                if (uiState.hasRemoteSession && !uiState.isParent) {
+                if (!uiState.canOpenQuickAdd) {
                     Text(
-                        text = "Missions et quêtes sont réservées au parent.",
+                        text = "Action réservée au parent.",
                         style = MaterialTheme.typography.bodySmall,
                         color = ParchmentCream.copy(alpha = 0.82f),
                     )

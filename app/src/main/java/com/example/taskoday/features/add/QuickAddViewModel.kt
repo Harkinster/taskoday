@@ -16,9 +16,17 @@ data class QuickAddUiState(
     val hasRemoteSession: Boolean = false,
     val isParent: Boolean = false,
 ) {
-    val canCreateRoutine: Boolean = true
-    val canCreateMission: Boolean = !isLoading && (!hasRemoteSession || isParent)
-    val canCreateQuest: Boolean = !isLoading && (!hasRemoteSession || isParent)
+    val canOpenQuickAdd: Boolean = !isLoading && hasRemoteSession && isParent
+    val canCreateRoutine: Boolean = canOpenQuickAdd
+    val canCreateMission: Boolean = canOpenQuickAdd
+    val canCreateQuest: Boolean = canOpenQuickAdd
+    val denialMessage: String?
+        get() =
+            if (!isLoading && !isParent) {
+                "Action réservée au parent."
+            } else {
+                null
+            }
 }
 
 @HiltViewModel

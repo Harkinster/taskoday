@@ -12,6 +12,7 @@ import com.example.taskoday.domain.repository.AuthRepository
 import com.example.taskoday.domain.repository.PointsRepository
 import com.example.taskoday.domain.repository.QuestRepository
 import com.example.taskoday.domain.repository.QuestsRepository
+import com.example.taskoday.features.planning.shouldApplyLocalCompletionAfterRemoteAttempt
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.IOException
 import java.net.ConnectException
@@ -48,6 +49,7 @@ class QuestsViewModel
                 ),
             )
         val uiState: StateFlow<QuestsUiState> = _uiState.asStateFlow()
+        private val pendingCompletionQuestIds = mutableSetOf<Long>()
 
         init {
             observeData()
@@ -143,18 +145,20 @@ class QuestsViewModel
 
         fun setQuestCompleted(item: QuestForDay, checked: Boolean) {
             val dayStart = selectedDay.value
+            if (!pendingCompletionQuestIds.add(item.quest.id)) return
             viewModelScope.launch {
                 val remoteRef = RemotePlanningIdCodec.decodeQuestId(item.quest.id)
                 if (checked && remoteRef?.itemType == PlanningItemType.QUEST) {
                     val remoteResult = questsRepository.completeQuest(item.quest.id)
-                    if (remoteResult.isFailure) {
+                    if (!shouldApplyLocalCompletionAfterRemoteAttempt(true, remoteResult.isSuccess)) {
                         val error = remoteResult.exceptionOrNull()
                         _uiState.update {
                             it.copy(
                                 errorMessage = error?.toMessage() ?: "Erreur backend.",
                             )
                         }
-                        if (error.isForbidden()) return@launch
+                        pendingCompletionQuestIds.remove(item.quest.id)
+                        return@launch
                     }
                 }
 
@@ -169,6 +173,7 @@ class QuestsViewModel
                 } else {
                     pointsRepository.revokeForQuest(item.quest.id, dayStart)
                 }
+                pendingCompletionQuestIds.remove(item.quest.id)
             }
         }
 

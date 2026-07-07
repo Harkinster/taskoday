@@ -11,6 +11,7 @@ import com.example.taskoday.domain.repository.AuthRepository
 import com.example.taskoday.domain.repository.MissionsRepository
 import com.example.taskoday.domain.repository.RoutinesRepository
 import com.example.taskoday.domain.repository.TaskRepository
+import com.example.taskoday.features.planning.shouldApplyLocalCompletionAfterRemoteAttempt
 import com.example.taskoday.navigation.TaskodayDestination
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.IOException
@@ -40,6 +41,7 @@ class TaskDetailViewModel
 
         private val _uiState = MutableStateFlow(TaskDetailUiState())
         val uiState: StateFlow<TaskDetailUiState> = _uiState.asStateFlow()
+        private val pendingStatusTaskIds = mutableSetOf<Long>()
 
         init {
             if (taskId == 0L) {
@@ -90,19 +92,20 @@ class TaskDetailViewModel
 
         fun updateStatus(status: TaskStatus) {
             val id = uiState.value.task?.id ?: return
+            if (!pendingStatusTaskIds.add(id)) return
             viewModelScope.launch {
                 val remoteRef = RemotePlanningIdCodec.decodeTaskId(id)
                 if (status == TaskStatus.DONE && remoteRef?.itemType == PlanningItemType.MISSION) {
                     val remoteResult = missionsRepository.completeMission(id)
-                    if (remoteResult.isFailure) {
+                    if (!shouldApplyLocalCompletionAfterRemoteAttempt(true, remoteResult.isSuccess)) {
                         val error = remoteResult.exceptionOrNull()
                         _uiState.update { it.copy(errorMessage = error?.toMessage() ?: "Erreur backend.") }
-                        if (error is HttpException && error.code() == 403) {
-                            return@launch
-                        }
+                        pendingStatusTaskIds.remove(id)
+                        return@launch
                     }
                 }
                 taskRepository.updateTaskStatus(taskId = id, status = status)
+                pendingStatusTaskIds.remove(id)
             }
         }
 
