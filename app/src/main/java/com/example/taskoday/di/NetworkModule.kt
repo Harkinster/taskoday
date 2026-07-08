@@ -49,7 +49,8 @@ object NetworkModule {
     @Singleton
     fun provideHttpLoggingInterceptor(): HttpLoggingInterceptor =
         HttpLoggingInterceptor().apply {
-            level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY else HttpLoggingInterceptor.Level.BASIC
+            sensitiveHttpHeaders.forEach(::redactHeader)
+            level = taskodayHttpLogLevel(isDebug = BuildConfig.DEBUG)
         }
 
     @Provides
@@ -130,3 +131,12 @@ object NetworkModule {
     @Singleton
     fun providePairingApi(apiClient: ApiClient): PairingApi = apiClient.create(PairingApi::class.java)
 }
+
+internal val sensitiveHttpHeaders = listOf("Authorization")
+
+internal fun taskodayHttpLogLevel(isDebug: Boolean): HttpLoggingInterceptor.Level =
+    if (isDebug) {
+        HttpLoggingInterceptor.Level.BASIC
+    } else {
+        HttpLoggingInterceptor.Level.NONE
+    }
