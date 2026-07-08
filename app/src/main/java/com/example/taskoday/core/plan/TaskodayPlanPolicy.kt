@@ -52,5 +52,5 @@ object TaskodayPlanPolicy {
     }
 
     fun limitReachedMessage(): String =
-        "Limite gratuite atteinte. Le Premium permettra d'en creer davantage."
+        "Limite gratuite atteinte. Le Premium permettra d'en créer davantage."
 }

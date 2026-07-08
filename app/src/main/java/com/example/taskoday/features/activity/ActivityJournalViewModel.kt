@@ -90,12 +90,15 @@ private fun XpHistoryEntry.toActivityItem(index: Int): ActivityJournalItem {
         id = "xp-$index-${dateLabel.hashCode()}-${amount.hashCode()}",
         sortKey = dateLabel,
         dateLabel = formatDateLabel(dateLabel),
-        typeLabel = "Action terminee",
-        title = reason.ifBlank { "Reussite du jour" },
+        typeLabel = "Action terminée",
+        title = reason.ifBlank { "Reussite du jour" }.polishJournalText(),
         detail = "+$amount XP",
         kind = ActivityJournalKind.ACTION,
     )
 }
+
+private fun String.polishJournalText(): String =
+    replace("Fragment oeuf", "Fragment d'œuf", ignoreCase = true)
 
 private fun RewardRedemptionRequest.toActivityItems(): List<ActivityJournalItem> {
     val requested =
