@@ -90,22 +90,22 @@ private fun fantasyCardBrush(tone: FantasyTone): Brush =
             when (tone) {
                 FantasyTone.Night,
                 FantasyTone.Violet,
-                -> listOf(ParchmentLight, ParchmentCream, Color(0xFFE9D8F7))
-                FantasyTone.Wood -> listOf(ParchmentLight, ParchmentCream, Color(0xFFEED4AE))
-                FantasyTone.Ember -> listOf(ParchmentLight, ParchmentCream, Color(0xFFFFD0A3))
-                FantasyTone.Moss -> listOf(ParchmentLight, ParchmentCream, Color(0xFFE6F0D0))
-                FantasyTone.Gold -> listOf(ParchmentLight, ParchmentCream, Color(0xFFFFE7B1))
+                -> listOf(ParchmentLight, ParchmentCream, Color(0xFFF3E7FF), Color(0xFFE7D2F6))
+                FantasyTone.Wood -> listOf(ParchmentLight, ParchmentCream, Color(0xFFF2D9B4), Color(0xFFE7C08D))
+                FantasyTone.Ember -> listOf(ParchmentLight, ParchmentCream, Color(0xFFFFD9AD), Color(0xFFFFBE82))
+                FantasyTone.Moss -> listOf(ParchmentLight, ParchmentCream, Color(0xFFEAF4D6), Color(0xFFD7E6B6))
+                FantasyTone.Gold -> listOf(ParchmentLight, ParchmentCream, Color(0xFFFFE9B8), Color(0xFFFFD987))
             },
     )
 
 private fun fantasyButtonBrush(style: FantasyButtonStyle, enabled: Boolean): Brush =
     if (!enabled) {
-        Brush.verticalGradient(listOf(ParchmentShadow.copy(alpha = 0.74f), WoodBrown.copy(alpha = 0.34f)))
+        Brush.verticalGradient(listOf(ParchmentCream.copy(alpha = 0.92f), ParchmentShadow.copy(alpha = 0.70f)))
     } else {
         when (style) {
             FantasyButtonStyle.Filled -> taskodayGoldBrush()
-            FantasyButtonStyle.Outline -> Brush.verticalGradient(listOf(MagicViolet, WoodBrownDark))
-            FantasyButtonStyle.Quiet -> Brush.verticalGradient(listOf(ParchmentLight, ParchmentCream))
+            FantasyButtonStyle.Outline -> Brush.verticalGradient(listOf(MagicVioletSoft, MagicViolet, WoodBrownDark))
+            FantasyButtonStyle.Quiet -> Brush.verticalGradient(listOf(ParchmentLight, ParchmentCream, Color(0xFFFFE6AF)))
         }
     }
 
@@ -143,20 +143,21 @@ fun FantasyCard(
     contentPadding: PaddingValues = PaddingValues(horizontal = 13.dp, vertical = 11.dp),
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val shape = RoundedCornerShape(16.dp)
+    val shape = RoundedCornerShape(18.dp)
     Box(
         modifier =
             modifier
                 .defaultMinSize(minHeight = 58.dp)
-                .shadow(elevation = 5.dp, shape = shape, clip = false)
+                .shadow(elevation = 7.dp, shape = shape, clip = false)
                 .clip(shape)
                 .background(fantasyCardBrush(tone))
                 .border(
-                    width = 1.8.dp,
+                    width = 1.6.dp,
                     brush =
                         Brush.linearGradient(
                             listOf(
-                                SoftGold.copy(alpha = 0.95f),
+                                SoftGoldPale.copy(alpha = 0.98f),
+                                SoftGold.copy(alpha = 0.92f),
                                 tone.accent.copy(alpha = 0.78f),
                                 ParchmentShadow.copy(alpha = 0.88f),
                             ),
@@ -166,14 +167,14 @@ fun FantasyCard(
     ) {
         Canvas(modifier = Modifier.matchParentSize()) {
             drawLine(
-                color = SoftGold.copy(alpha = 0.32f),
+                color = SoftGoldPale.copy(alpha = 0.54f),
                 start = Offset(size.width * 0.08f, 5f),
                 end = Offset(size.width * 0.92f, 5f),
-                strokeWidth = 2f,
+                strokeWidth = 2.2f,
                 cap = StrokeCap.Round,
             )
             drawLine(
-                color = WoodBrown.copy(alpha = 0.14f),
+                color = WoodBrown.copy(alpha = 0.18f),
                 start = Offset(size.width * 0.08f, size.height - 5f),
                 end = Offset(size.width * 0.92f, size.height - 5f),
                 strokeWidth = 2f,
@@ -211,11 +212,11 @@ fun FantasyButton(
     style: FantasyButtonStyle = FantasyButtonStyle.Filled,
     enabled: Boolean = true,
 ) {
-    val shape = RoundedCornerShape(13.dp)
+    val shape = RoundedCornerShape(15.dp)
     val buttonModifier =
             modifier
                 .defaultMinSize(minHeight = 38.dp)
-                .shadow(elevation = if (enabled) 4.dp else 0.dp, shape = shape, clip = false)
+                .shadow(elevation = if (enabled) 6.dp else 0.dp, shape = shape, clip = false)
                 .clip(shape)
                 .background(fantasyButtonBrush(style, enabled))
                 .clickable(enabled = enabled, onClick = onClick)
@@ -235,12 +236,21 @@ fun FantasyButton(
         modifier =
             buttonModifier
                 .border(
-                    width = if (style == FantasyButtonStyle.Filled) 1.dp else 1.2.dp,
-                    color = if (style == FantasyButtonStyle.Filled) MagicViolet.copy(alpha = 0.48f) else SoftGold.copy(alpha = 0.70f),
+                    width = if (style == FantasyButtonStyle.Filled) 1.2.dp else 1.3.dp,
+                    color = if (style == FantasyButtonStyle.Filled) MagicViolet.copy(alpha = 0.56f) else SoftGold.copy(alpha = 0.82f),
                     shape = shape,
                 ),
         contentAlignment = Alignment.Center,
     ) {
+        Canvas(modifier = Modifier.matchParentSize()) {
+            drawLine(
+                color = SoftGoldPale.copy(alpha = if (enabled) 0.58f else 0.22f),
+                start = Offset(size.width * 0.12f, 3.5f),
+                end = Offset(size.width * 0.88f, 3.5f),
+                strokeWidth = 1.8f,
+                cap = StrokeCap.Round,
+            )
+        }
         Box(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), contentAlignment = Alignment.Center) {
             textContent()
         }
@@ -808,13 +818,21 @@ fun InventoryLootCard(
     contentDescription: String = title,
     usageLabel: String? = null,
 ) {
-    FantasyCard(modifier = modifier.fillMaxWidth(), tone = if (rarity == "rare") FantasyTone.Violet else FantasyTone.Moss) {
+    val normalizedRarity = rarity.lowercase()
+    val tone =
+        when {
+            "épique" in normalizedRarity || "epic" in normalizedRarity -> FantasyTone.Gold
+            "rare" in normalizedRarity -> FantasyTone.Violet
+            "coffre" in normalizedRarity -> FantasyTone.Wood
+            else -> FantasyTone.Gold
+        }
+    FantasyCard(modifier = modifier.fillMaxWidth(), tone = tone, contentPadding = PaddingValues(horizontal = 11.dp, vertical = 9.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            FantasyAssetBubble(assetResId = assetResId, contentDescription = contentDescription, size = 50.dp)
+            FantasyAssetBubble(assetResId = assetResId, contentDescription = contentDescription, size = 54.dp)
             Column(verticalArrangement = Arrangement.spacedBy(3.dp), modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
@@ -823,12 +841,21 @@ fun InventoryLootCard(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Text(text = rarity, style = MaterialTheme.typography.bodySmall, color = InkMuted)
+                Text(
+                    text = rarity,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MagicViolet,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 if (!usageLabel.isNullOrBlank()) {
                     Text(text = usageLabel, style = MaterialTheme.typography.bodySmall, color = MossGreen)
                 }
             }
-            Text(text = "x$quantity", style = MaterialTheme.typography.titleLarge, color = WoodBrownDark)
+            FantasyBadge(
+                text = "x$quantity",
+                tone = if (quantity > 0) FantasyTone.Gold else FantasyTone.Night,
+            )
         }
     }
 }

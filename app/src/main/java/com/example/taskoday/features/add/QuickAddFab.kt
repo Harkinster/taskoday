@@ -155,7 +155,7 @@ private fun QuickAddSelectionDialog(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = "Choisis le type d’action à créer.",
+                    text = "Choisis le type d'action à créer.",
                     style = MaterialTheme.typography.bodySmall,
                     color = ParchmentCream.copy(alpha = 0.92f),
                     maxLines = 2,

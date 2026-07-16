@@ -53,6 +53,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -271,14 +272,19 @@ fun NeonCard(
     Box(
             modifier =
             modifier
-                .shadow(elevation = 4.dp, shape = shape, clip = false)
+                .shadow(elevation = 7.dp, shape = shape, clip = false)
                 .clip(shape)
                 .background(taskodayReadablePanelBrush(tone))
                 .border(
                     width = MaterialTheme.fantasyMetrics.cardStrokeStrong,
                     brush =
                         Brush.linearGradient(
-                            listOf(SoftGold.copy(alpha = 0.92f), borderTone.copy(alpha = 0.82f), NeonBorderEnd.copy(alpha = 0.68f)),
+                            listOf(
+                                ParchmentLight.copy(alpha = 0.96f),
+                                SoftGold.copy(alpha = 0.94f),
+                                borderTone.copy(alpha = 0.82f),
+                                NeonBorderEnd.copy(alpha = 0.70f),
+                            ),
                         ),
                     shape = shape,
                 ),
@@ -290,9 +296,16 @@ fun NeonCard(
                 center = Offset(size.width * 0.95f, size.height * 0.05f),
             )
             drawLine(
-                color = SoftGold.copy(alpha = 0.72f),
+                color = SoftGold.copy(alpha = 0.82f),
                 start = Offset(size.width * 0.08f, size.height * 0.04f),
                 end = Offset(size.width * 0.92f, size.height * 0.04f),
+                strokeWidth = 2f,
+                cap = StrokeCap.Round,
+            )
+            drawLine(
+                color = WoodBrownDark.copy(alpha = 0.12f),
+                start = Offset(size.width * 0.10f, size.height - 5f),
+                end = Offset(size.width * 0.90f, size.height - 5f),
                 strokeWidth = 2f,
                 cap = StrokeCap.Round,
             )
@@ -401,17 +414,26 @@ fun NeonButton(
         modifier =
             modifier
                 .defaultMinSize(minHeight = 38.dp)
-                .shadow(elevation = if (enabled) 4.dp else 0.dp, shape = shape, clip = false)
+                .shadow(elevation = if (enabled) 6.dp else 0.dp, shape = shape, clip = false)
                 .clip(shape)
                 .background(taskodayReadableButtonBrush(style, enabled))
                 .clickable(enabled = enabled, onClick = onClick)
                 .border(
-                    width = MaterialTheme.fantasyMetrics.cardStroke,
-                    color = if (style == NeonButtonStyle.Filled) MagicViolet.copy(alpha = 0.58f) else SoftGold.copy(alpha = 0.76f),
+                    width = MaterialTheme.fantasyMetrics.cardStrokeStrong,
+                    color = if (style == NeonButtonStyle.Filled) MagicViolet.copy(alpha = 0.62f) else SoftGold.copy(alpha = 0.84f),
                     shape = shape,
                 ),
         contentAlignment = Alignment.Center,
     ) {
+        Canvas(modifier = Modifier.matchParentSize()) {
+            drawLine(
+                color = ParchmentLight.copy(alpha = if (enabled) 0.48f else 0.18f),
+                start = Offset(size.width * 0.12f, 4f),
+                end = Offset(size.width * 0.88f, 4f),
+                strokeWidth = 1.8f,
+                cap = StrokeCap.Round,
+            )
+        }
         Text(
             text = text,
             style = MaterialTheme.typography.labelLarge,
@@ -421,6 +443,7 @@ fun NeonButton(
                     style == NeonButtonStyle.Filled -> WoodBrownDark
                     else -> ParchmentLight
                 },
+            fontWeight = FontWeight.SemiBold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -1367,21 +1390,30 @@ fun FantasyBottomNavigation(
     modifier: Modifier = Modifier,
     attentionDestinationRoutes: Set<String> = emptySet(),
 ) {
-    val shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp)
+    val shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp)
     Box(
             modifier =
             modifier
                 .fillMaxWidth()
-                .shadow(elevation = 10.dp, shape = shape, clip = false)
+                .shadow(elevation = 14.dp, shape = shape, clip = false)
                 .clip(shape)
                 .background(taskodayBottomNavBrush())
                 .border(
-                    width = 2.dp,
+                    width = 1.8.dp,
                     brush = taskodayNeonBorderBrush(),
                     shape = shape,
                 )
-                .padding(horizontal = 5.dp, vertical = 5.dp),
+                .padding(horizontal = 6.dp, vertical = 6.dp),
     ) {
+        Canvas(modifier = Modifier.matchParentSize()) {
+            drawLine(
+                color = SoftGold.copy(alpha = 0.34f),
+                start = Offset(size.width * 0.06f, 4f),
+                end = Offset(size.width * 0.94f, 4f),
+                strokeWidth = 2.2f,
+                cap = StrokeCap.Round,
+            )
+        }
         Row(
             modifier = Modifier.fillMaxWidth().padding(end = 58.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -1389,18 +1421,15 @@ fun FantasyBottomNavigation(
             destinations.forEach { destination ->
                 val selected = currentDestination?.hierarchy?.any { it.route == destination.route } == true
                 val itemColor = if (selected) SoftGold else ParchmentCream.copy(alpha = 0.86f)
+                val itemShape = RoundedCornerShape(13.dp)
 
                 Column(
                     modifier =
                         Modifier
                             .weight(1f)
-                            .clip(RoundedCornerShape(10.dp))
+                            .clip(itemShape)
                             .background(
-                                if (selected) {
-                                    Brush.verticalGradient(listOf(MagicViolet.copy(alpha = 0.96f), Color(0xFF4C1C66), WoodBrownDark.copy(alpha = 0.98f)))
-                                } else {
-                                    Brush.verticalGradient(listOf(Color(0xFF2B1637).copy(alpha = 0.78f), Color(0xFF160B1E).copy(alpha = 0.92f)))
-                                },
+                                if (selected) taskodayBottomNavActiveBrush() else taskodayBottomNavInactiveBrush(),
                             )
                             .border(
                                 width = if (selected) 1.4.dp else 0.8.dp,
@@ -1410,10 +1439,10 @@ fun FantasyBottomNavigation(
                                     } else {
                                         SoftGold.copy(alpha = 0.18f)
                                     },
-                                shape = RoundedCornerShape(10.dp),
+                                shape = itemShape,
                             )
                             .clickable { onNavigate(destination) }
-                            .padding(vertical = if (selected) 5.dp else 4.dp),
+                            .padding(vertical = if (selected) 5.dp else 4.dp, horizontal = 2.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(3.dp),
                 ) {
@@ -1432,7 +1461,7 @@ fun FantasyBottomNavigation(
                                     )
                                     .border(
                                         width = if (selected) 1.dp else 0.8.dp,
-                                        color = if (selected) MagicViolet.copy(alpha = 0.70f) else SoftGold.copy(alpha = 0.20f),
+                                        color = if (selected) SoftGold.copy(alpha = 0.82f) else SoftGold.copy(alpha = 0.24f),
                                         shape = RoundedCornerShape(9.dp),
                                     ),
                             contentAlignment = Alignment.Center,
@@ -1460,10 +1489,21 @@ fun FantasyBottomNavigation(
                         text = destination.label,
                         style = MaterialTheme.typography.labelMedium,
                         color = itemColor,
+                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         softWrap = false,
                     )
+                    if (selected) {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .width(22.dp)
+                                    .height(3.dp)
+                                    .clip(RoundedCornerShape(100.dp))
+                                    .background(SoftGold.copy(alpha = 0.92f)),
+                        )
+                    }
                 }
             }
         }
@@ -1657,22 +1697,22 @@ private fun taskodayReadablePanelBrush(tone: NeonTone): Brush =
             when (tone) {
                 NeonTone.Violet,
                 NeonTone.Danger,
-                -> listOf(ParchmentLight, ParchmentCream, Color(0xFFE9D8F7))
-                NeonTone.Warning -> listOf(ParchmentLight, ParchmentCream, Color(0xFFFFE3AE))
-                NeonTone.Success -> listOf(ParchmentLight, ParchmentCream, Color(0xFFE6F0D0))
+                -> listOf(ParchmentLight, ParchmentCream, Color(0xFFF3E7FF), Color(0xFFE9D8F7))
+                NeonTone.Warning -> listOf(ParchmentLight, ParchmentCream, Color(0xFFFFE9B8), Color(0xFFFFD58A))
+                NeonTone.Success -> listOf(ParchmentLight, ParchmentCream, Color(0xFFEAF4D6), Color(0xFFD9E9BA))
                 NeonTone.Blue,
                 NeonTone.Cyan,
-                -> listOf(ParchmentLight, ParchmentCream, Color(0xFFFFE7B1))
+                -> listOf(ParchmentLight, ParchmentCream, Color(0xFFFFE9B8), Color(0xFFEBD7FF))
             },
     )
 
 private fun taskodayReadableButtonBrush(style: NeonButtonStyle, enabled: Boolean): Brush =
     if (!enabled) {
-        Brush.verticalGradient(listOf(TextDimmed.copy(alpha = 0.30f), ParchmentCream.copy(alpha = 0.60f)))
+        Brush.verticalGradient(listOf(ParchmentCream.copy(alpha = 0.88f), TextDimmed.copy(alpha = 0.28f)))
     } else {
         when (style) {
             NeonButtonStyle.Filled -> taskodayGoldBrush()
-            NeonButtonStyle.Outline -> Brush.verticalGradient(listOf(MagicViolet, WoodBrownDark))
+            NeonButtonStyle.Outline -> Brush.verticalGradient(listOf(NightBlue850, MagicViolet, WoodBrownDark))
         }
     }
 
@@ -1683,5 +1723,26 @@ private fun taskodayQuestCardBrush(): Brush =
 
 private fun taskodayBottomNavBrush(): Brush =
     Brush.verticalGradient(
-        colors = listOf(Color(0xFF15091E), CarvedWoodDark, Color(0xFF2A1238), Color(0xFF140817)),
+        colors = listOf(Color(0xFF1B0B2A), Color(0xFF3A1D3B), CarvedWoodDark, Color(0xFF140817)),
+    )
+
+private fun taskodayBottomNavActiveBrush(): Brush =
+    Brush.verticalGradient(
+        colors =
+            listOf(
+                Color(0xFF6C3BA4),
+                MagicViolet.copy(alpha = 0.98f),
+                Color(0xFF421957),
+                WoodBrownDark.copy(alpha = 0.98f),
+            ),
+    )
+
+private fun taskodayBottomNavInactiveBrush(): Brush =
+    Brush.verticalGradient(
+        colors =
+            listOf(
+                Color(0xFF321A40).copy(alpha = 0.74f),
+                Color(0xFF1C0D29).copy(alpha = 0.92f),
+                Color(0xFF120716).copy(alpha = 0.96f),
+            ),
     )

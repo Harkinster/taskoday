@@ -28,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -181,12 +182,14 @@ private fun LoginPanel(content: @Composable ColumnScope.() -> Unit) {
         modifier =
             Modifier
                 .fillMaxWidth()
+                .shadow(elevation = 12.dp, shape = RoundedCornerShape(26.dp), clip = false)
                 .clip(RoundedCornerShape(26.dp))
                 .background(
                     Brush.verticalGradient(
                         listOf(
                             ParchmentLight.copy(alpha = 0.96f),
                             ParchmentCream.copy(alpha = 0.94f),
+                            ParchmentLight.copy(alpha = 0.90f),
                         ),
                     ),
                 )

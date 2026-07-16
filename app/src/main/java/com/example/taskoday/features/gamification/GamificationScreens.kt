@@ -34,10 +34,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -68,7 +66,6 @@ import com.example.taskoday.core.ui.theme.ParchmentLight
 import com.example.taskoday.core.ui.theme.SoftGold
 import com.example.taskoday.core.ui.theme.WoodBrownDark
 import com.example.taskoday.core.ui.theme.spacing
-import com.example.taskoday.core.ui.theme.taskodayWoodPanelBrush
 import com.example.taskoday.data.remote.dto.ChestDto
 import com.example.taskoday.data.remote.dto.BestiaryFamilyDto
 import com.example.taskoday.data.remote.dto.DragonDto
@@ -167,7 +164,6 @@ fun NestScreen(
             ActiveNestDisplayCard(
                 dragon = activeDragon,
                 egg = followedEgg,
-                perchLevel = progress?.nest?.level ?: 1,
                 onOpenBestiary = onOpenDragons,
             )
         }
@@ -216,9 +212,6 @@ fun NestScreen(
                     onAction = { egg.id?.let(viewModel::evolveEgg) },
                 )
             }
-        }
-        item {
-            PerchOverviewCard(level = progress?.nest?.level ?: 1)
         }
     }
 }
@@ -538,7 +531,6 @@ private fun CurrencyPill(
 private fun ActiveNestDisplayCard(
     dragon: DragonUiItem?,
     egg: EggUiItem?,
-    perchLevel: Int,
     onOpenBestiary: () -> Unit,
 ) {
     if (dragon == null && egg == null) {
@@ -551,8 +543,7 @@ private fun ActiveNestDisplayCard(
         FantasyButton(text = "Ouvrir le Bestiaire", onClick = onOpenBestiary, style = FantasyButtonStyle.Outline)
         return
     }
-    val statusLabel = dragon?.let { "Compagnon actif" } ?: "Œuf suivi"
-    val platformGlow = (0.36f + perchLevel * 0.03f).coerceAtMost(0.52f)
+    val statusLabel = dragon?.let { "Compagnon du Nid" } ?: "Œuf suivi"
     FantasyCard(tone = FantasyTone.Gold, contentPadding = PaddingValues(12.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             FantasyBadge(text = statusLabel, tone = FantasyTone.Moss)
@@ -582,10 +573,10 @@ private fun ActiveNestDisplayCard(
                     .background(
                         Brush.verticalGradient(
                             listOf(
-                                WoodBrownDark,
-                                MagicViolet,
-                                Color(0xFF2A174A),
-                                WoodBrownDark,
+                                Color(0xFF2B1247),
+                                MagicViolet.copy(alpha = 0.96f),
+                                Color(0xFF45235D),
+                                Color(0xFF24113A),
                             ),
                         ),
                     )
@@ -611,46 +602,17 @@ private fun ActiveNestDisplayCard(
                     cap = StrokeCap.Round,
                 )
             }
-            Box(
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .height(38.dp)
-                        .background(taskodayWoodPanelBrush()),
-            )
-            Box(
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth(0.64f)
-                        .height(18.dp)
-                        .clip(RoundedCornerShape(100.dp))
-                        .background(Brush.horizontalGradient(listOf(Color.Transparent, SoftGold.copy(alpha = 0.28f), Color.Transparent))),
-            )
-            Box(
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth(0.52f)
-                        .height(28.dp)
-                        .clip(RoundedCornerShape(100.dp))
-                        .background(
-                            Brush.horizontalGradient(
-                                listOf(
-                                    WoodBrownDark,
-                                    SoftGold.copy(alpha = platformGlow),
-                                    WoodBrownDark,
-                                ),
-                            ),
-                        )
-                        .border(1.dp, SoftGold.copy(alpha = 0.42f), RoundedCornerShape(100.dp)),
+            Text(
+                text = "Chronodria",
+                style = MaterialTheme.typography.labelLarge,
+                color = SoftGold.copy(alpha = 0.92f),
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = 13.dp),
             )
             Box(
                 modifier =
                     Modifier
                         .align(Alignment.Center)
-                        .size(146.dp)
+                        .size(156.dp)
                         .clip(RoundedCornerShape(26.dp))
                         .background(
                             Brush.radialGradient(
@@ -672,14 +634,13 @@ private fun ActiveNestDisplayCard(
                             .fillMaxSize()
                             .padding(4.dp)
                             .clip(RoundedCornerShape(22.dp)),
-                    contentScale = ContentScale.Crop,
-                    colorFilter = ColorFilter.tint(Color(0xFFFFC86F), BlendMode.Modulate),
+                    contentScale = ContentScale.Fit,
                 )
                 Box(
                     modifier =
                         Modifier
                             .matchParentSize()
-                            .background(MagicViolet.copy(alpha = 0.14f)),
+                            .background(MagicViolet.copy(alpha = 0.04f)),
                 )
             }
             FantasyAssetBubble(
@@ -703,6 +664,12 @@ private fun ActiveNestDisplayCard(
             overflow = TextOverflow.Ellipsis,
         )
         FantasyProgressBar(progress = dragon?.progress ?: egg?.progress ?: 0f)
+        FantasyButton(
+            text = "Voir le Bestiaire",
+            onClick = onOpenBestiary,
+            style = FantasyButtonStyle.Quiet,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
@@ -722,7 +689,7 @@ private fun NestHubTiles(
                 title = "Inventaire",
                 subtitle = "Objets",
                 assetResId = NestAssets.interfaceAsset("inventory_empty"),
-                tone = FantasyTone.Wood,
+                tone = FantasyTone.Gold,
                 modifier = Modifier.weight(1f),
                 onClick = onOpenInventory,
             )
@@ -730,7 +697,7 @@ private fun NestHubTiles(
                 title = "Bestiaire",
                 subtitle = "Familles",
                 assetResId = NestAssets.dragonAsset("pyron", "baby"),
-                tone = FantasyTone.Ember,
+                tone = FantasyTone.Violet,
                 modifier = Modifier.weight(1f),
                 onClick = onOpenDragons,
             )
@@ -743,7 +710,7 @@ private fun NestHubTiles(
                 title = "Caverne",
                 subtitle = "Souhaits & Coffres",
                 assetResId = NestAssets.interfaceAsset("wish_cave"),
-                tone = FantasyTone.Violet,
+                tone = FantasyTone.Ember,
                 modifier = Modifier.weight(1f),
                 onClick = onOpenWishes,
             )
@@ -751,7 +718,7 @@ private fun NestHubTiles(
                 title = "Parchemins",
                 subtitle = "Souhaits",
                 assetResId = NestAssets.scrollAsset("approved"),
-                tone = FantasyTone.Violet,
+                tone = FantasyTone.Gold,
                 modifier = Modifier.weight(1f),
                 onClick = onOpenScrolls,
             )
@@ -771,10 +738,10 @@ private fun NestHubTile(
     FantasyCard(
         modifier = modifier.clickable(onClick = onClick),
         tone = tone,
-        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 10.dp),
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 9.dp),
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            FantasyAssetBubble(assetResId = assetResId, contentDescription = title, size = 40.dp)
+        Row(horizontalArrangement = Arrangement.spacedBy(9.dp), verticalAlignment = Alignment.CenterVertically) {
+            FantasyAssetBubble(assetResId = assetResId, contentDescription = title, size = 46.dp)
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
                 Text(
                     text = title,
@@ -883,21 +850,29 @@ private fun BestiaryChoiceRow(
     badgeTone: FantasyTone = FantasyTone.Gold,
     onClick: () -> Unit,
 ) {
-    val shape = RoundedCornerShape(14.dp)
+    val shape = RoundedCornerShape(16.dp)
     Box(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .clip(shape)
-                .background(Brush.horizontalGradient(listOf(ParchmentLight.copy(alpha = 0.90f), MagicViolet.copy(alpha = 0.08f))))
-                .border(1.dp, SoftGold.copy(alpha = 0.46f), shape),
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(
+                            ParchmentLight.copy(alpha = 0.98f),
+                            Color(0xFFFFE8B8).copy(alpha = 0.88f),
+                            MagicViolet.copy(alpha = 0.12f),
+                        ),
+                    ),
+                )
+                .border(1.2.dp, SoftGold.copy(alpha = 0.72f), shape),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 9.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(9.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            FantasyAssetBubble(assetResId = assetResId, contentDescription = contentDescription, size = 44.dp)
+            FantasyAssetBubble(assetResId = assetResId, contentDescription = contentDescription, size = 48.dp)
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
                 Text(
                     text = title,
@@ -937,7 +912,13 @@ private fun FamilyBestiaryCard(
     onEvolveEgg: () -> Unit,
     onEvolveDragon: () -> Unit,
 ) {
-    FantasyCard(tone = if (dragon.active) FantasyTone.Gold else FantasyTone.Violet, contentPadding = PaddingValues(10.dp)) {
+    val cardTone =
+        when {
+            dragon.active -> FantasyTone.Gold
+            dragon.discovered -> FantasyTone.Violet
+            else -> FantasyTone.Night
+        }
+    FantasyCard(tone = cardTone, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 9.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -946,10 +927,16 @@ private fun FamilyBestiaryCard(
             FantasyAssetBubble(
                 assetResId = dragon.assetResId,
                 contentDescription = dragon.contentDescription,
-                size = 54.dp,
+                size = 58.dp,
             )
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(text = dragon.title, style = MaterialTheme.typography.titleMedium, color = WoodBrownDark)
+                Text(
+                    text = dragon.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = WoodBrownDark,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 Text(
                     text = dragon.stage,
                     style = MaterialTheme.typography.bodySmall,
@@ -1037,28 +1024,6 @@ private fun FamilyBestiaryCard(
                 text = if (dragon.artifactOwned >= dragon.artifactRequired) "Possédé" else "Verrouillé",
                 tone = if (dragon.artifactOwned >= dragon.artifactRequired) FantasyTone.Moss else FantasyTone.Night,
             )
-        }
-    }
-}
-
-@Composable
-private fun PerchOverviewCard(level: Int) {
-    FantasyCard(tone = FantasyTone.Moss) {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            FantasyAssetBubble(
-                assetResId = NestAssets.perchAsset(level),
-                contentDescription = "Perchoir niveau $level",
-                size = 62.dp,
-            )
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(text = "Perchoir du Nid", style = MaterialTheme.typography.titleMedium, color = WoodBrownDark)
-                Text(text = "Niveau $level", style = MaterialTheme.typography.bodyMedium, color = MossGreen)
-                Text(
-                    text = "Le dragon actif garde sa place au chaud.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = InkMuted,
-                )
-            }
         }
     }
 }
@@ -1323,11 +1288,11 @@ internal fun String.toFantasyStateLabel(): String =
 private val sampleLoot =
     listOf(
         LootUiItem("chest_common", "Coffre commun", "coffre possédé", 1, NestAssets.chestAsset("common"), "À ouvrir dans la Caverne"),
-        LootUiItem("wood_logs", "Rondins de bois", "commun", 3, NestAssets.inventoryItemAsset("wood_logs"), "Perchoir"),
-        LootUiItem("leaf_sprout", "Pousse de feuille", "commun", 4, NestAssets.inventoryItemAsset("leaf_sprout"), "Œuf ou Perchoir"),
+        LootUiItem("wood_logs", "Rondins de bois", "commun", 3, NestAssets.inventoryItemAsset("wood_logs"), "Refuge"),
+        LootUiItem("leaf_sprout", "Pousse de feuille", "commun", 4, NestAssets.inventoryItemAsset("leaf_sprout"), "Œuf ou Refuge"),
         LootUiItem("mushroom", "Champignon", "commun", 2, NestAssets.inventoryItemAsset("mushroom"), "Œuf"),
         LootUiItem("potion", "Potion douce", "peu commun", 1, NestAssets.inventoryItemAsset("potion"), "Dragon ou Œuf"),
-        LootUiItem("lantern", "Lanterne", "peu commun", 1, NestAssets.inventoryItemAsset("lantern"), "Perchoir"),
+        LootUiItem("lantern", "Lanterne", "peu commun", 1, NestAssets.inventoryItemAsset("lantern"), "Refuge"),
         LootUiItem("magic_book", "Livre magique", "rare", 1, NestAssets.inventoryItemAsset("magic_book"), "Dragon"),
         LootUiItem("star_charm", "Charme étoile", "épique", 1, NestAssets.inventoryItemAsset("star_charm"), "Artefact légendaire"),
     )
