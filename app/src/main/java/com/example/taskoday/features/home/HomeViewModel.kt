@@ -250,7 +250,11 @@ class HomeViewModel
             selectDay(DateTimeUtils.startOfDayMillis())
         }
 
-        fun setTaskChecked(item: TaskForDay, checked: Boolean) {
+        fun setTaskChecked(
+            item: TaskForDay,
+            checked: Boolean,
+            showFeedback: Boolean = true,
+        ) {
             val dayStart = selectedDay.value
             val itemType = if (item.task.isDaily) PlanningItemType.ROUTINE else PlanningItemType.MISSION
             val completionKey = "${itemType.apiValue}-${item.task.id}"
@@ -280,11 +284,16 @@ class HomeViewModel
                     reward = reward ?: rewardPreviewFor(itemType).takeIf { remoteRef == null },
                     checked = checked,
                     refreshNest = remoteRef != null,
+                    showFeedback = showFeedback,
                 )
             }
         }
 
-        fun setQuestChecked(item: QuestForDay, checked: Boolean) {
+        fun setQuestChecked(
+            item: QuestForDay,
+            checked: Boolean,
+            showFeedback: Boolean = true,
+        ) {
             val dayStart = selectedDay.value
             val completionKey = "quest-${item.quest.id}"
             if (!beginCompletion(completionKey)) return
@@ -309,6 +318,7 @@ class HomeViewModel
                     reward = reward ?: rewardPreviewFor(PlanningItemType.QUEST).takeIf { remoteRef == null },
                     checked = checked,
                     refreshNest = remoteRef != null,
+                    showFeedback = showFeedback,
                 )
             }
         }
@@ -432,13 +442,14 @@ class HomeViewModel
             reward: CompletionReward?,
             checked: Boolean,
             refreshNest: Boolean,
+            showFeedback: Boolean,
         ) {
             val progress = if (refreshNest) nestRepository.getProgress().getOrNull() else null
             if (refreshNest) nestRepository.notifyProgressChanged()
             _uiState.update {
                 it.copy(
                     pendingCompletionKeys = it.pendingCompletionKeys - completionKey,
-                    completionFeedback = CompletionFeedback(actionTitle, reward).takeIf { checked },
+                    completionFeedback = CompletionFeedback(actionTitle, reward).takeIf { checked && showFeedback },
                     remoteXp = progress?.guardian?.xp ?: it.remoteXp,
                     remoteFlammeches = progress?.wallet?.flammeches ?: it.remoteFlammeches,
                     remoteCrystals = progress?.wallet?.crystals ?: it.remoteCrystals,

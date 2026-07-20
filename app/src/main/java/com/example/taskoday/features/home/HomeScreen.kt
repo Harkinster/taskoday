@@ -33,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -58,6 +59,7 @@ import com.example.taskoday.core.ui.theme.SoftGold
 import com.example.taskoday.core.ui.theme.WoodBrownDark
 import com.example.taskoday.core.ui.theme.spacing
 import com.example.taskoday.core.util.DateTimeUtils
+import com.example.taskoday.domain.model.CompletionReward
 import com.example.taskoday.domain.model.DayPart
 import com.example.taskoday.domain.model.PlanningItemType
 import com.example.taskoday.domain.model.QuestForDay
@@ -112,6 +114,12 @@ fun HomeScreen(
     val sections = buildActionSections(planningItems)
     val showParentDashboard = uiState.isParentUser && uiState.usingRemoteData && !isLocalChildMode
     val canManageActions = uiState.canManageActions && !isLocalChildMode
+    val shouldShowChildCompletionFeedback =
+        shouldShowCompletionCelebration(
+            isParentUser = uiState.isParentUser,
+            isLocalChildMode = isLocalChildMode,
+            usingRemoteData = uiState.usingRemoteData,
+        )
     val emptyActionsTitle = if (showParentDashboard) "Aucune action pour l’instant" else "Rien à faire pour le moment"
     val emptyActionsMessage =
         if (showParentDashboard) {
@@ -259,16 +267,6 @@ fun HomeScreen(
                     )
                 }
 
-                uiState.completionFeedback?.let { feedback ->
-                    item {
-                        RewardToast(
-                            message = feedbackMessage(feedback),
-                            tone = FantasyTone.Gold,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                }
-
                 uiState.successMessage?.let { message ->
                     item {
                         RewardToast(message = message, tone = FantasyTone.Moss)
@@ -311,10 +309,18 @@ fun HomeScreen(
                                 onRequestDeleteRoutine = { pendingDeleteRoutine = it },
                                 onToggleCheck = { item, checked ->
                                     item.taskForDay?.let { taskForDay ->
-                                        viewModel.setTaskChecked(taskForDay, checked)
+                                        viewModel.setTaskChecked(
+                                            item = taskForDay,
+                                            checked = checked,
+                                            showFeedback = shouldShowChildCompletionFeedback,
+                                        )
                                     }
                                     item.questForDay?.let { questForDay ->
-                                        viewModel.setQuestChecked(questForDay, checked)
+                                        viewModel.setQuestChecked(
+                                            item = questForDay,
+                                            checked = checked,
+                                            showFeedback = shouldShowChildCompletionFeedback,
+                                        )
                                     }
                                 },
                                 pendingCompletionKeys = uiState.pendingCompletionKeys,
@@ -327,6 +333,19 @@ fun HomeScreen(
             }
         }
     }
+
+    uiState.completionFeedback
+        ?.takeIf { shouldShowChildCompletionFeedback }
+        ?.let { feedback ->
+            CompletionCelebrationDialog(
+                feedback = feedback,
+                onOpenNest = {
+                    viewModel.clearCompletionFeedback()
+                    onOpenNest()
+                },
+                onContinue = viewModel::clearCompletionFeedback,
+            )
+        }
 
     if (showDatePicker) {
         val initialUtcMillis =
@@ -393,6 +412,154 @@ fun HomeScreen(
         )
     }
 }
+
+@Composable
+private fun CompletionCelebrationDialog(
+    feedback: CompletionFeedback,
+    onOpenNest: () -> Unit,
+    onContinue: () -> Unit,
+) {
+    val rewardRows = completionRewardRows(feedback.reward)
+
+    Dialog(onDismissRequest = onContinue) {
+        FantasyCard(
+            modifier = Modifier.fillMaxWidth(),
+            tone = FantasyTone.Gold,
+            contentPadding = PaddingValues(18.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                FantasyAssetBubble(
+                    assetResId = NestAssets.interfaceAsset("flammeche"),
+                    contentDescription = null,
+                    size = 58.dp,
+                )
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(3.dp),
+                ) {
+                    Text(
+                        text = "Bravo Gardien !",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = WoodBrownDark,
+                        maxLines = 1,
+                    )
+                    Text(
+                        text = "« ${feedback.actionTitle} » est terminée.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = InkMuted,
+                        maxLines = 2,
+                    )
+                }
+            }
+
+            if (rewardRows.isEmpty()) {
+                Text(
+                    text = "Le Nid vient de gagner une belle étincelle.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = WoodBrownDark,
+                )
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    rewardRows.forEach { row ->
+                        CompletionRewardRow(row)
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                FantasyButton(
+                    text = "Continuer",
+                    onClick = onContinue,
+                    modifier = Modifier.weight(1f),
+                    style = FantasyButtonStyle.Outline,
+                )
+                FantasyButton(
+                    text = "Voir Le Nid",
+                    onClick = onOpenNest,
+                    modifier = Modifier.weight(1f),
+                    style = FantasyButtonStyle.Filled,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CompletionRewardRow(row: CompletionRewardDisplayRow) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        FantasyAssetBubble(
+            assetResId = row.assetResId,
+            contentDescription = row.label,
+            size = 34.dp,
+        )
+        Text(
+            text = row.label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = InkMuted,
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+        )
+        Text(
+            text = row.value,
+            style = MaterialTheme.typography.titleMedium,
+            color = row.color,
+            maxLines = 1,
+        )
+    }
+}
+
+private data class CompletionRewardDisplayRow(
+    val label: String,
+    val value: String,
+    val assetResId: Int,
+    val color: Color,
+)
+
+private fun completionRewardRows(reward: CompletionReward?): List<CompletionRewardDisplayRow> =
+    buildList {
+        if (reward == null) return@buildList
+        if (reward.xp > 0) {
+            add(
+                CompletionRewardDisplayRow(
+                    label = "Expérience",
+                    value = "+${reward.xp} XP",
+                    assetResId = NestAssets.interfaceAsset("nid"),
+                    color = MossGreen,
+                ),
+            )
+        }
+        if (reward.flammeches > 0) {
+            add(
+                CompletionRewardDisplayRow(
+                    label = "Flammèches",
+                    value = "+${reward.flammeches}",
+                    assetResId = NestAssets.interfaceAsset("flammeche"),
+                    color = EmberOrange,
+                ),
+            )
+        }
+        if (reward.crystals > 0) {
+            add(
+                CompletionRewardDisplayRow(
+                    label = "Cristaux",
+                    value = "+${reward.crystals}",
+                    assetResId = NestAssets.interfaceAsset("crystal"),
+                    color = CrystalBlue,
+                ),
+            )
+        }
+    }
 
 @Composable
 private fun LocalChildModeCard(
@@ -925,6 +1092,12 @@ private fun wishSummaryText(
         else ->
             "Aucune demande de souhait en attente."
     }
+
+internal fun shouldShowCompletionCelebration(
+    isParentUser: Boolean,
+    isLocalChildMode: Boolean,
+    usingRemoteData: Boolean,
+): Boolean = usingRemoteData && (!isParentUser || isLocalChildMode)
 
 private fun feedbackMessage(feedback: CompletionFeedback): String {
     val rewardLabel = feedback.reward?.compactLabel().orEmpty()
