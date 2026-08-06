@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 
 from sqlalchemy import func, select, update
@@ -301,17 +301,33 @@ def _cycle_xp_total(db: Session, *, completion: TaskCompletion, cycle: TaskRewar
     )
 
 
-def _active_reward_cycle(db: Session, *, completion: TaskCompletion, reward: TaskReward) -> TaskRewardCycle:
+def _completion_reward(db: Session, completion: TaskCompletion) -> TaskReward:
+    reward = TASK_REWARDS[completion.task_type]
+    if completion.task_type != TaskType.QUEST:
+        return reward
+
+    quest = db.get(Quest, completion.task_id)
+    if quest is None:
+        return reward
+    return replace(reward, guardian_xp=quest.xp_reward)
+
+
+def _active_reward_cycle(db: Session, *, completion: TaskCompletion, reward: TaskReward) -> tuple[TaskRewardCycle, int]:
     cycle = _reward_cycle(completion)
     cycle_xp = _cycle_xp_total(db, completion=completion, cycle=cycle)
     if cycle_xp == reward.guardian_xp:
-        return cycle
+        return cycle, reward.guardian_xp
+    if completion.task_type == TaskType.QUEST and cycle_xp > 0:
+        return cycle, cycle_xp
     if cycle_xp != 0:
         raise TaskRewardRollbackError("Le cycle de recompense courant est incoherent.")
 
     legacy_cycle = _legacy_reward_cycle(completion)
-    if _cycle_xp_total(db, completion=completion, cycle=legacy_cycle) == reward.guardian_xp:
-        return legacy_cycle
+    legacy_xp = _cycle_xp_total(db, completion=completion, cycle=legacy_cycle)
+    if legacy_xp == reward.guardian_xp:
+        return legacy_cycle, reward.guardian_xp
+    if completion.task_type == TaskType.QUEST and legacy_xp > 0:
+        return legacy_cycle, legacy_xp
 
     raise TaskRewardRollbackError(
         "Cette completion historique ne peut pas etre annulee automatiquement sans reconciliation."
@@ -334,7 +350,7 @@ def award_task_completion(
     task_id = completion.task_id
     ensure_catalog_seeded(db)
     progress = get_or_create_progress(db, child_id)
-    reward = TASK_REWARDS[task_type]
+    reward = _completion_reward(db, completion)
     cycle = _reward_cycle(completion)
     cycle_xp = _cycle_xp_total(db, completion=completion, cycle=cycle)
     if cycle_xp == reward.guardian_xp:
@@ -408,8 +424,10 @@ def revoke_task_completion(db: Session, *, completion: TaskCompletion, title: st
     child_id = completion.child_id
     task_type = completion.task_type
     task_id = completion.task_id
-    reward = TASK_REWARDS[task_type]
-    cycle = _active_reward_cycle(db, completion=completion, reward=reward)
+    reward = _completion_reward(db, completion)
+    cycle, guardian_xp = _active_reward_cycle(db, completion=completion, reward=reward)
+    if guardian_xp != reward.guardian_xp:
+        reward = replace(reward, guardian_xp=guardian_xp)
 
     award_transaction = db.scalar(
         select(ScaleTransaction).where(

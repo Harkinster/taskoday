@@ -7,7 +7,7 @@ from app.dependencies import ensure_child_access, ensure_parent_child_access, ge
 from app.models.task import Mission, TaskCompletion, TaskStatus, TaskType
 from app.models.user import User
 from app.schemas.task import MissionCreateRequest, MissionUpdateRequest
-from app.services.gamification_service import award_task_completion
+from app.services.gamification_service import TaskRewardRollbackError, award_task_completion, revoke_task_completion
 
 router = APIRouter(tags=["missions"])
 
@@ -159,3 +159,33 @@ def complete_mission(mission_id: int, db: Session = Depends(get_db), current_use
     db.commit()
 
     return success_response({"mission_id": mission.id, "completed": True, "award": award}, message="Mission completee.")
+
+
+@router.post("/missions/{mission_id}/uncomplete")
+def uncomplete_mission(mission_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    mission = db.get(Mission, mission_id)
+    if not mission:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mission introuvable.")
+
+    ensure_child_access(db, current_user, mission.child_id)
+
+    completion = db.execute(
+        select(TaskCompletion).where(
+            TaskCompletion.task_type == TaskType.MISSION,
+            TaskCompletion.task_id == mission.id,
+            TaskCompletion.child_id == mission.child_id,
+        )
+    ).scalars().first()
+
+    if completion:
+        try:
+            revoke_task_completion(db, completion=completion, title=mission.title)
+        except TaskRewardRollbackError as exc:
+            db.rollback()
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+        db.delete(completion)
+
+    mission.status = TaskStatus.OPEN
+    db.commit()
+
+    return success_response({"mission_id": mission.id, "completed": False}, message="Mission devalidee.")

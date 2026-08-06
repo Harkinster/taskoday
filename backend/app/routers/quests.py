@@ -7,7 +7,7 @@ from app.dependencies import ensure_child_access, ensure_parent_child_access, ge
 from app.models.task import Quest, TaskCompletion, TaskStatus, TaskType
 from app.models.user import User
 from app.schemas.task import QuestCreateRequest, QuestUpdateRequest
-from app.services.gamification_service import award_task_completion
+from app.services.gamification_service import TaskRewardRollbackError, award_task_completion, revoke_task_completion
 
 router = APIRouter(tags=["quests"])
 
@@ -175,3 +175,33 @@ def complete_quest(quest_id: int, db: Session = Depends(get_db), current_user: U
         },
         message="Quete deja completee.",
     )
+
+
+@router.post("/quests/{quest_id}/uncomplete")
+def uncomplete_quest(quest_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    quest = db.get(Quest, quest_id)
+    if not quest:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quete introuvable.")
+
+    ensure_child_access(db, current_user, quest.child_id)
+
+    completion = db.execute(
+        select(TaskCompletion).where(
+            TaskCompletion.task_type == TaskType.QUEST,
+            TaskCompletion.task_id == quest.id,
+            TaskCompletion.child_id == quest.child_id,
+        )
+    ).scalars().first()
+
+    if completion:
+        try:
+            revoke_task_completion(db, completion=completion, title=quest.title)
+        except TaskRewardRollbackError as exc:
+            db.rollback()
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+        db.delete(completion)
+
+    quest.status = TaskStatus.OPEN
+    db.commit()
+
+    return success_response({"quest_id": quest.id, "completed": False}, message="Quete devalidee.")

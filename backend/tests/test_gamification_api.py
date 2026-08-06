@@ -131,7 +131,7 @@ def test_task_completion_adds_guardian_xp_flammeches_and_chest_progress(client) 
     progress = client.get(f"/api/v1/children/{child_id}/progress", headers={"Authorization": f"Bearer {child_token}"})
     assert progress.status_code == 200
     payload = progress.json()["data"]
-    assert payload["guardian"]["xp"] == 50
+    assert payload["guardian"]["xp"] == 45
     assert payload["wallet"]["flammeches"] == 20
     assert payload["wallet"]["crystals"] == 10
     assert payload["chest_progress"]["points"] == 4
