@@ -80,6 +80,7 @@ fun HomeScreen(
     onOpenJournal: () -> Unit,
     onOpenWishes: () -> Unit,
     onOpenNest: () -> Unit,
+    onOpenNestAfterReward: (CompletionFeedback) -> Unit = { onOpenNest() },
     onEnterLocalChildMode: () -> Unit = {},
     onExitLocalChildMode: () -> Unit = {},
 ) {
@@ -341,7 +342,7 @@ fun HomeScreen(
                 feedback = feedback,
                 onOpenNest = {
                     viewModel.clearCompletionFeedback()
-                    onOpenNest()
+                    onOpenNestAfterReward(feedback)
                 },
                 onContinue = viewModel::clearCompletionFeedback,
             )

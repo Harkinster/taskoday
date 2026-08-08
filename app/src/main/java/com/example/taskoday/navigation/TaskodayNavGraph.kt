@@ -47,6 +47,7 @@ import com.example.taskoday.features.gamification.EggsScreen
 import com.example.taskoday.features.gamification.InventoryScreen
 import com.example.taskoday.features.gamification.NestScreen
 import com.example.taskoday.features.gamification.NestViewModel
+import com.example.taskoday.features.gamification.RecentNestReward
 import com.example.taskoday.features.gamification.ScrollsScreen
 import com.example.taskoday.features.home.HomeScreen
 import com.example.taskoday.features.home.HomeViewModel
@@ -74,6 +75,11 @@ fun TaskodayApp() {
     val sessionEventsViewModel: SessionEventsViewModel = hiltViewModel()
     val quickAddViewModel: QuickAddViewModel = hiltViewModel()
     val quickAddUiState by quickAddViewModel.uiState.collectAsStateWithLifecycle()
+    var recentNestRewardEventId by rememberSaveable { mutableStateOf(0L) }
+    var recentNestRewardActionTitle by rememberSaveable { mutableStateOf<String?>(null) }
+    var recentNestRewardXp by rememberSaveable { mutableStateOf(0) }
+    var recentNestRewardFlammeches by rememberSaveable { mutableStateOf(0) }
+    var recentNestRewardCrystals by rememberSaveable { mutableStateOf(0) }
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
     val currentTopLevelIndex =
@@ -279,8 +285,25 @@ fun TaskodayApp() {
 
             composable(TaskodayDestination.Nest.route) {
                 val viewModel: NestViewModel = hiltViewModel()
+                val recentNestReward =
+                    recentNestRewardActionTitle?.let { actionTitle ->
+                        RecentNestReward(
+                            actionTitle = actionTitle,
+                            xp = recentNestRewardXp,
+                            flammeches = recentNestRewardFlammeches,
+                            crystals = recentNestRewardCrystals,
+                        )
+                    }
                 NestScreen(
                     viewModel = viewModel,
+                    recentReward = recentNestReward,
+                    recentRewardEventId = recentNestRewardEventId,
+                    onRecentRewardConsumed = {
+                        recentNestRewardActionTitle = null
+                        recentNestRewardXp = 0
+                        recentNestRewardFlammeches = 0
+                        recentNestRewardCrystals = 0
+                    },
                     onOpenInventory = { navController.navigate(TaskodayDestination.Inventory.route) },
                     onOpenDragons = { navController.navigate(TaskodayDestination.Dragons.route) },
                     onOpenWishes = { navController.navigate(TaskodayDestination.Shop.createRoute(TaskodayDestination.Shop.SECTION_WISHES)) },
@@ -302,6 +325,14 @@ fun TaskodayApp() {
                     onOpenJournal = { navController.navigate(TaskodayDestination.ActivityJournal.route) },
                     onOpenWishes = { navController.navigate(TaskodayDestination.Shop.createRoute(TaskodayDestination.Shop.SECTION_WISHES)) },
                     onOpenNest = { navigateToTopLevel(TaskodayDestination.Nest) },
+                    onOpenNestAfterReward = { feedback ->
+                        recentNestRewardEventId += 1L
+                        recentNestRewardActionTitle = feedback.actionTitle
+                        recentNestRewardXp = feedback.reward?.xp ?: 0
+                        recentNestRewardFlammeches = feedback.reward?.flammeches ?: 0
+                        recentNestRewardCrystals = feedback.reward?.crystals ?: 0
+                        navigateToTopLevel(TaskodayDestination.Nest)
+                    },
                     onEnterLocalChildMode = {
                         localChildMode = true
                         navigateToTopLevel(TaskodayDestination.Home)

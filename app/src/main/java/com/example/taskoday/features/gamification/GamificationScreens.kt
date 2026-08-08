@@ -26,8 +26,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -59,6 +61,8 @@ import com.example.taskoday.core.ui.component.fantasy.InventoryLootCard
 import com.example.taskoday.core.ui.component.fantasy.NestAssets
 import com.example.taskoday.core.ui.component.fantasy.ScrollCard
 import com.example.taskoday.core.ui.format.toTaskodayDisplayLabel
+import com.example.taskoday.core.ui.theme.CrystalBlue
+import com.example.taskoday.core.ui.theme.EmberOrange
 import com.example.taskoday.core.ui.theme.InkMuted
 import com.example.taskoday.core.ui.theme.MagicViolet
 import com.example.taskoday.core.ui.theme.MossGreen
@@ -73,9 +77,24 @@ import com.example.taskoday.data.remote.dto.EggDto
 import com.example.taskoday.data.remote.dto.InventoryDto
 import com.example.taskoday.data.remote.dto.InventoryItemDto
 
+data class RecentNestReward(
+    val actionTitle: String,
+    val xp: Int = 0,
+    val flammeches: Int = 0,
+    val crystals: Int = 0,
+)
+
+internal fun shouldShowRecentNestReward(reward: RecentNestReward?): Boolean =
+    reward != null &&
+        reward.actionTitle.isNotBlank() &&
+        (reward.xp > 0 || reward.flammeches > 0 || reward.crystals > 0)
+
 @Composable
 fun NestScreen(
     viewModel: NestViewModel,
+    recentReward: RecentNestReward? = null,
+    recentRewardEventId: Long = 0L,
+    onRecentRewardConsumed: () -> Unit = {},
     onOpenInventory: () -> Unit,
     onOpenDragons: () -> Unit,
     onOpenWishes: () -> Unit,
@@ -86,6 +105,7 @@ fun NestScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var activeCompanionKey by rememberSaveable { mutableStateOf("dragon_pyron") }
     var followedEggKey by rememberSaveable { mutableStateOf("egg_pyron") }
+    var visibleRecentReward by remember { mutableStateOf<RecentNestReward?>(null) }
     val dragons =
         if (uiState.hasRemoteSession) {
             uiState.bestiary?.families.orEmpty().map { family ->
@@ -122,6 +142,14 @@ fun NestScreen(
             progress.wallet.flammeches == 0 &&
             progress.wallet.crystals == 0
 
+    LaunchedEffect(recentRewardEventId) {
+        if (recentReward == null) return@LaunchedEffect
+        if (shouldShowRecentNestReward(recentReward)) {
+            visibleRecentReward = recentReward
+        }
+        onRecentRewardConsumed()
+    }
+
     GamificationScaffold {
         item {
             FantasyHeader(
@@ -148,6 +176,14 @@ fun NestScreen(
                 onOpenWishes = onOpenWishes,
                 onOpenChests = onOpenChests,
             )
+        }
+        visibleRecentReward?.let { reward ->
+            item {
+                RecentNestRewardCard(
+                    reward = reward,
+                    onDismiss = { visibleRecentReward = null },
+                )
+            }
         }
         if (hasEmptyNestProgress) {
             item {
@@ -455,6 +491,128 @@ private fun GuardianProgressCard(
         )
     }
 }
+
+@Composable
+private fun RecentNestRewardCard(
+    reward: RecentNestReward,
+    onDismiss: () -> Unit,
+) {
+    val rows = recentNestRewardRows(reward)
+    FantasyCard(tone = FantasyTone.Gold, contentPadding = PaddingValues(14.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            FantasyAssetBubble(
+                assetResId = NestAssets.interfaceAsset("flammeche"),
+                contentDescription = null,
+                size = 50.dp,
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text = "Le Nid brille un peu plus !",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = WoodBrownDark,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = "Grâce à « ${reward.actionTitle} », tes gains viennent d'arriver ici.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = InkMuted,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            rows.forEach { row ->
+                RecentNestRewardRow(row)
+            }
+        }
+        FantasyProgressBar(progress = 1f, height = 6.dp)
+        FantasyButton(
+            text = "Continue tes aventures",
+            onClick = onDismiss,
+            modifier = Modifier.fillMaxWidth(),
+            style = FantasyButtonStyle.Quiet,
+        )
+    }
+}
+
+@Composable
+private fun RecentNestRewardRow(row: RecentNestRewardDisplayRow) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        FantasyAssetBubble(
+            assetResId = row.assetResId,
+            contentDescription = row.label,
+            size = 32.dp,
+        )
+        Text(
+            text = row.label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = InkMuted,
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = row.value,
+            style = MaterialTheme.typography.titleSmall,
+            color = row.color,
+            maxLines = 1,
+        )
+    }
+}
+
+private data class RecentNestRewardDisplayRow(
+    val label: String,
+    val value: String,
+    val assetResId: Int,
+    val color: Color,
+)
+
+private fun recentNestRewardRows(reward: RecentNestReward): List<RecentNestRewardDisplayRow> =
+    buildList {
+        if (reward.xp > 0) {
+            add(
+                RecentNestRewardDisplayRow(
+                    label = "XP du Gardien",
+                    value = "+${reward.xp} XP",
+                    assetResId = NestAssets.interfaceAsset("nid"),
+                    color = MossGreen,
+                ),
+            )
+        }
+        if (reward.flammeches > 0) {
+            add(
+                RecentNestRewardDisplayRow(
+                    label = "Flammèches",
+                    value = "+${reward.flammeches}",
+                    assetResId = NestAssets.interfaceAsset("flammeche"),
+                    color = EmberOrange,
+                ),
+            )
+        }
+        if (reward.crystals > 0) {
+            add(
+                RecentNestRewardDisplayRow(
+                    label = "Cristaux",
+                    value = "+${reward.crystals}",
+                    assetResId = NestAssets.interfaceAsset("crystal"),
+                    color = CrystalBlue,
+                ),
+            )
+        }
+    }
 
 @Composable
 private fun NestCurrencyBar(
