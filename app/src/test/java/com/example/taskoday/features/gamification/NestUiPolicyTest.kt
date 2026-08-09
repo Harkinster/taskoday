@@ -1,10 +1,11 @@
 package com.example.taskoday.features.gamification
 
 import com.example.taskoday.core.ui.format.toTaskodayDisplayLabel
+import com.example.taskoday.data.remote.dto.DragonDto
 import com.example.taskoday.data.remote.dto.EggDto
 import com.example.taskoday.data.remote.dto.InventoryDto
 import com.example.taskoday.data.remote.dto.InventoryItemDto
-import com.example.taskoday.data.remote.dto.StateUnlockDto
+import com.example.taskoday.data.remote.dto.RequiredResourceDto
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -165,50 +166,97 @@ class NestUiPolicyTest {
     }
 
     @Test
-    fun `dragon next stage follows the first locked stage after current stage`() {
-        assertEquals(
-            "Jeune",
-            nextDragonStageLabel(
-                currentStage = "baby",
-                stages =
-                    listOf(
-                        StateUnlockDto("baby", unlocked = true),
-                        StateUnlockDto("young", unlocked = false),
-                        StateUnlockDto("adult", unlocked = false),
+    fun `dragon resources all sufficient expose readable requirement rows`() {
+        val rows =
+            dragonResourceRows(
+                listOf(
+                    RequiredResourceDto(
+                        itemKey = "pomme_dragon",
+                        title = "Pomme dragon",
+                        ownedQuantity = 29,
+                        requiredQuantity = 5,
+                        isSatisfied = true,
                     ),
-            ),
-        )
+                    RequiredResourceDto(
+                        itemKey = "petit_cristal",
+                        title = "Petit cristal",
+                        ownedQuantity = 4,
+                        requiredQuantity = 4,
+                        isSatisfied = true,
+                    ),
+                ),
+            )
+
+        assertEquals(2, rows.size)
+        assertTrue(rows.all { row -> row.missingQuantity == 0 })
+        assertEquals("Pomme dragon", rows.first { row -> row.key == "pomme_dragon" }.title)
     }
 
     @Test
-    fun `dragon next stage is absent at maximum stage`() {
-        assertNull(
-            nextDragonStageLabel(
-                currentStage = "adult",
-                stages =
-                    listOf(
-                        StateUnlockDto("baby", unlocked = true),
-                        StateUnlockDto("young", unlocked = true),
-                        StateUnlockDto("adult", unlocked = true),
+    fun `dragon resources expose missing quantity`() {
+        val rows =
+            dragonResourceRows(
+                listOf(
+                    RequiredResourceDto(
+                        itemKey = "petit_cristal",
+                        title = "Petit cristal",
+                        ownedQuantity = 2,
+                        requiredQuantity = 4,
+                        isSatisfied = false,
                     ),
-            ),
-        )
+                    RequiredResourceDto(
+                        itemKey = "rune_ancienne",
+                        title = "Rune ancienne",
+                        ownedQuantity = 0,
+                        requiredQuantity = 2,
+                        isSatisfied = false,
+                    ),
+                ),
+            )
+
+        assertEquals(2, rows.first { row -> row.key == "petit_cristal" }.missingQuantity)
+        assertEquals(2, rows.first { row -> row.key == "rune_ancienne" }.missingQuantity)
     }
 
     @Test
-    fun `dragon next stage falls back to first locked stage when current stage is unknown`() {
-        assertEquals(
-            "Adulte",
-            nextDragonStageLabel(
-                currentStage = "ancient",
-                stages =
+    fun `next stage absent means maximum dragon stage`() {
+        assertNull(dragonNextStageLabel(null))
+    }
+
+    @Test
+    fun `legacy next evolution does not enable dragon evolution`() {
+        val dragon =
+            dragonDto(
+                nextStage = "young",
+                canEvolve = false,
+                nextEvolution = mapOf("legacy" to "present"),
+            ).toUiItem()
+
+        assertEquals("Jeune", dragon.nextStageLabel)
+        assertFalse(dragon.canEvolve)
+    }
+
+    @Test
+    fun `typed can evolve enables dragon evolution when next stage exists`() {
+        val dragon =
+            dragonDto(
+                nextStage = "young",
+                canEvolve = true,
+                requiredResources =
                     listOf(
-                        StateUnlockDto("baby", unlocked = true),
-                        StateUnlockDto("young", unlocked = true),
-                        StateUnlockDto("medium", unlocked = false),
+                        RequiredResourceDto(
+                            itemKey = "pomme_dragon",
+                            title = "Pomme dragon",
+                            ownedQuantity = 5,
+                            requiredQuantity = 5,
+                            isSatisfied = true,
+                        ),
                     ),
-            ),
-        )
+            ).toUiItem()
+
+        assertEquals("Jeune", dragon.nextStageLabel)
+        assertTrue(dragon.canEvolve)
+        assertEquals(0, dragon.resourceRows.single().missingQuantity)
     }
 
     private fun eggUiItem(
@@ -245,6 +293,27 @@ class NestUiPolicyTest {
             assetKey = "oeuf_braise_sleeping",
             requirements = mapOf("pomme_dragon" to 3, "petit_cristal" to 2, "pierre_chaude" to 1),
         )
+
+    private fun dragonDto(
+        nextStage: String?,
+        canEvolve: Boolean,
+        nextEvolution: Map<String, Any>? = null,
+        requiredResources: List<RequiredResourceDto>? = emptyList(),
+    ) = DragonDto(
+        id = 7,
+        childId = 19,
+        dragonKey = "dragon_braise",
+        title = "Dragon de Braise",
+        stage = "baby",
+        currentStage = "baby",
+        progressPercent = 40,
+        nextStage = nextStage,
+        requiredResources = requiredResources,
+        canEvolve = canEvolve,
+        activeCompanion = false,
+        assetKey = "dragon_braise_baby",
+        nextEvolution = nextEvolution,
+    )
 
     private fun inventory(
         pommeDragon: Int,

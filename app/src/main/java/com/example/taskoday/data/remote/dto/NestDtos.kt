@@ -110,13 +110,26 @@ data class EggDto(
     @SerializedName("requirements") val requirements: Map<String, Int>,
 )
 
+data class RequiredResourceDto(
+    @SerializedName("item_key") val itemKey: String,
+    @SerializedName("title") val title: String,
+    @SerializedName("owned_quantity") val ownedQuantity: Int,
+    @SerializedName("required_quantity") val requiredQuantity: Int,
+    @SerializedName("is_satisfied") val isSatisfied: Boolean,
+)
+
 data class DragonDto(
     @SerializedName("id") val id: Long,
     @SerializedName("child_id") val childId: Long,
     @SerializedName("dragon_key") val dragonKey: String,
     @SerializedName("title") val title: String,
     @SerializedName("stage") val stage: String,
+    @SerializedName("current_stage") val currentStage: String? = null,
     @SerializedName("progress_percent") val progressPercent: Int,
+    @SerializedName("next_stage") val nextStage: String? = null,
+    @SerializedName("requirements") val requirements: Map<String, Int>? = null,
+    @SerializedName("required_resources") val requiredResources: List<RequiredResourceDto>? = null,
+    @SerializedName("can_evolve") val canEvolve: Boolean = false,
     @SerializedName("active_companion") val activeCompanion: Boolean,
     @SerializedName("asset_key") val assetKey: String,
     @SerializedName("next_evolution") val nextEvolution: Map<String, Any>? = null,
@@ -192,6 +205,10 @@ data class BestiaryFamilyDto(
     @SerializedName("active_companion") val activeCompanion: Boolean,
     @SerializedName("legendary_unlocked") val legendaryUnlocked: Boolean,
     @SerializedName("progress_percent") val progressPercent: Int,
+    @SerializedName("dragon") val dragon: DragonDto? = null,
+    @SerializedName("next_dragon_stage") val nextDragonStage: String? = null,
+    @SerializedName("dragon_required_resources") val dragonRequiredResources: List<RequiredResourceDto>? = null,
+    @SerializedName("dragon_can_evolve") val dragonCanEvolve: Boolean? = null,
     @SerializedName("egg_asset_key") val eggAssetKey: String,
     @SerializedName("dragon_asset_key") val dragonAssetKey: String,
     @SerializedName("egg_states") val eggStates: List<StateUnlockDto>,

@@ -77,7 +77,7 @@ import com.example.taskoday.data.remote.dto.DragonDto
 import com.example.taskoday.data.remote.dto.EggDto
 import com.example.taskoday.data.remote.dto.InventoryDto
 import com.example.taskoday.data.remote.dto.InventoryItemDto
-import com.example.taskoday.data.remote.dto.StateUnlockDto
+import com.example.taskoday.data.remote.dto.RequiredResourceDto
 
 data class RecentNestReward(
     val actionTitle: String,
@@ -1385,12 +1385,15 @@ private fun FamilyBestiaryCard(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = dragon.nextStageLabel ?: if (dragon.canEvolve) "Évolution disponible" else "Stade actuel maximal",
+                    text = dragon.nextStageLabel ?: "Stade actuel maximal",
                     style = MaterialTheme.typography.bodyMedium,
                     color = WoodBrownDark,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+            }
+            dragon.resourceRows.forEach { resource ->
+                EggResourceRequirementRow(resource)
             }
         }
         if (!dragon.active && dragon.discovered && dragon.id != null) {
@@ -1400,11 +1403,12 @@ private fun FamilyBestiaryCard(
                 style = FantasyButtonStyle.Outline,
             )
         }
-        if (dragon.canEvolve && dragon.id != null) {
+        if (dragon.nextStageLabel != null && dragon.id != null) {
             FantasyButton(
                 text = "Faire évoluer",
                 onClick = onEvolveDragon,
                 style = FantasyButtonStyle.Quiet,
+                enabled = dragon.canEvolve,
             )
         }
         if (egg != null) {
@@ -1609,6 +1613,7 @@ data class DragonUiItem(
     val familyLabel: String? = null,
     val progressPercent: Int = (progress.coerceIn(0f, 1f) * 100).toInt(),
     val nextStageLabel: String? = null,
+    val resourceRows: List<EggResourceUiItem> = emptyList(),
 )
 
 data class ScrollUiItem(
@@ -1667,15 +1672,19 @@ internal fun eggResourceRows(
 
 internal fun eggNextStateLabel(egg: EggDto): String? = egg.nextState?.toFantasyStateLabel()
 
-internal fun nextDragonStageLabel(
-    currentStage: String?,
-    stages: List<StateUnlockDto>,
-): String? {
-    if (stages.isEmpty()) return null
-    val currentIndex = stages.indexOfFirst { stage -> stage.state == currentStage }
-    val candidateStages = if (currentIndex >= 0) stages.drop(currentIndex + 1) else stages
-    return candidateStages.firstOrNull { stage -> !stage.unlocked }?.state?.toFantasyStateLabel()
-}
+internal fun dragonNextStageLabel(nextStage: String?): String? = nextStage?.toFantasyStateLabel()
+
+internal fun dragonResourceRows(resources: List<RequiredResourceDto>?): List<EggResourceUiItem> =
+    resources.orEmpty()
+        .sortedBy { resource -> resource.itemKey }
+        .map { resource ->
+            EggResourceUiItem(
+                key = resource.itemKey,
+                title = resource.title.ifBlank { resource.itemKey.toTaskodayDisplayLabel() },
+                ownedQuantity = resource.ownedQuantity,
+                requiredQuantity = resource.requiredQuantity,
+            )
+        }
 
 private fun EggDto.toUiItem(inventory: InventoryDto?): EggUiItem {
     val family = eggKey.removePrefix("oeuf_").removePrefix("egg_")
@@ -1705,55 +1714,63 @@ private fun EggDto.toUiItem(inventory: InventoryDto?): EggUiItem {
     )
 }
 
-private fun DragonDto.toUiItem(): DragonUiItem {
+internal fun DragonDto.toUiItem(): DragonUiItem {
     val family = dragonKey.removePrefix("dragon_")
     val progress = progressPercent.coerceIn(0, 100)
+    val currentStageKey = currentStage ?: stage
+    val nextStageLabel = dragonNextStageLabel(nextStage)
     return DragonUiItem(
         key = dragonKey,
         title = title,
-        stage = stage.toFantasyStateLabel(),
-        nextStep = nextEvolution?.let { "Évolution disponible" } ?: "Stade actuel : ${stage.toFantasyStateLabel()}",
-        assetResId = NestAssets.dragonAsset(family.toVisualFamily(), stage),
-        contentDescription = "$title, stade ${stage.toFantasyStateLabel()}",
+        stage = currentStageKey.toFantasyStateLabel(),
+        nextStep = nextStageLabel ?: "Stade actuel : ${currentStageKey.toFantasyStateLabel()}",
+        assetResId = NestAssets.dragonAsset(family.toVisualFamily(), currentStageKey),
+        contentDescription = "$title, stade ${currentStageKey.toFantasyStateLabel()}",
         active = activeCompanion,
         progress = progress / 100f,
         id = id,
-        canEvolve = nextEvolution != null,
+        canEvolve = nextStageLabel != null && canEvolve,
         familyLabel = family.toTaskodayDisplayLabel(),
         progressPercent = progress,
+        nextStageLabel = nextStageLabel,
+        resourceRows = dragonResourceRows(requiredResources),
     )
 }
 
-private fun BestiaryFamilyDto.toDragonUiItem(dragon: DragonDto?): DragonUiItem {
+internal fun BestiaryFamilyDto.toDragonUiItem(dragon: DragonDto?): DragonUiItem {
     val familyDiscovered = isBestiaryFamilyDiscovered(discovered, eggOwned, dragonOwned)
-    val progress = progressPercent.coerceIn(0, 100)
-    val nextStageLabel = if (dragonOwned) nextDragonStageLabel(currentDragonStage, dragonStages) else null
+    val backendDragon = dragon ?: this.dragon
+    val currentStageKey = backendDragon?.currentStage ?: currentDragonStage ?: backendDragon?.stage
+    val progress = (backendDragon?.progressPercent ?: progressPercent).coerceIn(0, 100)
+    val nextStageLabel = if (dragonOwned) dragonNextStageLabel(nextDragonStage ?: backendDragon?.nextStage) else null
+    val canEvolve = nextStageLabel != null && (dragonCanEvolve ?: backendDragon?.canEvolve ?: false)
     return DragonUiItem(
         key = "dragon_$familyId",
-        title = dragon?.title?.ifBlank { "Dragon $familyName" } ?: familyName,
+        title = backendDragon?.title?.ifBlank { "Dragon $familyName" } ?: familyName,
         stage =
-            currentDragonStage?.toFantasyStateLabel()
+            currentStageKey?.toFantasyStateLabel()
                 ?: if (familyDiscovered) "Dragon non obtenu" else "Non découvert",
         nextStep = if (dragonOwned) "$progress% de progression" else "Fais éclore l'œuf de cette famille.",
-        assetResId = NestAssets.dragonAsset(familyId.toVisualFamily(), currentDragonStage ?: "baby"),
+        assetResId = NestAssets.dragonAsset(familyId.toVisualFamily(), currentStageKey ?: "baby"),
         contentDescription =
             "$familyName, ${
-                currentDragonStage?.toFantasyStateLabel()
+                currentStageKey?.toFantasyStateLabel()
                     ?: if (familyDiscovered) "dragon non obtenu" else "verrouillé"
             }",
         active = activeCompanion,
         progress = progress / 100f,
-        id = dragon?.id,
+        id = backendDragon?.id,
         discovered = familyDiscovered,
         eggStatesLabel = eggStates.joinToString(" • ") { "${it.state.toFantasyStateLabel()} ${if (it.unlocked) "✓" else "—"}" },
         dragonStagesLabel = dragonStages.joinToString(" • ") { "${it.state.toFantasyStateLabel()} ${if (it.unlocked) "✓" else "—"}" },
         artifactOwned = legendaryArtifact.owned,
         artifactRequired = legendaryArtifact.required,
-        canEvolve = dragon?.nextEvolution != null,
+        canEvolve = canEvolve,
         owned = dragonOwned,
         familyLabel = familyName,
         progressPercent = progress,
         nextStageLabel = nextStageLabel,
+        resourceRows = dragonResourceRows(dragonRequiredResources ?: backendDragon?.requiredResources),
     )
 }
 
