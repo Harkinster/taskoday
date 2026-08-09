@@ -104,6 +104,10 @@ def _loot_item(loot, item_key: str) -> dict:
     return next(item for item in loot if item["key"] == item_key)
 
 
+def _required_resource(resources, item_key: str) -> dict:
+    return next(resource for resource in resources if resource["item_key"] == item_key)
+
+
 def _open_unopened_rare_chests(client, child_token: str, child_id: int) -> list[dict]:
     chests = client.get(
         f"/api/v1/children/{child_id}/chests",
@@ -119,6 +123,34 @@ def _open_unopened_rare_chests(client, child_token: str, child_id: int) -> list[
             assert response.status_code == 200
             opened.append(response.json()["data"])
     return opened
+
+
+def _hatch_braise_dragon(client, parent_token: str, child_token: str, child_id: int, *, rare_chest_count: int = 4) -> dict:
+    for _ in range(rare_chest_count):
+        _create_and_complete_quest(client, parent_token, child_token, child_id)
+
+    opened = _open_unopened_rare_chests(client, child_token, child_id)
+    assert len(opened) == rare_chest_count
+
+    eggs = client.get(
+        f"/api/v1/children/{child_id}/eggs",
+        headers={"Authorization": f"Bearer {child_token}"},
+    )
+    egg_id = eggs.json()["data"]["eggs"][0]["id"]
+    for expected_state in ["warm", "glowing", "cracked", "hatching"]:
+        evolved_egg = client.post(
+            f"/api/v1/children/{child_id}/eggs/{egg_id}/evolve",
+            headers={"Authorization": f"Bearer {child_token}"},
+        )
+        assert evolved_egg.status_code == 200
+        assert evolved_egg.json()["data"]["egg"]["state"] == expected_state
+
+    hatched = client.post(
+        f"/api/v1/children/{child_id}/eggs/{egg_id}/evolve",
+        headers={"Authorization": f"Bearer {child_token}"},
+    )
+    assert hatched.status_code == 200
+    return hatched.json()["data"]["dragon"]
 
 
 def test_task_completion_adds_guardian_xp_flammeches_and_chest_progress(client) -> None:
@@ -340,6 +372,145 @@ def test_egg_contract_exposes_next_action_requirements_and_real_progress(client)
     assert braise["required_resources"] == warm_egg["required_resources"]
     assert braise["can_evolve"] is False
     assert braise["egg"] == warm_egg
+
+
+def test_dragon_contract_exposes_requirements_and_can_evolve_with_sufficient_resources(client) -> None:
+    parent_token, child_token, child_id = _setup_family(client, "dragon-contract-ok")
+    hatched_dragon = _hatch_braise_dragon(client, parent_token, child_token, child_id)
+    headers = {"Authorization": f"Bearer {child_token}"}
+
+    dragons = client.get(f"/api/v1/children/{child_id}/dragons", headers=headers)
+    assert dragons.status_code == 200
+    dragon = dragons.json()["data"]["dragons"][0]
+    assert dragon["id"] == hatched_dragon["id"]
+    assert dragon["stage"] == dragon["current_stage"] == "baby"
+    assert dragon["progress_percent"] == 0
+    assert dragon["next_stage"] == "young"
+    assert dragon["requirements"] == {
+        "pomme_dragon": 5,
+        "petit_cristal": 4,
+        "rune_ancienne": 2,
+    }
+    assert dragon["next_evolution"] == {
+        "next_stage": "young",
+        "items": dragon["requirements"],
+    }
+    assert dragon["required_resources"] == [
+        {
+            "item_key": "pomme_dragon",
+            "title": "Pomme dragon",
+            "owned_quantity": 29,
+            "required_quantity": 5,
+            "is_satisfied": True,
+        },
+        {
+            "item_key": "petit_cristal",
+            "title": "Petit cristal",
+            "owned_quantity": 22,
+            "required_quantity": 4,
+            "is_satisfied": True,
+        },
+        {
+            "item_key": "rune_ancienne",
+            "title": "Rune ancienne",
+            "owned_quantity": 12,
+            "required_quantity": 2,
+            "is_satisfied": True,
+        },
+    ]
+    assert dragon["can_evolve"] is True
+
+    bestiary = client.get(f"/api/v1/children/{child_id}/bestiary", headers=headers)
+    braise = next(family for family in bestiary.json()["data"]["families"] if family["family_id"] == "braise")
+    assert braise["dragon"]["id"] == dragon["id"]
+    assert braise["requirements"] == dragon["requirements"]
+    assert braise["required_resources"] == dragon["required_resources"]
+    assert braise["dragon_required_resources"] == dragon["required_resources"]
+    assert braise["can_evolve"] is True
+    assert braise["dragon_can_evolve"] is True
+    assert braise["next_dragon_stage"] == "young"
+
+    evolved = client.post(f"/api/v1/children/{child_id}/dragons/{dragon['id']}/evolve", headers=headers)
+    assert evolved.status_code == 200
+    evolved_payload = evolved.json()["data"]
+    assert evolved_payload["dragon"]["stage"] == evolved_payload["dragon"]["current_stage"] == "young"
+    assert evolved_payload["dragon"]["next_stage"] == "medium"
+    assert evolved_payload["dragon"]["can_evolve"] is True
+    assert _item_quantity(evolved_payload["inventory"]["items"], "pomme_dragon") == 24
+    assert _item_quantity(evolved_payload["inventory"]["items"], "petit_cristal") == 18
+    assert _item_quantity(evolved_payload["inventory"]["items"], "rune_ancienne") == 10
+
+
+def test_dragon_contract_marks_can_evolve_false_with_insufficient_resources(client) -> None:
+    parent_token, child_token, child_id = _setup_family(client, "dragon-contract-ko")
+    dragon = _hatch_braise_dragon(client, parent_token, child_token, child_id)
+    headers = {"Authorization": f"Bearer {child_token}"}
+
+    for expected_stage in ["young", "medium"]:
+        evolved = client.post(f"/api/v1/children/{child_id}/dragons/{dragon['id']}/evolve", headers=headers)
+        assert evolved.status_code == 200
+        assert evolved.json()["data"]["dragon"]["stage"] == expected_stage
+
+    dragons = client.get(f"/api/v1/children/{child_id}/dragons", headers=headers)
+    current_dragon = dragons.json()["data"]["dragons"][0]
+    assert current_dragon["stage"] == current_dragon["current_stage"] == "medium"
+    assert current_dragon["next_stage"] == "large"
+    assert current_dragon["requirements"] == {
+        "pomme_dragon": 15,
+        "petit_cristal": 12,
+        "rune_ancienne": 8,
+    }
+    assert current_dragon["can_evolve"] is False
+
+    pomme = _required_resource(current_dragon["required_resources"], "pomme_dragon")
+    cristal = _required_resource(current_dragon["required_resources"], "petit_cristal")
+    rune = _required_resource(current_dragon["required_resources"], "rune_ancienne")
+    assert pomme["owned_quantity"] == 14
+    assert pomme["required_quantity"] == 15
+    assert pomme["is_satisfied"] is False
+    assert cristal["owned_quantity"] == 10
+    assert cristal["required_quantity"] == 12
+    assert cristal["is_satisfied"] is False
+    assert rune["owned_quantity"] == 5
+    assert rune["required_quantity"] == 8
+    assert rune["is_satisfied"] is False
+
+    blocked = client.post(f"/api/v1/children/{child_id}/dragons/{dragon['id']}/evolve", headers=headers)
+    assert blocked.status_code == 400
+    assert "Objets insuffisants" in blocked.json()["error"]["message"]
+
+
+def test_dragon_contract_has_no_next_stage_or_fake_cost_at_max_stage(client) -> None:
+    parent_token, child_token, child_id = _setup_family(client, "dragon-contract-max")
+    dragon = _hatch_braise_dragon(client, parent_token, child_token, child_id, rare_chest_count=9)
+    headers = {"Authorization": f"Bearer {child_token}"}
+
+    for expected_stage in ["young", "medium", "large", "legendary"]:
+        evolved = client.post(f"/api/v1/children/{child_id}/dragons/{dragon['id']}/evolve", headers=headers)
+        assert evolved.status_code == 200
+        assert evolved.json()["data"]["dragon"]["stage"] == expected_stage
+
+    dragons = client.get(f"/api/v1/children/{child_id}/dragons", headers=headers)
+    legendary = dragons.json()["data"]["dragons"][0]
+    assert legendary["stage"] == legendary["current_stage"] == "legendary"
+    assert legendary["progress_percent"] == 100
+    assert legendary["next_stage"] is None
+    assert legendary["requirements"] == {}
+    assert legendary["required_resources"] == []
+    assert legendary["can_evolve"] is False
+    assert legendary["next_evolution"] is None
+
+    bestiary = client.get(f"/api/v1/children/{child_id}/bestiary", headers=headers)
+    braise = next(family for family in bestiary.json()["data"]["families"] if family["family_id"] == "braise")
+    assert braise["next_dragon_stage"] is None
+    assert braise["requirements"] == {}
+    assert braise["required_resources"] == []
+    assert braise["can_evolve"] is False
+    assert braise["dragon_can_evolve"] is False
+
+    blocked = client.post(f"/api/v1/children/{child_id}/dragons/{dragon['id']}/evolve", headers=headers)
+    assert blocked.status_code == 400
+    assert "stade maximal" in blocked.json()["error"]["message"]
 
 
 def test_wish_alias_approval_spends_flammeches_and_creates_scroll(client) -> None:
@@ -615,7 +786,9 @@ def test_main_gamification_openapi_responses_have_schemas(client) -> None:
         ("post", "/api/v1/children/{child_id}/chests/catalog/{catalog_id}/open"),
         ("get", "/api/v1/children/{child_id}/inventory"),
         ("get", "/api/v1/children/{child_id}/bestiary"),
+        ("get", "/api/v1/children/{child_id}/dragons"),
         ("post", "/api/v1/children/{child_id}/eggs/{egg_id}/evolve"),
+        ("post", "/api/v1/children/{child_id}/dragons/{dragon_id}/evolve"),
         ("post", "/api/v1/children/{child_id}/dragons/{dragon_id}/activate"),
         ("get", "/api/v1/children/{child_id}/scrolls"),
     ]

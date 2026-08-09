@@ -803,7 +803,7 @@ def hatch_egg(db: Session, *, child_id: int, egg_id: int) -> dict:
     return {
         "egg": child_egg_payload(db, child_egg),
         "hatched": True,
-        "dragon": child_dragon_payload(dragon),
+        "dragon": child_dragon_payload(db, dragon),
         "inventory": build_inventory_payload(db, child_id),
         "progress": build_progress_payload(db, child_id),
     }
@@ -842,7 +842,7 @@ def evolve_dragon(db: Session, *, child_id: int, dragon_id: int) -> dict:
     db.add(dragon)
     db.flush()
     return {
-        "dragon": child_dragon_payload(dragon),
+        "dragon": child_dragon_payload(db, dragon),
         "inventory": build_inventory_payload(db, child_id),
         "progress": build_progress_payload(db, child_id),
     }
@@ -860,7 +860,7 @@ def set_active_companion(db: Session, *, child_id: int, dragon_id: int) -> dict:
     db.flush()
     return {
         "child_id": child_id,
-        "active_companion": child_dragon_payload(dragon),
+        "active_companion": child_dragon_payload(db, dragon),
     }
 
 
@@ -955,11 +955,12 @@ def build_eggs_payload(db: Session, child_id: int) -> dict:
 def build_dragons_payload(db: Session, child_id: int) -> dict:
     ensure_catalog_seeded(db)
     dragons = list(db.scalars(select(ChildDragon).where(ChildDragon.child_id == child_id).order_by(ChildDragon.id.asc())).all())
+    items = child_item_quantities(db, child_id)
     return {
         "child_id": child_id,
-        "dragons": [child_dragon_payload(dragon) for dragon in dragons],
+        "dragons": [child_dragon_payload(db, dragon, items=items) for dragon in dragons],
         "active_companion": next(
-            (child_dragon_payload(dragon) for dragon in dragons if dragon.active_companion),
+            (child_dragon_payload(db, dragon, items=items) for dragon in dragons if dragon.active_companion),
             None,
         ),
     }
@@ -985,6 +986,8 @@ def build_bestiary_payload(db: Session, child_id: int) -> dict:
         dragon_stage = dragon.stage.value if dragon else None
         artifact_key = family["legendary_artifact"]
         egg_payload = child_egg_payload(db, egg, items=items) if egg else None
+        dragon_payload = child_dragon_payload(db, dragon, items=items) if dragon else None
+        evolution_payload = dragon_payload or egg_payload
         families.append(
             {
                 "family_id": family_id,
@@ -995,14 +998,20 @@ def build_bestiary_payload(db: Session, child_id: int) -> dict:
                 "dragon_owned": dragon is not None,
                 "current_egg_state": egg_state,
                 "current_dragon_stage": dragon_stage,
+                "dragon_progress_percent": dragon.progress if dragon else None,
+                "next_dragon_stage": dragon_payload["next_stage"] if dragon_payload else None,
                 "active_companion": bool(dragon and dragon.active_companion),
                 "legendary_unlocked": bool(dragon and dragon.stage == DragonStage.LEGENDARY),
                 "progress_percent": bestiary_progress_percent(egg, dragon),
                 "egg_progress_percent": egg.progress if egg else None,
                 "next_egg_state": egg_payload["next_state"] if egg_payload else None,
-                "required_resources": egg_payload["required_resources"] if egg_payload else [],
-                "can_evolve": egg_payload["can_evolve"] if egg_payload else False,
+                "requirements": evolution_payload["requirements"] if evolution_payload else {},
+                "required_resources": evolution_payload["required_resources"] if evolution_payload else [],
+                "can_evolve": evolution_payload["can_evolve"] if evolution_payload else False,
                 "egg": egg_payload,
+                "dragon": dragon_payload,
+                "dragon_required_resources": dragon_payload["required_resources"] if dragon_payload else [],
+                "dragon_can_evolve": dragon_payload["can_evolve"] if dragon_payload else False,
                 "egg_asset_key": f"egg_{family_id}_{egg_state or 'locked'}",
                 "dragon_asset_key": f"dragon_{family_id}_{dragon_stage or 'locked'}",
                 "egg_states": state_unlocks(EGG_STATES, egg_state),
@@ -1078,16 +1087,7 @@ def child_egg_payload(db: Session, egg: ChildEgg, *, items: dict[str, int] | Non
             item.item_key: item.quantity
             for item in db.scalars(select(ItemInventory).where(ItemInventory.child_id == egg.child_id)).all()
         }
-    required_resources = [
-        {
-            "item_key": item_key,
-            "title": ITEM_CATALOG.get(item_key, {"title": item_key})["title"],
-            "owned_quantity": items.get(item_key, 0),
-            "required_quantity": required_quantity,
-            "is_satisfied": items.get(item_key, 0) >= required_quantity,
-        }
-        for item_key, required_quantity in requirements.items()
-    ]
+    required_resources = required_resource_payloads(requirements, items)
     return {
         "id": egg.id,
         "child_id": egg.child_id,
@@ -1119,17 +1119,49 @@ def egg_next_action_requirements(egg: ChildEgg) -> dict[str, int]:
     return {"fragment_oeuf": 1}
 
 
-def child_dragon_payload(dragon: ChildDragon) -> dict:
+def child_item_quantities(db: Session, child_id: int) -> dict[str, int]:
+    return {
+        item.item_key: item.quantity
+        for item in db.scalars(select(ItemInventory).where(ItemInventory.child_id == child_id)).all()
+    }
+
+
+def required_resource_payloads(requirements: dict[str, int], items: dict[str, int]) -> list[dict]:
+    return [
+        {
+            "item_key": item_key,
+            "title": ITEM_CATALOG.get(item_key, {"title": item_key})["title"],
+            "owned_quantity": items.get(item_key, 0),
+            "required_quantity": required_quantity,
+            "is_satisfied": items.get(item_key, 0) >= required_quantity,
+        }
+        for item_key, required_quantity in requirements.items()
+    ]
+
+
+def child_dragon_payload(db: Session, dragon: ChildDragon, *, items: dict[str, int] | None = None) -> dict:
+    evolution = DRAGON_EVOLUTION_REQUIREMENTS.get(dragon.stage)
+    requirements = dict(evolution["items"]) if evolution else {}
+    next_stage = evolution["next_stage"].value if evolution else None
+    if items is None:
+        items = child_item_quantities(db, dragon.child_id)
+    required_resources = required_resource_payloads(requirements, items)
+    can_evolve = bool(evolution) and all(resource["is_satisfied"] for resource in required_resources)
     return {
         "id": dragon.id,
         "child_id": dragon.child_id,
         "dragon_key": dragon.dragon_key,
         "title": DRAGON_CATALOG.get(dragon.dragon_key, dragon.dragon_key),
         "stage": dragon.stage.value,
+        "current_stage": dragon.stage.value,
         "progress_percent": dragon.progress,
         "active_companion": dragon.active_companion,
         "asset_key": f"{dragon.dragon_key}_{dragon.stage.value}",
-        "next_evolution": DRAGON_EVOLUTION_REQUIREMENTS.get(dragon.stage),
+        "next_stage": next_stage,
+        "requirements": requirements,
+        "required_resources": required_resources,
+        "can_evolve": can_evolve,
+        "next_evolution": {"next_stage": next_stage, "items": requirements} if evolution else None,
     }
 
 

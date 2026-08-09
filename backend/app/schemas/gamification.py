@@ -88,10 +88,27 @@ class DragonResponse(BaseModel):
     dragon_key: str
     title: str
     stage: str
+    current_stage: str
     progress_percent: int
     active_companion: bool
     asset_key: str
+    next_stage: str | None
+    requirements: dict[str, int]
+    required_resources: list[RequiredResourceResponse]
+    can_evolve: bool
     next_evolution: dict[str, Any] | None
+
+
+class DragonsResponse(BaseModel):
+    child_id: int
+    dragons: list[DragonResponse]
+    active_companion: DragonResponse | None
+
+
+class DragonEvolutionResponse(BaseModel):
+    dragon: DragonResponse
+    inventory: InventoryResponse
+    progress: dict[str, Any]
 
 
 class DuplicateCompensationResponse(BaseModel):
@@ -157,14 +174,20 @@ class BestiaryFamilyResponse(BaseModel):
     dragon_owned: bool
     current_egg_state: str | None
     current_dragon_stage: str | None
+    dragon_progress_percent: int | None
+    next_dragon_stage: str | None
     active_companion: bool
     legendary_unlocked: bool
     progress_percent: int
     egg_progress_percent: int | None
     next_egg_state: str | None
+    requirements: dict[str, int]
     required_resources: list[RequiredResourceResponse]
     can_evolve: bool
     egg: EggResponse | None
+    dragon: DragonResponse | None
+    dragon_required_resources: list[RequiredResourceResponse]
+    dragon_can_evolve: bool
     egg_asset_key: str
     dragon_asset_key: str
     egg_states: list[StateUnlockResponse]

@@ -12,6 +12,8 @@ from app.schemas.gamification import (
     BestiaryResponse,
     ChestCatalogResponse,
     CrystalBalanceResponse,
+    DragonEvolutionResponse,
+    DragonsResponse,
     EggEvolutionResponse,
     EggsResponse,
     InventoryResponse,
@@ -191,7 +193,7 @@ def hatch_child_egg(
     return success_response(payload, message="Oeuf eclos.")
 
 
-@router.get("/children/{child_id}/dragons")
+@router.get("/children/{child_id}/dragons", response_model=SuccessResponse[DragonsResponse])
 def get_child_dragons(child_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     ensure_child_access(db, current_user, child_id)
     return success_response(build_dragons_payload(db, child_id))
@@ -227,7 +229,7 @@ def get_child_bestiary(child_id: int, db: Session = Depends(get_db), current_use
     return success_response(build_bestiary_payload(db, child_id))
 
 
-@router.post("/children/{child_id}/dragons/{dragon_id}/evolve")
+@router.post("/children/{child_id}/dragons/{dragon_id}/evolve", response_model=SuccessResponse[DragonEvolutionResponse])
 def evolve_child_dragon(
     child_id: int,
     dragon_id: int,
