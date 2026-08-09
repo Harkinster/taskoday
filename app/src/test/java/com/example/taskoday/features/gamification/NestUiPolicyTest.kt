@@ -4,6 +4,7 @@ import com.example.taskoday.core.ui.format.toTaskodayDisplayLabel
 import com.example.taskoday.data.remote.dto.EggDto
 import com.example.taskoday.data.remote.dto.InventoryDto
 import com.example.taskoday.data.remote.dto.InventoryItemDto
+import com.example.taskoday.data.remote.dto.StateUnlockDto
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -161,6 +162,53 @@ class NestUiPolicyTest {
     @Test
     fun `missing next state stays absent`() {
         assertNull(eggNextStateLabel(braiseEgg(nextState = null)))
+    }
+
+    @Test
+    fun `dragon next stage follows the first locked stage after current stage`() {
+        assertEquals(
+            "Jeune",
+            nextDragonStageLabel(
+                currentStage = "baby",
+                stages =
+                    listOf(
+                        StateUnlockDto("baby", unlocked = true),
+                        StateUnlockDto("young", unlocked = false),
+                        StateUnlockDto("adult", unlocked = false),
+                    ),
+            ),
+        )
+    }
+
+    @Test
+    fun `dragon next stage is absent at maximum stage`() {
+        assertNull(
+            nextDragonStageLabel(
+                currentStage = "adult",
+                stages =
+                    listOf(
+                        StateUnlockDto("baby", unlocked = true),
+                        StateUnlockDto("young", unlocked = true),
+                        StateUnlockDto("adult", unlocked = true),
+                    ),
+            ),
+        )
+    }
+
+    @Test
+    fun `dragon next stage falls back to first locked stage when current stage is unknown`() {
+        assertEquals(
+            "Adulte",
+            nextDragonStageLabel(
+                currentStage = "ancient",
+                stages =
+                    listOf(
+                        StateUnlockDto("baby", unlocked = true),
+                        StateUnlockDto("young", unlocked = true),
+                        StateUnlockDto("medium", unlocked = false),
+                    ),
+            ),
+        )
     }
 
     private fun eggUiItem(
