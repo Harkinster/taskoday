@@ -306,6 +306,7 @@ fun TaskodayApp() {
                     },
                     onOpenInventory = { navController.navigate(TaskodayDestination.Inventory.route) },
                     onOpenDragons = { navController.navigate(TaskodayDestination.Dragons.route) },
+                    onOpenEggs = { navController.navigate(TaskodayDestination.Eggs.route) },
                     onOpenWishes = { navController.navigate(TaskodayDestination.Shop.createRoute(TaskodayDestination.Shop.SECTION_WISHES)) },
                     onOpenChests = { navController.navigate(TaskodayDestination.Shop.createRoute(TaskodayDestination.Shop.SECTION_CHESTS)) },
                     onOpenScrolls = { navController.navigate(TaskodayDestination.Scrolls.route) },

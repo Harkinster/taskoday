@@ -97,6 +97,7 @@ fun NestScreen(
     onRecentRewardConsumed: () -> Unit = {},
     onOpenInventory: () -> Unit,
     onOpenDragons: () -> Unit,
+    onOpenEggs: () -> Unit,
     onOpenWishes: () -> Unit,
     onOpenChests: () -> Unit,
     onOpenScrolls: () -> Unit,
@@ -104,7 +105,6 @@ fun NestScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var activeCompanionKey by rememberSaveable { mutableStateOf("dragon_pyron") }
-    var followedEggKey by rememberSaveable { mutableStateOf("egg_pyron") }
     var visibleRecentReward by remember { mutableStateOf<RecentNestReward?>(null) }
     val dragons =
         if (uiState.hasRemoteSession) {
@@ -114,16 +114,11 @@ fun NestScreen(
         } else {
             sampleDragons
         }
-    val eggs =
+    val nestEggs =
         if (uiState.hasRemoteSession) {
-            uiState.bestiary?.families.orEmpty().map { family ->
-                family.toEggUiItem(
-                    egg = uiState.eggs?.eggs.orEmpty().firstOrNull { it.eggKey == "oeuf_${family.familyId}" },
-                    inventory = uiState.inventory,
-                )
-            }
+            uiState.eggs?.eggs.orEmpty().map { egg -> egg.toUiItem(uiState.inventory) }
         } else {
-            sampleEggs
+            emptyList()
         }
     val activeDragon =
         if (uiState.hasRemoteSession) {
@@ -131,9 +126,7 @@ fun NestScreen(
         } else {
             dragons.firstOrNull { dragon -> dragon.key == activeCompanionKey }
         }
-    val followedEgg =
-        eggs.firstOrNull { egg -> !egg.locked && egg.key == followedEggKey }
-            ?: eggs.firstOrNull { egg -> !egg.locked }
+    val activeNestEgg = selectActiveNestEgg(nestEggs)
     val progress = uiState.progress
     val hasEmptyNestProgress =
         uiState.hasRemoteSession &&
@@ -199,7 +192,7 @@ fun NestScreen(
         item {
             ActiveNestDisplayCard(
                 dragon = activeDragon,
-                egg = followedEgg,
+                egg = activeNestEgg,
                 onOpenBestiary = onOpenDragons,
             )
         }
@@ -232,22 +225,12 @@ fun NestScreen(
                 onOpenWishes = onOpenWishes,
             )
         }
-        followedEgg?.let { egg ->
-            item {
-                EggProgressCard(
-                    title = egg.title,
-                    status = egg.status,
-                    requirements = egg.requirements,
-                    progress = egg.progress,
-                    assetResId = egg.assetResId,
-                    contentDescription = egg.contentDescription,
-                    locked = egg.locked,
-                    materialLabel = egg.materialLabel,
-                    actionLabel = egg.actionLabel,
-                    actionEnabled = egg.actionEnabled,
-                    onAction = { egg.id?.let(viewModel::evolveEgg) },
-                )
-            }
+        item {
+            NestActiveEggCard(
+                egg = activeNestEgg,
+                onOpenEggs = onOpenEggs,
+                onEvolveEgg = { activeNestEgg?.id?.let(viewModel::evolveEgg) },
+            )
         }
     }
 }
@@ -815,7 +798,7 @@ private fun ActiveNestDisplayCard(
             )
         }
         Text(
-            text = dragon?.nextStep ?: egg?.requirements.orEmpty(),
+            text = dragon?.nextStep ?: egg?.let { "${it.progressPercent}% de progression" }.orEmpty(),
             style = MaterialTheme.typography.bodySmall,
             color = InkMuted,
             maxLines = 1,
@@ -827,6 +810,150 @@ private fun ActiveNestDisplayCard(
             onClick = onOpenBestiary,
             style = FantasyButtonStyle.Quiet,
             modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+@Composable
+private fun NestActiveEggCard(
+    egg: EggUiItem?,
+    onOpenEggs: () -> Unit,
+    onEvolveEgg: () -> Unit,
+) {
+    if (egg == null) {
+        FantasyStateCard(
+            title = "Aucun œuf ne repose encore dans ton Nid.",
+            message = "Continue tes aventures pour en découvrir.",
+            assetResId = NestAssets.interfaceAsset("egg_locked"),
+            assetDescription = "Œuf à découvrir",
+        )
+        FantasyButton(
+            text = "Voir mes œufs",
+            onClick = onOpenEggs,
+            modifier = Modifier.fillMaxWidth(),
+            style = FantasyButtonStyle.Outline,
+        )
+        return
+    }
+
+    FantasyCard(tone = FantasyTone.Gold, contentPadding = PaddingValues(14.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            FantasyAssetBubble(
+                assetResId = egg.assetResId,
+                contentDescription = egg.contentDescription,
+                size = 64.dp,
+            )
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = egg.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = WoodBrownDark,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                egg.familyLabel?.let { family ->
+                    Text(
+                        text = "Famille $family",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = InkMuted,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Text(
+                    text = egg.status,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MossGreen,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            FantasyBadge(text = "${egg.progressPercent}%", tone = FantasyTone.Violet)
+        }
+        FantasyProgressBar(progress = egg.progress)
+        egg.nextStateLabel?.let { nextState ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(text = "Prochaine étape", style = MaterialTheme.typography.bodySmall, color = InkMuted)
+                Text(
+                    text = nextState,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = WoodBrownDark,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+            if (egg.resourceRows.isEmpty()) {
+                Text(
+                    text = "Aucune ressource requise pour le moment.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = InkMuted,
+                )
+            } else {
+                egg.resourceRows.forEach { resource ->
+                    EggResourceRequirementRow(resource)
+                }
+            }
+        }
+        if (!egg.actionLabel.isNullOrBlank()) {
+            FantasyButton(
+                text = egg.actionLabel,
+                onClick = onEvolveEgg,
+                modifier = Modifier.fillMaxWidth(),
+                style = FantasyButtonStyle.Quiet,
+                enabled = egg.actionEnabled && egg.id != null,
+            )
+        }
+        FantasyButton(
+            text = "Voir mes œufs",
+            onClick = onOpenEggs,
+            modifier = Modifier.fillMaxWidth(),
+            style = FantasyButtonStyle.Outline,
+        )
+    }
+}
+
+@Composable
+private fun EggResourceRequirementRow(resource: EggResourceUiItem) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        FantasyAssetBubble(
+            assetResId = NestAssets.itemAsset(resource.key, resource.category),
+            contentDescription = resource.title,
+            size = 34.dp,
+        )
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+            Text(
+                text = resource.title,
+                style = MaterialTheme.typography.bodyMedium,
+                color = WoodBrownDark,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = "${resource.ownedQuantity} possédés • ${resource.requiredQuantity} nécessaires",
+                style = MaterialTheme.typography.bodySmall,
+                color = InkMuted,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        FantasyBadge(
+            text =
+                if (resource.missingQuantity > 0) {
+                    "Manque ${resource.missingQuantity}"
+                } else {
+                    "OK"
+                },
+            tone = if (resource.missingQuantity > 0) FantasyTone.Ember else FantasyTone.Moss,
         )
     }
 }
@@ -927,7 +1054,6 @@ private fun BestiaryPreviewCard(
     dragons: List<DragonUiItem>,
     eggs: List<EggUiItem>,
     activeCompanionKey: String,
-    followedEggKey: String,
     onSelectDragon: (DragonUiItem) -> Unit,
     onSelectEgg: (EggUiItem) -> Unit,
     onOpenDragons: () -> Unit,
@@ -965,15 +1091,14 @@ private fun BestiaryPreviewCard(
             )
         }
         eggs.take(1).forEach { egg ->
-            val isFollowed = egg.key == followedEggKey && activeCompanionKey.isBlank()
             BestiaryChoiceRow(
                 title = egg.title,
                 subtitle = "Œuf découvert",
                 assetResId = egg.assetResId,
                 contentDescription = egg.contentDescription,
-                actionLabel = if (isFollowed) "Suivi" else "Suivre",
-                enabled = !isFollowed,
-                badgeTone = if (isFollowed) FantasyTone.Moss else FantasyTone.Gold,
+                actionLabel = "Voir",
+                enabled = true,
+                badgeTone = FantasyTone.Gold,
                 onClick = { onSelectEgg(egg) },
             )
         }
@@ -1273,6 +1398,17 @@ data class LootUiItem(
     val usageLabel: String,
 )
 
+data class EggResourceUiItem(
+    val key: String,
+    val title: String,
+    val ownedQuantity: Int,
+    val requiredQuantity: Int,
+    val category: String = "material",
+) {
+    val missingQuantity: Int
+        get() = (requiredQuantity - ownedQuantity).coerceAtLeast(0)
+}
+
 data class EggUiItem(
     val key: String,
     val title: String,
@@ -1287,6 +1423,11 @@ data class EggUiItem(
     val actionEnabled: Boolean = true,
     val id: Long? = null,
     val familyKey: String = key.removePrefix("egg_").removePrefix("oeuf_"),
+    val familyLabel: String? = null,
+    val progressPercent: Int = (progress.coerceIn(0f, 1f) * 100).toInt(),
+    val nextStateLabel: String? = null,
+    val resourceRows: List<EggResourceUiItem> = emptyList(),
+    val hatched: Boolean = false,
 )
 
 data class DragonUiItem(
@@ -1334,24 +1475,60 @@ private fun ChestDto.toUiItem(): LootUiItem =
         usageLabel = "À ouvrir dans la Caverne",
     )
 
+internal fun selectActiveNestEgg(eggs: List<EggUiItem>): EggUiItem? {
+    val ownedEggs = eggs.filter { egg -> !egg.locked && !egg.hatched && egg.id != null }
+    return ownedEggs.firstOrNull { egg -> egg.nextStateLabel != null && egg.progressPercent in 1..99 }
+        ?: ownedEggs.firstOrNull { egg -> egg.nextStateLabel != null }
+        ?: ownedEggs.firstOrNull()
+}
+
+internal fun eggResourceRows(
+    egg: EggDto?,
+    inventory: InventoryDto?,
+): List<EggResourceUiItem> {
+    if (egg == null) return emptyList()
+    val inventoryItemsByKey = inventory?.items.orEmpty().associateBy { item -> item.key }
+    return egg.requirements.entries
+        .sortedBy { (key, _) -> key }
+        .map { (key, required) ->
+            val inventoryItem = inventoryItemsByKey[key]
+            EggResourceUiItem(
+                key = key,
+                title = key.toTaskodayDisplayLabel(),
+                ownedQuantity = inventoryItem?.quantity ?: 0,
+                requiredQuantity = required,
+                category = inventoryItem?.category ?: "material",
+            )
+        }
+}
+
+internal fun eggNextStateLabel(egg: EggDto): String? = egg.nextState?.toFantasyStateLabel()
+
 private fun EggDto.toUiItem(inventory: InventoryDto?): EggUiItem {
     val family = eggKey.removePrefix("oeuf_").removePrefix("egg_")
     val actionState = eggEvolutionActionState(this, inventory)
+    val displayTitle = title.ifBlank { eggKey.toTaskodayDisplayLabel() }
+    val progress = progressPercent.coerceIn(0, 100)
     val requirementsLabel =
         actionState.requirementsLabel
     return EggUiItem(
         key = eggKey,
-        title = eggKey.toTaskodayDisplayLabel(),
+        title = displayTitle,
         status = state.toFantasyStateLabel(),
         requirements = requirementsLabel,
-        progress = progressPercent.coerceIn(0, 100) / 100f,
+        progress = progress / 100f,
         assetResId = NestAssets.eggAsset(family.toVisualFamily(), state),
-        contentDescription = "$title, état ${state.toFantasyStateLabel()}",
-        materialLabel = "$progressPercent% de progression",
+        contentDescription = "$displayTitle, état ${state.toFantasyStateLabel()}",
+        materialLabel = "$progress% de progression",
         actionLabel = actionState.label,
         actionEnabled = actionState.enabled,
         id = id,
         familyKey = family,
+        familyLabel = family.toTaskodayDisplayLabel(),
+        progressPercent = progress,
+        nextStateLabel = eggNextStateLabel(this),
+        resourceRows = eggResourceRows(this, inventory),
+        hatched = isHatched(),
     )
 }
 
@@ -1403,22 +1580,31 @@ private fun BestiaryFamilyDto.toEggUiItem(
     inventory: InventoryDto?,
 ): EggUiItem {
     val actionState = eggEvolutionActionState(egg, inventory)
+    val progress = (egg?.progressPercent ?: progressPercent).coerceIn(0, 100)
     return EggUiItem(
         key = "oeuf_$familyId",
         title = "Œuf $familyName",
         status = currentEggState?.toFantasyStateLabel() ?: "Verrouillé",
         requirements = if (eggOwned) actionState.requirementsLabel else "Œuf non découvert",
-        progress = progressPercent.coerceIn(0, 100) / 100f,
+        progress = progress / 100f,
         assetResId = NestAssets.eggAsset(familyId.toVisualFamily(), currentEggState ?: "sleeping"),
         locked = !eggOwned,
         contentDescription = "Œuf $familyName, ${currentEggState?.toFantasyStateLabel() ?: "verrouillé"}",
-        materialLabel = "$progressPercent% de progression",
+        materialLabel = "$progress% de progression",
         actionLabel = if (eggOwned) actionState.label else null,
         actionEnabled = eggOwned && actionState.enabled,
         id = egg?.id,
         familyKey = familyId,
+        familyLabel = familyName,
+        progressPercent = progress,
+        nextStateLabel = egg?.let(::eggNextStateLabel),
+        resourceRows = eggResourceRows(egg, inventory),
+        hatched = egg?.isHatched() == true,
     )
 }
+
+private fun EggDto.isHatched(): Boolean =
+    !hatchedAt.isNullOrBlank() || status.equals("hatched", ignoreCase = true)
 
 private fun String.toVisualFamily(): String =
     when (lowercase()) {

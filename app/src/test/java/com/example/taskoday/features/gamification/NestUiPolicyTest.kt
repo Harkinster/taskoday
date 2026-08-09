@@ -6,6 +6,7 @@ import com.example.taskoday.data.remote.dto.InventoryDto
 import com.example.taskoday.data.remote.dto.InventoryItemDto
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -63,7 +64,127 @@ class NestUiPolicyTest {
         assertEquals("Évolution...", state.label)
     }
 
-    private fun braiseEgg() =
+    @Test
+    fun `no owned backend egg leaves nest without active egg`() {
+        assertNull(selectActiveNestEgg(emptyList()))
+        assertNull(
+            selectActiveNestEgg(
+                listOf(
+                    eggUiItem(key = "egg_pyron", id = null, progressPercent = 80, nextStateLabel = "Lumineux"),
+                    eggUiItem(key = "oeuf_braise", id = 1, progressPercent = 30, nextStateLabel = "Tiède", locked = true),
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun `single backend egg is selected for the nest`() {
+        val selected =
+            selectActiveNestEgg(
+                listOf(
+                    eggUiItem(key = "oeuf_braise", id = 1, progressPercent = 50, nextStateLabel = "Lumineux"),
+                ),
+            )
+
+        assertEquals("oeuf_braise", selected?.key)
+    }
+
+    @Test
+    fun `old sample key without backend id does not influence nest selection`() {
+        val selected =
+            selectActiveNestEgg(
+                listOf(
+                    eggUiItem(key = "egg_pyron", id = null, progressPercent = 90, nextStateLabel = "Éclosion"),
+                    eggUiItem(key = "oeuf_braise", id = 12, progressPercent = 25, nextStateLabel = "Tiède"),
+                ),
+            )
+
+        assertEquals("oeuf_braise", selected?.key)
+    }
+
+    @Test
+    fun `multiple eggs prefer an egg currently in progress`() {
+        val selected =
+            selectActiveNestEgg(
+                listOf(
+                    eggUiItem(key = "oeuf_lunaire", id = 2, progressPercent = 0, nextStateLabel = "Tiède"),
+                    eggUiItem(key = "oeuf_braise", id = 1, progressPercent = 40, nextStateLabel = "Lumineux"),
+                ),
+            )
+
+        assertEquals("oeuf_braise", selected?.key)
+    }
+
+    @Test
+    fun `multiple eggs fall back deterministically to the first owned egg`() {
+        val selected =
+            selectActiveNestEgg(
+                listOf(
+                    eggUiItem(key = "oeuf_lunaire", id = 2, progressPercent = 0, nextStateLabel = null),
+                    eggUiItem(key = "oeuf_braise", id = 1, progressPercent = 0, nextStateLabel = null),
+                ),
+            )
+
+        assertEquals("oeuf_lunaire", selected?.key)
+    }
+
+    @Test
+    fun `sufficient resources expose readable requirement rows`() {
+        val rows =
+            eggResourceRows(
+                egg = braiseEgg(),
+                inventory = inventory(pommeDragon = 3, petitCristal = 2, pierreChaude = 1),
+            )
+
+        assertEquals(3, rows.size)
+        assertTrue(rows.all { row -> row.missingQuantity == 0 })
+        assertEquals("Pomme dragon", rows.first { row -> row.key == "pomme_dragon" }.title)
+    }
+
+    @Test
+    fun `insufficient resources expose missing quantity`() {
+        val rows =
+            eggResourceRows(
+                egg = braiseEgg(),
+                inventory = inventory(pommeDragon = 1, petitCristal = 2, pierreChaude = 0),
+            )
+
+        assertEquals(2, rows.first { row -> row.key == "pomme_dragon" }.missingQuantity)
+        assertEquals(1, rows.first { row -> row.key == "pierre_chaude" }.missingQuantity)
+    }
+
+    @Test
+    fun `next state label is displayed when available`() {
+        assertEquals("Tiède", eggNextStateLabel(braiseEgg(nextState = "warm")))
+    }
+
+    @Test
+    fun `missing next state stays absent`() {
+        assertNull(eggNextStateLabel(braiseEgg(nextState = null)))
+    }
+
+    private fun eggUiItem(
+        key: String,
+        id: Long?,
+        progressPercent: Int,
+        nextStateLabel: String?,
+        locked: Boolean = false,
+        hatched: Boolean = false,
+    ) = EggUiItem(
+        key = key,
+        title = key,
+        status = "Endormi",
+        requirements = "",
+        progress = progressPercent / 100f,
+        assetResId = 0,
+        locked = locked,
+        id = id,
+        progressPercent = progressPercent,
+        nextStateLabel = nextStateLabel,
+        hatched = hatched,
+    )
+
+    private fun braiseEgg(nextState: String? = "warm") =
         EggDto(
             id = 1,
             childId = 19,
@@ -72,7 +193,7 @@ class NestUiPolicyTest {
             status = "available",
             state = "sleeping",
             progressPercent = 0,
-            nextState = "warm",
+            nextState = nextState,
             assetKey = "oeuf_braise_sleeping",
             requirements = mapOf("pomme_dragon" to 3, "petit_cristal" to 2, "pierre_chaude" to 1),
         )
