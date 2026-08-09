@@ -4,11 +4,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.taskoday.data.remote.dto.BestiaryDto
 import com.example.taskoday.data.remote.dto.CrystalBalanceDto
+import com.example.taskoday.data.remote.dto.DragonDto
 import com.example.taskoday.data.remote.dto.DragonsDto
+import com.example.taskoday.data.remote.dto.EggEvolutionDto
 import com.example.taskoday.data.remote.dto.EggsDto
 import com.example.taskoday.data.remote.dto.InventoryDto
 import com.example.taskoday.data.remote.dto.NestProgressDto
 import com.example.taskoday.data.remote.dto.ScrollsDto
+import com.example.taskoday.data.repository.NestSnapshot
 import com.example.taskoday.data.repository.NestRepository
 import com.example.taskoday.data.repository.toRemoteUserMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -31,7 +34,19 @@ data class NestUiState(
     val dragons: DragonsDto? = null,
     val scrolls: ScrollsDto? = null,
     val userMessage: String? = null,
+    val hatchingCelebration: NestHatchingCelebration? = null,
 )
+
+data class NestHatchingCelebration(
+    val eventId: Long,
+    val dragonId: Long? = null,
+    val dragonKey: String? = null,
+    val dragonTitle: String? = null,
+    val dragonStage: String? = null,
+) {
+    val hasDragonDetails: Boolean
+        get() = dragonId != null && !dragonTitle.isNullOrBlank()
+}
 
 @HiltViewModel
 class NestViewModel
@@ -41,6 +56,7 @@ class NestViewModel
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(NestUiState())
         val uiState: StateFlow<NestUiState> = _uiState.asStateFlow()
+        private var nextHatchingEventId = 0L
 
         init {
             observeProgressChanges()
@@ -66,16 +82,9 @@ class NestViewModel
                     .loadSnapshot()
                     .onSuccess { snapshot ->
                         _uiState.update {
-                            it.copy(
+                            it.withSnapshot(snapshot).copy(
                                 hasRemoteSession = true,
                                 isLoading = false,
-                                progress = snapshot.progress,
-                                crystals = snapshot.crystals,
-                                inventory = snapshot.inventory,
-                                bestiary = snapshot.bestiary,
-                                eggs = snapshot.eggs,
-                                dragons = snapshot.dragons,
-                                scrolls = snapshot.scrolls,
                             )
                         }
                     }.onFailure { error ->
@@ -106,19 +115,44 @@ class NestViewModel
                 nestRepository
                     .evolveEgg(eggId)
                     .onSuccess { result ->
-                        val message =
-                            if (result.hatched) {
-                                "${result.dragon?.title ?: "Le dragon"} a éclos."
-                            } else {
-                                "L'œuf évolue vers ${result.egg.state}."
+                        if (result.hatched) {
+                            val snapshotResult = nestRepository.loadSnapshot()
+                            val celebration =
+                                hatchingCelebrationFromEvolution(
+                                    eventId = nextHatchingEventId++,
+                                    result = result,
+                                    refreshedDragons = snapshotResult.getOrNull()?.dragons,
+                                )
+                            _uiState.update { state ->
+                                val refreshedState =
+                                    snapshotResult
+                                        .getOrNull()
+                                        ?.let { snapshot -> state.withSnapshot(snapshot) }
+                                        ?: state
+                                refreshedState.copy(
+                                    isSubmitting = false,
+                                    isLoading = false,
+                                    inventory = snapshotResult.getOrNull()?.inventory ?: result.inventory,
+                                    hatchingCelebration = celebration,
+                                    userMessage = null,
+                                )
                             }
-                        _uiState.update { it.copy(isSubmitting = false, userMessage = message) }
-                        refresh()
+                        } else {
+                            _uiState.update {
+                                it.copy(
+                                    isSubmitting = false,
+                                    userMessage = "L'œuf évolue vers ${result.egg.state}.",
+                                    hatchingCelebration = null,
+                                )
+                            }
+                            refresh()
+                        }
                     }.onFailure { error ->
                         _uiState.update {
                             it.copy(
                                 isSubmitting = false,
                                 userMessage = error.toRemoteUserMessage("Impossible de faire évoluer cet œuf."),
+                                hatchingCelebration = null,
                             )
                         }
                     }
@@ -176,4 +210,48 @@ class NestViewModel
         fun consumeMessage() {
             _uiState.update { it.copy(userMessage = null) }
         }
+
+        fun consumeHatchingCelebration() {
+            _uiState.update(::consumeHatchingCelebrationState)
+        }
     }
+
+private fun NestUiState.withSnapshot(snapshot: NestSnapshot): NestUiState =
+    copy(
+        progress = snapshot.progress,
+        crystals = snapshot.crystals,
+        inventory = snapshot.inventory,
+        bestiary = snapshot.bestiary,
+        eggs = snapshot.eggs,
+        dragons = snapshot.dragons,
+        scrolls = snapshot.scrolls,
+    )
+
+internal fun hatchingCelebrationFromEvolution(
+    eventId: Long,
+    result: EggEvolutionDto?,
+    refreshedDragons: DragonsDto?,
+): NestHatchingCelebration? {
+    if (result?.hatched != true) return null
+    val dragon = findHatchedDragon(returnedDragon = result.dragon, refreshedDragons = refreshedDragons)
+    return NestHatchingCelebration(
+        eventId = eventId,
+        dragonId = dragon?.id,
+        dragonKey = dragon?.dragonKey,
+        dragonTitle = dragon?.title,
+        dragonStage = dragon?.stage,
+    )
+}
+
+internal fun consumeHatchingCelebrationState(state: NestUiState): NestUiState =
+    state.copy(hatchingCelebration = null)
+
+private fun findHatchedDragon(
+    returnedDragon: DragonDto?,
+    refreshedDragons: DragonsDto?,
+): DragonDto? {
+    if (refreshedDragons == null) return returnedDragon
+    if (returnedDragon == null) return null
+    return refreshedDragons.dragons.firstOrNull { dragon -> dragon.id == returnedDragon.id }
+        ?: refreshedDragons.dragons.firstOrNull { dragon -> dragon.dragonKey == returnedDragon.dragonKey }
+}

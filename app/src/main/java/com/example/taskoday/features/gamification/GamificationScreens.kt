@@ -43,6 +43,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.taskoday.core.ui.component.fantasy.EggProgressCard
 import com.example.taskoday.core.ui.component.fantasy.ChestCard
@@ -232,6 +233,16 @@ fun NestScreen(
                 onEvolveEgg = { activeNestEgg?.id?.let(viewModel::evolveEgg) },
             )
         }
+    }
+    uiState.hatchingCelebration?.let { celebration ->
+        HatchingCelebrationDialog(
+            celebration = celebration,
+            onDiscoverDragon = {
+                viewModel.consumeHatchingCelebration()
+                onOpenDragons()
+            },
+            onDismiss = viewModel::consumeHatchingCelebration,
+        )
     }
 }
 
@@ -554,6 +565,99 @@ private fun RecentNestRewardRow(row: RecentNestRewardDisplayRow) {
             maxLines = 1,
         )
     }
+}
+
+@Composable
+private fun HatchingCelebrationDialog(
+    celebration: NestHatchingCelebration,
+    onDiscoverDragon: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val dragonTitle = celebration.dragonTitle?.takeIf { it.isNotBlank() }
+    val familyLabel =
+        celebration.dragonKey
+            ?.removePrefix("dragon_")
+            ?.takeIf { it.isNotBlank() }
+            ?.toTaskodayDisplayLabel()
+    val stageLabel = celebration.dragonStage?.toFantasyStateLabel()
+    Dialog(onDismissRequest = onDismiss) {
+        FantasyCard(tone = FantasyTone.Gold, contentPadding = PaddingValues(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                FantasyAssetBubble(
+                    assetResId = hatchingCelebrationAsset(celebration),
+                    contentDescription = dragonTitle ?: "Dragon découvert",
+                    size = 78.dp,
+                )
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    FantasyBadge(text = "Éclosion", tone = FantasyTone.Moss)
+                    Text(
+                        text = "Un dragon s'éveille !",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = WoodBrownDark,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text =
+                            dragonTitle
+                                ?: "Ton œuf vient d'éclore.",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MagicViolet,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            Text(
+                text = "Une nouvelle créature rejoint ton aventure dans Chronodria.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = InkMuted,
+            )
+            if (celebration.hasDragonDetails) {
+                val details =
+                    listOfNotNull(
+                        familyLabel?.let { "Famille $it" },
+                        stageLabel,
+                    ).joinToString(" • ")
+                if (details.isNotBlank()) {
+                    Text(
+                        text = details,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MossGreen,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Text(
+                    text = "Tu peux maintenant le choisir comme compagnon.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = InkMuted,
+                )
+            }
+            FantasyProgressBar(progress = 1f, height = 6.dp)
+            FantasyButton(
+                text = "Découvrir mon dragon",
+                onClick = onDiscoverDragon,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            FantasyButton(
+                text = "Plus tard",
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth(),
+                style = FantasyButtonStyle.Quiet,
+            )
+        }
+    }
+}
+
+private fun hatchingCelebrationAsset(celebration: NestHatchingCelebration): Int {
+    val dragonKey = celebration.dragonKey ?: return NestAssets.interfaceAsset("nid")
+    val stage = celebration.dragonStage ?: return NestAssets.interfaceAsset("nid")
+    return NestAssets.dragonAsset(dragonKey.removePrefix("dragon_").toVisualFamily(), stage)
 }
 
 private data class RecentNestRewardDisplayRow(
