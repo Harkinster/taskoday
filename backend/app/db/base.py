@@ -4,6 +4,7 @@ from app.db.declarative import Base
 # Import explicite des modeles pour que SQLAlchemy/Alembic detecte les tables.
 from app.models.child import ChildProfile  # noqa: E402,F401
 from app.models.family import Family, FamilyMember  # noqa: E402,F401
+from app.models.family_task import FamilyTask, FamilyTaskAssignee, FamilyTaskOccurrence  # noqa: E402,F401
 from app.models.gamification import (  # noqa: E402,F401
     ChestInventory,
     ChildDragon,

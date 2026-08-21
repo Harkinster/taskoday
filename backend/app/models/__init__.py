@@ -1,5 +1,13 @@
 from app.models.child import ChildProfile
 from app.models.family import Family, FamilyMember, FamilyMemberRole
+from app.models.family_task import (
+    FamilyTask,
+    FamilyTaskAssignee,
+    FamilyTaskOccurrence,
+    FamilyTaskOccurrenceStatus,
+    FamilyTaskPriority,
+    FamilyTaskRecurrence,
+)
 from app.models.gamification import (
     ChestInventory,
     ChestStatus,
@@ -25,6 +33,12 @@ __all__ = [
     "Family",
     "FamilyMember",
     "FamilyMemberRole",
+    "FamilyTask",
+    "FamilyTaskAssignee",
+    "FamilyTaskOccurrence",
+    "FamilyTaskOccurrenceStatus",
+    "FamilyTaskPriority",
+    "FamilyTaskRecurrence",
     "ChestInventory",
     "ChestStatus",
     "ChestType",

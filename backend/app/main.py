@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import settings
-from app.routers import auth, children, families, gamification, missions, pairing, profile, quests, rewards, routines
+from app.routers import auth, children, families, family_tasks, gamification, missions, pairing, profile, quests, rewards, routines
 
 
 def _error_code_from_status(status_code: int) -> str:
@@ -81,6 +81,7 @@ def create_application() -> FastAPI:
 
     application.include_router(auth.router, prefix=settings.api_v1_prefix)
     application.include_router(families.router, prefix=settings.api_v1_prefix)
+    application.include_router(family_tasks.router, prefix=settings.api_v1_prefix)
     application.include_router(pairing.router, prefix=settings.api_v1_prefix)
     application.include_router(children.router, prefix=settings.api_v1_prefix)
     application.include_router(routines.router, prefix=settings.api_v1_prefix)
