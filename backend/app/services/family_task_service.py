@@ -226,6 +226,19 @@ def get_or_create_occurrence(db: Session, *, task: FamilyTask, scheduled_date: d
     return occurrence
 
 
+def get_or_create_occurrences_for_date(
+    db: Session,
+    *,
+    tasks: list[FamilyTask],
+    scheduled_date: date,
+) -> list[FamilyTaskOccurrence]:
+    return [
+        get_or_create_occurrence(db, task=task, scheduled_date=scheduled_date)
+        for task in tasks
+        if is_task_scheduled_for_date(task, scheduled_date)
+    ]
+
+
 def complete_occurrence(
     db: Session,
     *,
@@ -327,12 +340,14 @@ def occurrence_payload(db: Session, occurrence: FamilyTaskOccurrence) -> dict:
         "task_id": task.id,
         "occurrence_id": occurrence.id,
         "title": task.title,
+        "description": task.description,
         "assignees": assignees_payload(db, task),
         "scheduled_date": occurrence.scheduled_date,
         "due_at": task.due_at,
         "due_date": task.due_date,
         "has_due_time": task.due_time is not None,
         "due_time": task.due_time,
+        "recurrence": _enum_value(task.recurrence),
         "status": _enum_value(occurrence.status),
         "validation_required": task.validation_required,
         "gamification_enabled": task.gamification_enabled,

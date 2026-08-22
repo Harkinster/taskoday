@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
@@ -14,10 +14,9 @@ from app.services.family_task_service import (
     ensure_family_member,
     ensure_family_parent,
     get_occurrence_for_member,
-    get_or_create_occurrence,
+    get_or_create_occurrences_for_date,
     get_task_for_member,
     group_items_by_member,
-    is_task_scheduled_for_date,
     normalize_weekdays,
     normalize_due_fields,
     normalize_due_update,
@@ -32,6 +31,8 @@ from app.services.family_task_service import (
 )
 
 router = APIRouter(tags=["family-tasks"])
+
+MAX_OCCURRENCE_RANGE_DAYS = 31
 
 
 @router.get("/families/{family_id}/tasks")
@@ -107,16 +108,11 @@ def family_tasks_today(
     ensure_family_member(db, family_id=family_id, user=current_user)
     scheduled_date = target_date or date.today()
 
-    tasks = db.scalars(
-        select(FamilyTask)
-        .where(FamilyTask.family_id == family_id, FamilyTask.active.is_(True))
-        .order_by(FamilyTask.id.asc())
-    ).all()
-    occurrences = [
-        get_or_create_occurrence(db, task=task, scheduled_date=scheduled_date)
-        for task in tasks
-        if is_task_scheduled_for_date(task, scheduled_date)
-    ]
+    occurrences = get_or_create_occurrences_for_date(
+        db,
+        tasks=_active_family_tasks(db, family_id),
+        scheduled_date=scheduled_date,
+    )
     db.commit()
 
     items = [occurrence_payload(db, occurrence) for occurrence in occurrences]
@@ -126,6 +122,39 @@ def family_tasks_today(
             "date": scheduled_date,
             "items": items,
             "by_member": group_items_by_member(items),
+        }
+    )
+
+
+@router.get("/families/{family_id}/task-occurrences")
+def family_task_occurrences_range(
+    family_id: int,
+    start_date: date,
+    end_date: date,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    ensure_family_member(db, family_id=family_id, user=current_user)
+    dates = _validated_date_range(start_date, end_date)
+    tasks = _active_family_tasks(db, family_id)
+
+    occurrences = []
+    for scheduled_date in dates:
+        occurrences.extend(
+            get_or_create_occurrences_for_date(
+                db,
+                tasks=tasks,
+                scheduled_date=scheduled_date,
+            )
+        )
+    db.commit()
+
+    return success_response(
+        {
+            "family_id": family_id,
+            "start_date": start_date,
+            "end_date": end_date,
+            "items": [occurrence_payload(db, occurrence) for occurrence in occurrences],
         }
     )
 
@@ -274,3 +303,28 @@ def _selected_weekdays_for_recurrence(
             detail="selected_weekdays est requis pour SELECTED_WEEKDAYS.",
         )
     return weekdays_to_storage(days)
+
+
+def _active_family_tasks(db: Session, family_id: int) -> list[FamilyTask]:
+    return db.scalars(
+        select(FamilyTask)
+        .where(FamilyTask.family_id == family_id, FamilyTask.active.is_(True))
+        .order_by(FamilyTask.id.asc())
+    ).all()
+
+
+def _validated_date_range(start_date: date, end_date: date) -> list[date]:
+    if start_date > end_date:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="start_date doit etre avant ou egal a end_date.",
+        )
+
+    days = (end_date - start_date).days + 1
+    if days > MAX_OCCURRENCE_RANGE_DAYS:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"La plage ne peut pas depasser {MAX_OCCURRENCE_RANGE_DAYS} jours.",
+        )
+
+    return [start_date + timedelta(days=offset) for offset in range(days)]

@@ -69,6 +69,16 @@ def _today(client, token: str, family_id: int, target: date) -> dict:
     return response.json()["data"]
 
 
+def _range(client, token: str, family_id: int, start: date, end: date) -> dict:
+    response = client.get(
+        f"{API}/families/{family_id}/task-occurrences",
+        headers=_headers(token),
+        params={"start_date": start.isoformat(), "end_date": end.isoformat()},
+    )
+    assert response.status_code == 200
+    return response.json()["data"]
+
+
 def _item_by_title(today_payload: dict, title: str) -> dict:
     matches = [item for item in today_payload["items"] if item["title"] == title]
     assert len(matches) == 1
@@ -367,3 +377,170 @@ def test_family_task_access_isolated_between_families(client) -> None:
         headers=_headers(parent_b_token),
     )
     assert forbidden_complete.status_code == 404
+
+
+def test_family_task_occurrences_range_generates_recurrences_and_keeps_existing_status(client) -> None:
+    parent_token, parent_id, family_id = _register_parent(client, "family-tasks-range")
+    _, child_id = _register_child_and_attach(client, parent_token, "family-tasks-range")
+    start = date(2026, 8, 17)
+    end = start + timedelta(days=6)
+
+    _create_task(
+        client,
+        parent_token,
+        family_id,
+        {
+            "title": "Range daily",
+            "description": "Every day",
+            "due_date": start.isoformat(),
+            "recurrence": "DAILY",
+            "assignee_user_ids": [child_id],
+        },
+    )
+    _create_task(
+        client,
+        parent_token,
+        family_id,
+        {
+            "title": "Range weekly",
+            "due_date": (start + timedelta(days=2)).isoformat(),
+            "recurrence": "WEEKLY",
+        },
+    )
+    _create_task(
+        client,
+        parent_token,
+        family_id,
+        {
+            "title": "Range selected weekdays",
+            "due_date": start.isoformat(),
+            "recurrence": "SELECTED_WEEKDAYS",
+            "selected_weekdays": ["lundi", "mercredi", "vendredi"],
+        },
+    )
+    _create_task(
+        client,
+        parent_token,
+        family_id,
+        {
+            "title": "Range none",
+            "due_date": (start + timedelta(days=4)).isoformat(),
+        },
+    )
+    _create_task(
+        client,
+        parent_token,
+        family_id,
+        {
+            "title": "Range maison",
+            "due_date": (start + timedelta(days=5)).isoformat(),
+        },
+    )
+    _create_task(
+        client,
+        parent_token,
+        family_id,
+        {
+            "title": "Range multi",
+            "due_date": (start + timedelta(days=3)).isoformat(),
+            "assignee_user_ids": [parent_id, child_id],
+        },
+    )
+    inactive = _create_task(
+        client,
+        parent_token,
+        family_id,
+        {
+            "title": "Range inactive",
+            "due_date": (start + timedelta(days=1)).isoformat(),
+        },
+    )
+    deleted = client.delete(f"{API}/family-tasks/{inactive['id']}", headers=_headers(parent_token))
+    assert deleted.status_code == 200
+
+    payload = _range(client, parent_token, family_id, start, end)
+    assert payload["start_date"] == start.isoformat()
+    assert payload["end_date"] == end.isoformat()
+    items = payload["items"]
+
+    by_title = {}
+    for item in items:
+        by_title.setdefault(item["title"], []).append(item)
+
+    assert len(by_title["Range daily"]) == 7
+    assert len(by_title["Range weekly"]) == 1
+    assert [item["scheduled_date"] for item in by_title["Range weekly"]] == [(start + timedelta(days=2)).isoformat()]
+    assert [item["scheduled_date"] for item in by_title["Range selected weekdays"]] == [
+        start.isoformat(),
+        (start + timedelta(days=2)).isoformat(),
+        (start + timedelta(days=4)).isoformat(),
+    ]
+    assert len(by_title["Range none"]) == 1
+    assert len(by_title["Range maison"]) == 1
+    assert by_title["Range maison"][0]["assignees"] == []
+    assert len(by_title["Range multi"]) == 1
+    assert {assignee["user_id"] for assignee in by_title["Range multi"][0]["assignees"]} == {parent_id, child_id}
+    assert "Range inactive" not in by_title
+
+    daily_first = by_title["Range daily"][0]
+    assert daily_first["description"] == "Every day"
+    assert daily_first["recurrence"] == "DAILY"
+    assert daily_first["due_date"] == start.isoformat()
+    assert daily_first["due_time"] is None
+    assert daily_first["has_due_time"] is False
+
+    completed = client.post(
+        f"{API}/task-occurrences/{daily_first['occurrence_id']}/complete",
+        headers=_headers(parent_token),
+    )
+    assert completed.status_code == 200
+    assert completed.json()["data"]["status"] == "COMPLETED"
+
+    repeated_payload = _range(client, parent_token, family_id, start, end)
+    repeated_items = repeated_payload["items"]
+    assert len(repeated_items) == len(items)
+    assert {item["occurrence_id"] for item in repeated_items} == {item["occurrence_id"] for item in items}
+    repeated_daily_first = next(
+        item
+        for item in repeated_items
+        if item["title"] == "Range daily" and item["scheduled_date"] == start.isoformat()
+    )
+    assert repeated_daily_first["occurrence_id"] == daily_first["occurrence_id"]
+    assert repeated_daily_first["status"] == "COMPLETED"
+
+
+def test_family_task_occurrences_range_rejects_invalid_ranges_and_other_families(client) -> None:
+    parent_a_token, _, family_a_id = _register_parent(client, "family-tasks-range-access-a")
+    parent_b_token, _, _ = _register_parent(client, "family-tasks-range-access-b")
+    start = date(2026, 8, 17)
+
+    _create_task(
+        client,
+        parent_a_token,
+        family_a_id,
+        {
+            "title": "Private range task",
+            "due_date": start.isoformat(),
+        },
+    )
+
+    reversed_range = client.get(
+        f"{API}/families/{family_a_id}/task-occurrences",
+        headers=_headers(parent_a_token),
+        params={"start_date": start.isoformat(), "end_date": (start - timedelta(days=1)).isoformat()},
+    )
+    assert reversed_range.status_code == 422
+
+    oversized_range = client.get(
+        f"{API}/families/{family_a_id}/task-occurrences",
+        headers=_headers(parent_a_token),
+        params={"start_date": start.isoformat(), "end_date": (start + timedelta(days=31)).isoformat()},
+    )
+    assert oversized_range.status_code == 422
+
+    other_family = client.get(
+        f"{API}/families/{family_a_id}/task-occurrences",
+        headers=_headers(parent_b_token),
+        params={"start_date": start.isoformat(), "end_date": (start + timedelta(days=6)).isoformat()},
+    )
+    assert other_family.status_code == 404
