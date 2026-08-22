@@ -4,6 +4,7 @@ data class FamilyHomeUiState(
     val isLoading: Boolean = true,
     val mode: FamilyHomeMode = FamilyHomeMode.TODAY,
     val familyId: Long? = null,
+    val todayDate: String? = null,
     val dateLabel: String = "",
     val sections: List<FamilyTaskMemberSection> = emptyList(),
     val totalTasks: Int = 0,

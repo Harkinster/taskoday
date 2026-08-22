@@ -171,9 +171,45 @@ class FamilyHomeUiPolicyTest {
 
     @Test
     fun `creation date is contextual only in week mode`() {
-        assertNull(familyTaskCreationDateForMode(FamilyHomeMode.TODAY, selectedWeekDate = "2026-08-26"))
-        assertEquals("2026-08-26", familyTaskCreationDateForMode(FamilyHomeMode.WEEK, selectedWeekDate = "2026-08-26"))
-        assertNull(familyTaskCreationDateForMode(FamilyHomeMode.WEEK, selectedWeekDate = "bad-date"))
+        assertEquals(
+            "2026-08-23",
+            familyTaskCreationDateForMode(
+                mode = FamilyHomeMode.TODAY,
+                selectedWeekDate = "2026-08-26",
+                todayDate = "2026-08-23",
+            ),
+        )
+        assertEquals(
+            "2026-08-26",
+            familyTaskCreationDateForMode(
+                mode = FamilyHomeMode.WEEK,
+                selectedWeekDate = "2026-08-26",
+                todayDate = "2026-08-23",
+            ),
+        )
+        assertNull(
+            familyTaskCreationDateForMode(
+                mode = FamilyHomeMode.WEEK,
+                selectedWeekDate = "bad-date",
+                todayDate = "2026-08-23",
+            ),
+        )
+    }
+
+    @Test
+    fun `occurrence recurrence label hides one off technical values`() {
+        assertNull(familyTaskOccurrenceRecurrenceLabel(null))
+        assertNull(familyTaskOccurrenceRecurrenceLabel(""))
+        assertNull(familyTaskOccurrenceRecurrenceLabel("NONE"))
+        assertNull(familyTaskOccurrenceRecurrenceLabel("one shot"))
+    }
+
+    @Test
+    fun `occurrence recurrence label maps recurring technical values`() {
+        assertEquals("Tous les jours", familyTaskOccurrenceRecurrenceLabel("DAILY"))
+        assertEquals("Chaque semaine", familyTaskOccurrenceRecurrenceLabel("weekly"))
+        assertEquals("Certains jours", familyTaskOccurrenceRecurrenceLabel("SELECTED_WEEKDAYS"))
+        assertEquals("Toutes les deux semaines", familyTaskOccurrenceRecurrenceLabel("Toutes les deux semaines"))
     }
 
     @Test

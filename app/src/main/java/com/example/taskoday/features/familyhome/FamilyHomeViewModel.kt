@@ -55,7 +55,7 @@ class FamilyHomeViewModel
 
         fun showWeek() {
             if (_uiState.value.mode == FamilyHomeMode.WEEK) return
-            val today = LocalDate.now()
+            val today = resolvedTodayDate()
             activeWeekWindow = familyTaskWeekWindowContaining(today)
             selectedWeekDate = today
             viewModelScope.launch {
@@ -77,7 +77,7 @@ class FamilyHomeViewModel
         }
 
         fun showCurrentWeek() {
-            val today = LocalDate.now()
+            val today = resolvedTodayDate()
             activeWeekWindow = familyTaskWeekWindowContaining(today)
             selectedWeekDate = today
             viewModelScope.launch {
@@ -173,6 +173,7 @@ class FamilyHomeViewModel
                             isLoading = false,
                             mode = FamilyHomeMode.TODAY,
                             familyId = today.familyId,
+                            todayDate = today.date,
                             dateLabel = formatFamilyHomeDateLabel(today.date),
                             sections = sections,
                             totalTasks = today.tasks.size,
@@ -187,6 +188,7 @@ class FamilyHomeViewModel
                         it.copy(
                             isLoading = false,
                             mode = FamilyHomeMode.TODAY,
+                            todayDate = null,
                             dateLabel = formatFamilyHomeDateLabel(null),
                             sections = emptyList(),
                             totalTasks = 0,
@@ -220,6 +222,7 @@ class FamilyHomeViewModel
                         resolveFamilyTaskSelectedWeekDate(
                             preferredDate = preferredSelectedDate,
                             weekStartDate = activeWeekWindow.startDate,
+                            today = resolvedTodayDate(),
                         )
                     weekOccurrences = range.occurrences
                     applyWeekSelection(
@@ -234,6 +237,7 @@ class FamilyHomeViewModel
                         resolveFamilyTaskSelectedWeekDate(
                             preferredDate = preferredSelectedDate,
                             weekStartDate = activeWeekWindow.startDate,
+                            today = resolvedTodayDate(),
                         )
                     applyWeekSelection(
                         familyId = _uiState.value.familyId,
@@ -248,7 +252,7 @@ class FamilyHomeViewModel
             isLoading: Boolean = _uiState.value.isLoading,
             errorMessage: String? = _uiState.value.errorMessage,
         ) {
-            val today = LocalDate.now()
+            val today = resolvedTodayDate()
             val selectedTasks = familyTasksForDate(tasks = weekOccurrences, date = selectedWeekDate)
             val sections = buildFamilyTaskSections(selectedTasks)
             _uiState.update {
@@ -280,6 +284,9 @@ class FamilyHomeViewModel
                 )
             }
         }
+
+        private fun resolvedTodayDate(): LocalDate =
+            parseFamilyTaskDateInput(_uiState.value.todayDate.orEmpty()) ?: LocalDate.now()
     }
 
 private fun FamilyTaskQuickAction.successMessage(): String =

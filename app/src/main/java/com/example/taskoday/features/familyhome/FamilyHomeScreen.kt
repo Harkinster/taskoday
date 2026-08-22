@@ -72,7 +72,12 @@ fun FamilyHomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val spacing = MaterialTheme.spacing
-    val creationDate = familyTaskCreationDateForMode(uiState.mode, uiState.selectedWeekDate)
+    val creationDate =
+        familyTaskCreationDateForMode(
+            mode = uiState.mode,
+            selectedWeekDate = uiState.selectedWeekDate,
+            todayDate = uiState.todayDate,
+        )
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.refresh()
@@ -176,15 +181,13 @@ fun FamilyHomeScreen(
                                 EmptyFamilyWeekCard(
                                     title = "Rien de prévu cette semaine.",
                                     message = "Ajoute une tâche si la maison a besoin d'un repère.",
-                                    onAddTask = { onAddTask(creationDate) },
                                 )
                             uiState.mode == FamilyHomeMode.WEEK ->
                                 EmptyFamilyWeekCard(
                                     title = "Rien de prévu ce jour-là.",
                                     message = "Les autres jours de la semaine restent accessibles juste au-dessus.",
-                                    onAddTask = { onAddTask(creationDate) },
                                 )
-                            else -> EmptyFamilyHomeCard(onAddTask = { onAddTask(creationDate) })
+                            else -> EmptyFamilyHomeCard()
                         }
                     }
                 } else {
@@ -310,6 +313,16 @@ private fun FamilyHomeHeader(
                     style = MaterialTheme.typography.bodyMedium,
                     color = InkMuted,
                 )
+                Button(
+                    onClick = { onAddTask(creationDate) },
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = WoodBrown, contentColor = ParchmentLight),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Ajouter une tâche")
+                }
             }
         }
     }
@@ -656,7 +669,6 @@ private fun PriorityChip(
 private fun EmptyFamilyWeekCard(
     title: String,
     message: String,
-    onAddTask: () -> Unit,
 ) {
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
@@ -682,22 +694,12 @@ private fun EmptyFamilyWeekCard(
                 style = MaterialTheme.typography.bodyMedium,
                 color = InkMuted,
             )
-            Button(
-                onClick = onAddTask,
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = WoodBrown, contentColor = ParchmentLight),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Ajouter une tâche")
-            }
         }
     }
 }
 
 @Composable
-private fun EmptyFamilyHomeCard(onAddTask: () -> Unit) {
+private fun EmptyFamilyHomeCard() {
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
@@ -722,16 +724,6 @@ private fun EmptyFamilyHomeCard(onAddTask: () -> Unit) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = InkMuted,
             )
-            Button(
-                onClick = onAddTask,
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = WoodBrown, contentColor = ParchmentLight),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Ajouter une tâche")
-            }
         }
     }
 }
@@ -785,7 +777,7 @@ private fun FamilyTaskTodayItem.details(): List<String> =
             hasDueTime = hasDueTime,
             dueAt = dueAt,
         )?.let { add("Échéance $it") }
-        recurrenceLabel?.let { add(it) }
+        familyTaskOccurrenceRecurrenceLabel(recurrenceLabel)?.let { add(it) }
         if (validationRequired) add("Validation requise")
         if (gamificationEnabled) add("Gamification active")
     }

@@ -119,11 +119,23 @@ fun resolveFamilyTaskSelectedWeekDate(
 fun familyTaskCreationDateForMode(
     mode: FamilyHomeMode,
     selectedWeekDate: String?,
+    todayDate: String?,
 ): String? =
     when (mode) {
-        FamilyHomeMode.TODAY -> null
+        FamilyHomeMode.TODAY -> todayDate?.takeIf { value -> parseFamilyTaskDateInput(value) != null }
         FamilyHomeMode.WEEK -> selectedWeekDate?.takeIf { value -> parseFamilyTaskDateInput(value) != null }
     }
+
+fun familyTaskOccurrenceRecurrenceLabel(value: String?): String? {
+    val normalized = value?.trim()?.takeIf { it.isNotBlank() } ?: return null
+    return when (normalized.replace("-", "_").replace(" ", "_").uppercase(Locale.US)) {
+        "NONE", "ONCE", "ONE_SHOT", "SINGLE" -> null
+        "DAILY" -> "Tous les jours"
+        "WEEKLY" -> "Chaque semaine"
+        "SELECTED_WEEKDAYS" -> "Certains jours"
+        else -> normalized
+    }
+}
 
 fun familyTaskStatusLabel(status: FamilyTaskStatus): String =
     when (status) {
