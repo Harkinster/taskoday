@@ -56,6 +56,8 @@ import com.example.taskoday.features.familyhome.FamilyTaskCreateScreen
 import com.example.taskoday.features.familyhome.FamilyTaskCreateViewModel
 import com.example.taskoday.features.familyhome.FamilyTaskDetailScreen
 import com.example.taskoday.features.familyhome.FamilyTaskDetailViewModel
+import com.example.taskoday.features.familyhome.FamilyTaskListScreen
+import com.example.taskoday.features.familyhome.FamilyTaskListViewModel
 import com.example.taskoday.features.home.HomeScreen
 import com.example.taskoday.features.home.HomeViewModel
 import com.example.taskoday.features.parent.ParentPlanningScreen
@@ -327,6 +329,17 @@ fun TaskodayApp() {
                     viewModel = viewModel,
                     onOpenProfile = navigateToProfile,
                     onAddTask = { navController.navigate(TaskodayDestination.FamilyTaskCreate.route) },
+                    onOpenAllTasks = { navController.navigate(TaskodayDestination.FamilyTasksList.route) },
+                    onOpenTask = { taskId -> navController.navigate(TaskodayDestination.FamilyTaskDetail.createRoute(taskId)) },
+                )
+            }
+
+            composable(TaskodayDestination.FamilyTasksList.route) {
+                val viewModel: FamilyTaskListViewModel = hiltViewModel()
+                FamilyTaskListScreen(
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() },
+                    onAddTask = { navController.navigate(TaskodayDestination.FamilyTaskCreate.route) },
                     onOpenTask = { taskId -> navController.navigate(TaskodayDestination.FamilyTaskDetail.createRoute(taskId)) },
                 )
             }
@@ -349,9 +362,7 @@ fun TaskodayApp() {
                     viewModel = viewModel,
                     onBack = { navController.popBackStack() },
                     onEdit = { taskId -> navController.navigate(TaskodayDestination.FamilyTaskEdit.createRoute(taskId)) },
-                    onDeleted = {
-                        navController.popBackStack(TaskodayDestination.FamilyHome.route, inclusive = false)
-                    },
+                    onDeleted = { navController.popBackStack() },
                 )
             }
 

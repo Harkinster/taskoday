@@ -67,6 +67,7 @@ fun FamilyHomeScreen(
     viewModel: FamilyHomeViewModel,
     onOpenProfile: () -> Unit,
     onAddTask: () -> Unit,
+    onOpenAllTasks: () -> Unit,
     onOpenTask: (Long) -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -121,6 +122,7 @@ fun FamilyHomeScreen(
                         completedTasks = uiState.completedTasks,
                         totalTasks = uiState.totalTasks,
                         onAddTask = onAddTask,
+                        onOpenAllTasks = onOpenAllTasks,
                         onShowToday = viewModel::showToday,
                         onShowWeek = viewModel::showWeek,
                     )
@@ -209,6 +211,7 @@ private fun FamilyHomeHeader(
     completedTasks: Int,
     totalTasks: Int,
     onAddTask: () -> Unit,
+    onOpenAllTasks: () -> Unit,
     onShowToday: () -> Unit,
     onShowWeek: () -> Unit,
 ) {
@@ -262,6 +265,14 @@ private fun FamilyHomeHeader(
                 onShowToday = onShowToday,
                 onShowWeek = onShowWeek,
             )
+
+            OutlinedButton(
+                onClick = onOpenAllTasks,
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Toutes les tâches")
+            }
 
             if (totalTasks > 0) {
                 LinearProgressIndicator(

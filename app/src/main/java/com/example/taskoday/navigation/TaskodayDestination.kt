@@ -24,6 +24,8 @@ sealed class TaskodayDestination(
 
     data object FamilyHome : TaskodayDestination(route = "family_home", label = "Ma maison", icon = Icons.Outlined.Home)
 
+    data object FamilyTasksList : TaskodayDestination(route = "family_home/tasks", label = "Toutes les tÃ¢ches")
+
     data object FamilyTaskCreate : TaskodayDestination(route = "family_home/create", label = "Nouvelle tâche")
 
     data object FamilyTaskDetail : TaskodayDestination(route = "family_home/task/{taskId}", label = "Tâche familiale") {
