@@ -2,6 +2,7 @@ package com.example.taskoday.data.remote.dto
 
 import com.example.taskoday.domain.model.FamilyTaskAssignee
 import com.example.taskoday.domain.model.FamilyTaskCreateInput
+import com.example.taskoday.domain.model.FamilyTaskDefinition
 import com.example.taskoday.domain.model.FamilyTaskMember
 import com.example.taskoday.domain.model.FamilyTaskMemberRole
 import com.example.taskoday.domain.model.FamilyTaskPriority
@@ -46,10 +47,37 @@ data class FamilyTaskOccurrenceDto(
 )
 
 data class FamilyTaskAssigneeDto(
-    @SerializedName(value = "id", alternate = ["child_id", "child_profile_id", "user_id"])
+    @SerializedName(value = "user_id", alternate = ["id", "child_id", "child_profile_id"])
     val id: Long? = null,
     @SerializedName(value = "display_name", alternate = ["name", "title", "email"])
     val displayName: String? = null,
+)
+
+data class FamilyTaskDefinitionDto(
+    @SerializedName("id")
+    val id: Long? = null,
+    @SerializedName(value = "family_id", alternate = ["familyId"])
+    val familyId: Long? = null,
+    @SerializedName("title")
+    val title: String? = null,
+    @SerializedName("description")
+    val description: String? = null,
+    @SerializedName("assignees")
+    val assignees: List<FamilyTaskAssigneeDto> = emptyList(),
+    @SerializedName(value = "due_at", alternate = ["dueAt"])
+    val dueAt: String? = null,
+    @SerializedName("recurrence")
+    val recurrence: String? = null,
+    @SerializedName(value = "selected_weekdays", alternate = ["selectedWeekdays"])
+    val selectedWeekdays: List<Int> = emptyList(),
+    @SerializedName(value = "validation_required", alternate = ["validationRequired"])
+    val validationRequired: Boolean? = null,
+    @SerializedName(value = "gamification_enabled", alternate = ["gamificationEnabled"])
+    val gamificationEnabled: Boolean? = null,
+    @SerializedName("priority")
+    val priority: String? = null,
+    @SerializedName("active")
+    val active: Boolean? = null,
 )
 
 data class FamilyTaskMemberDto(
@@ -84,6 +112,27 @@ data class FamilyTaskCreateRequestDto(
     val gamificationEnabled: Boolean,
 )
 
+data class FamilyTaskUpdateRequestDto(
+    @SerializedName("title")
+    val title: String,
+    @SerializedName("description")
+    val description: String? = null,
+    @SerializedName("priority")
+    val priority: String,
+    @SerializedName("due_at")
+    val dueAt: String,
+    @SerializedName("recurrence")
+    val recurrence: String,
+    @SerializedName("selected_weekdays")
+    val selectedWeekdays: List<Int>? = null,
+    @SerializedName("assignee_user_ids")
+    val assigneeUserIds: List<Long>,
+    @SerializedName("validation_required")
+    val validationRequired: Boolean,
+    @SerializedName("gamification_enabled")
+    val gamificationEnabled: Boolean,
+)
+
 fun JsonElement.toFamilyTasksTodayResponseDto(gson: Gson): FamilyTasksTodayResponseDto =
     when {
         isJsonArray -> {
@@ -92,6 +141,26 @@ fun JsonElement.toFamilyTasksTodayResponseDto(gson: Gson): FamilyTasksTodayRespo
         }
         isJsonObject -> gson.fromJson(this, FamilyTasksTodayResponseDto::class.java)
         else -> FamilyTasksTodayResponseDto()
+    }
+
+fun JsonElement.toFamilyTaskDefinitionDtos(gson: Gson): List<FamilyTaskDefinitionDto> =
+    when {
+        isJsonArray -> {
+            val listType = object : TypeToken<List<FamilyTaskDefinitionDto>>() {}.type
+            gson.fromJson(this, listType)
+        }
+        isJsonObject -> {
+            val listType = object : TypeToken<List<FamilyTaskDefinitionDto>>() {}.type
+            val nestedTasks =
+                asJsonObject.get("tasks")
+                    ?: asJsonObject.get("items")
+            if (nestedTasks?.isJsonArray == true) {
+                gson.fromJson(nestedTasks, listType)
+            } else {
+                emptyList()
+            }
+        }
+        else -> emptyList()
     }
 
 fun JsonElement.toFamilyTaskMemberDtos(gson: Gson): List<FamilyTaskMemberDto> =
@@ -131,6 +200,24 @@ fun FamilyTaskOccurrenceDto.toDomain(): FamilyTaskTodayItem {
     )
 }
 
+fun FamilyTaskDefinitionDto.toDomain(): FamilyTaskDefinition {
+    val resolvedId = id ?: 0L
+    return FamilyTaskDefinition(
+        id = resolvedId,
+        familyId = familyId ?: 0L,
+        title = title?.trim()?.takeIf { it.isNotBlank() } ?: "Tache sans titre",
+        description = description?.trim()?.takeIf { it.isNotBlank() },
+        assignees = assignees.mapNotNull { assignee -> assignee.toDomainOrNull() },
+        dueAt = dueAt?.trim()?.takeIf { it.isNotBlank() },
+        recurrence = FamilyTaskRecurrence.fromBackend(recurrence),
+        selectedWeekdays = selectedWeekdays.filter { day -> day in 1..7 }.distinct().sorted(),
+        validationRequired = validationRequired ?: false,
+        gamificationEnabled = gamificationEnabled ?: false,
+        priority = FamilyTaskPriority.fromBackend(priority),
+        active = active ?: true,
+    )
+}
+
 fun FamilyTaskMemberDto.toDomain(): FamilyTaskMember =
     FamilyTaskMember(
         userId = userId,
@@ -157,6 +244,24 @@ fun FamilyTaskCreateInput.toRequestDto(): FamilyTaskCreateRequestDto =
         dueAt = dueAt,
         recurrence = recurrence.name,
         selectedWeekdays = selectedWeekdays.takeIf { recurrence == FamilyTaskRecurrence.SELECTED_WEEKDAYS },
+        assigneeUserIds = assigneeUserIds,
+        validationRequired = validationRequired,
+        gamificationEnabled = gamificationEnabled,
+    )
+
+fun FamilyTaskCreateInput.toUpdateRequestDto(): FamilyTaskUpdateRequestDto =
+    FamilyTaskUpdateRequestDto(
+        title = title,
+        description = description.orEmpty(),
+        priority = priority.backendValue(),
+        dueAt = dueAt,
+        recurrence = recurrence.name,
+        selectedWeekdays =
+            if (recurrence == FamilyTaskRecurrence.SELECTED_WEEKDAYS) {
+                selectedWeekdays
+            } else {
+                emptyList()
+            },
         assigneeUserIds = assigneeUserIds,
         validationRequired = validationRequired,
         gamificationEnabled = gamificationEnabled,

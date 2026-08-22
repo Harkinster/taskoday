@@ -1,5 +1,6 @@
 package com.example.taskoday.features.familyhome
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -66,6 +67,7 @@ fun FamilyHomeScreen(
     viewModel: FamilyHomeViewModel,
     onOpenProfile: () -> Unit,
     onAddTask: () -> Unit,
+    onOpenTask: (Long) -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val spacing = MaterialTheme.spacing
@@ -157,6 +159,7 @@ fun FamilyHomeScreen(
                             section = section,
                             actingOccurrenceId = uiState.actingOccurrenceId,
                             onQuickAction = viewModel::runQuickAction,
+                            onOpenTask = onOpenTask,
                         )
                     }
                 }
@@ -250,6 +253,7 @@ private fun FamilyMemberSectionCard(
     section: FamilyTaskMemberSection,
     actingOccurrenceId: Long?,
     onQuickAction: (FamilyTaskTodayItem) -> Unit,
+    onOpenTask: (Long) -> Unit,
 ) {
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
@@ -287,6 +291,7 @@ private fun FamilyMemberSectionCard(
                     task = row.task,
                     isActing = actingOccurrenceId == row.task.occurrenceId,
                     onQuickAction = onQuickAction,
+                    onOpenTask = onOpenTask,
                 )
             }
         }
@@ -298,10 +303,14 @@ private fun FamilyTaskRowCard(
     task: FamilyTaskTodayItem,
     isActing: Boolean,
     onQuickAction: (FamilyTaskTodayItem) -> Unit,
+    onOpenTask: (Long) -> Unit,
 ) {
     val action = quickActionFor(task)
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(enabled = task.taskId > 0L) { onOpenTask(task.taskId) },
         shape = RoundedCornerShape(8.dp),
         color = ParchmentCream.copy(alpha = 0.78f),
         contentColor = InkBrown,

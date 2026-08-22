@@ -1,5 +1,7 @@
 package com.example.taskoday.features.familyhome
 
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,12 +39,14 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -58,6 +62,9 @@ import com.example.taskoday.domain.model.FamilyTaskMember
 import com.example.taskoday.domain.model.FamilyTaskMemberRole
 import com.example.taskoday.domain.model.FamilyTaskPriority
 import com.example.taskoday.domain.model.FamilyTaskRecurrence
+import java.time.LocalDate
+import java.time.LocalTime
+import java.util.Locale
 
 @Composable
 fun FamilyTaskCreateScreen(
@@ -93,42 +100,49 @@ fun FamilyTaskCreateScreen(
                 verticalArrangement = Arrangement.spacedBy(spacing.medium),
             ) {
                 item {
-                    FamilyTaskCreateHeader(onBack = onBack)
+                    FamilyTaskCreateHeader(isEditing = uiState.isEditing, onBack = onBack)
                 }
 
-                item {
-                    FamilyTaskCreateFormCard(
-                        uiState = uiState,
-                        onTitleChanged = viewModel::onTitleChanged,
-                        onDescriptionChanged = viewModel::onDescriptionChanged,
-                        onDateChanged = viewModel::onDateChanged,
-                        onTimeChanged = viewModel::onTimeChanged,
-                    )
-                }
+                if (uiState.isLoadingTask) {
+                    item {
+                        LoadingTaskCard()
+                    }
+                } else {
+                    item {
+                        FamilyTaskCreateFormCard(
+                            uiState = uiState,
+                            onTitleChanged = viewModel::onTitleChanged,
+                            onDescriptionChanged = viewModel::onDescriptionChanged,
+                            onDateChanged = viewModel::onDateChanged,
+                            onTimeChanged = viewModel::onTimeChanged,
+                            onClearTime = viewModel::clearTime,
+                        )
+                    }
 
-                item {
-                    AssigneesCard(
-                        uiState = uiState,
-                        onSelectHouse = viewModel::selectHouseTask,
-                        onToggleAssignee = viewModel::toggleAssignee,
-                    )
-                }
+                    item {
+                        AssigneesCard(
+                            uiState = uiState,
+                            onSelectHouse = viewModel::selectHouseTask,
+                            onToggleAssignee = viewModel::toggleAssignee,
+                        )
+                    }
 
-                item {
-                    RecurrenceCard(
-                        uiState = uiState,
-                        onRecurrenceChanged = viewModel::onRecurrenceChanged,
-                        onToggleWeekday = viewModel::toggleWeekday,
-                    )
-                }
+                    item {
+                        RecurrenceCard(
+                            uiState = uiState,
+                            onRecurrenceChanged = viewModel::onRecurrenceChanged,
+                            onToggleWeekday = viewModel::toggleWeekday,
+                        )
+                    }
 
-                item {
-                    TaskOptionsCard(
-                        uiState = uiState,
-                        onValidationRequiredChanged = viewModel::onValidationRequiredChanged,
-                        onGamificationEnabledChanged = viewModel::onGamificationEnabledChanged,
-                        onPriorityChanged = viewModel::onPriorityChanged,
-                    )
+                    item {
+                        TaskOptionsCard(
+                            uiState = uiState,
+                            onValidationRequiredChanged = viewModel::onValidationRequiredChanged,
+                            onGamificationEnabledChanged = viewModel::onGamificationEnabledChanged,
+                            onPriorityChanged = viewModel::onPriorityChanged,
+                        )
+                    }
                 }
 
                 uiState.errorMessage?.takeIf { it.isNotBlank() }?.let { error ->
@@ -137,8 +151,9 @@ fun FamilyTaskCreateScreen(
                     }
                 }
 
-                item {
-                    Row(
+                if (!uiState.isLoadingTask) {
+                    item {
+                        Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
@@ -167,7 +182,15 @@ fun FamilyTaskCreateScreen(
                                 Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                             }
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(if (uiState.isSubmitting) "Création..." else "Créer la tâche")
+                            Text(
+                                when {
+                                    uiState.isSubmitting && uiState.isEditing -> "Enregistrement..."
+                                    uiState.isSubmitting -> "Création..."
+                                    uiState.isEditing -> "Enregistrer"
+                                    else -> "Créer la tâche"
+                                },
+                            )
+                        }
                         }
                     }
                 }
@@ -177,7 +200,10 @@ fun FamilyTaskCreateScreen(
 }
 
 @Composable
-private fun FamilyTaskCreateHeader(onBack: () -> Unit) {
+private fun FamilyTaskCreateHeader(
+    isEditing: Boolean,
+    onBack: () -> Unit,
+) {
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
@@ -200,13 +226,18 @@ private fun FamilyTaskCreateHeader(onBack: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(
-                    text = "Nouvelle tâche familiale",
+                    text = if (isEditing) "Modifier la tâche familiale" else "Nouvelle tâche familiale",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = InkBrown,
                 )
                 Text(
-                    text = "Organise la journée sans mélanger la partie Chronodria.",
+                    text =
+                        if (isEditing) {
+                            "Ajuste l'organisation sans toucher aux occurrences à la main."
+                        } else {
+                            "Organise la journée sans mélanger la partie Chronodria."
+                        },
                     style = MaterialTheme.typography.bodyMedium,
                     color = InkMuted,
                 )
@@ -223,7 +254,12 @@ private fun FamilyTaskCreateFormCard(
     onDescriptionChanged: (String) -> Unit,
     onDateChanged: (String) -> Unit,
     onTimeChanged: (String) -> Unit,
+    onClearTime: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val selectedDate = parseFamilyTaskDateInput(uiState.date) ?: LocalDate.now()
+    val selectedTime = parseFamilyTaskTimeInput(uiState.time) ?: LocalTime.now()
+
     FamilyTaskCreateCard(title = "Détails") {
         OutlinedTextField(
             value = uiState.title,
@@ -241,22 +277,58 @@ private fun FamilyTaskCreateFormCard(
             modifier = Modifier.fillMaxWidth(),
         )
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedTextField(
-                value = uiState.date,
-                onValueChange = onDateChanged,
-                label = { Text("Date") },
-                placeholder = { Text("AAAA-MM-JJ") },
-                singleLine = true,
+            OutlinedButton(
+                onClick = {
+                    DatePickerDialog(
+                        context,
+                        { _, year, month, dayOfMonth ->
+                            onDateChanged(LocalDate.of(year, month + 1, dayOfMonth).toString())
+                        },
+                        selectedDate.year,
+                        selectedDate.monthValue - 1,
+                        selectedDate.dayOfMonth,
+                    ).show()
+                },
+                shape = RoundedCornerShape(8.dp),
                 modifier = Modifier.weight(1f),
-            )
-            OutlinedTextField(
-                value = uiState.time,
-                onValueChange = onTimeChanged,
-                label = { Text("Heure") },
-                placeholder = { Text("HH:mm") },
-                singleLine = true,
+            ) {
+                Text(formatFamilyTaskDateLabel(uiState.date))
+            }
+            OutlinedButton(
+                onClick = {
+                    TimePickerDialog(
+                        context,
+                        { _, hourOfDay, minute ->
+                            onTimeChanged(String.format(Locale.US, "%02d:%02d", hourOfDay, minute))
+                        },
+                        selectedTime.hour,
+                        selectedTime.minute,
+                        true,
+                    ).show()
+                },
+                shape = RoundedCornerShape(8.dp),
                 modifier = Modifier.weight(1f),
-            )
+            ) {
+                Text(formatFamilyTaskTimeLabel(uiState.time))
+            }
+        }
+        if (uiState.time.isNotBlank()) {
+            TextButton(onClick = onClearTime) {
+                Text("Retirer l'heure")
+            }
+        }
+    }
+}
+
+@Composable
+private fun LoadingTaskCard() {
+    FamilyTaskCreateCard(title = "Chargement") {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = SoftGold)
+            Text("Chargement de la tâche familiale...", style = MaterialTheme.typography.bodyMedium, color = InkMuted)
         }
     }
 }

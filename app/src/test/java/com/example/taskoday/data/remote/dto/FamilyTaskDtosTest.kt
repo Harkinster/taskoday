@@ -166,4 +166,99 @@ class FamilyTaskDtosTest {
         assertFalse(json["validation_required"].asBoolean)
         assertFalse(json["gamification_enabled"].asBoolean)
     }
+
+    @Test
+    fun `task definition payload maps to domain contract`() {
+        val payload =
+            JsonParser.parseString(
+                """
+                [
+                  {
+                    "id": 91,
+                    "family_id": 4,
+                    "title": "Smoke Maison Codex",
+                    "description": "Controle de smoke",
+                    "due_at": "2026-08-22T18:30:00Z",
+                    "recurrence": "SELECTED_WEEKDAYS",
+                    "selected_weekdays": [5, 1, 3],
+                    "assignees": [
+                      {"user_id": 10, "display_name": "Parent Test"},
+                      {"user_id": 20, "display_name": "Enfant Test"}
+                    ],
+                    "validation_required": true,
+                    "gamification_enabled": false,
+                    "priority": "urgent",
+                    "active": true
+                  }
+                ]
+                """.trimIndent(),
+            )
+
+        val task = payload.toFamilyTaskDefinitionDtos(gson).single().toDomain()
+
+        assertEquals(91L, task.id)
+        assertEquals(4L, task.familyId)
+        assertEquals("Smoke Maison Codex", task.title)
+        assertEquals("Controle de smoke", task.description)
+        assertEquals("2026-08-22T18:30:00Z", task.dueAt)
+        assertEquals(FamilyTaskRecurrence.SELECTED_WEEKDAYS, task.recurrence)
+        assertEquals(listOf(1, 3, 5), task.selectedWeekdays)
+        assertEquals(listOf(10L, 20L), task.assignees.map { assignee -> assignee.id })
+        assertTrue(task.validationRequired)
+        assertFalse(task.gamificationEnabled)
+        assertEquals(FamilyTaskPriority.URGENT, task.priority)
+        assertTrue(task.active)
+    }
+
+    @Test
+    fun `update request maps editable fields to backend snake case`() {
+        val request =
+            FamilyTaskCreateInput(
+                title = "Smoke Maison modifie",
+                description = "Nouvelle consigne",
+                dueAt = "2026-08-23T09:15:00Z",
+                recurrence = FamilyTaskRecurrence.SELECTED_WEEKDAYS,
+                selectedWeekdays = listOf(1, 3, 5),
+                assigneeUserIds = listOf(10L, 20L),
+                validationRequired = true,
+                gamificationEnabled = true,
+                priority = FamilyTaskPriority.HIGH,
+            ).toUpdateRequestDto()
+        val json = JsonParser.parseString(gson.toJson(request)).asJsonObject
+
+        assertEquals("Smoke Maison modifie", json["title"].asString)
+        assertEquals("Nouvelle consigne", json["description"].asString)
+        assertEquals("HIGH", json["priority"].asString)
+        assertEquals("2026-08-23T09:15:00Z", json["due_at"].asString)
+        assertEquals("SELECTED_WEEKDAYS", json["recurrence"].asString)
+        assertEquals(1, json["selected_weekdays"].asJsonArray[0].asInt)
+        assertEquals(3, json["selected_weekdays"].asJsonArray[1].asInt)
+        assertEquals(5, json["selected_weekdays"].asJsonArray[2].asInt)
+        assertEquals(10L, json["assignee_user_ids"].asJsonArray[0].asLong)
+        assertEquals(20L, json["assignee_user_ids"].asJsonArray[1].asLong)
+        assertTrue(json["validation_required"].asBoolean)
+        assertTrue(json["gamification_enabled"].asBoolean)
+    }
+
+    @Test
+    fun `update request can clear optional description and selected weekdays`() {
+        val request =
+            FamilyTaskCreateInput(
+                title = "Routine simple",
+                description = null,
+                dueAt = "2026-08-23T00:00:00Z",
+                recurrence = FamilyTaskRecurrence.DAILY,
+                selectedWeekdays = emptyList(),
+                assigneeUserIds = emptyList(),
+                validationRequired = false,
+                gamificationEnabled = false,
+                priority = FamilyTaskPriority.NORMAL,
+            ).toUpdateRequestDto()
+        val json = JsonParser.parseString(gson.toJson(request)).asJsonObject
+
+        assertEquals("", json["description"].asString)
+        assertEquals("DAILY", json["recurrence"].asString)
+        assertEquals(0, json["selected_weekdays"].asJsonArray.size())
+        assertEquals(0, json["assignee_user_ids"].asJsonArray.size())
+    }
 }

@@ -95,6 +95,25 @@ class FamilyTaskCreatePolicyTest {
         assertEquals(FamilyTaskPriority.URGENT, input?.priority)
     }
 
+    @Test
+    fun `recurrence summary is human readable`() {
+        assertEquals("Une seule fois", familyTaskRecurrenceSummary(FamilyTaskRecurrence.NONE, emptyList()))
+        assertEquals("Tous les jours", familyTaskRecurrenceSummary(FamilyTaskRecurrence.DAILY, emptyList()))
+        assertEquals("Chaque semaine", familyTaskRecurrenceSummary(FamilyTaskRecurrence.WEEKLY, emptyList()))
+        assertEquals("Lun. • Mer. • Ven.", familyTaskRecurrenceSummary(FamilyTaskRecurrence.SELECTED_WEEKDAYS, listOf(1, 3, 5)))
+        assertEquals("Certains jours", familyTaskRecurrenceSummary(FamilyTaskRecurrence.SELECTED_WEEKDAYS, emptyList()))
+    }
+
+    @Test
+    fun `date and time labels are formatted for parent input`() {
+        assertEquals("22/08/2026", formatFamilyTaskDateLabel("2026-08-22"))
+        assertEquals("Choisir une date", formatFamilyTaskDateLabel("bad-date"))
+        assertEquals("18:30", formatFamilyTaskTimeLabel("18:30"))
+        assertEquals("Sans heure", formatFamilyTaskTimeLabel(""))
+        assertEquals("2026-08-22", familyTaskDateFromDueAt("2026-08-22T18:30:00Z"))
+        assertEquals("18:30", familyTaskTimeFromDueAt("2026-08-22T18:30:00Z"))
+    }
+
     private fun validForm(
         title: String = "Sortir les poubelles",
         description: String = "Bac jaune",

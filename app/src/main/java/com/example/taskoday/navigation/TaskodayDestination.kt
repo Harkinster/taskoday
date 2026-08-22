@@ -26,6 +26,18 @@ sealed class TaskodayDestination(
 
     data object FamilyTaskCreate : TaskodayDestination(route = "family_home/create", label = "Nouvelle tâche")
 
+    data object FamilyTaskDetail : TaskodayDestination(route = "family_home/task/{taskId}", label = "Tâche familiale") {
+        const val ARG_TASK_ID: String = "taskId"
+
+        fun createRoute(taskId: Long): String = "family_home/task/$taskId"
+    }
+
+    data object FamilyTaskEdit : TaskodayDestination(route = "family_home/task/{taskId}/edit", label = "Modifier tâche") {
+        const val ARG_TASK_ID: String = "taskId"
+
+        fun createRoute(taskId: Long): String = "family_home/task/$taskId/edit"
+    }
+
     data object Home : TaskodayDestination(route = "home", label = "Routine", icon = Icons.Outlined.Repeat)
 
     data object Tasks :

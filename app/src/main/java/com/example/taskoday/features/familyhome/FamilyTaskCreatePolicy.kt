@@ -89,12 +89,58 @@ fun buildFamilyTaskDueAt(
         OffsetDateTime.of(date, time, ZoneOffset.UTC).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
     }
 
+fun parseFamilyTaskDateInput(value: String): LocalDate? =
+    runCatching { LocalDate.parse(value.trim(), DateTimeFormatter.ISO_LOCAL_DATE) }.getOrNull()
+
+fun parseFamilyTaskTimeInput(value: String): LocalTime? =
+    value
+        .trim()
+        .takeIf { it.isNotBlank() }
+        ?.let { text -> runCatching { LocalTime.parse(text, DateTimeFormatter.ofPattern("HH:mm")) }.getOrNull() }
+
+fun familyTaskDateFromDueAt(value: String?): String? {
+    val trimmed = value?.trim()?.takeIf { it.isNotBlank() } ?: return null
+    return trimmed.substringBefore("T").takeIf { it.matches(Regex("\\d{4}-\\d{2}-\\d{2}")) }
+}
+
+fun familyTaskTimeFromDueAt(value: String?): String {
+    val trimmed = value?.trim()?.takeIf { it.isNotBlank() } ?: return ""
+    val timePart = trimmed.substringAfter("T", missingDelimiterValue = "")
+    return timePart.takeIf { it.length >= 5 }?.take(5).orEmpty()
+}
+
+fun formatFamilyTaskDateLabel(value: String): String =
+    parseFamilyTaskDateInput(value)?.let { date ->
+        val day = date.dayOfMonth.toString().padStart(2, '0')
+        val month = date.monthValue.toString().padStart(2, '0')
+        "$day/$month/${date.year}"
+    } ?: "Choisir une date"
+
+fun formatFamilyTaskTimeLabel(value: String): String =
+    parseFamilyTaskTimeInput(value)?.format(DateTimeFormatter.ofPattern("HH:mm")) ?: "Sans heure"
+
 fun familyTaskRecurrenceLabel(recurrence: FamilyTaskRecurrence): String =
     when (recurrence) {
         FamilyTaskRecurrence.NONE -> "Jamais"
         FamilyTaskRecurrence.DAILY -> "Tous les jours"
         FamilyTaskRecurrence.WEEKLY -> "Chaque semaine"
         FamilyTaskRecurrence.SELECTED_WEEKDAYS -> "Certains jours"
+    }
+
+fun familyTaskRecurrenceSummary(
+    recurrence: FamilyTaskRecurrence,
+    selectedWeekdays: List<Int>,
+): String =
+    when (recurrence) {
+        FamilyTaskRecurrence.NONE -> "Une seule fois"
+        FamilyTaskRecurrence.DAILY -> "Tous les jours"
+        FamilyTaskRecurrence.WEEKLY -> "Chaque semaine"
+        FamilyTaskRecurrence.SELECTED_WEEKDAYS ->
+            selectedWeekdays
+                .mapNotNull { day -> familyTaskShortWeekdayLabels[day] }
+                .takeIf { it.isNotEmpty() }
+                ?.joinToString(" • ")
+                ?: "Certains jours"
     }
 
 fun familyTaskPriorityFormLabel(priority: FamilyTaskPriority): String =
@@ -119,4 +165,15 @@ val familyTaskWeekdays: List<Pair<Int, String>> =
         5 to "Vendredi",
         6 to "Samedi",
         7 to "Dimanche",
+    )
+
+private val familyTaskShortWeekdayLabels: Map<Int, String> =
+    mapOf(
+        1 to "Lun.",
+        2 to "Mar.",
+        3 to "Mer.",
+        4 to "Jeu.",
+        5 to "Ven.",
+        6 to "Sam.",
+        7 to "Dim.",
     )

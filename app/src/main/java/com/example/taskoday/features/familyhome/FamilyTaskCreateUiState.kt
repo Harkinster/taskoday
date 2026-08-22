@@ -6,6 +6,8 @@ import com.example.taskoday.domain.model.FamilyTaskRecurrence
 import java.time.LocalDate
 
 data class FamilyTaskCreateUiState(
+    val taskId: Long? = null,
+    val isLoadingTask: Boolean = false,
     val isLoadingMembers: Boolean = true,
     val members: List<FamilyTaskMember> = emptyList(),
     val title: String = "",
@@ -22,6 +24,9 @@ data class FamilyTaskCreateUiState(
     val errorMessage: String? = null,
     val created: Boolean = false,
 ) {
+    val isEditing: Boolean
+        get() = taskId != null
+
     val isHouseTask: Boolean
         get() = selectedAssigneeUserIds.isEmpty()
 }

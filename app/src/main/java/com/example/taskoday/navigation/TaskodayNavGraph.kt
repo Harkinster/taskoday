@@ -54,6 +54,8 @@ import com.example.taskoday.features.familyhome.FamilyHomeScreen
 import com.example.taskoday.features.familyhome.FamilyHomeViewModel
 import com.example.taskoday.features.familyhome.FamilyTaskCreateScreen
 import com.example.taskoday.features.familyhome.FamilyTaskCreateViewModel
+import com.example.taskoday.features.familyhome.FamilyTaskDetailScreen
+import com.example.taskoday.features.familyhome.FamilyTaskDetailViewModel
 import com.example.taskoday.features.home.HomeScreen
 import com.example.taskoday.features.home.HomeViewModel
 import com.example.taskoday.features.parent.ParentPlanningScreen
@@ -325,6 +327,7 @@ fun TaskodayApp() {
                     viewModel = viewModel,
                     onOpenProfile = navigateToProfile,
                     onAddTask = { navController.navigate(TaskodayDestination.FamilyTaskCreate.route) },
+                    onOpenTask = { taskId -> navController.navigate(TaskodayDestination.FamilyTaskDetail.createRoute(taskId)) },
                 )
             }
 
@@ -334,6 +337,35 @@ fun TaskodayApp() {
                     viewModel = viewModel,
                     onBack = { navController.popBackStack() },
                     onCreated = { navController.popBackStack() },
+                )
+            }
+
+            composable(
+                route = TaskodayDestination.FamilyTaskDetail.route,
+                arguments = listOf(navArgument(TaskodayDestination.FamilyTaskDetail.ARG_TASK_ID) { type = NavType.LongType }),
+            ) {
+                val viewModel: FamilyTaskDetailViewModel = hiltViewModel()
+                FamilyTaskDetailScreen(
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() },
+                    onEdit = { taskId -> navController.navigate(TaskodayDestination.FamilyTaskEdit.createRoute(taskId)) },
+                    onDeleted = {
+                        navController.popBackStack(TaskodayDestination.FamilyHome.route, inclusive = false)
+                    },
+                )
+            }
+
+            composable(
+                route = TaskodayDestination.FamilyTaskEdit.route,
+                arguments = listOf(navArgument(TaskodayDestination.FamilyTaskEdit.ARG_TASK_ID) { type = NavType.LongType }),
+            ) {
+                val viewModel: FamilyTaskCreateViewModel = hiltViewModel()
+                FamilyTaskCreateScreen(
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() },
+                    onCreated = {
+                        navController.popBackStack(TaskodayDestination.FamilyHome.route, inclusive = false)
+                    },
                 )
             }
 

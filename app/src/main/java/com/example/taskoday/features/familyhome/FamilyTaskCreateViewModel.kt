@@ -1,8 +1,10 @@
 package com.example.taskoday.features.familyhome
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.taskoday.data.repository.toRemoteUserMessage
+import com.example.taskoday.domain.model.FamilyTaskDefinition
 import com.example.taskoday.domain.model.FamilyTaskPriority
 import com.example.taskoday.domain.model.FamilyTaskRecurrence
 import com.example.taskoday.domain.repository.FamilyTasksRepository
@@ -18,18 +20,26 @@ import kotlinx.coroutines.launch
 class FamilyTaskCreateViewModel
     @Inject
     constructor(
+        savedStateHandle: SavedStateHandle,
         private val familyTasksRepository: FamilyTasksRepository,
     ) : ViewModel() {
-        private val _uiState = MutableStateFlow(FamilyTaskCreateUiState())
+        private val taskId: Long? = savedStateHandle.get<Long>("taskId")?.takeIf { it > 0L }
+        private val _uiState = MutableStateFlow(FamilyTaskCreateUiState(taskId = taskId, isLoadingTask = taskId != null))
         val uiState: StateFlow<FamilyTaskCreateUiState> = _uiState.asStateFlow()
 
         init {
-            loadMembers()
+            loadInitialForm()
         }
 
-        fun loadMembers() {
+        fun loadInitialForm() {
             viewModelScope.launch {
-                _uiState.update { it.copy(isLoadingMembers = true, errorMessage = null) }
+                _uiState.update {
+                    it.copy(
+                        isLoadingMembers = true,
+                        isLoadingTask = taskId != null,
+                        errorMessage = null,
+                    )
+                }
                 familyTasksRepository
                     .fetchMembers()
                     .onSuccess { members ->
@@ -50,6 +60,22 @@ class FamilyTaskCreateViewModel
                             )
                         }
                     }
+
+                taskId?.let { id ->
+                    familyTasksRepository
+                        .fetchTask(id)
+                        .onSuccess { task ->
+                            _uiState.update { it.withTask(task) }
+                        }
+                        .onFailure { throwable ->
+                            _uiState.update {
+                                it.copy(
+                                    isLoadingTask = false,
+                                    errorMessage = throwable.toRemoteUserMessage("Impossible de charger la tâche."),
+                                )
+                            }
+                        }
+                }
             }
         }
 
@@ -67,6 +93,10 @@ class FamilyTaskCreateViewModel
 
         fun onTimeChanged(value: String) {
             _uiState.update { it.copy(time = value, errorMessage = null) }
+        }
+
+        fun clearTime() {
+            _uiState.update { it.copy(time = "", errorMessage = null) }
         }
 
         fun onRecurrenceChanged(value: FamilyTaskRecurrence) {
@@ -151,8 +181,13 @@ class FamilyTaskCreateViewModel
 
             viewModelScope.launch {
                 _uiState.update { it.copy(isSubmitting = true, errorMessage = null) }
-                familyTasksRepository
-                    .createTask(input)
+                val result =
+                    if (current.isEditing && current.taskId != null) {
+                        familyTasksRepository.updateTask(current.taskId, input)
+                    } else {
+                        familyTasksRepository.createTask(input)
+                    }
+                result
                     .onSuccess {
                         _uiState.update { it.copy(isSubmitting = false, created = true) }
                     }
@@ -160,10 +195,33 @@ class FamilyTaskCreateViewModel
                         _uiState.update {
                             it.copy(
                                 isSubmitting = false,
-                                errorMessage = throwable.toRemoteUserMessage("Impossible de créer la tâche."),
+                                errorMessage =
+                                    throwable.toRemoteUserMessage(
+                                        if (current.isEditing) {
+                                            "Impossible de modifier la tâche."
+                                        } else {
+                                            "Impossible de créer la tâche."
+                                        },
+                                    ),
                             )
                         }
                     }
             }
         }
     }
+
+private fun FamilyTaskCreateUiState.withTask(task: FamilyTaskDefinition): FamilyTaskCreateUiState =
+    copy(
+        isLoadingTask = false,
+        title = task.title,
+        description = task.description.orEmpty(),
+        date = familyTaskDateFromDueAt(task.dueAt) ?: date,
+        time = familyTaskTimeFromDueAt(task.dueAt),
+        recurrence = task.recurrence,
+        selectedWeekdays = task.selectedWeekdays.toSet(),
+        selectedAssigneeUserIds = task.assignees.mapNotNull { assignee -> assignee.id }.toSet(),
+        validationRequired = task.validationRequired,
+        gamificationEnabled = task.gamificationEnabled,
+        priority = task.priority,
+        errorMessage = null,
+    )
