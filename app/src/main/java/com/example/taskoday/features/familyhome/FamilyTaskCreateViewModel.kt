@@ -24,7 +24,15 @@ class FamilyTaskCreateViewModel
         private val familyTasksRepository: FamilyTasksRepository,
     ) : ViewModel() {
         private val taskId: Long? = savedStateHandle.get<Long>("taskId")?.takeIf { it > 0L }
-        private val _uiState = MutableStateFlow(FamilyTaskCreateUiState(taskId = taskId, isLoadingTask = taskId != null))
+        private val prefilledDate: String? = savedStateHandle.get<String>("date")
+        private val _uiState =
+            MutableStateFlow(
+                FamilyTaskCreateUiState(
+                    taskId = taskId,
+                    isLoadingTask = taskId != null,
+                    date = resolveFamilyTaskInitialDate(prefilledDate),
+                ),
+            )
         val uiState: StateFlow<FamilyTaskCreateUiState> = _uiState.asStateFlow()
 
         init {

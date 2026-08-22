@@ -2,6 +2,7 @@ package com.example.taskoday.features.familyhome
 
 import com.example.taskoday.domain.model.FamilyTaskPriority
 import com.example.taskoday.domain.model.FamilyTaskRecurrence
+import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -137,6 +138,24 @@ class FamilyTaskCreatePolicyTest {
         assertEquals("22 août", familyTaskDueLabel(dueDate = "2026-08-22", dueTime = null, hasDueTime = false, dueAt = null))
         assertEquals("22 août à 00:00", familyTaskDueLabel(dueDate = "2026-08-22", dueTime = "00:00", hasDueTime = true, dueAt = null))
         assertEquals("22 août à 18:30", familyTaskDueLabel(dueDate = "2026-08-22", dueTime = "18:30", hasDueTime = true, dueAt = null))
+    }
+
+    @Test
+    fun `initial date uses route prefill when valid`() {
+        assertEquals(
+            "2026-08-26",
+            resolveFamilyTaskInitialDate(
+                prefilledDate = "2026-08-26",
+                fallback = LocalDate.of(2026, 8, 22),
+            ),
+        )
+        assertEquals(
+            "2026-08-22",
+            resolveFamilyTaskInitialDate(
+                prefilledDate = "not-a-date",
+                fallback = LocalDate.of(2026, 8, 22),
+            ),
+        )
     }
 
     private fun validForm(

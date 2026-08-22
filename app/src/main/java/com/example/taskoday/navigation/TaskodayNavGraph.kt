@@ -328,7 +328,7 @@ fun TaskodayApp() {
                 FamilyHomeScreen(
                     viewModel = viewModel,
                     onOpenProfile = navigateToProfile,
-                    onAddTask = { navController.navigate(TaskodayDestination.FamilyTaskCreate.route) },
+                    onAddTask = { date -> navController.navigate(TaskodayDestination.FamilyTaskCreate.createRoute(date)) },
                     onOpenAllTasks = { navController.navigate(TaskodayDestination.FamilyTasksList.route) },
                     onOpenTask = { taskId -> navController.navigate(TaskodayDestination.FamilyTaskDetail.createRoute(taskId)) },
                 )
@@ -339,12 +339,22 @@ fun TaskodayApp() {
                 FamilyTaskListScreen(
                     viewModel = viewModel,
                     onBack = { navController.popBackStack() },
-                    onAddTask = { navController.navigate(TaskodayDestination.FamilyTaskCreate.route) },
+                    onAddTask = { navController.navigate(TaskodayDestination.FamilyTaskCreate.createRoute()) },
                     onOpenTask = { taskId -> navController.navigate(TaskodayDestination.FamilyTaskDetail.createRoute(taskId)) },
                 )
             }
 
-            composable(TaskodayDestination.FamilyTaskCreate.route) {
+            composable(
+                route = TaskodayDestination.FamilyTaskCreate.route,
+                arguments =
+                    listOf(
+                        navArgument(TaskodayDestination.FamilyTaskCreate.ARG_DATE) {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        },
+                    ),
+            ) {
                 val viewModel: FamilyTaskCreateViewModel = hiltViewModel()
                 FamilyTaskCreateScreen(
                     viewModel = viewModel,

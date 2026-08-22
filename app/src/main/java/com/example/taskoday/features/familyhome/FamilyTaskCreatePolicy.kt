@@ -119,6 +119,15 @@ fun buildFamilyTaskDueAt(
 fun parseFamilyTaskDateInput(value: String): LocalDate? =
     runCatching { LocalDate.parse(value.trim(), DateTimeFormatter.ISO_LOCAL_DATE) }.getOrNull()
 
+fun resolveFamilyTaskInitialDate(
+    prefilledDate: String?,
+    fallback: LocalDate = LocalDate.now(),
+): String =
+    prefilledDate
+        ?.let { value -> parseFamilyTaskDateInput(value) }
+        ?.toString()
+        ?: fallback.toString()
+
 fun parseFamilyTaskTimeInput(value: String): LocalTime? =
     value
         .trim()

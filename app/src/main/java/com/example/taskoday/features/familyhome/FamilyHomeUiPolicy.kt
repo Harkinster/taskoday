@@ -116,6 +116,15 @@ fun resolveFamilyTaskSelectedWeekDate(
     }
 }
 
+fun familyTaskCreationDateForMode(
+    mode: FamilyHomeMode,
+    selectedWeekDate: String?,
+): String? =
+    when (mode) {
+        FamilyHomeMode.TODAY -> null
+        FamilyHomeMode.WEEK -> selectedWeekDate?.takeIf { value -> parseFamilyTaskDateInput(value) != null }
+    }
+
 fun familyTaskStatusLabel(status: FamilyTaskStatus): String =
     when (status) {
         FamilyTaskStatus.TODO -> "À faire"

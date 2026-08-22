@@ -170,6 +170,13 @@ class FamilyHomeUiPolicyTest {
     }
 
     @Test
+    fun `creation date is contextual only in week mode`() {
+        assertNull(familyTaskCreationDateForMode(FamilyHomeMode.TODAY, selectedWeekDate = "2026-08-26"))
+        assertEquals("2026-08-26", familyTaskCreationDateForMode(FamilyHomeMode.WEEK, selectedWeekDate = "2026-08-26"))
+        assertNull(familyTaskCreationDateForMode(FamilyHomeMode.WEEK, selectedWeekDate = "bad-date"))
+    }
+
+    @Test
     fun `status labels cover expected family task states`() {
         assertEquals("À faire", familyTaskStatusLabel(FamilyTaskStatus.TODO))
         assertEquals("En attente de validation", familyTaskStatusLabel(FamilyTaskStatus.PENDING_VALIDATION))

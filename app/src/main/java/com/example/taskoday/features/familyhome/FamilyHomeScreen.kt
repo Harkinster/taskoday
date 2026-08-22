@@ -66,12 +66,13 @@ import com.example.taskoday.domain.model.FamilyTaskTodayItem
 fun FamilyHomeScreen(
     viewModel: FamilyHomeViewModel,
     onOpenProfile: () -> Unit,
-    onAddTask: () -> Unit,
+    onAddTask: (String?) -> Unit,
     onOpenAllTasks: () -> Unit,
     onOpenTask: (Long) -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val spacing = MaterialTheme.spacing
+    val creationDate = familyTaskCreationDateForMode(uiState.mode, uiState.selectedWeekDate)
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.refresh()
@@ -121,6 +122,7 @@ fun FamilyHomeScreen(
                         weekRangeLabel = uiState.weekRangeLabel,
                         completedTasks = uiState.completedTasks,
                         totalTasks = uiState.totalTasks,
+                        creationDate = creationDate,
                         onAddTask = onAddTask,
                         onOpenAllTasks = onOpenAllTasks,
                         onShowToday = viewModel::showToday,
@@ -174,15 +176,15 @@ fun FamilyHomeScreen(
                                 EmptyFamilyWeekCard(
                                     title = "Rien de prévu cette semaine.",
                                     message = "Ajoute une tâche si la maison a besoin d'un repère.",
-                                    onAddTask = onAddTask,
+                                    onAddTask = { onAddTask(creationDate) },
                                 )
                             uiState.mode == FamilyHomeMode.WEEK ->
                                 EmptyFamilyWeekCard(
                                     title = "Rien de prévu ce jour-là.",
                                     message = "Les autres jours de la semaine restent accessibles juste au-dessus.",
-                                    onAddTask = onAddTask,
+                                    onAddTask = { onAddTask(creationDate) },
                                 )
-                            else -> EmptyFamilyHomeCard(onAddTask = onAddTask)
+                            else -> EmptyFamilyHomeCard(onAddTask = { onAddTask(creationDate) })
                         }
                     }
                 } else {
@@ -210,7 +212,8 @@ private fun FamilyHomeHeader(
     weekRangeLabel: String,
     completedTasks: Int,
     totalTasks: Int,
-    onAddTask: () -> Unit,
+    creationDate: String?,
+    onAddTask: (String?) -> Unit,
     onOpenAllTasks: () -> Unit,
     onShowToday: () -> Unit,
     onShowWeek: () -> Unit,
@@ -287,7 +290,7 @@ private fun FamilyHomeHeader(
                     color = InkMuted,
                 )
                 Button(
-                    onClick = onAddTask,
+                    onClick = { onAddTask(creationDate) },
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = WoodBrown, contentColor = ParchmentLight),
                     modifier = Modifier.fillMaxWidth(),
