@@ -27,13 +27,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.taskoday.core.ui.theme.spacing
+import com.example.taskoday.domain.model.AuthenticatedUser
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterParentScreen(
     viewModel: AuthViewModel,
     onBackToLogin: () -> Unit,
-    onOpenApp: () -> Unit,
+    onOpenApp: (AuthenticatedUser?, Boolean) -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val spacing = MaterialTheme.spacing
@@ -48,7 +49,7 @@ fun RegisterParentScreen(
 
     LaunchedEffect(uiState.isAuthenticated, uiState.isLocalMode) {
         if (uiState.isAuthenticated || uiState.isLocalMode) {
-            onOpenApp()
+            onOpenApp(uiState.currentUser, uiState.isLocalMode)
         }
     }
 

@@ -14,10 +14,12 @@ import com.example.taskoday.data.repository.RoutinesRepositoryImpl
 import com.example.taskoday.data.repository.RoutineRepositoryImpl
 import com.example.taskoday.data.repository.AuthRepositoryImpl
 import com.example.taskoday.data.repository.ChildrenRepositoryImpl
+import com.example.taskoday.data.repository.FamilyTasksRepositoryImpl
 import com.example.taskoday.data.repository.TagRepositoryImpl
 import com.example.taskoday.data.repository.TaskRepositoryImpl
 import com.example.taskoday.domain.repository.AuthRepository
 import com.example.taskoday.domain.repository.ChildrenRepository
+import com.example.taskoday.domain.repository.FamilyTasksRepository
 import com.example.taskoday.domain.repository.MissionsRepository
 import com.example.taskoday.domain.repository.ParentPlanningRepository
 import com.example.taskoday.domain.repository.PairingRepository
@@ -104,4 +106,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindPointsRepository(impl: PointsRepositoryImpl): PointsRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindFamilyTasksRepository(impl: FamilyTasksRepositoryImpl): FamilyTasksRepository
 }

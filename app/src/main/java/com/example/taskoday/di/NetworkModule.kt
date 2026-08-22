@@ -9,6 +9,7 @@ import com.example.taskoday.data.remote.auth.SecureTokenStorage
 import com.example.taskoday.data.remote.auth.TokenStorage
 import com.example.taskoday.data.remote.auth.UnauthorizedInterceptor
 import com.example.taskoday.data.remote.children.ChildrenApi
+import com.example.taskoday.data.remote.familytasks.FamilyTasksApi
 import com.example.taskoday.data.remote.gamification.NestApi
 import com.example.taskoday.data.remote.missions.MissionsApi
 import com.example.taskoday.data.remote.pairing.PairingApi
@@ -130,6 +131,10 @@ object NetworkModule {
     @Provides
     @Singleton
     fun providePairingApi(apiClient: ApiClient): PairingApi = apiClient.create(PairingApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideFamilyTasksApi(apiClient: ApiClient): FamilyTasksApi = apiClient.create(FamilyTasksApi::class.java)
 }
 
 internal val sensitiveHttpHeaders = listOf("Authorization")

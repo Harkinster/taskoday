@@ -22,6 +22,8 @@ sealed class TaskodayDestination(
 
     data object Nest : TaskodayDestination(route = "nest", label = "Le Nid", icon = Icons.Outlined.Home)
 
+    data object FamilyHome : TaskodayDestination(route = "family_home", label = "Ma maison", icon = Icons.Outlined.Home)
+
     data object Home : TaskodayDestination(route = "home", label = "Routine", icon = Icons.Outlined.Repeat)
 
     data object Tasks :
@@ -92,6 +94,7 @@ sealed class TaskodayDestination(
 
 val TopLevelDestinations: List<TaskodayDestination> =
     listOf(
+        TaskodayDestination.FamilyHome,
         TaskodayDestination.Home,
         TaskodayDestination.Tasks,
         TaskodayDestination.Quests,

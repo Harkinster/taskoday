@@ -33,6 +33,7 @@ import com.example.taskoday.core.ui.component.fantasy.LocalTaskodayBrandClick
 import com.example.taskoday.core.ui.component.fantasy.TaskodayBottomBar
 import com.example.taskoday.core.ui.theme.BackgroundBottom
 import com.example.taskoday.core.ui.theme.BackgroundTop
+import com.example.taskoday.domain.model.AuthenticatedUser
 import com.example.taskoday.domain.model.PlanningFormType
 import com.example.taskoday.features.add.QuickAddFab
 import com.example.taskoday.features.add.QuickAddViewModel
@@ -49,6 +50,8 @@ import com.example.taskoday.features.gamification.NestScreen
 import com.example.taskoday.features.gamification.NestViewModel
 import com.example.taskoday.features.gamification.RecentNestReward
 import com.example.taskoday.features.gamification.ScrollsScreen
+import com.example.taskoday.features.familyhome.FamilyHomeScreen
+import com.example.taskoday.features.familyhome.FamilyHomeViewModel
 import com.example.taskoday.features.home.HomeScreen
 import com.example.taskoday.features.home.HomeViewModel
 import com.example.taskoday.features.parent.ParentPlanningScreen
@@ -228,10 +231,10 @@ fun TaskodayApp() {
                         },
                 )
 
-                LaunchedEffect(uiState.isCheckingSession, uiState.isAuthenticated, uiState.isLocalMode) {
+                LaunchedEffect(uiState.isCheckingSession, uiState.isAuthenticated, uiState.isLocalMode, uiState.currentUser) {
                     if (!uiState.isCheckingSession) {
                         if (uiState.isAuthenticated || uiState.isLocalMode) {
-                            navController.navigate(TaskodayDestination.Home.route) {
+                            navController.navigate(uiState.currentUser.preferredAppRoute(uiState.isLocalMode)) {
                                 popUpTo(TaskodayDestination.Splash.route) {
                                     inclusive = true
                                 }
@@ -254,9 +257,9 @@ fun TaskodayApp() {
                 LoginScreen(
                     viewModel = viewModel,
                     onOpenRegisterParent = { navController.navigate(TaskodayDestination.RegisterParent.route) },
-                    onOpenApp = {
+                    onOpenApp = { user, isLocalMode ->
                         localChildMode = false
-                        navController.navigate(TaskodayDestination.Home.route) {
+                        navController.navigate(user.preferredAppRoute(isLocalMode)) {
                             popUpTo(TaskodayDestination.Login.route) {
                                 inclusive = true
                             }
@@ -271,9 +274,9 @@ fun TaskodayApp() {
                 RegisterParentScreen(
                     viewModel = viewModel,
                     onBackToLogin = { navController.popBackStack() },
-                    onOpenApp = {
+                    onOpenApp = { user, isLocalMode ->
                         localChildMode = false
-                        navController.navigate(TaskodayDestination.Home.route) {
+                        navController.navigate(user.preferredAppRoute(isLocalMode)) {
                             popUpTo(TaskodayDestination.Login.route) {
                                 inclusive = true
                             }
@@ -311,6 +314,15 @@ fun TaskodayApp() {
                     onOpenChests = { navController.navigate(TaskodayDestination.Shop.createRoute(TaskodayDestination.Shop.SECTION_CHESTS)) },
                     onOpenScrolls = { navController.navigate(TaskodayDestination.Scrolls.route) },
                     onOpenProfile = navigateToProfile,
+                )
+            }
+
+            composable(TaskodayDestination.FamilyHome.route) {
+                val viewModel: FamilyHomeViewModel = hiltViewModel()
+                FamilyHomeScreen(
+                    viewModel = viewModel,
+                    onOpenProfile = navigateToProfile,
+                    onAddTask = { navController.navigate(TaskodayDestination.ParentPlanning.createRoute()) },
                 )
             }
 
@@ -533,4 +545,11 @@ private fun String?.toPlanningFormType(): PlanningFormType =
         "mission" -> PlanningFormType.MISSION
         "quest" -> PlanningFormType.QUEST
         else -> PlanningFormType.ROUTINE
+    }
+
+private fun AuthenticatedUser?.preferredAppRoute(isLocalMode: Boolean): String =
+    if (!isLocalMode && this?.role?.equals("PARENT", ignoreCase = true) == true) {
+        TaskodayDestination.FamilyHome.route
+    } else {
+        TaskodayDestination.Home.route
     }

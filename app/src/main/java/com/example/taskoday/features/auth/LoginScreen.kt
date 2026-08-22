@@ -45,12 +45,13 @@ import com.example.taskoday.core.ui.theme.SoftGold
 import com.example.taskoday.core.ui.theme.TextMuted
 import com.example.taskoday.core.ui.theme.WoodBrownDark
 import com.example.taskoday.core.ui.theme.spacing
+import com.example.taskoday.domain.model.AuthenticatedUser
 
 @Composable
 fun LoginScreen(
     viewModel: AuthViewModel,
     onOpenRegisterParent: () -> Unit,
-    onOpenApp: () -> Unit,
+    onOpenApp: (AuthenticatedUser?, Boolean) -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val spacing = MaterialTheme.spacing
@@ -60,7 +61,7 @@ fun LoginScreen(
 
     LaunchedEffect(uiState.isAuthenticated, uiState.isLocalMode) {
         if (uiState.isAuthenticated || uiState.isLocalMode) {
-            onOpenApp()
+            onOpenApp(uiState.currentUser, uiState.isLocalMode)
         }
     }
 
