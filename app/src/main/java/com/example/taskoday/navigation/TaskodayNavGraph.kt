@@ -52,6 +52,8 @@ import com.example.taskoday.features.gamification.RecentNestReward
 import com.example.taskoday.features.gamification.ScrollsScreen
 import com.example.taskoday.features.familyhome.FamilyHomeScreen
 import com.example.taskoday.features.familyhome.FamilyHomeViewModel
+import com.example.taskoday.features.familyhome.FamilyTaskCreateScreen
+import com.example.taskoday.features.familyhome.FamilyTaskCreateViewModel
 import com.example.taskoday.features.home.HomeScreen
 import com.example.taskoday.features.home.HomeViewModel
 import com.example.taskoday.features.parent.ParentPlanningScreen
@@ -322,7 +324,16 @@ fun TaskodayApp() {
                 FamilyHomeScreen(
                     viewModel = viewModel,
                     onOpenProfile = navigateToProfile,
-                    onAddTask = { navController.navigate(TaskodayDestination.ParentPlanning.createRoute()) },
+                    onAddTask = { navController.navigate(TaskodayDestination.FamilyTaskCreate.route) },
+                )
+            }
+
+            composable(TaskodayDestination.FamilyTaskCreate.route) {
+                val viewModel: FamilyTaskCreateViewModel = hiltViewModel()
+                FamilyTaskCreateScreen(
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() },
+                    onCreated = { navController.popBackStack() },
                 )
             }
 

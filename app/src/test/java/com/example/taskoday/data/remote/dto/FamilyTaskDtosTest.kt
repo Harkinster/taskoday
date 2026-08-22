@@ -1,6 +1,8 @@
 package com.example.taskoday.data.remote.dto
 
 import com.example.taskoday.domain.model.FamilyTaskPriority
+import com.example.taskoday.domain.model.FamilyTaskCreateInput
+import com.example.taskoday.domain.model.FamilyTaskRecurrence
 import com.example.taskoday.domain.model.FamilyTaskStatus
 import com.google.gson.Gson
 import com.google.gson.JsonParser
@@ -93,5 +95,75 @@ class FamilyTaskDtosTest {
         assertEquals("2026-08-22", objectPayload.toFamilyTasksTodayResponseDto(gson).date)
         assertEquals(1, objectPayload.toFamilyTasksTodayResponseDto(gson).tasks.size)
         assertEquals(3L, listPayload.toFamilyTasksTodayResponseDto(gson).tasks.single().taskId)
+    }
+
+    @Test
+    fun `family children payload maps from envelope data array`() {
+        val payload =
+            JsonParser.parseString(
+                """
+                [
+                  {"id": 11, "email": "ada@example.test", "display_name": "Ada"}
+                ]
+                """.trimIndent(),
+            )
+
+        val member = payload.toFamilyTaskMemberDtos(gson).single().toDomain()
+
+        assertEquals(11L, member.userId)
+        assertEquals("Ada", member.displayName)
+    }
+
+    @Test
+    fun `create request maps to backend snake case contract`() {
+        val request =
+            FamilyTaskCreateInput(
+                title = "Sortir les poubelles",
+                description = "Bac jaune",
+                dueAt = "2026-08-22T18:30:00Z",
+                recurrence = FamilyTaskRecurrence.SELECTED_WEEKDAYS,
+                selectedWeekdays = listOf(1, 3),
+                assigneeUserIds = listOf(10L, 20L),
+                validationRequired = true,
+                gamificationEnabled = true,
+                priority = FamilyTaskPriority.HIGH,
+            ).toRequestDto()
+        val json = JsonParser.parseString(gson.toJson(request)).asJsonObject
+
+        assertEquals("Sortir les poubelles", json["title"].asString)
+        assertEquals("Bac jaune", json["description"].asString)
+        assertEquals("HIGH", json["priority"].asString)
+        assertEquals("2026-08-22T18:30:00Z", json["due_at"].asString)
+        assertEquals("SELECTED_WEEKDAYS", json["recurrence"].asString)
+        assertEquals(1, json["selected_weekdays"].asJsonArray[0].asInt)
+        assertEquals(3, json["selected_weekdays"].asJsonArray[1].asInt)
+        assertEquals(10L, json["assignee_user_ids"].asJsonArray[0].asLong)
+        assertEquals(20L, json["assignee_user_ids"].asJsonArray[1].asLong)
+        assertTrue(json["validation_required"].asBoolean)
+        assertTrue(json["gamification_enabled"].asBoolean)
+    }
+
+    @Test
+    fun `create request keeps unassigned house task empty`() {
+        val request =
+            FamilyTaskCreateInput(
+                title = "Ranger l'entrée",
+                description = null,
+                dueAt = "2026-08-22T00:00:00Z",
+                recurrence = FamilyTaskRecurrence.NONE,
+                selectedWeekdays = emptyList(),
+                assigneeUserIds = emptyList(),
+                validationRequired = false,
+                gamificationEnabled = false,
+                priority = FamilyTaskPriority.NORMAL,
+            ).toRequestDto()
+        val json = JsonParser.parseString(gson.toJson(request)).asJsonObject
+
+        assertEquals("NORMAL", json["priority"].asString)
+        assertEquals("NONE", json["recurrence"].asString)
+        assertEquals(0, json["assignee_user_ids"].asJsonArray.size())
+        assertFalse(json.has("selected_weekdays") && !json["selected_weekdays"].isJsonNull)
+        assertFalse(json["validation_required"].asBoolean)
+        assertFalse(json["gamification_enabled"].asBoolean)
     }
 }

@@ -21,7 +21,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Undo
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
@@ -117,6 +116,7 @@ fun FamilyHomeScreen(
                         dateLabel = uiState.dateLabel,
                         completedTasks = uiState.completedTasks,
                         totalTasks = uiState.totalTasks,
+                        onAddTask = onAddTask,
                     )
                 }
 
@@ -170,6 +170,7 @@ private fun FamilyHomeHeader(
     dateLabel: String,
     completedTasks: Int,
     totalTasks: Int,
+    onAddTask: () -> Unit,
 ) {
     val progress = if (totalTasks == 0) 0f else completedTasks.toFloat() / totalTasks.toFloat()
     ElevatedCard(
@@ -223,6 +224,16 @@ private fun FamilyHomeHeader(
                     style = MaterialTheme.typography.bodySmall,
                     color = InkMuted,
                 )
+                Button(
+                    onClick = onAddTask,
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = WoodBrown, contentColor = ParchmentLight),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Ajouter une tâche")
+                }
             } else {
                 Text(
                     text = "Aucune tâche planifiée aujourd'hui.",

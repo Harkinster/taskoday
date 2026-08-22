@@ -1,9 +1,15 @@
 package com.example.taskoday.domain.repository
 
+import com.example.taskoday.domain.model.FamilyTaskCreateInput
+import com.example.taskoday.domain.model.FamilyTaskMember
 import com.example.taskoday.domain.model.FamilyTasksToday
 
 interface FamilyTasksRepository {
     suspend fun fetchToday(): Result<FamilyTasksToday>
+
+    suspend fun fetchMembers(): Result<List<FamilyTaskMember>>
+
+    suspend fun createTask(input: FamilyTaskCreateInput): Result<Unit>
 
     suspend fun completeOccurrence(occurrenceId: Long): Result<Unit>
 

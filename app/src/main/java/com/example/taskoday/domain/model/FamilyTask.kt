@@ -8,6 +8,30 @@ data class FamilyTasksToday(
     val tasks: List<FamilyTaskTodayItem>,
 )
 
+data class FamilyTaskMember(
+    val userId: Long,
+    val displayName: String,
+    val email: String?,
+    val role: FamilyTaskMemberRole,
+)
+
+enum class FamilyTaskMemberRole {
+    PARENT,
+    CHILD,
+}
+
+data class FamilyTaskCreateInput(
+    val title: String,
+    val description: String?,
+    val dueAt: String,
+    val recurrence: FamilyTaskRecurrence,
+    val selectedWeekdays: List<Int>,
+    val assigneeUserIds: List<Long>,
+    val validationRequired: Boolean,
+    val gamificationEnabled: Boolean,
+    val priority: FamilyTaskPriority,
+)
+
 data class FamilyTaskTodayItem(
     val taskId: Long,
     val occurrenceId: Long,
@@ -74,6 +98,13 @@ enum class FamilyTaskPriority {
             }
         }
     }
+}
+
+enum class FamilyTaskRecurrence {
+    NONE,
+    DAILY,
+    WEEKLY,
+    SELECTED_WEEKDAYS,
 }
 
 private fun String?.normalizedBackendKey(): String =
