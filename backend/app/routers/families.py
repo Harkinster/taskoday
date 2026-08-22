@@ -98,3 +98,38 @@ def family_children(
         )
 
     return success_response(children)
+
+
+@router.get("/{family_id}/members")
+def family_members(
+    family_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    is_member = db.execute(
+        select(FamilyMember.id).where(FamilyMember.family_id == family_id, FamilyMember.user_id == current_user.id)
+    ).first()
+    if not is_member:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Famille introuvable.")
+
+    stmt = (
+        select(User, ChildProfile, FamilyMember)
+        .join(FamilyMember, FamilyMember.user_id == User.id)
+        .join(ChildProfile, ChildProfile.user_id == User.id, isouter=True)
+        .where(FamilyMember.family_id == family_id)
+        .order_by(FamilyMember.id.asc())
+    )
+
+    members = []
+    for user, profile, membership in db.execute(stmt).all():
+        members.append(
+            {
+                "user_id": user.id,
+                "display_name": profile.display_name if profile else user.email.split("@")[0],
+                "role": membership.role.name,
+                "email": user.email,
+                "is_active": user.is_active,
+            }
+        )
+
+    return success_response(members)

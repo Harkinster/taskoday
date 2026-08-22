@@ -94,6 +94,54 @@ def test_create_family_tasks_with_assignments_recurrence_and_today_view(client) 
     assert unassigned["assignees"] == []
     assert unassigned["gamification_enabled"] is False
     assert unassigned["recurrence"] == "NONE"
+    assert unassigned["due_date"] == today.isoformat()
+    assert unassigned["has_due_time"] is True
+    assert unassigned["due_time"] == "08:00:00"
+
+    date_only = _create_task(
+        client,
+        parent_token,
+        family_id,
+        {
+            "title": "Tache jour sans heure",
+            "due_date": today.isoformat(),
+            "gamification_enabled": False,
+        },
+    )
+    assert date_only["due_at"] is None
+    assert date_only["due_date"] == today.isoformat()
+    assert date_only["has_due_time"] is False
+    assert date_only["due_time"] is None
+
+    timed = _create_task(
+        client,
+        parent_token,
+        family_id,
+        {
+            "title": "Tache avec heure explicite",
+            "due_date": today.isoformat(),
+            "due_time": "14:30:00",
+            "gamification_enabled": False,
+        },
+    )
+    assert timed["due_at"] is not None
+    assert timed["due_date"] == today.isoformat()
+    assert timed["has_due_time"] is True
+    assert timed["due_time"] == "14:30:00"
+
+    unscheduled = _create_task(
+        client,
+        parent_token,
+        family_id,
+        {
+            "title": "Tache sans echeance",
+            "gamification_enabled": False,
+        },
+    )
+    assert unscheduled["due_at"] is None
+    assert unscheduled["due_date"] is None
+    assert unscheduled["has_due_time"] is False
+    assert unscheduled["due_time"] is None
 
     child_task = _create_task(
         client,
@@ -166,7 +214,10 @@ def test_create_family_tasks_with_assignments_recurrence_and_today_view(client) 
         "Tache parent",
         "Tache partagee",
         "Tache quotidienne",
+        "Tache jour sans heure",
+        "Tache avec heure explicite",
     }.issubset(titles)
+    assert "Tache sans echeance" not in titles
 
     child_item = _item_by_title(today_payload, "Tache enfant")
     assert child_item["status"] == "TODO"
@@ -174,6 +225,18 @@ def test_create_family_tasks_with_assignments_recurrence_and_today_view(client) 
     assert child_item["validation_required"] is False
     assert child_item["gamification_enabled"] is False
     assert [assignee["user_id"] for assignee in child_item["assignees"]] == [child_id]
+
+    date_only_item = _item_by_title(today_payload, "Tache jour sans heure")
+    assert date_only_item["due_at"] is None
+    assert date_only_item["due_date"] == today.isoformat()
+    assert date_only_item["has_due_time"] is False
+    assert date_only_item["due_time"] is None
+
+    timed_item = _item_by_title(today_payload, "Tache avec heure explicite")
+    assert timed_item["due_at"] is not None
+    assert timed_item["due_date"] == today.isoformat()
+    assert timed_item["has_due_time"] is True
+    assert timed_item["due_time"] == "14:30:00"
 
     group_user_ids = {group["assignee"]["user_id"] for group in today_payload["by_member"] if group["assignee"]}
     assert {parent_id, child_id}.issubset(group_user_ids)

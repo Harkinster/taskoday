@@ -1,7 +1,7 @@
 import enum
-from datetime import date, datetime
+from datetime import date, datetime, time
 
-from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, String, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, String, Text, Time, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.declarative import Base
@@ -45,6 +45,8 @@ class FamilyTask(Base):
         index=True,
     )
     due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    due_date: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)
+    due_time: Mapped[time | None] = mapped_column(Time, nullable=True)
     recurrence: Mapped[FamilyTaskRecurrence] = mapped_column(
         Enum(FamilyTaskRecurrence),
         default=FamilyTaskRecurrence.NONE,

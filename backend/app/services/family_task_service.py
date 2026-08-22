@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time, timezone
 import unicodedata
 
 from fastapi import HTTPException, status
@@ -101,6 +101,42 @@ def parse_weekdays(value: str | None) -> list[int]:
     return [int(part) for part in value.split(",") if part]
 
 
+def normalize_due_fields(
+    *,
+    due_at: datetime | None,
+    due_date: date | None,
+    due_time: time | None,
+) -> tuple[datetime | None, date | None, time | None]:
+    if due_at is not None:
+        return due_at, due_at.date(), _storage_time(due_at.time())
+    if due_date is not None and due_time is not None:
+        due_at = datetime.combine(due_date, due_time)
+        if due_at.tzinfo is None:
+            due_at = due_at.replace(tzinfo=timezone.utc)
+        return due_at, due_date, _storage_time(due_time)
+    if due_date is not None:
+        return None, due_date, None
+    return None, None, None
+
+
+def normalize_due_update(task: FamilyTask, data: dict) -> tuple[datetime | None, date | None, time | None]:
+    if "due_at" in data:
+        due_at = data["due_at"]
+        return normalize_due_fields(due_at=due_at, due_date=None, due_time=None)
+
+    due_date = data["due_date"] if "due_date" in data else task.due_date
+    due_time = data["due_time"] if "due_time" in data else task.due_time
+    if due_date is None:
+        if due_time is not None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="due_date est requis quand due_time est fourni.",
+            )
+        return None, None, None
+
+    return normalize_due_fields(due_at=None, due_date=due_date, due_time=due_time)
+
+
 def validate_assignee_user_ids(db: Session, *, family_id: int, assignee_user_ids: list[int]) -> list[int]:
     user_ids = _dedupe_user_ids(assignee_user_ids)
     if not user_ids:
@@ -152,6 +188,9 @@ def get_occurrence_for_member(
 
 
 def is_task_scheduled_for_date(task: FamilyTask, target_date: date) -> bool:
+    if task.recurrence == FamilyTaskRecurrence.NONE and task.due_date is None and task.due_at is None:
+        return False
+
     start_date = _task_start_date(task)
     if target_date < start_date:
         return False
@@ -268,6 +307,9 @@ def task_payload(db: Session, task: FamilyTask) -> dict:
         "category": task.category,
         "priority": _enum_value(task.priority),
         "due_at": task.due_at,
+        "due_date": task.due_date,
+        "has_due_time": task.due_time is not None,
+        "due_time": task.due_time,
         "recurrence": _enum_value(task.recurrence),
         "selected_weekdays": parse_weekdays(task.selected_weekdays),
         "assignees": assignees_payload(db, task),
@@ -288,6 +330,9 @@ def occurrence_payload(db: Session, occurrence: FamilyTaskOccurrence) -> dict:
         "assignees": assignees_payload(db, task),
         "scheduled_date": occurrence.scheduled_date,
         "due_at": task.due_at,
+        "due_date": task.due_date,
+        "has_due_time": task.due_time is not None,
+        "due_time": task.due_time,
         "status": _enum_value(occurrence.status),
         "validation_required": task.validation_required,
         "gamification_enabled": task.gamification_enabled,
@@ -353,6 +398,8 @@ def _ensure_can_complete(db: Session, *, task: FamilyTask, membership: FamilyMem
 
 
 def _task_start_date(task: FamilyTask) -> date:
+    if task.due_date is not None:
+        return task.due_date
     if task.due_at is not None:
         return task.due_at.date()
     if task.created_at is not None:
@@ -376,6 +423,10 @@ def _dedupe_user_ids(values: list[int]) -> list[int]:
 def _normalize_weekday(value: str) -> str:
     text = unicodedata.normalize("NFKD", value.strip().lower())
     return "".join(char for char in text if not unicodedata.combining(char))
+
+
+def _storage_time(value: time) -> time:
+    return value.replace(tzinfo=None)
 
 
 def _enum_value(value: object) -> object:

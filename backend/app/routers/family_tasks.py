@@ -19,6 +19,8 @@ from app.services.family_task_service import (
     group_items_by_member,
     is_task_scheduled_for_date,
     normalize_weekdays,
+    normalize_due_fields,
+    normalize_due_update,
     occurrence_payload,
     parse_weekdays,
     reopen_occurrence,
@@ -59,6 +61,11 @@ def create_family_task(
     ensure_family_parent(db, family_id=family_id, user=current_user)
     recurrence = FamilyTaskRecurrence(payload.recurrence)
     selected_weekdays = _selected_weekdays_for_recurrence(recurrence, payload.selected_weekdays)
+    due_at, due_date, due_time = normalize_due_fields(
+        due_at=payload.due_at,
+        due_date=payload.due_date,
+        due_time=payload.due_time,
+    )
     assignee_user_ids = validate_assignee_user_ids(
         db,
         family_id=family_id,
@@ -72,7 +79,9 @@ def create_family_task(
         creator_user_id=current_user.id,
         category=payload.category,
         priority=FamilyTaskPriority(payload.priority),
-        due_at=payload.due_at,
+        due_at=due_at,
+        due_date=due_date,
+        due_time=due_time,
         recurrence=recurrence,
         selected_weekdays=selected_weekdays,
         validation_required=payload.validation_required,
@@ -136,6 +145,7 @@ def update_family_task(
     recurrence_was_set = "recurrence" in data
     selected_weekdays_was_set = "selected_weekdays" in data
     selected_weekdays_payload = data.pop("selected_weekdays", None)
+    due_was_set = "due_at" in data or "due_date" in data or "due_time" in data
 
     if "title" in data:
         task.title = data["title"]
@@ -145,8 +155,11 @@ def update_family_task(
         task.category = data["category"]
     if "priority" in data:
         task.priority = FamilyTaskPriority(data["priority"])
-    if "due_at" in data:
-        task.due_at = data["due_at"]
+    if due_was_set:
+        due_at, due_date, due_time = normalize_due_update(task, data)
+        task.due_at = due_at
+        task.due_date = due_date
+        task.due_time = due_time
     if "validation_required" in data:
         task.validation_required = data["validation_required"]
     if "gamification_enabled" in data:
