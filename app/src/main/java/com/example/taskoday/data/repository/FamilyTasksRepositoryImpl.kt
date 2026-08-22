@@ -3,6 +3,7 @@ package com.example.taskoday.data.repository
 import com.example.taskoday.data.remote.dto.toDomain
 import com.example.taskoday.data.remote.dto.toFamilyTaskDefinitionDtos
 import com.example.taskoday.data.remote.dto.toFamilyTaskMemberDtos
+import com.example.taskoday.data.remote.dto.toFamilyTaskOccurrencesRangeResponseDto
 import com.example.taskoday.data.remote.dto.toFamilyTasksTodayResponseDto
 import com.example.taskoday.data.remote.dto.toRequestDto
 import com.example.taskoday.data.remote.dto.toUpdateRequestDto
@@ -10,6 +11,7 @@ import com.example.taskoday.data.remote.familytasks.FamilyTasksApi
 import com.example.taskoday.domain.model.FamilyTaskCreateInput
 import com.example.taskoday.domain.model.FamilyTaskDefinition
 import com.example.taskoday.domain.model.FamilyTaskMember
+import com.example.taskoday.domain.model.FamilyTaskOccurrencesRange
 import com.example.taskoday.domain.model.FamilyTasksToday
 import com.example.taskoday.domain.repository.AuthRepository
 import com.example.taskoday.domain.repository.FamilyTasksRepository
@@ -35,6 +37,26 @@ class FamilyTasksRepositoryImpl
                     date = today.date,
                     tasks = today.tasks.map { task -> task.toDomain() },
                 )
+            }
+
+        override suspend fun fetchOccurrences(
+            startDate: String,
+            endDate: String,
+        ): Result<FamilyTaskOccurrencesRange> =
+            runCatching {
+                val familyId = resolveFamilyId()
+                familyTasksApi
+                    .getTaskOccurrences(
+                        familyId = familyId,
+                        startDate = startDate,
+                        endDate = endDate,
+                    ).data
+                    .toFamilyTaskOccurrencesRangeResponseDto(gson)
+                    .toDomain(
+                        fallbackFamilyId = familyId,
+                        fallbackStartDate = startDate,
+                        fallbackEndDate = endDate,
+                    )
             }
 
         override suspend fun fetchTasks(): Result<List<FamilyTaskDefinition>> =

@@ -5,6 +5,7 @@ import com.example.taskoday.domain.model.FamilyTaskCreateInput
 import com.example.taskoday.domain.model.FamilyTaskDefinition
 import com.example.taskoday.domain.model.FamilyTaskMember
 import com.example.taskoday.domain.model.FamilyTaskMemberRole
+import com.example.taskoday.domain.model.FamilyTaskOccurrencesRange
 import com.example.taskoday.domain.model.FamilyTaskPriority
 import com.example.taskoday.domain.model.FamilyTaskRecurrence
 import com.example.taskoday.domain.model.FamilyTaskStatus
@@ -25,6 +26,17 @@ data class FamilyTasksTodayResponseDto(
     val tasks: List<FamilyTaskOccurrenceDto> = emptyList(),
     @SerializedName(value = "date", alternate = ["today", "scheduled_date"])
     val date: String? = null,
+)
+
+data class FamilyTaskOccurrencesRangeResponseDto(
+    @SerializedName(value = "family_id", alternate = ["familyId"])
+    val familyId: Long? = null,
+    @SerializedName(value = "start_date", alternate = ["startDate"])
+    val startDate: String? = null,
+    @SerializedName(value = "end_date", alternate = ["endDate"])
+    val endDate: String? = null,
+    @SerializedName(value = "items", alternate = ["tasks", "occurrences"])
+    val items: List<FamilyTaskOccurrenceDto> = emptyList(),
 )
 
 data class FamilyTaskOccurrenceDto(
@@ -223,6 +235,16 @@ fun JsonElement.toFamilyTasksTodayResponseDto(gson: Gson): FamilyTasksTodayRespo
         else -> FamilyTasksTodayResponseDto()
     }
 
+fun JsonElement.toFamilyTaskOccurrencesRangeResponseDto(gson: Gson): FamilyTaskOccurrencesRangeResponseDto =
+    when {
+        isJsonArray -> {
+            val listType = object : TypeToken<List<FamilyTaskOccurrenceDto>>() {}.type
+            FamilyTaskOccurrencesRangeResponseDto(items = gson.fromJson(this, listType))
+        }
+        isJsonObject -> gson.fromJson(this, FamilyTaskOccurrencesRangeResponseDto::class.java)
+        else -> FamilyTaskOccurrencesRangeResponseDto()
+    }
+
 fun JsonElement.toFamilyTaskDefinitionDtos(gson: Gson): List<FamilyTaskDefinitionDto> =
     when {
         isJsonArray -> {
@@ -282,6 +304,18 @@ fun FamilyTaskOccurrenceDto.toDomain(): FamilyTaskTodayItem {
         recurrenceLabel = recurrenceLabel?.trim()?.takeIf { it.isNotBlank() },
     )
 }
+
+fun FamilyTaskOccurrencesRangeResponseDto.toDomain(
+    fallbackFamilyId: Long,
+    fallbackStartDate: String,
+    fallbackEndDate: String,
+): FamilyTaskOccurrencesRange =
+    FamilyTaskOccurrencesRange(
+        familyId = familyId ?: fallbackFamilyId,
+        startDate = startDate.normalizedDateOrNull() ?: fallbackStartDate,
+        endDate = endDate.normalizedDateOrNull() ?: fallbackEndDate,
+        occurrences = items.map { item -> item.toDomain() },
+    )
 
 fun FamilyTaskDefinitionDto.toDomain(): FamilyTaskDefinition {
     val resolvedId = id ?: 0L

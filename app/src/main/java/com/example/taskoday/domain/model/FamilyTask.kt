@@ -8,6 +8,13 @@ data class FamilyTasksToday(
     val tasks: List<FamilyTaskTodayItem>,
 )
 
+data class FamilyTaskOccurrencesRange(
+    val familyId: Long,
+    val startDate: String,
+    val endDate: String,
+    val occurrences: List<FamilyTaskTodayItem>,
+)
+
 data class FamilyTaskMember(
     val userId: Long,
     val displayName: String,

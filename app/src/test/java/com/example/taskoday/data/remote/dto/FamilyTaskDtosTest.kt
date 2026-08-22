@@ -111,6 +111,59 @@ class FamilyTaskDtosTest {
     }
 
     @Test
+    fun `task occurrence range payload maps to domain`() {
+        val payload =
+            JsonParser.parseString(
+                """
+                {
+                  "family_id": 4,
+                  "start_date": "2026-08-17",
+                  "end_date": "2026-08-23",
+                  "items": [
+                    {
+                      "task_id": 10,
+                      "occurrence_id": 100,
+                      "title": "Courses",
+                      "scheduled_date": "2026-08-22",
+                      "due_date": "2026-08-22",
+                      "due_time": null,
+                      "has_due_time": false,
+                      "status": "todo"
+                    },
+                    {
+                      "task_id": 11,
+                      "occurrence_id": 101,
+                      "title": "Sortir les poubelles",
+                      "scheduled_date": "2026-08-23",
+                      "due_date": "2026-08-23",
+                      "due_time": "00:00",
+                      "has_due_time": true,
+                      "status": "validated"
+                    }
+                  ]
+                }
+                """.trimIndent(),
+            )
+
+        val range =
+            payload
+                .toFamilyTaskOccurrencesRangeResponseDto(gson)
+                .toDomain(
+                    fallbackFamilyId = 0L,
+                    fallbackStartDate = "2026-01-01",
+                    fallbackEndDate = "2026-01-07",
+                )
+
+        assertEquals(4L, range.familyId)
+        assertEquals("2026-08-17", range.startDate)
+        assertEquals("2026-08-23", range.endDate)
+        assertEquals(listOf(10L, 11L), range.occurrences.map { item -> item.taskId })
+        assertFalse(range.occurrences.first().hasDueTime)
+        assertTrue(range.occurrences.last().hasDueTime)
+        assertEquals("00:00", range.occurrences.last().dueTime)
+    }
+
+    @Test
     fun `family members payload maps parents children and active flag`() {
         val payload =
             JsonParser.parseString(

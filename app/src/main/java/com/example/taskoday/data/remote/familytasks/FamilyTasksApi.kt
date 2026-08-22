@@ -10,6 +10,7 @@ import retrofit2.http.GET
 import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 interface FamilyTasksApi {
     @GET("families/{familyId}/tasks")
@@ -20,6 +21,13 @@ interface FamilyTasksApi {
     @GET("families/{familyId}/tasks/today")
     suspend fun getTodayTasks(
         @Path("familyId") familyId: Long,
+    ): ApiEnvelopeDto<JsonElement>
+
+    @GET("families/{familyId}/task-occurrences")
+    suspend fun getTaskOccurrences(
+        @Path("familyId") familyId: Long,
+        @Query("start_date") startDate: String,
+        @Query("end_date") endDate: String,
     ): ApiEnvelopeDto<JsonElement>
 
     @GET("families/{familyId}/members")

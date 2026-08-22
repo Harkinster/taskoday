@@ -115,11 +115,30 @@ fun FamilyHomeScreen(
 
                 item {
                     FamilyHomeHeader(
+                        mode = uiState.mode,
                         dateLabel = uiState.dateLabel,
+                        weekRangeLabel = uiState.weekRangeLabel,
                         completedTasks = uiState.completedTasks,
                         totalTasks = uiState.totalTasks,
                         onAddTask = onAddTask,
+                        onShowToday = viewModel::showToday,
+                        onShowWeek = viewModel::showWeek,
                     )
+                }
+
+                if (uiState.mode == FamilyHomeMode.WEEK) {
+                    item {
+                        FamilyHomeWeekControls(
+                            weekRangeLabel = uiState.weekRangeLabel,
+                            selectedDateLabel = uiState.selectedWeekDateLabel,
+                            days = uiState.weekDays,
+                            isCurrentWeek = uiState.isCurrentWeek,
+                            onPreviousWeek = viewModel::previousWeek,
+                            onNextWeek = viewModel::nextWeek,
+                            onCurrentWeek = viewModel::showCurrentWeek,
+                            onSelectDate = viewModel::selectWeekDate,
+                        )
+                    }
                 }
 
                 uiState.errorMessage?.takeIf { it.isNotBlank() }?.let { error ->
@@ -148,7 +167,21 @@ fun FamilyHomeScreen(
 
                 if (uiState.sections.isEmpty()) {
                     item {
-                        EmptyFamilyHomeCard(onAddTask = onAddTask)
+                        when {
+                            uiState.mode == FamilyHomeMode.WEEK && uiState.isWeekEmpty ->
+                                EmptyFamilyWeekCard(
+                                    title = "Rien de prévu cette semaine.",
+                                    message = "Ajoute une tâche si la maison a besoin d'un repère.",
+                                    onAddTask = onAddTask,
+                                )
+                            uiState.mode == FamilyHomeMode.WEEK ->
+                                EmptyFamilyWeekCard(
+                                    title = "Rien de prévu ce jour-là.",
+                                    message = "Les autres jours de la semaine restent accessibles juste au-dessus.",
+                                    onAddTask = onAddTask,
+                                )
+                            else -> EmptyFamilyHomeCard(onAddTask = onAddTask)
+                        }
                     }
                 } else {
                     items(
@@ -170,12 +203,21 @@ fun FamilyHomeScreen(
 
 @Composable
 private fun FamilyHomeHeader(
+    mode: FamilyHomeMode,
     dateLabel: String,
+    weekRangeLabel: String,
     completedTasks: Int,
     totalTasks: Int,
     onAddTask: () -> Unit,
+    onShowToday: () -> Unit,
+    onShowWeek: () -> Unit,
 ) {
     val progress = if (totalTasks == 0) 0f else completedTasks.toFloat() / totalTasks.toFloat()
+    val subtitle =
+        when (mode) {
+            FamilyHomeMode.TODAY -> dateLabel
+            FamilyHomeMode.WEEK -> weekRangeLabel
+        }
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
@@ -202,7 +244,7 @@ private fun FamilyHomeHeader(
                         color = InkBrown,
                     )
                     Text(
-                        text = dateLabel,
+                        text = subtitle,
                         style = MaterialTheme.typography.bodyMedium,
                         color = InkMuted,
                     )
@@ -214,6 +256,12 @@ private fun FamilyHomeHeader(
                     modifier = Modifier.size(30.dp),
                 )
             }
+
+            FamilyHomeModeSwitch(
+                mode = mode,
+                onShowToday = onShowToday,
+                onShowWeek = onShowWeek,
+            )
 
             if (totalTasks > 0) {
                 LinearProgressIndicator(
@@ -239,11 +287,192 @@ private fun FamilyHomeHeader(
                 }
             } else {
                 Text(
-                    text = "Aucune tâche planifiée aujourd'hui.",
+                    text =
+                        if (mode == FamilyHomeMode.TODAY) {
+                            "Aucune tâche planifiée aujourd'hui."
+                        } else {
+                            "S\u00e9lectionne un jour pour suivre la semaine."
+                        },
                     style = MaterialTheme.typography.bodyMedium,
                     color = InkMuted,
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun FamilyHomeModeSwitch(
+    mode: FamilyHomeMode,
+    onShowToday: () -> Unit,
+    onShowWeek: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        FamilyHomeModeButton(
+            label = "Aujourd'hui",
+            selected = mode == FamilyHomeMode.TODAY,
+            onClick = onShowToday,
+            modifier = Modifier.weight(1f),
+        )
+        FamilyHomeModeButton(
+            label = "Semaine",
+            selected = mode == FamilyHomeMode.WEEK,
+            onClick = onShowWeek,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+@Composable
+private fun FamilyHomeModeButton(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (selected) {
+        Button(
+            onClick = onClick,
+            modifier = modifier,
+            shape = RoundedCornerShape(8.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = WoodBrown, contentColor = ParchmentLight),
+        ) {
+            Text(label)
+        }
+    } else {
+        OutlinedButton(
+            onClick = onClick,
+            modifier = modifier,
+            shape = RoundedCornerShape(8.dp),
+        ) {
+            Text(label)
+        }
+    }
+}
+
+@Composable
+private fun FamilyHomeWeekControls(
+    weekRangeLabel: String,
+    selectedDateLabel: String,
+    days: List<FamilyTaskWeekDaySummary>,
+    isCurrentWeek: Boolean,
+    onPreviousWeek: () -> Unit,
+    onNextWeek: () -> Unit,
+    onCurrentWeek: () -> Unit,
+    onSelectDate: (String) -> Unit,
+) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        colors =
+            CardDefaults.elevatedCardColors(
+                containerColor = ParchmentLight.copy(alpha = 0.98f),
+                contentColor = InkBrown,
+            ),
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TextButton(onClick = onPreviousWeek) {
+                    Text("<")
+                }
+                Text(
+                    text = weekRangeLabel,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = InkBrown,
+                )
+                TextButton(onClick = onNextWeek) {
+                    Text(">")
+                }
+            }
+
+            if (!isCurrentWeek) {
+                OutlinedButton(
+                    onClick = onCurrentWeek,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Semaine actuelle")
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                days.forEach { day ->
+                    FamilyHomeWeekDayButton(
+                        day = day,
+                        onClick = { onSelectDate(day.date) },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+
+            Text(
+                text = selectedDateLabel,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = InkBrown,
+            )
+        }
+    }
+}
+
+@Composable
+private fun FamilyHomeWeekDayButton(
+    day: FamilyTaskWeekDaySummary,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val background =
+        when {
+            day.isSelected -> WoodBrown
+            day.isToday -> SoftGold.copy(alpha = 0.28f)
+            else -> ParchmentCream.copy(alpha = 0.82f)
+        }
+    val content =
+        if (day.isSelected) {
+            ParchmentLight
+        } else {
+            InkBrown
+        }
+    Surface(
+        modifier = modifier.clickable(onClick = onClick),
+        shape = RoundedCornerShape(8.dp),
+        color = background,
+        contentColor = content,
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(3.dp),
+        ) {
+            Text(
+                text = day.weekdayLabel,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = day.dayNumberLabel,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = day.progressLabel(),
+                style = MaterialTheme.typography.labelSmall,
+                color = content.copy(alpha = 0.82f),
+            )
         }
     }
 }
@@ -410,6 +639,50 @@ private fun PriorityChip(
 }
 
 @Composable
+private fun EmptyFamilyWeekCard(
+    title: String,
+    message: String,
+    onAddTask: () -> Unit,
+) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        colors =
+            CardDefaults.elevatedCardColors(
+                containerColor = ParchmentLight.copy(alpha = 0.97f),
+                contentColor = InkBrown,
+            ),
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = InkBrown,
+            )
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = InkMuted,
+            )
+            Button(
+                onClick = onAddTask,
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = WoodBrown, contentColor = ParchmentLight),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Ajouter une tâche")
+            }
+        }
+    }
+}
+
+@Composable
 private fun EmptyFamilyHomeCard(onAddTask: () -> Unit) {
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
@@ -509,6 +782,9 @@ private fun FamilyTaskQuickAction.icon() =
         FamilyTaskQuickAction.VALIDATE -> Icons.Outlined.Check
         FamilyTaskQuickAction.REOPEN -> Icons.AutoMirrored.Outlined.Undo
     }
+
+private fun FamilyTaskWeekDaySummary.progressLabel(): String =
+    if (totalCount == 0) "-" else "$completedCount/$totalCount"
 
 
 @Composable
