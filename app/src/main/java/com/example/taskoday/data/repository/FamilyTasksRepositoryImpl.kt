@@ -10,7 +10,6 @@ import com.example.taskoday.data.remote.familytasks.FamilyTasksApi
 import com.example.taskoday.domain.model.FamilyTaskCreateInput
 import com.example.taskoday.domain.model.FamilyTaskDefinition
 import com.example.taskoday.domain.model.FamilyTaskMember
-import com.example.taskoday.domain.model.FamilyTaskMemberRole
 import com.example.taskoday.domain.model.FamilyTasksToday
 import com.example.taskoday.domain.repository.AuthRepository
 import com.example.taskoday.domain.repository.FamilyTasksRepository
@@ -58,23 +57,13 @@ class FamilyTasksRepositoryImpl
 
         override suspend fun fetchMembers(): Result<List<FamilyTaskMember>> =
             runCatching {
-                val me = authRepository.fetchMe()
-                val familyId = resolveFamilyId(me.familyIds)
-                val parent =
-                    FamilyTaskMember(
-                        userId = me.id,
-                        displayName = me.email.substringBefore("@").ifBlank { "Parent" },
-                        email = me.email,
-                        role = FamilyTaskMemberRole.PARENT,
-                    )
-                val children =
-                    familyTasksApi
-                        .getFamilyChildren(familyId)
-                        .data
-                        .toFamilyTaskMemberDtos(gson)
-                        .map { child -> child.toDomain() }
-                listOf(parent)
-                    .plus(children)
+                val familyId = resolveFamilyId()
+                familyTasksApi
+                    .getFamilyMembers(familyId)
+                    .data
+                    .toFamilyTaskMemberDtos(gson)
+                    .map { member -> member.toDomain() }
+                    .filter { member -> member.isActive }
                     .distinctBy { member -> member.userId }
             }
 

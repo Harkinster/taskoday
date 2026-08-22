@@ -215,8 +215,13 @@ private fun FamilyTaskCreateUiState.withTask(task: FamilyTaskDefinition): Family
         isLoadingTask = false,
         title = task.title,
         description = task.description.orEmpty(),
-        date = familyTaskDateFromDueAt(task.dueAt) ?: date,
-        time = familyTaskTimeFromDueAt(task.dueAt),
+        date = familyTaskDateFromFields(dueDate = task.dueDate, dueAt = task.dueAt) ?: date,
+        time =
+            familyTaskTimeFromFields(
+                hasDueTime = task.hasDueTime,
+                dueTime = task.dueTime,
+                dueAt = task.dueAt,
+            ),
         recurrence = task.recurrence,
         selectedWeekdays = task.selectedWeekdays.toSet(),
         selectedAssigneeUserIds = task.assignees.mapNotNull { assignee -> assignee.id }.toSet(),

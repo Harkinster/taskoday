@@ -22,8 +22,8 @@ interface FamilyTasksApi {
         @Path("familyId") familyId: Long,
     ): ApiEnvelopeDto<JsonElement>
 
-    @GET("families/{familyId}/children")
-    suspend fun getFamilyChildren(
+    @GET("families/{familyId}/members")
+    suspend fun getFamilyMembers(
         @Path("familyId") familyId: Long,
     ): ApiEnvelopeDto<JsonElement>
 

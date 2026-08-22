@@ -350,12 +350,16 @@ private fun List<FamilyTaskAssignee>.assignmentLabel(): String =
     }
 
 private fun FamilyTaskDefinition.dateLabel(): String =
-    familyTaskDateFromDueAt(dueAt)
+    familyTaskDateFromFields(dueDate = dueDate, dueAt = dueAt)
         ?.let { date -> formatFamilyTaskDateLabel(date) }
         ?: "Aucune date"
 
 private fun FamilyTaskDefinition.timeLabel(): String =
-    familyTaskTimeFromDueAt(dueAt)
+    familyTaskTimeFromFields(
+        hasDueTime = hasDueTime,
+        dueTime = dueTime,
+        dueAt = dueAt,
+    )
         .takeIf { it.isNotBlank() }
         ?.let { time -> formatFamilyTaskTimeLabel(time) }
         ?: "Sans heure"

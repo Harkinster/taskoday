@@ -2,12 +2,14 @@ package com.example.taskoday.data.remote.dto
 
 import com.example.taskoday.domain.model.FamilyTaskPriority
 import com.example.taskoday.domain.model.FamilyTaskCreateInput
+import com.example.taskoday.domain.model.FamilyTaskMemberRole
 import com.example.taskoday.domain.model.FamilyTaskRecurrence
 import com.example.taskoday.domain.model.FamilyTaskStatus
 import com.google.gson.Gson
 import com.google.gson.JsonParser
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -27,7 +29,10 @@ class FamilyTaskDtosTest {
                     {"child_profile_id": 12, "display_name": "Ada"}
                   ],
                   "scheduled_date": "2026-08-22",
-                  "due_at": "18:30:00",
+                  "due_date": "2026-08-22",
+                  "due_time": "18:30",
+                  "has_due_time": true,
+                  "due_at": "2026-08-22T18:30:00Z",
                   "status": "pending_validation",
                   "validation_required": true,
                   "gamification_enabled": false,
@@ -41,7 +46,9 @@ class FamilyTaskDtosTest {
         assertEquals(700L, dto.occurrenceId)
         assertEquals("Ada", dto.assignees.single().displayName)
         assertEquals("2026-08-22", dto.scheduledDate)
-        assertEquals("18:30:00", dto.dueAt)
+        assertEquals("2026-08-22", dto.dueDate)
+        assertEquals("18:30", dto.dueTime)
+        assertTrue(dto.hasDueTime == true)
         assertTrue(dto.validationRequired == true)
         assertFalse(dto.gamificationEnabled == true)
     }
@@ -58,6 +65,9 @@ class FamilyTaskDtosTest {
                 validationRequired = true,
                 gamificationEnabled = false,
                 priority = "urgent",
+                dueDate = "2026-08-22",
+                dueTime = "00:00",
+                hasDueTime = true,
             ).toDomain()
 
         assertEquals(42L, item.taskId)
@@ -66,6 +76,9 @@ class FamilyTaskDtosTest {
         assertEquals("Ada", item.assignees.single().displayName)
         assertEquals(FamilyTaskStatus.VALIDATED, item.status)
         assertEquals(FamilyTaskPriority.URGENT, item.priority)
+        assertEquals("2026-08-22", item.dueDate)
+        assertEquals("00:00", item.dueTime)
+        assertTrue(item.hasDueTime)
         assertTrue(item.validationRequired)
         assertFalse(item.gamificationEnabled)
     }
@@ -98,20 +111,30 @@ class FamilyTaskDtosTest {
     }
 
     @Test
-    fun `family children payload maps from envelope data array`() {
+    fun `family members payload maps parents children and active flag`() {
         val payload =
             JsonParser.parseString(
                 """
                 [
-                  {"id": 11, "email": "ada@example.test", "display_name": "Ada"}
+                  {"user_id": 10, "email": "parent@example.test", "display_name": "Parent", "role": "PARENT", "is_active": true},
+                  {"user_id": 11, "email": "second@example.test", "display_name": "Second Parent", "role": "PARENT", "is_active": true},
+                  {"user_id": 12, "email": "ada@example.test", "display_name": "Ada", "role": "CHILD", "is_active": false}
                 ]
                 """.trimIndent(),
             )
 
-        val member = payload.toFamilyTaskMemberDtos(gson).single().toDomain()
+        val members = payload.toFamilyTaskMemberDtos(gson).map { member -> member.toDomain() }
 
-        assertEquals(11L, member.userId)
-        assertEquals("Ada", member.displayName)
+        assertEquals(listOf(10L, 11L, 12L), members.map { member -> member.userId })
+        assertEquals("Parent", members[0].displayName)
+        assertEquals("Second Parent", members[1].displayName)
+        assertEquals("Ada", members[2].displayName)
+        assertEquals(FamilyTaskMemberRole.PARENT, members[0].role)
+        assertEquals(FamilyTaskMemberRole.PARENT, members[1].role)
+        assertEquals(FamilyTaskMemberRole.CHILD, members[2].role)
+        assertTrue(members[0].isActive)
+        assertTrue(members[1].isActive)
+        assertFalse(members[2].isActive)
     }
 
     @Test
@@ -120,7 +143,8 @@ class FamilyTaskDtosTest {
             FamilyTaskCreateInput(
                 title = "Sortir les poubelles",
                 description = "Bac jaune",
-                dueAt = "2026-08-22T18:30:00Z",
+                dueDate = "2026-08-22",
+                dueTime = "18:30",
                 recurrence = FamilyTaskRecurrence.SELECTED_WEEKDAYS,
                 selectedWeekdays = listOf(1, 3),
                 assigneeUserIds = listOf(10L, 20L),
@@ -133,7 +157,9 @@ class FamilyTaskDtosTest {
         assertEquals("Sortir les poubelles", json["title"].asString)
         assertEquals("Bac jaune", json["description"].asString)
         assertEquals("HIGH", json["priority"].asString)
-        assertEquals("2026-08-22T18:30:00Z", json["due_at"].asString)
+        assertEquals("2026-08-22", json["due_date"].asString)
+        assertEquals("18:30", json["due_time"].asString)
+        assertFalse(json.has("due_at"))
         assertEquals("SELECTED_WEEKDAYS", json["recurrence"].asString)
         assertEquals(1, json["selected_weekdays"].asJsonArray[0].asInt)
         assertEquals(3, json["selected_weekdays"].asJsonArray[1].asInt)
@@ -149,7 +175,8 @@ class FamilyTaskDtosTest {
             FamilyTaskCreateInput(
                 title = "Ranger l'entrée",
                 description = null,
-                dueAt = "2026-08-22T00:00:00Z",
+                dueDate = "2026-08-22",
+                dueTime = null,
                 recurrence = FamilyTaskRecurrence.NONE,
                 selectedWeekdays = emptyList(),
                 assigneeUserIds = emptyList(),
@@ -161,6 +188,9 @@ class FamilyTaskDtosTest {
 
         assertEquals("NORMAL", json["priority"].asString)
         assertEquals("NONE", json["recurrence"].asString)
+        assertEquals("2026-08-22", json["due_date"].asString)
+        assertTrue(json["due_time"].isJsonNull)
+        assertFalse(json.has("due_at"))
         assertEquals(0, json["assignee_user_ids"].asJsonArray.size())
         assertFalse(json.has("selected_weekdays") && !json["selected_weekdays"].isJsonNull)
         assertFalse(json["validation_required"].asBoolean)
@@ -178,6 +208,9 @@ class FamilyTaskDtosTest {
                     "family_id": 4,
                     "title": "Smoke Maison Codex",
                     "description": "Controle de smoke",
+                    "due_date": "2026-08-22",
+                    "due_time": "18:30",
+                    "has_due_time": true,
                     "due_at": "2026-08-22T18:30:00Z",
                     "recurrence": "SELECTED_WEEKDAYS",
                     "selected_weekdays": [5, 1, 3],
@@ -200,6 +233,9 @@ class FamilyTaskDtosTest {
         assertEquals(4L, task.familyId)
         assertEquals("Smoke Maison Codex", task.title)
         assertEquals("Controle de smoke", task.description)
+        assertEquals("2026-08-22", task.dueDate)
+        assertEquals("18:30", task.dueTime)
+        assertTrue(task.hasDueTime)
         assertEquals("2026-08-22T18:30:00Z", task.dueAt)
         assertEquals(FamilyTaskRecurrence.SELECTED_WEEKDAYS, task.recurrence)
         assertEquals(listOf(1, 3, 5), task.selectedWeekdays)
@@ -216,7 +252,8 @@ class FamilyTaskDtosTest {
             FamilyTaskCreateInput(
                 title = "Smoke Maison modifie",
                 description = "Nouvelle consigne",
-                dueAt = "2026-08-23T09:15:00Z",
+                dueDate = "2026-08-23",
+                dueTime = "09:15",
                 recurrence = FamilyTaskRecurrence.SELECTED_WEEKDAYS,
                 selectedWeekdays = listOf(1, 3, 5),
                 assigneeUserIds = listOf(10L, 20L),
@@ -229,7 +266,9 @@ class FamilyTaskDtosTest {
         assertEquals("Smoke Maison modifie", json["title"].asString)
         assertEquals("Nouvelle consigne", json["description"].asString)
         assertEquals("HIGH", json["priority"].asString)
-        assertEquals("2026-08-23T09:15:00Z", json["due_at"].asString)
+        assertEquals("2026-08-23", json["due_date"].asString)
+        assertEquals("09:15", json["due_time"].asString)
+        assertFalse(json.has("due_at"))
         assertEquals("SELECTED_WEEKDAYS", json["recurrence"].asString)
         assertEquals(1, json["selected_weekdays"].asJsonArray[0].asInt)
         assertEquals(3, json["selected_weekdays"].asJsonArray[1].asInt)
@@ -246,7 +285,8 @@ class FamilyTaskDtosTest {
             FamilyTaskCreateInput(
                 title = "Routine simple",
                 description = null,
-                dueAt = "2026-08-23T00:00:00Z",
+                dueDate = "2026-08-23",
+                dueTime = null,
                 recurrence = FamilyTaskRecurrence.DAILY,
                 selectedWeekdays = emptyList(),
                 assigneeUserIds = emptyList(),
@@ -257,6 +297,9 @@ class FamilyTaskDtosTest {
         val json = JsonParser.parseString(gson.toJson(request)).asJsonObject
 
         assertEquals("", json["description"].asString)
+        assertEquals("2026-08-23", json["due_date"].asString)
+        assertTrue(json["due_time"].isJsonNull)
+        assertFalse(json.has("due_at"))
         assertEquals("DAILY", json["recurrence"].asString)
         assertEquals(0, json["selected_weekdays"].asJsonArray.size())
         assertEquals(0, json["assignee_user_ids"].asJsonArray.size())

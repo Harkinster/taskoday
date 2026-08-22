@@ -9,6 +9,7 @@ import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
+import java.util.Locale
 
 data class FamilyTaskCreateForm(
     val title: String,
@@ -41,18 +42,22 @@ fun validateFamilyTaskCreateForm(form: FamilyTaskCreateForm): FamilyTaskCreateVa
         return FamilyTaskCreateValidation(errorMessage = "Choisis au moins un jour.")
     }
 
-    val dueAt =
-        buildFamilyTaskDueAt(
+    val dueDate =
+        buildFamilyTaskDueDate(
             dateText = form.date,
-            timeText = form.time,
         ).getOrElse { return FamilyTaskCreateValidation(errorMessage = it.message ?: "Date invalide.") }
+    val dueTime =
+        buildFamilyTaskDueTime(
+            timeText = form.time,
+        ).getOrElse { return FamilyTaskCreateValidation(errorMessage = it.message ?: "Heure invalide.") }
 
     return FamilyTaskCreateValidation(
         input =
             FamilyTaskCreateInput(
                 title = title,
                 description = form.description.trim().takeIf { it.isNotBlank() },
-                dueAt = dueAt,
+                dueDate = dueDate,
+                dueTime = dueTime,
                 recurrence = form.recurrence,
                 selectedWeekdays = form.selectedWeekdays.sorted(),
                 assigneeUserIds = form.assigneeUserIds.sorted(),
@@ -64,6 +69,28 @@ fun validateFamilyTaskCreateForm(form: FamilyTaskCreateForm): FamilyTaskCreateVa
             ),
     )
 }
+
+fun buildFamilyTaskDueDate(dateText: String): Result<String> =
+    runCatching {
+        try {
+            LocalDate.parse(dateText.trim(), DateTimeFormatter.ISO_LOCAL_DATE).toString()
+        } catch (error: DateTimeParseException) {
+            throw IllegalArgumentException("Date invalide. Utilise AAAA-MM-JJ.")
+        }
+    }
+
+fun buildFamilyTaskDueTime(timeText: String): Result<String?> =
+    runCatching {
+        if (timeText.isBlank()) {
+            null
+        } else {
+            try {
+                LocalTime.parse(timeText.trim(), DateTimeFormatter.ofPattern("HH:mm")).format(DateTimeFormatter.ofPattern("HH:mm"))
+            } catch (error: DateTimeParseException) {
+                throw IllegalArgumentException("Heure invalide. Utilise HH:mm.")
+            }
+        }
+    }
 
 fun buildFamilyTaskDueAt(
     dateText: String,
@@ -105,15 +132,60 @@ fun familyTaskDateFromDueAt(value: String?): String? {
 
 fun familyTaskTimeFromDueAt(value: String?): String {
     val trimmed = value?.trim()?.takeIf { it.isNotBlank() } ?: return ""
-    val timePart = trimmed.substringAfter("T", missingDelimiterValue = "")
+    val timePart =
+        trimmed
+            .substringAfter("T", missingDelimiterValue = trimmed)
+            .substringBefore("Z")
+            .substringBefore("+")
     return timePart.takeIf { it.length >= 5 }?.take(5).orEmpty()
+}
+
+fun familyTaskDateFromFields(
+    dueDate: String?,
+    dueAt: String?,
+): String? =
+    dueDate
+        ?.trim()
+        ?.takeIf { it.matches(Regex("\\d{4}-\\d{2}-\\d{2}")) }
+        ?: familyTaskDateFromDueAt(dueAt)
+
+fun familyTaskTimeFromFields(
+    hasDueTime: Boolean,
+    dueTime: String?,
+    dueAt: String?,
+): String =
+    if (hasDueTime) {
+        dueTime
+            ?.trim()
+            ?.takeIf { it.isNotBlank() }
+            ?.let { time -> familyTaskTimeFromDueAt(time) }
+            ?: familyTaskTimeFromDueAt(dueAt)
+    } else {
+        ""
+    }
+
+fun familyTaskDueLabel(
+    dueDate: String?,
+    dueTime: String?,
+    hasDueTime: Boolean,
+    dueAt: String?,
+): String? {
+    val dateLabel =
+        familyTaskDateFromFields(dueDate = dueDate, dueAt = dueAt)
+            ?.let { date -> formatFamilyTaskDateLabel(date) }
+            ?: return null
+    val timeLabel =
+        familyTaskTimeFromFields(
+            hasDueTime = hasDueTime,
+            dueTime = dueTime,
+            dueAt = dueAt,
+        ).takeIf { it.isNotBlank() }
+    return if (timeLabel == null) dateLabel else "$dateLabel à $timeLabel"
 }
 
 fun formatFamilyTaskDateLabel(value: String): String =
     parseFamilyTaskDateInput(value)?.let { date ->
-        val day = date.dayOfMonth.toString().padStart(2, '0')
-        val month = date.monthValue.toString().padStart(2, '0')
-        "$day/$month/${date.year}"
+        date.format(DateTimeFormatter.ofPattern("d MMMM", Locale.FRANCE))
     } ?: "Choisir une date"
 
 fun formatFamilyTaskTimeLabel(value: String): String =

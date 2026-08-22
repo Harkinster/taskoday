@@ -68,11 +68,33 @@ class FamilyTaskCreatePolicyTest {
     }
 
     @Test
-    fun `date and time are converted to backend datetime`() {
+    fun `date and optional time are preserved separately`() {
         assertEquals(
-            "2026-08-22T18:30:00Z",
-            buildFamilyTaskDueAt(dateText = "2026-08-22", timeText = "18:30").getOrThrow(),
+            "2026-08-22",
+            buildFamilyTaskDueDate(dateText = "2026-08-22").getOrThrow(),
         )
+        assertEquals("18:30", buildFamilyTaskDueTime(timeText = "18:30").getOrThrow())
+        assertNull(buildFamilyTaskDueTime(timeText = "").getOrThrow())
+    }
+
+    @Test
+    fun `form creates a task without inventing midnight`() {
+        val input = validateFamilyTaskCreateForm(validForm(time = "")).input
+
+        assertEquals("2026-08-22", input?.dueDate)
+        assertNull(input?.dueTime)
+    }
+
+    @Test
+    fun `form preserves real midnight when selected`() {
+        val input = validateFamilyTaskCreateForm(validForm(time = "00:00")).input
+
+        assertEquals("2026-08-22", input?.dueDate)
+        assertEquals("00:00", input?.dueTime)
+    }
+
+    @Test
+    fun `legacy due at is still available for compatibility`() {
         assertEquals(
             "2026-08-22T00:00:00Z",
             buildFamilyTaskDueAt(dateText = "2026-08-22", timeText = "").getOrThrow(),
@@ -106,12 +128,15 @@ class FamilyTaskCreatePolicyTest {
 
     @Test
     fun `date and time labels are formatted for parent input`() {
-        assertEquals("22/08/2026", formatFamilyTaskDateLabel("2026-08-22"))
+        assertEquals("22 août", formatFamilyTaskDateLabel("2026-08-22"))
         assertEquals("Choisir une date", formatFamilyTaskDateLabel("bad-date"))
         assertEquals("18:30", formatFamilyTaskTimeLabel("18:30"))
         assertEquals("Sans heure", formatFamilyTaskTimeLabel(""))
         assertEquals("2026-08-22", familyTaskDateFromDueAt("2026-08-22T18:30:00Z"))
         assertEquals("18:30", familyTaskTimeFromDueAt("2026-08-22T18:30:00Z"))
+        assertEquals("22 août", familyTaskDueLabel(dueDate = "2026-08-22", dueTime = null, hasDueTime = false, dueAt = null))
+        assertEquals("22 août à 00:00", familyTaskDueLabel(dueDate = "2026-08-22", dueTime = "00:00", hasDueTime = true, dueAt = null))
+        assertEquals("22 août à 18:30", familyTaskDueLabel(dueDate = "2026-08-22", dueTime = "18:30", hasDueTime = true, dueAt = null))
     }
 
     private fun validForm(

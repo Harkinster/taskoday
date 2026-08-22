@@ -13,6 +13,7 @@ data class FamilyTaskMember(
     val displayName: String,
     val email: String?,
     val role: FamilyTaskMemberRole,
+    val isActive: Boolean,
 )
 
 enum class FamilyTaskMemberRole {
@@ -23,7 +24,8 @@ enum class FamilyTaskMemberRole {
 data class FamilyTaskCreateInput(
     val title: String,
     val description: String?,
-    val dueAt: String,
+    val dueDate: String,
+    val dueTime: String?,
     val recurrence: FamilyTaskRecurrence,
     val selectedWeekdays: List<Int>,
     val assigneeUserIds: List<Long>,
@@ -38,6 +40,9 @@ data class FamilyTaskDefinition(
     val title: String,
     val description: String?,
     val assignees: List<FamilyTaskAssignee>,
+    val dueDate: String?,
+    val dueTime: String?,
+    val hasDueTime: Boolean,
     val dueAt: String?,
     val recurrence: FamilyTaskRecurrence,
     val selectedWeekdays: List<Int>,
@@ -53,6 +58,9 @@ data class FamilyTaskTodayItem(
     val title: String,
     val assignees: List<FamilyTaskAssignee>,
     val scheduledDate: String?,
+    val dueDate: String?,
+    val dueTime: String?,
+    val hasDueTime: Boolean,
     val dueAt: String?,
     val status: FamilyTaskStatus,
     val validationRequired: Boolean,

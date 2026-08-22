@@ -492,7 +492,12 @@ private enum class MessageTone {
 
 private fun FamilyTaskTodayItem.details(): List<String> =
     buildList {
-        formatDueAt(dueAt)?.let { add("Échéance $it") }
+        familyTaskDueLabel(
+            dueDate = dueDate,
+            dueTime = dueTime,
+            hasDueTime = hasDueTime,
+            dueAt = dueAt,
+        )?.let { add("Échéance $it") }
         recurrenceLabel?.let { add(it) }
         if (validationRequired) add("Validation requise")
         if (gamificationEnabled) add("Gamification active")
@@ -505,11 +510,6 @@ private fun FamilyTaskQuickAction.icon() =
         FamilyTaskQuickAction.REOPEN -> Icons.AutoMirrored.Outlined.Undo
     }
 
-private fun formatDueAt(value: String?): String? {
-    val trimmed = value?.trim()?.takeIf { it.isNotBlank() } ?: return null
-    val timePart = trimmed.substringAfter("T", trimmed).substringBefore("Z").substringBefore("+")
-    return timePart.takeIf { it.length >= 5 }?.take(5) ?: trimmed
-}
 
 @Composable
 private fun FamilyTaskStatus.containerColor(): Color =

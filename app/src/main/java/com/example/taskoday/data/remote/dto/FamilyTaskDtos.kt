@@ -11,8 +11,14 @@ import com.example.taskoday.domain.model.FamilyTaskStatus
 import com.example.taskoday.domain.model.FamilyTaskTodayItem
 import com.google.gson.Gson
 import com.google.gson.JsonElement
+import com.google.gson.JsonNull
+import com.google.gson.JsonPrimitive
+import com.google.gson.TypeAdapter
+import com.google.gson.annotations.JsonAdapter
 import com.google.gson.annotations.SerializedName
 import com.google.gson.reflect.TypeToken
+import com.google.gson.stream.JsonReader
+import com.google.gson.stream.JsonWriter
 
 data class FamilyTasksTodayResponseDto(
     @SerializedName(value = "tasks", alternate = ["items", "occurrences"])
@@ -32,6 +38,12 @@ data class FamilyTaskOccurrenceDto(
     val assignees: List<FamilyTaskAssigneeDto> = emptyList(),
     @SerializedName(value = "scheduled_date", alternate = ["scheduledDate"])
     val scheduledDate: String? = null,
+    @SerializedName(value = "due_date", alternate = ["dueDate"])
+    val dueDate: String? = null,
+    @SerializedName(value = "due_time", alternate = ["dueTime"])
+    val dueTime: String? = null,
+    @SerializedName(value = "has_due_time", alternate = ["hasDueTime"])
+    val hasDueTime: Boolean? = null,
     @SerializedName(value = "due_at", alternate = ["dueAt"])
     val dueAt: String? = null,
     @SerializedName("status")
@@ -66,6 +78,12 @@ data class FamilyTaskDefinitionDto(
     val assignees: List<FamilyTaskAssigneeDto> = emptyList(),
     @SerializedName(value = "due_at", alternate = ["dueAt"])
     val dueAt: String? = null,
+    @SerializedName(value = "due_date", alternate = ["dueDate"])
+    val dueDate: String? = null,
+    @SerializedName(value = "due_time", alternate = ["dueTime"])
+    val dueTime: String? = null,
+    @SerializedName(value = "has_due_time", alternate = ["hasDueTime"])
+    val hasDueTime: Boolean? = null,
     @SerializedName("recurrence")
     val recurrence: String? = null,
     @SerializedName(value = "selected_weekdays", alternate = ["selectedWeekdays"])
@@ -89,8 +107,11 @@ data class FamilyTaskMemberDto(
     val email: String? = null,
     @SerializedName("role")
     val role: String? = null,
+    @SerializedName(value = "is_active", alternate = ["isActive", "active"])
+    val isActive: Boolean? = null,
 )
 
+@JsonAdapter(FamilyTaskCreateRequestDtoJsonAdapter::class)
 data class FamilyTaskCreateRequestDto(
     @SerializedName("title")
     val title: String,
@@ -98,8 +119,10 @@ data class FamilyTaskCreateRequestDto(
     val description: String? = null,
     @SerializedName("priority")
     val priority: String,
-    @SerializedName("due_at")
-    val dueAt: String,
+    @SerializedName("due_date")
+    val dueDate: String,
+    @SerializedName("due_time")
+    val dueTime: JsonElement,
     @SerializedName("recurrence")
     val recurrence: String,
     @SerializedName("selected_weekdays")
@@ -112,6 +135,7 @@ data class FamilyTaskCreateRequestDto(
     val gamificationEnabled: Boolean,
 )
 
+@JsonAdapter(FamilyTaskUpdateRequestDtoJsonAdapter::class)
 data class FamilyTaskUpdateRequestDto(
     @SerializedName("title")
     val title: String,
@@ -119,8 +143,10 @@ data class FamilyTaskUpdateRequestDto(
     val description: String? = null,
     @SerializedName("priority")
     val priority: String,
-    @SerializedName("due_at")
-    val dueAt: String,
+    @SerializedName("due_date")
+    val dueDate: String,
+    @SerializedName("due_time")
+    val dueTime: JsonElement,
     @SerializedName("recurrence")
     val recurrence: String,
     @SerializedName("selected_weekdays")
@@ -132,6 +158,60 @@ data class FamilyTaskUpdateRequestDto(
     @SerializedName("gamification_enabled")
     val gamificationEnabled: Boolean,
 )
+
+class FamilyTaskCreateRequestDtoJsonAdapter : TypeAdapter<FamilyTaskCreateRequestDto>() {
+    override fun write(
+        out: JsonWriter,
+        value: FamilyTaskCreateRequestDto?,
+    ) {
+        if (value == null) {
+            out.nullValue()
+            return
+        }
+        out.beginObject()
+        out.name("title").value(value.title)
+        value.description?.let { description -> out.name("description").value(description) }
+        out.name("priority").value(value.priority)
+        out.name("due_date").value(value.dueDate)
+        out.writeDueTime(value.dueTime)
+        out.name("recurrence").value(value.recurrence)
+        value.selectedWeekdays?.let { selectedWeekdays -> out.writeIntArray("selected_weekdays", selectedWeekdays) }
+        out.writeLongArray("assignee_user_ids", value.assigneeUserIds)
+        out.name("validation_required").value(value.validationRequired)
+        out.name("gamification_enabled").value(value.gamificationEnabled)
+        out.endObject()
+    }
+
+    override fun read(reader: JsonReader): FamilyTaskCreateRequestDto =
+        throw UnsupportedOperationException("FamilyTaskCreateRequestDto is write-only.")
+}
+
+class FamilyTaskUpdateRequestDtoJsonAdapter : TypeAdapter<FamilyTaskUpdateRequestDto>() {
+    override fun write(
+        out: JsonWriter,
+        value: FamilyTaskUpdateRequestDto?,
+    ) {
+        if (value == null) {
+            out.nullValue()
+            return
+        }
+        out.beginObject()
+        out.name("title").value(value.title)
+        out.name("description").value(value.description)
+        out.name("priority").value(value.priority)
+        out.name("due_date").value(value.dueDate)
+        out.writeDueTime(value.dueTime)
+        out.name("recurrence").value(value.recurrence)
+        out.writeIntArray("selected_weekdays", value.selectedWeekdays.orEmpty())
+        out.writeLongArray("assignee_user_ids", value.assigneeUserIds)
+        out.name("validation_required").value(value.validationRequired)
+        out.name("gamification_enabled").value(value.gamificationEnabled)
+        out.endObject()
+    }
+
+    override fun read(reader: JsonReader): FamilyTaskUpdateRequestDto =
+        throw UnsupportedOperationException("FamilyTaskUpdateRequestDto is write-only.")
+}
 
 fun JsonElement.toFamilyTasksTodayResponseDto(gson: Gson): FamilyTasksTodayResponseDto =
     when {
@@ -191,6 +271,9 @@ fun FamilyTaskOccurrenceDto.toDomain(): FamilyTaskTodayItem {
         title = title?.trim()?.takeIf { it.isNotBlank() } ?: "Tâche sans titre",
         assignees = assignees.mapNotNull { assignee -> assignee.toDomainOrNull() },
         scheduledDate = scheduledDate?.trim()?.takeIf { it.isNotBlank() },
+        dueDate = dueDate.normalizedDateOrNull(),
+        dueTime = dueTime.normalizedTimeOrNull(),
+        hasDueTime = resolveHasDueTime(hasDueTime = hasDueTime, dueTime = dueTime, dueAt = dueAt),
         dueAt = dueAt?.trim()?.takeIf { it.isNotBlank() },
         status = FamilyTaskStatus.fromBackend(status),
         validationRequired = validationRequired ?: false,
@@ -208,6 +291,9 @@ fun FamilyTaskDefinitionDto.toDomain(): FamilyTaskDefinition {
         title = title?.trim()?.takeIf { it.isNotBlank() } ?: "Tache sans titre",
         description = description?.trim()?.takeIf { it.isNotBlank() },
         assignees = assignees.mapNotNull { assignee -> assignee.toDomainOrNull() },
+        dueDate = dueDate.normalizedDateOrNull(),
+        dueTime = dueTime.normalizedTimeOrNull(),
+        hasDueTime = resolveHasDueTime(hasDueTime = hasDueTime, dueTime = dueTime, dueAt = dueAt),
         dueAt = dueAt?.trim()?.takeIf { it.isNotBlank() },
         recurrence = FamilyTaskRecurrence.fromBackend(recurrence),
         selectedWeekdays = selectedWeekdays.filter { day -> day in 1..7 }.distinct().sorted(),
@@ -234,6 +320,7 @@ fun FamilyTaskMemberDto.toDomain(): FamilyTaskMember =
             } else {
                 FamilyTaskMemberRole.CHILD
             },
+        isActive = isActive ?: true,
     )
 
 fun FamilyTaskCreateInput.toRequestDto(): FamilyTaskCreateRequestDto =
@@ -241,7 +328,8 @@ fun FamilyTaskCreateInput.toRequestDto(): FamilyTaskCreateRequestDto =
         title = title,
         description = description,
         priority = priority.backendValue(),
-        dueAt = dueAt,
+        dueDate = dueDate,
+        dueTime = dueTime.toDueTimeJsonElement(),
         recurrence = recurrence.name,
         selectedWeekdays = selectedWeekdays.takeIf { recurrence == FamilyTaskRecurrence.SELECTED_WEEKDAYS },
         assigneeUserIds = assigneeUserIds,
@@ -254,7 +342,8 @@ fun FamilyTaskCreateInput.toUpdateRequestDto(): FamilyTaskUpdateRequestDto =
         title = title,
         description = description.orEmpty(),
         priority = priority.backendValue(),
-        dueAt = dueAt,
+        dueDate = dueDate,
+        dueTime = dueTime.toDueTimeJsonElement(),
         recurrence = recurrence.name,
         selectedWeekdays =
             if (recurrence == FamilyTaskRecurrence.SELECTED_WEEKDAYS) {
@@ -289,3 +378,63 @@ private fun FamilyTaskPriority.backendValue(): String =
         FamilyTaskPriority.HIGH -> "HIGH"
         FamilyTaskPriority.URGENT -> "URGENT"
     }
+
+private fun JsonWriter.writeDueTime(dueTime: JsonElement) {
+    name("due_time")
+    val previousSerializeNulls = serializeNulls
+    serializeNulls = true
+    if (dueTime.isJsonNull) {
+        nullValue()
+    } else {
+        value(dueTime.asString)
+    }
+    serializeNulls = previousSerializeNulls
+}
+
+private fun JsonWriter.writeIntArray(
+    name: String,
+    values: List<Int>,
+) {
+    name(name)
+    beginArray()
+    values.forEach { item -> value(item.toLong()) }
+    endArray()
+}
+
+private fun JsonWriter.writeLongArray(
+    name: String,
+    values: List<Long>,
+) {
+    name(name)
+    beginArray()
+    values.forEach { item -> value(item) }
+    endArray()
+}
+
+private fun String?.normalizedDateOrNull(): String? {
+    val trimmed = this?.trim()?.takeIf { it.isNotBlank() } ?: return null
+    return trimmed.substringBefore("T").takeIf { it.matches(Regex("\\d{4}-\\d{2}-\\d{2}")) }
+}
+
+private fun String?.normalizedTimeOrNull(): String? {
+    val trimmed = this?.trim()?.takeIf { it.isNotBlank() } ?: return null
+    val candidate =
+        trimmed
+            .substringAfter("T", trimmed)
+            .substringBefore("Z")
+            .substringBefore("+")
+    return candidate.takeIf { it.length >= 5 }?.take(5)
+}
+
+private fun resolveHasDueTime(
+    hasDueTime: Boolean?,
+    dueTime: String?,
+    dueAt: String?,
+): Boolean =
+    hasDueTime
+        ?: dueTime.normalizedTimeOrNull()?.isNotBlank()
+        ?: dueAt.normalizedTimeOrNull()?.let { time -> time != "00:00" }
+        ?: false
+
+private fun String?.toDueTimeJsonElement(): JsonElement =
+    normalizedTimeOrNull()?.let { time -> JsonPrimitive(time) } ?: JsonNull.INSTANCE
