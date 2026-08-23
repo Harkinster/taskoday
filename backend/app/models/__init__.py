@@ -1,5 +1,6 @@
 from app.models.child import ChildProfile
 from app.models.family import Family, FamilyMember, FamilyMemberRole
+from app.models.family_invite import FamilyInvite
 from app.models.family_task import (
     FamilyTask,
     FamilyTaskAssignee,
@@ -33,6 +34,7 @@ __all__ = [
     "Family",
     "FamilyMember",
     "FamilyMemberRole",
+    "FamilyInvite",
     "FamilyTask",
     "FamilyTaskAssignee",
     "FamilyTaskOccurrence",

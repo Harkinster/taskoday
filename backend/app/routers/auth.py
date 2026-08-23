@@ -10,6 +10,7 @@ from app.models.child import ChildProfile
 from app.models.family import Family, FamilyMember, FamilyMemberRole
 from app.models.user import User, UserRole
 from app.schemas.auth import AuthMeResponse, LoginRequest, RegisterChildRequest, RegisterParentRequest, TokenResponse
+from app.services.family_invite_service import accept_parent_invite, validate_parent_invite_code
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -34,11 +35,17 @@ def register_parent(payload: RegisterParentRequest, db: Session = Depends(get_db
     if existing:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email deja utilise.")
 
-    existing_family = (
-        db.execute(select(Family.id).where(func.lower(Family.name) == payload.family_name.lower())).scalars().first()
-    )
-    if existing_family:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Nom de famille deja utilise.")
+    if payload.invite_code is not None:
+        validate_parent_invite_code(db, code=payload.invite_code)
+    else:
+        assert payload.family_name is not None
+        existing_family = (
+            db.execute(select(Family.id).where(func.lower(Family.name) == payload.family_name.lower()))
+            .scalars()
+            .first()
+        )
+        if existing_family:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Nom de famille deja utilise.")
 
     user = User(
         email=payload.email,
@@ -49,12 +56,15 @@ def register_parent(payload: RegisterParentRequest, db: Session = Depends(get_db
     db.add(user)
     db.flush()
 
-    family = Family(name=payload.family_name, created_by_user_id=user.id)
-    db.add(family)
-    db.flush()
+    if payload.invite_code is not None:
+        accept_parent_invite(db, code=payload.invite_code, user=user)
+    else:
+        family = Family(name=payload.family_name, created_by_user_id=user.id)
+        db.add(family)
+        db.flush()
 
-    membership = FamilyMember(family_id=family.id, user_id=user.id, role=FamilyMemberRole.PARENT)
-    db.add(membership)
+        membership = FamilyMember(family_id=family.id, user_id=user.id, role=FamilyMemberRole.PARENT)
+        db.add(membership)
 
     db.commit()
     db.refresh(user)
