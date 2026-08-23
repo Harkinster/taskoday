@@ -92,7 +92,13 @@ class AuthViewModel
             }
         }
 
-        fun registerParent(email: String, password: String, familyName: String, birthDate: String) {
+        fun registerParent(
+            email: String,
+            password: String,
+            familyName: String,
+            birthDate: String,
+            inviteCode: String? = null,
+        ) {
             if (email.isBlank() || password.isBlank() || familyName.isBlank() || birthDate.isBlank()) {
                 _uiState.update {
                     it.copy(errorMessage = "Email, mot de passe, nom de famille et date de naissance sont requis.")
@@ -114,6 +120,7 @@ class AuthViewModel
                         password = password,
                         familyName = familyName,
                         birthDate = normalizedBirthDate,
+                        inviteCode = inviteCode?.trim()?.takeIf { it.isNotBlank() },
                     )
                     authRepository.fetchMe()
                 }.onSuccess { me ->

@@ -54,7 +54,13 @@ private fun unusedPlanningApi(): PlanningApi =
     } as PlanningApi
 
 private class FakeRoutineAuthRepository : AuthRepository {
-    override suspend fun registerParent(email: String, password: String, familyName: String, birthDate: String): AuthSession = error("Not used")
+    override suspend fun registerParent(
+        email: String,
+        password: String,
+        familyName: String,
+        birthDate: String,
+        inviteCode: String?,
+    ): AuthSession = error("Not used")
     override suspend fun registerChild(email: String, password: String, displayName: String, birthDate: String?): AuthSession = error("Not used")
     override suspend fun login(email: String, password: String): AuthSession = error("Not used")
     override suspend fun fetchMe(): AuthenticatedUser = error("Not used")

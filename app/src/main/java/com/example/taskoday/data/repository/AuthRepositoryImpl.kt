@@ -26,6 +26,7 @@ class AuthRepositoryImpl
             password: String,
             familyName: String,
             birthDate: String,
+            inviteCode: String?,
         ): AuthSession {
             val response =
                 authApi.registerParent(
@@ -34,6 +35,7 @@ class AuthRepositoryImpl
                         password = password,
                         familyName = familyName.trim(),
                         birthDate = birthDate.trim(),
+                        inviteCode = inviteCode?.trim()?.takeIf { it.isNotBlank() },
                     ),
                 )
             return response.toDomain().also { session ->

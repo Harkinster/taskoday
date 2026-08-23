@@ -42,6 +42,8 @@ fun RegisterParentScreen(
     var selectedRole by rememberSaveable { mutableStateOf(RegistrationRole.Parent) }
     var familyName by rememberSaveable { mutableStateOf("") }
     var parentBirthDate by rememberSaveable { mutableStateOf("") }
+    var showParentInviteCode by rememberSaveable { mutableStateOf(false) }
+    var parentInviteCode by rememberSaveable { mutableStateOf("") }
     var childDisplayName by rememberSaveable { mutableStateOf("") }
     var childBirthDate by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
@@ -131,6 +133,29 @@ fun RegisterParentScreen(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
+
+                TextButton(
+                    onClick = {
+                        showParentInviteCode = !showParentInviteCode
+                        viewModel.clearError()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(if (showParentInviteCode) "Masquer le code d'invitation" else "Vous avez un code d'invitation ?")
+                }
+
+                if (showParentInviteCode) {
+                    OutlinedTextField(
+                        value = parentInviteCode,
+                        onValueChange = {
+                            parentInviteCode = it
+                            viewModel.clearError()
+                        },
+                        label = { Text("Code d'invitation") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             } else {
                 OutlinedTextField(
                     value = childDisplayName,
@@ -195,6 +220,7 @@ fun RegisterParentScreen(
                                 password = password,
                                 familyName = familyName,
                                 birthDate = parentBirthDate,
+                                inviteCode = parentInviteCode,
                             )
                         RegistrationRole.Child ->
                             viewModel.registerChild(

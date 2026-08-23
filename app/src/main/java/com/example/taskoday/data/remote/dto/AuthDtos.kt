@@ -13,6 +13,8 @@ data class RegisterParentRequestDto(
     val familyName: String,
     @SerializedName("birth_date")
     val birthDate: String,
+    @SerializedName("invite_code")
+    val inviteCode: String? = null,
 )
 
 data class RegisterChildRequestDto(

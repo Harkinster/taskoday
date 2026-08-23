@@ -22,6 +22,39 @@ import org.junit.Test
 
 class AuthRepositoryImplTest {
     @Test
+    fun `register parent without invite keeps invite code null`() =
+        runBlocking {
+            val authApi = FakeAuthApi()
+            val repository = AuthRepositoryImpl(authApi, FakeChildrenApi(), MemoryTokenStorage())
+
+            repository.registerParent(
+                email = "parent@example.test",
+                password = "password123",
+                familyName = "Famille Test",
+                birthDate = "1990-01-01",
+            )
+
+            assertNull(authApi.lastRegisterParentPayload?.inviteCode)
+        }
+
+    @Test
+    fun `register parent with invite sends trimmed code without changing case`() =
+        runBlocking {
+            val authApi = FakeAuthApi()
+            val repository = AuthRepositoryImpl(authApi, FakeChildrenApi(), MemoryTokenStorage())
+
+            repository.registerParent(
+                email = "parent@example.test",
+                password = "password123",
+                familyName = "Famille Test",
+                birthDate = "1990-01-01",
+                inviteCode = "  AbC-123  ",
+            )
+
+            assertEquals("AbC-123", authApi.lastRegisterParentPayload?.inviteCode)
+        }
+
+    @Test
     fun `login replaces token and clears active child`() =
         runBlocking {
             val storage = MemoryTokenStorage(accessToken = "old-token", activeChildId = 99L)
@@ -123,7 +156,12 @@ private class MemoryTokenStorage(
 }
 
 private class FakeAuthApi : AuthApi {
-    override suspend fun registerParent(payload: RegisterParentRequestDto): TokenResponseDto = tokenResponse()
+    var lastRegisterParentPayload: RegisterParentRequestDto? = null
+
+    override suspend fun registerParent(payload: RegisterParentRequestDto): TokenResponseDto {
+        lastRegisterParentPayload = payload
+        return tokenResponse()
+    }
 
     override suspend fun registerChild(payload: RegisterChildRequestDto): TokenResponseDto = tokenResponse()
 

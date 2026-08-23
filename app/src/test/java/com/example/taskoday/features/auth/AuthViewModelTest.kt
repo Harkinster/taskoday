@@ -33,6 +33,7 @@ private class FakeAuthRepository : AuthRepository {
         password: String,
         familyName: String,
         birthDate: String,
+        inviteCode: String?,
     ): AuthSession = error("Not used")
 
     override suspend fun registerChild(

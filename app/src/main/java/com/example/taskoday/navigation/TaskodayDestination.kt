@@ -26,6 +26,8 @@ sealed class TaskodayDestination(
 
     data object FamilyTasksList : TaskodayDestination(route = "family_home/tasks", label = "Toutes les tÃ¢ches")
 
+    data object FamilyHousehold : TaskodayDestination(route = "family_household", label = "Mon foyer")
+
     data object FamilyTaskCreate : TaskodayDestination(route = "family_home/create?date={date}", label = "Nouvelle tâche") {
         const val ARG_DATE: String = "date"
 

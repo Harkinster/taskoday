@@ -43,6 +43,8 @@ import com.example.taskoday.features.auth.AuthViewModel
 import com.example.taskoday.features.auth.LoginScreen
 import com.example.taskoday.features.auth.RegisterParentScreen
 import com.example.taskoday.features.auth.SessionEventsViewModel
+import com.example.taskoday.features.family.FamilyHouseholdScreen
+import com.example.taskoday.features.family.FamilyHouseholdViewModel
 import com.example.taskoday.features.gamification.DragonsScreen
 import com.example.taskoday.features.gamification.EggsScreen
 import com.example.taskoday.features.gamification.InventoryScreen
@@ -344,6 +346,14 @@ fun TaskodayApp() {
                 )
             }
 
+            composable(TaskodayDestination.FamilyHousehold.route) {
+                val viewModel: FamilyHouseholdViewModel = hiltViewModel()
+                FamilyHouseholdScreen(
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() },
+                )
+            }
+
             composable(
                 route = TaskodayDestination.FamilyTaskCreate.route,
                 arguments =
@@ -569,6 +579,7 @@ fun TaskodayApp() {
                         }
                     },
                     onOpenPremium = navigateToPremium,
+                    onOpenHousehold = { navController.navigate(TaskodayDestination.FamilyHousehold.route) },
                 )
             }
 

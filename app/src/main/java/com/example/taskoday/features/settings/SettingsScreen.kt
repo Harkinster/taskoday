@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Palette
@@ -80,6 +81,7 @@ fun SettingsScreen(
     onExitLocalChildMode: () -> Unit = {},
     onLogoutConfirmed: () -> Unit = {},
     onOpenPremium: () -> Unit = {},
+    onOpenHousehold: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val spacing = MaterialTheme.spacing
@@ -220,6 +222,14 @@ fun SettingsScreen(
                 if (!isLocalChildMode) {
                     item {
                         NeonCard(tone = NeonTone.Blue) {
+                            if (uiState.isParentUser) {
+                                ProfileActionRow(
+                                    icon = Icons.Outlined.Home,
+                                    title = "Mon foyer",
+                                    subtitle = "Parents, enfants et invitation d'un adulte.",
+                                    onClick = onOpenHousehold,
+                                )
+                            }
                             ProfileActionRow(
                                 icon = Icons.Outlined.Edit,
                                 title = "Modifier le profil",

@@ -9,6 +9,7 @@ interface AuthRepository {
         password: String,
         familyName: String,
         birthDate: String,
+        inviteCode: String? = null,
     ): AuthSession
 
     suspend fun registerChild(
