@@ -1,4 +1,9 @@
+from contextlib import contextmanager
 from datetime import date, timedelta
+from typing import Generator
+
+from app.db.session import get_db
+from app.models.family_task import FamilyTaskOccurrence, FamilyTaskOccurrenceStatus
 
 
 API = "/api/v1"
@@ -30,6 +35,27 @@ def _register_parent(client, slug: str) -> tuple[str, int, int]:
     return token, me.json()["id"], me.json()["family_ids"][0]
 
 
+def _register_second_parent(client, parent_token: str, family_id: int, slug: str) -> tuple[str, int]:
+    invite = client.post(f"{API}/families/{family_id}/parent-invites", headers=_headers(parent_token))
+    assert invite.status_code == 201
+
+    response = client.post(
+        f"{API}/auth/register-parent",
+        json={
+            "email": f"second.parent.{slug}@example.com",
+            "password": "supersecret123",
+            "birth_date": "1988-01-20",
+            "invite_code": invite.json()["data"]["code"],
+        },
+    )
+    assert response.status_code == 201
+    token = response.json()["access_token"]
+
+    me = client.get(f"{API}/auth/me", headers=_headers(token))
+    assert me.status_code == 200
+    return token, me.json()["id"]
+
+
 def _register_child_and_attach(client, parent_token: str, slug: str) -> tuple[str, int]:
     child = client.post(
         f"{API}/auth/register-child",
@@ -51,6 +77,17 @@ def _register_child_and_attach(client, parent_token: str, slug: str) -> tuple[st
     )
     assert attached.status_code == 200
     return child_token, attached.json()["data"]["child_id"]
+
+
+@contextmanager
+def _db_session(client) -> Generator:
+    override_get_db = client.app.dependency_overrides[get_db]
+    generator = override_get_db()
+    db = next(generator)
+    try:
+        yield db
+    finally:
+        generator.close()
 
 
 def _create_task(client, token: str, family_id: int, payload: dict) -> dict:
@@ -79,10 +116,28 @@ def _range(client, token: str, family_id: int, start: date, end: date) -> dict:
     return response.json()["data"]
 
 
+def _overdue(client, token: str, family_id: int) -> dict:
+    response = client.get(f"{API}/families/{family_id}/task-occurrences/overdue", headers=_headers(token))
+    assert response.status_code == 200
+    return response.json()["data"]
+
+
 def _item_by_title(today_payload: dict, title: str) -> dict:
     matches = [item for item in today_payload["items"] if item["title"] == title]
     assert len(matches) == 1
     return matches[0]
+
+
+def _items_by_title(payload: dict, title: str) -> list[dict]:
+    return [item for item in payload["items"] if item["title"] == title]
+
+
+def _set_occurrence_status(client, occurrence_id: int, status: FamilyTaskOccurrenceStatus) -> None:
+    with _db_session(client) as db:
+        occurrence = db.get(FamilyTaskOccurrence, occurrence_id)
+        assert occurrence is not None
+        occurrence.status = status
+        db.commit()
 
 
 def test_create_family_tasks_with_assignments_recurrence_and_today_view(client) -> None:
@@ -542,5 +597,253 @@ def test_family_task_occurrences_range_rejects_invalid_ranges_and_other_families
         f"{API}/families/{family_a_id}/task-occurrences",
         headers=_headers(parent_b_token),
         params={"start_date": start.isoformat(), "end_date": (start + timedelta(days=6)).isoformat()},
+    )
+    assert other_family.status_code == 404
+
+
+def test_family_task_overdue_occurrences_filter_statuses_assignments_and_recurrences(client) -> None:
+    parent_token, parent_id, family_id = _register_parent(client, "family-tasks-overdue")
+    second_parent_token, second_parent_id = _register_second_parent(
+        client,
+        parent_token,
+        family_id,
+        "family-tasks-overdue",
+    )
+    child_token, child_id = _register_child_and_attach(client, parent_token, "family-tasks-overdue")
+    today = date.today()
+    yesterday = today - timedelta(days=1)
+    two_days_ago = today - timedelta(days=2)
+    tomorrow = today + timedelta(days=1)
+
+    _create_task(
+        client,
+        parent_token,
+        family_id,
+        {
+            "title": "Overdue maison",
+            "due_date": yesterday.isoformat(),
+        },
+    )
+    _create_task(
+        client,
+        parent_token,
+        family_id,
+        {
+            "title": "Overdue assignee",
+            "due_date": two_days_ago.isoformat(),
+            "assignee_user_ids": [child_id],
+        },
+    )
+    _create_task(
+        client,
+        parent_token,
+        family_id,
+        {
+            "title": "Overdue multi",
+            "due_date": yesterday.isoformat(),
+            "assignee_user_ids": [parent_id, child_id, second_parent_id],
+        },
+    )
+    _create_task(
+        client,
+        parent_token,
+        family_id,
+        {
+            "title": "Not overdue today",
+            "due_date": today.isoformat(),
+        },
+    )
+    _create_task(
+        client,
+        parent_token,
+        family_id,
+        {
+            "title": "Not overdue tomorrow",
+            "due_date": tomorrow.isoformat(),
+        },
+    )
+
+    _create_task(
+        client,
+        parent_token,
+        family_id,
+        {
+            "title": "Completed yesterday",
+            "due_date": yesterday.isoformat(),
+            "assignee_user_ids": [child_id],
+        },
+    )
+    completed_occurrence = _item_by_title(_today(client, parent_token, family_id, yesterday), "Completed yesterday")
+    completed = client.post(
+        f"{API}/task-occurrences/{completed_occurrence['occurrence_id']}/complete",
+        headers=_headers(child_token),
+    )
+    assert completed.status_code == 200
+    assert completed.json()["data"]["status"] == "COMPLETED"
+
+    _create_task(
+        client,
+        parent_token,
+        family_id,
+        {
+            "title": "Pending yesterday",
+            "due_date": yesterday.isoformat(),
+            "assignee_user_ids": [child_id],
+            "validation_required": True,
+        },
+    )
+    pending_occurrence = _item_by_title(_today(client, parent_token, family_id, yesterday), "Pending yesterday")
+    pending = client.post(
+        f"{API}/task-occurrences/{pending_occurrence['occurrence_id']}/complete",
+        headers=_headers(child_token),
+    )
+    assert pending.status_code == 200
+    assert pending.json()["data"]["status"] == "PENDING_VALIDATION"
+
+    _create_task(
+        client,
+        parent_token,
+        family_id,
+        {
+            "title": "Validated yesterday",
+            "due_date": yesterday.isoformat(),
+            "assignee_user_ids": [child_id],
+            "validation_required": True,
+        },
+    )
+    validated_occurrence = _item_by_title(_today(client, parent_token, family_id, yesterday), "Validated yesterday")
+    validation_pending = client.post(
+        f"{API}/task-occurrences/{validated_occurrence['occurrence_id']}/complete",
+        headers=_headers(child_token),
+    )
+    assert validation_pending.status_code == 200
+    validated = client.post(
+        f"{API}/task-occurrences/{validated_occurrence['occurrence_id']}/validate",
+        headers=_headers(parent_token),
+    )
+    assert validated.status_code == 200
+    assert validated.json()["data"]["status"] == "VALIDATED"
+
+    _create_task(
+        client,
+        parent_token,
+        family_id,
+        {
+            "title": "Skipped yesterday",
+            "due_date": yesterday.isoformat(),
+        },
+    )
+    skipped_occurrence = _item_by_title(_today(client, parent_token, family_id, yesterday), "Skipped yesterday")
+    _set_occurrence_status(
+        client,
+        skipped_occurrence["occurrence_id"],
+        FamilyTaskOccurrenceStatus.SKIPPED,
+    )
+
+    _create_task(
+        client,
+        parent_token,
+        family_id,
+        {
+            "title": "Overdue daily",
+            "due_date": (today - timedelta(days=4)).isoformat(),
+            "recurrence": "DAILY",
+        },
+    )
+    _create_task(
+        client,
+        parent_token,
+        family_id,
+        {
+            "title": "Overdue weekly",
+            "due_date": (today - timedelta(days=7)).isoformat(),
+            "recurrence": "WEEKLY",
+        },
+    )
+    selected_dates = [today - timedelta(days=6), today - timedelta(days=3)]
+    _create_task(
+        client,
+        parent_token,
+        family_id,
+        {
+            "title": "Overdue selected weekdays",
+            "due_date": selected_dates[0].isoformat(),
+            "recurrence": "SELECTED_WEEKDAYS",
+            "selected_weekdays": [day.isoweekday() for day in selected_dates],
+        },
+    )
+
+    payload = _overdue(client, parent_token, family_id)
+    titles = [item["title"] for item in payload["items"]]
+    assert payload["family_id"] == family_id
+    assert payload["start_date"] == (today - timedelta(days=30)).isoformat()
+    assert payload["end_date"] == yesterday.isoformat()
+    assert "Overdue maison" in titles
+    assert "Overdue assignee" in titles
+    assert "Overdue multi" in titles
+    assert "Not overdue today" not in titles
+    assert "Not overdue tomorrow" not in titles
+    assert "Completed yesterday" not in titles
+    assert "Pending yesterday" not in titles
+    assert "Validated yesterday" not in titles
+    assert "Skipped yesterday" not in titles
+    assert [item["scheduled_date"] for item in payload["items"]] == sorted(
+        item["scheduled_date"] for item in payload["items"]
+    )
+
+    maison = _item_by_title(payload, "Overdue maison")
+    assert maison["assignees"] == []
+    assert maison["status"] == "TODO"
+    assert maison["has_due_time"] is False
+    assert maison["due_time"] is None
+
+    assigned = _item_by_title(payload, "Overdue assignee")
+    assert [assignee["user_id"] for assignee in assigned["assignees"]] == [child_id]
+
+    multi = _item_by_title(payload, "Overdue multi")
+    assert {assignee["user_id"] for assignee in multi["assignees"]} == {
+        parent_id,
+        child_id,
+        second_parent_id,
+    }
+
+    assert len(_items_by_title(payload, "Overdue daily")) == 4
+    assert [item["scheduled_date"] for item in _items_by_title(payload, "Overdue weekly")] == [
+        (today - timedelta(days=7)).isoformat()
+    ]
+    assert [item["scheduled_date"] for item in _items_by_title(payload, "Overdue selected weekdays")] == [
+        day.isoformat() for day in selected_dates
+    ]
+
+    second_parent_payload = _overdue(client, second_parent_token, family_id)
+    assert [item["occurrence_id"] for item in second_parent_payload["items"]] == [
+        item["occurrence_id"] for item in payload["items"]
+    ]
+
+    repeated_payload = _overdue(client, parent_token, family_id)
+    assert len(repeated_payload["items"]) == len(payload["items"])
+    assert {item["occurrence_id"] for item in repeated_payload["items"]} == {
+        item["occurrence_id"] for item in payload["items"]
+    }
+
+
+def test_family_task_overdue_occurrences_reject_other_families(client) -> None:
+    parent_a_token, _, family_a_id = _register_parent(client, "family-tasks-overdue-a")
+    parent_b_token, _, _ = _register_parent(client, "family-tasks-overdue-b")
+    yesterday = date.today() - timedelta(days=1)
+
+    _create_task(
+        client,
+        parent_a_token,
+        family_a_id,
+        {
+            "title": "Private overdue",
+            "due_date": yesterday.isoformat(),
+        },
+    )
+
+    other_family = client.get(
+        f"{API}/families/{family_a_id}/task-occurrences/overdue",
+        headers=_headers(parent_b_token),
     )
     assert other_family.status_code == 404

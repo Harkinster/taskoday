@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.dependencies import get_current_user, success_response
-from app.models.family_task import FamilyTask, FamilyTaskPriority, FamilyTaskRecurrence
+from app.models.family_task import FamilyTask, FamilyTaskOccurrenceStatus, FamilyTaskPriority, FamilyTaskRecurrence
 from app.models.user import User
 from app.schemas.family_task import FamilyTaskCreateRequest, FamilyTaskUpdateRequest
 from app.services.family_task_service import (
@@ -33,6 +33,7 @@ from app.services.family_task_service import (
 router = APIRouter(tags=["family-tasks"])
 
 MAX_OCCURRENCE_RANGE_DAYS = 31
+OVERDUE_LOOKBACK_DAYS = 30
 
 
 @router.get("/families/{family_id}/tasks")
@@ -155,6 +156,45 @@ def family_task_occurrences_range(
             "start_date": start_date,
             "end_date": end_date,
             "items": [occurrence_payload(db, occurrence) for occurrence in occurrences],
+        }
+    )
+
+
+@router.get("/families/{family_id}/task-occurrences/overdue")
+def family_task_occurrences_overdue(
+    family_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    ensure_family_member(db, family_id=family_id, user=current_user)
+    today = date.today()
+    start_date = today - timedelta(days=OVERDUE_LOOKBACK_DAYS)
+    end_date = today - timedelta(days=1)
+    tasks = _active_family_tasks(db, family_id)
+
+    occurrences = []
+    for scheduled_date in _date_range(start_date, end_date):
+        occurrences.extend(
+            get_or_create_occurrences_for_date(
+                db,
+                tasks=tasks,
+                scheduled_date=scheduled_date,
+            )
+        )
+    db.commit()
+
+    overdue = [
+        occurrence
+        for occurrence in occurrences
+        if occurrence.scheduled_date < today and occurrence.status == FamilyTaskOccurrenceStatus.TODO
+    ]
+
+    return success_response(
+        {
+            "family_id": family_id,
+            "start_date": start_date,
+            "end_date": end_date,
+            "items": [occurrence_payload(db, occurrence) for occurrence in overdue],
         }
     )
 
@@ -327,4 +367,9 @@ def _validated_date_range(start_date: date, end_date: date) -> list[date]:
             detail=f"La plage ne peut pas depasser {MAX_OCCURRENCE_RANGE_DAYS} jours.",
         )
 
+    return _date_range(start_date, end_date)
+
+
+def _date_range(start_date: date, end_date: date) -> list[date]:
+    days = (end_date - start_date).days + 1
     return [start_date + timedelta(days=offset) for offset in range(days)]
