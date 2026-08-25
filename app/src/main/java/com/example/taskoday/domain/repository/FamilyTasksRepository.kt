@@ -14,6 +14,8 @@ interface FamilyTasksRepository {
         endDate: String,
     ): Result<FamilyTaskOccurrencesRange>
 
+    suspend fun fetchOverdueOccurrences(): Result<FamilyTaskOccurrencesRange>
+
     suspend fun fetchTasks(): Result<List<FamilyTaskDefinition>>
 
     suspend fun fetchTask(taskId: Long): Result<FamilyTaskDefinition>

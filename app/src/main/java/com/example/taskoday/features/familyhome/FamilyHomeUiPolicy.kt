@@ -22,6 +22,17 @@ data class FamilyTaskWeekWindow(
     val days: List<LocalDate>,
 )
 
+data class FamilyTaskDateWindow(
+    val startDate: LocalDate,
+    val endDate: LocalDate,
+)
+
+fun familyTaskUpcomingWindow(today: LocalDate): FamilyTaskDateWindow =
+    FamilyTaskDateWindow(
+        startDate = today.plusDays(1),
+        endDate = today.plusDays(7),
+    )
+
 fun buildFamilyTaskSections(tasks: List<FamilyTaskTodayItem>): List<FamilyTaskMemberSection> {
     val house = FamilyTaskAssignee(id = null, displayName = HOUSE_LABEL)
     val grouped =
@@ -46,6 +57,86 @@ fun buildFamilyTaskSections(tasks: List<FamilyTaskTodayItem>): List<FamilyTaskMe
         }
         .sortedWith(compareBy<FamilyTaskMemberSection> { if (it.name == HOUSE_LABEL) 0 else 1 }.thenBy { it.name.lowercase(Locale.FRANCE) })
 }
+
+fun buildFamilyTaskOverduePreview(
+    tasks: List<FamilyTaskTodayItem>,
+    previewLimit: Int = FAMILY_TASK_OVERDUE_PREVIEW_LIMIT,
+): List<FamilyTaskRow> =
+    tasks
+        .sortedWith(familyTaskOccurrenceComparator())
+        .take(previewLimit.coerceAtLeast(0))
+        .map { task -> FamilyTaskRow(task) }
+
+fun buildFamilyTaskUpcomingSections(
+    tasks: List<FamilyTaskTodayItem>,
+    today: LocalDate,
+    previewLimit: Int = FAMILY_TASK_UPCOMING_PREVIEW_LIMIT,
+): List<FamilyTaskUpcomingDaySection> {
+    val window = familyTaskUpcomingWindow(today)
+    return tasks
+        .mapNotNull { task ->
+            val date = task.occurrenceLocalDate() ?: return@mapNotNull null
+            if (date !in window.startDate..window.endDate) return@mapNotNull null
+            date to task
+        }
+        .sortedWith(compareBy<Pair<LocalDate, FamilyTaskTodayItem>> { it.first }.thenBy { it.second.timedSortKey() }.thenBy { it.second.title })
+        .take(previewLimit.coerceAtLeast(0))
+        .groupBy { it.first }
+        .map { (date, datedTasks) ->
+            FamilyTaskUpcomingDaySection(
+                date = date.toString(),
+                label = familyTaskUpcomingDayLabel(date = date, today = today),
+                tasks = datedTasks.map { (_, task) -> FamilyTaskRow(task) },
+            )
+        }
+}
+
+fun hasMoreFamilyTaskUpcomingPreview(
+    tasks: List<FamilyTaskTodayItem>,
+    today: LocalDate,
+    previewLimit: Int = FAMILY_TASK_UPCOMING_PREVIEW_LIMIT,
+): Boolean {
+    val window = familyTaskUpcomingWindow(today)
+    val eligibleCount =
+        tasks.count { task ->
+            val date = task.occurrenceLocalDate()
+            date != null && date in window.startDate..window.endDate
+        }
+    return eligibleCount > previewLimit
+}
+
+fun familyTaskOverdueMetaLabel(
+    task: FamilyTaskTodayItem,
+    today: LocalDate,
+): String {
+    val dateLabel =
+        task.occurrenceLocalDate()
+            ?.let { date ->
+                if (date == today.minusDays(1)) {
+                    "Hier"
+                } else {
+                    formatFamilyTaskDateLabel(date.toString())
+                }
+            }
+            ?: "Date à vérifier"
+    val time = task.occurrenceTimeLabel()
+    val dateAndTime = if (time == null) dateLabel else "$dateLabel à $time"
+    return listOf(dateAndTime, familyTaskAssignmentLabel(task)).joinToString(" · ")
+}
+
+fun familyTaskUpcomingMetaLabel(task: FamilyTaskTodayItem): String {
+    val time = task.occurrenceTimeLabel()
+    return listOfNotNull(time, familyTaskAssignmentLabel(task)).joinToString(" · ")
+}
+
+fun familyTaskAssignmentLabel(task: FamilyTaskTodayItem): String =
+    task.assignees
+        .takeIf { it.isNotEmpty() }
+        ?.joinToString { assignee -> assignee.displayName }
+        ?: HOUSE_LABEL
+
+fun familyTaskPendingValidationCount(tasks: List<FamilyTaskTodayItem>): Int =
+    tasks.count { task -> task.status == FamilyTaskStatus.PENDING_VALIDATION }
 
 fun familyTaskWeekWindowContaining(date: LocalDate): FamilyTaskWeekWindow {
     val start = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
@@ -195,10 +286,27 @@ fun formatFamilyHomeDateLabel(
 fun formatFamilyHomeSelectedDayLabel(date: LocalDate): String =
     formatFamilyHomeDateLabel(date.toString(), fallback = date)
 
+fun familyTaskUpcomingDayLabel(
+    date: LocalDate,
+    today: LocalDate,
+): String =
+    if (date == today.plusDays(1)) {
+        "Demain"
+    } else {
+        formatFamilyHomeDateLabel(date.toString(), fallback = date)
+    }
+
 private const val HOUSE_LABEL = "Maison"
+private const val FAMILY_TASK_OVERDUE_PREVIEW_LIMIT = 4
+private const val FAMILY_TASK_UPCOMING_PREVIEW_LIMIT = 5
 
 private fun FamilyTaskAssignee.sectionKey(): String =
     id?.let { "member_$it" } ?: "house_${displayName.lowercase(Locale.FRANCE)}"
+
+private fun familyTaskOccurrenceComparator(): Comparator<FamilyTaskTodayItem> =
+    compareBy<FamilyTaskTodayItem> { it.occurrenceDateKey().orEmpty() }
+        .thenBy { it.timedSortKey() }
+        .thenBy { it.title }
 
 private fun FamilyTaskTodayItem.sortKey(): String =
     buildString {
@@ -218,3 +326,16 @@ private fun FamilyTaskTodayItem.occurrenceDateKey(): String? =
         ?.trim()
         ?.takeIf { it.matches(Regex("\\d{4}-\\d{2}-\\d{2}")) }
         ?: familyTaskDateFromFields(dueDate = dueDate, dueAt = dueAt)
+
+private fun FamilyTaskTodayItem.occurrenceLocalDate(): LocalDate? =
+    occurrenceDateKey()?.let { value -> parseFamilyTaskDateInput(value) }
+
+private fun FamilyTaskTodayItem.occurrenceTimeLabel(): String? =
+    familyTaskTimeFromFields(
+        hasDueTime = hasDueTime,
+        dueTime = dueTime,
+        dueAt = dueAt,
+    ).takeIf { it.isNotBlank() }
+
+private fun FamilyTaskTodayItem.timedSortKey(): String =
+    occurrenceTimeLabel() ?: "99:99"

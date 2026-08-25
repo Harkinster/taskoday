@@ -9,6 +9,14 @@ data class FamilyHomeUiState(
     val sections: List<FamilyTaskMemberSection> = emptyList(),
     val totalTasks: Int = 0,
     val completedTasks: Int = 0,
+    val pendingValidationTasks: Int = 0,
+    val overdueTasks: List<FamilyTaskRow> = emptyList(),
+    val overdueTotalTasks: Int = 0,
+    val upcomingSections: List<FamilyTaskUpcomingDaySection> = emptyList(),
+    val upcomingTotalTasks: Int = 0,
+    val upcomingStartDate: String? = null,
+    val upcomingEndDate: String? = null,
+    val hasMoreUpcomingTasks: Boolean = false,
     val weekRangeLabel: String = "",
     val selectedWeekDateLabel: String = "",
     val selectedWeekDate: String? = null,
@@ -17,6 +25,7 @@ data class FamilyHomeUiState(
     val isWeekEmpty: Boolean = false,
     val actingOccurrenceId: Long? = null,
     val errorMessage: String? = null,
+    val secondaryErrorMessage: String? = null,
     val userMessage: String? = null,
 )
 
@@ -40,6 +49,12 @@ data class FamilyTaskMemberSection(
     val name: String,
     val completedCount: Int,
     val totalCount: Int,
+    val tasks: List<FamilyTaskRow>,
+)
+
+data class FamilyTaskUpcomingDaySection(
+    val date: String,
+    val label: String,
     val tasks: List<FamilyTaskRow>,
 )
 

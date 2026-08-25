@@ -37,6 +37,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -78,9 +81,14 @@ fun FamilyHomeScreen(
             selectedWeekDate = uiState.selectedWeekDate,
             todayDate = uiState.todayDate,
         )
+    var hasObservedInitialResume by rememberSaveable { mutableStateOf(false) }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-        viewModel.refresh()
+        if (hasObservedInitialResume) {
+            viewModel.refresh()
+        } else {
+            hasObservedInitialResume = true
+        }
     }
 
     Scaffold(
@@ -127,6 +135,8 @@ fun FamilyHomeScreen(
                         weekRangeLabel = uiState.weekRangeLabel,
                         completedTasks = uiState.completedTasks,
                         totalTasks = uiState.totalTasks,
+                        pendingValidationTasks = uiState.pendingValidationTasks,
+                        overdueTotalTasks = uiState.overdueTotalTasks,
                         creationDate = creationDate,
                         onAddTask = onAddTask,
                         onOpenAllTasks = onOpenAllTasks,
@@ -162,6 +172,18 @@ fun FamilyHomeScreen(
                     }
                 }
 
+                uiState.secondaryErrorMessage?.takeIf { it.isNotBlank() }?.let { error ->
+                    item {
+                        MessagePanel(
+                            message = error,
+                            tone = MessageTone.Error,
+                            actionLabel = "Réessayer",
+                            onAction = viewModel::refresh,
+                            onDismiss = viewModel::clearMessages,
+                        )
+                    }
+                }
+
                 uiState.userMessage?.takeIf { it.isNotBlank() }?.let { message ->
                     item {
                         MessagePanel(
@@ -174,33 +196,86 @@ fun FamilyHomeScreen(
                     }
                 }
 
-                if (uiState.sections.isEmpty()) {
+                if (uiState.mode == FamilyHomeMode.TODAY) {
+                    if (uiState.overdueTotalTasks > 0) {
+                        item {
+                            FamilyOverdueSectionCard(
+                                totalCount = uiState.overdueTotalTasks,
+                                rows = uiState.overdueTasks,
+                                todayDate = uiState.todayDate,
+                                actingOccurrenceId = uiState.actingOccurrenceId,
+                                onQuickAction = viewModel::runQuickAction,
+                                onOpenTask = onOpenTask,
+                            )
+                        }
+                    }
+
                     item {
-                        when {
-                            uiState.mode == FamilyHomeMode.WEEK && uiState.isWeekEmpty ->
+                        FamilyHomeSectionTitle(
+                            title = "Aujourd'hui",
+                            detail =
+                                if (uiState.totalTasks > 0) {
+                                    "${uiState.completedTasks} / ${uiState.totalTasks} terminées"
+                                } else {
+                                    null
+                                },
+                        )
+                    }
+
+                    if (uiState.sections.isEmpty()) {
+                        item { EmptyFamilyHomeCard() }
+                    } else {
+                        items(
+                            items = uiState.sections,
+                            key = { section -> section.key },
+                        ) { section ->
+                            FamilyMemberSectionCard(
+                                section = section,
+                                actingOccurrenceId = uiState.actingOccurrenceId,
+                                onQuickAction = viewModel::runQuickAction,
+                                onOpenTask = onOpenTask,
+                            )
+                        }
+                    }
+
+                    if (uiState.upcomingSections.isNotEmpty()) {
+                        item {
+                            FamilyUpcomingSectionCard(
+                                sections = uiState.upcomingSections,
+                                totalCount = uiState.upcomingTotalTasks,
+                                hasMore = uiState.hasMoreUpcomingTasks,
+                                onShowWeek = viewModel::showWeek,
+                                onOpenTask = onOpenTask,
+                            )
+                        }
+                    }
+                } else {
+                    if (uiState.sections.isEmpty()) {
+                        item {
+                            if (uiState.isWeekEmpty) {
                                 EmptyFamilyWeekCard(
                                     title = "Rien de prévu cette semaine.",
                                     message = "Ajoute une tâche si la maison a besoin d'un repère.",
                                 )
-                            uiState.mode == FamilyHomeMode.WEEK ->
+                            } else {
                                 EmptyFamilyWeekCard(
                                     title = "Rien de prévu ce jour-là.",
                                     message = "Les autres jours de la semaine restent accessibles juste au-dessus.",
                                 )
-                            else -> EmptyFamilyHomeCard()
+                            }
                         }
-                    }
-                } else {
-                    items(
-                        items = uiState.sections,
-                        key = { section -> section.key },
-                    ) { section ->
-                        FamilyMemberSectionCard(
-                            section = section,
-                            actingOccurrenceId = uiState.actingOccurrenceId,
-                            onQuickAction = viewModel::runQuickAction,
-                            onOpenTask = onOpenTask,
-                        )
+                    } else {
+                        items(
+                            items = uiState.sections,
+                            key = { section -> section.key },
+                        ) { section ->
+                            FamilyMemberSectionCard(
+                                section = section,
+                                actingOccurrenceId = uiState.actingOccurrenceId,
+                                onQuickAction = viewModel::runQuickAction,
+                                onOpenTask = onOpenTask,
+                            )
+                        }
                     }
                 }
             }
@@ -215,6 +290,8 @@ private fun FamilyHomeHeader(
     weekRangeLabel: String,
     completedTasks: Int,
     totalTasks: Int,
+    pendingValidationTasks: Int,
+    overdueTotalTasks: Int,
     creationDate: String?,
     onAddTask: (String?) -> Unit,
     onOpenAllTasks: () -> Unit,
@@ -263,6 +340,19 @@ private fun FamilyHomeHeader(
                     contentDescription = null,
                     tint = WoodBrown,
                     modifier = Modifier.size(30.dp),
+                )
+            }
+
+            if (mode == FamilyHomeMode.TODAY && (totalTasks > 0 || overdueTotalTasks > 0 || pendingValidationTasks > 0)) {
+                Text(
+                    text =
+                        buildList {
+                            if (totalTasks > 0) add("$completedTasks / $totalTasks terminées")
+                            if (pendingValidationTasks > 0) add("$pendingValidationTasks à valider")
+                            if (overdueTotalTasks > 0) add("$overdueTotalTasks en retard")
+                        }.joinToString(" · "),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = InkMuted,
                 )
             }
 
@@ -500,6 +590,263 @@ private fun FamilyHomeWeekDayButton(
                 style = MaterialTheme.typography.labelSmall,
                 color = content.copy(alpha = 0.82f),
             )
+        }
+    }
+}
+
+@Composable
+private fun FamilyHomeSectionTitle(
+    title: String,
+    detail: String?,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = InkBrown,
+        )
+        detail?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.labelLarge,
+                color = InkMuted,
+            )
+        }
+    }
+}
+
+@Composable
+private fun FamilyOverdueSectionCard(
+    totalCount: Int,
+    rows: List<FamilyTaskRow>,
+    todayDate: String?,
+    actingOccurrenceId: Long?,
+    onQuickAction: (FamilyTaskTodayItem) -> Unit,
+    onOpenTask: (Long) -> Unit,
+) {
+    val today = parseFamilyTaskDateInput(todayDate.orEmpty()) ?: java.time.LocalDate.now()
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        colors =
+            CardDefaults.elevatedCardColors(
+                containerColor = WarningGlow.copy(alpha = 0.16f),
+                contentColor = InkBrown,
+            ),
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "En retard · $totalCount",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = InkBrown,
+                )
+                if (rows.size < totalCount) {
+                    Text(
+                        text = "${rows.size} affichées",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = InkMuted,
+                    )
+                }
+            }
+            rows.forEach { row ->
+                FamilyOverdueRow(
+                    task = row.task,
+                    today = today,
+                    isActing = actingOccurrenceId == row.task.occurrenceId,
+                    onQuickAction = onQuickAction,
+                    onOpenTask = onOpenTask,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FamilyOverdueRow(
+    task: FamilyTaskTodayItem,
+    today: java.time.LocalDate,
+    isActing: Boolean,
+    onQuickAction: (FamilyTaskTodayItem) -> Unit,
+    onOpenTask: (Long) -> Unit,
+) {
+    val action = quickActionFor(task)
+    Surface(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(enabled = task.taskId > 0L) { onOpenTask(task.taskId) },
+        shape = RoundedCornerShape(8.dp),
+        color = ParchmentLight.copy(alpha = 0.92f),
+        contentColor = InkBrown,
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top,
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(5.dp),
+                ) {
+                    Text(
+                        text = task.title,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = InkBrown,
+                    )
+                    Text(
+                        text = familyTaskOverdueMetaLabel(task = task, today = today),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = InkMuted,
+                    )
+                }
+                familyTaskPriorityLabel(task.priority)?.let { priorityLabel ->
+                    PriorityChip(priority = task.priority, label = priorityLabel)
+                }
+            }
+            if (action == FamilyTaskQuickAction.COMPLETE) {
+                OutlinedButton(
+                    onClick = { onQuickAction(task) },
+                    enabled = !isActing && canRunQuickAction(task),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Check,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(if (isActing) "Mise à jour..." else "Terminer")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FamilyUpcomingSectionCard(
+    sections: List<FamilyTaskUpcomingDaySection>,
+    totalCount: Int,
+    hasMore: Boolean,
+    onShowWeek: () -> Unit,
+    onOpenTask: (Long) -> Unit,
+) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        colors =
+            CardDefaults.elevatedCardColors(
+                containerColor = ParchmentLight.copy(alpha = 0.97f),
+                contentColor = InkBrown,
+            ),
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "À venir",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = InkBrown,
+                )
+                Text(
+                    text = "$totalCount sur 7 jours",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = InkMuted,
+                )
+            }
+            sections.forEach { section ->
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = section.label,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = WoodBrown,
+                    )
+                    section.tasks.forEach { row ->
+                        FamilyUpcomingRow(
+                            task = row.task,
+                            onOpenTask = onOpenTask,
+                        )
+                    }
+                }
+            }
+            if (hasMore) {
+                OutlinedButton(
+                    onClick = onShowWeek,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Voir la semaine")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FamilyUpcomingRow(
+    task: FamilyTaskTodayItem,
+    onOpenTask: (Long) -> Unit,
+) {
+    Surface(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(enabled = task.taskId > 0L) { onOpenTask(task.taskId) },
+        shape = RoundedCornerShape(8.dp),
+        color = ParchmentCream.copy(alpha = 0.76f),
+        contentColor = InkBrown,
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(5.dp),
+            ) {
+                Text(
+                    text = task.title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = InkBrown,
+                )
+                Text(
+                    text = familyTaskUpcomingMetaLabel(task),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = InkMuted,
+                )
+            }
+            familyTaskPriorityLabel(task.priority)?.let { priorityLabel ->
+                PriorityChip(priority = task.priority, label = priorityLabel)
+            }
         }
     }
 }

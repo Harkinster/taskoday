@@ -30,6 +30,11 @@ interface FamilyTasksApi {
         @Query("end_date") endDate: String,
     ): ApiEnvelopeDto<JsonElement>
 
+    @GET("families/{familyId}/task-occurrences/overdue")
+    suspend fun getOverdueOccurrences(
+        @Path("familyId") familyId: Long,
+    ): ApiEnvelopeDto<JsonElement>
+
     @GET("families/{familyId}/members")
     suspend fun getFamilyMembers(
         @Path("familyId") familyId: Long,

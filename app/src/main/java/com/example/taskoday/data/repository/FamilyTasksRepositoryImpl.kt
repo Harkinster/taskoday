@@ -59,6 +59,20 @@ class FamilyTasksRepositoryImpl
                     )
             }
 
+        override suspend fun fetchOverdueOccurrences(): Result<FamilyTaskOccurrencesRange> =
+            runCatching {
+                val familyId = resolveFamilyId()
+                familyTasksApi
+                    .getOverdueOccurrences(familyId)
+                    .data
+                    .toFamilyTaskOccurrencesRangeResponseDto(gson)
+                    .toDomain(
+                        fallbackFamilyId = familyId,
+                        fallbackStartDate = "",
+                        fallbackEndDate = "",
+                    )
+            }
+
         override suspend fun fetchTasks(): Result<List<FamilyTaskDefinition>> =
             runCatching {
                 val familyId = resolveFamilyId()

@@ -98,7 +98,7 @@ class FamilyHomeViewModel
         }
 
         fun clearMessages() {
-            _uiState.update { it.copy(errorMessage = null, userMessage = null) }
+            _uiState.update { it.copy(errorMessage = null, secondaryErrorMessage = null, userMessage = null) }
         }
 
         fun runQuickAction(task: FamilyTaskTodayItem) {
@@ -167,19 +167,60 @@ class FamilyHomeViewModel
             familyTasksRepository
                 .fetchToday()
                 .onSuccess { today ->
+                    val todayReference = parseFamilyTaskDateInput(today.date.orEmpty()) ?: resolvedTodayDate()
+                    val todayDate = today.date ?: todayReference.toString()
+                    val upcomingWindow = familyTaskUpcomingWindow(todayReference)
+                    val secondaryErrors = mutableListOf<String>()
+                    val overdueTasks =
+                        familyTasksRepository
+                            .fetchOverdueOccurrences()
+                            .onFailure {
+                                secondaryErrors += "Les tâches en retard n'ont pas pu être chargées."
+                            }
+                            .getOrNull()
+                            ?.occurrences
+                            .orEmpty()
+                    val upcomingTasks =
+                        familyTasksRepository
+                            .fetchOccurrences(
+                                startDate = upcomingWindow.startDate.toString(),
+                                endDate = upcomingWindow.endDate.toString(),
+                            ).onFailure {
+                                secondaryErrors += "Les tâches à venir n'ont pas pu être chargées."
+                            }
+                            .getOrNull()
+                            ?.occurrences
+                            .orEmpty()
                     val sections = buildFamilyTaskSections(today.tasks)
                     _uiState.update {
                         it.copy(
                             isLoading = false,
                             mode = FamilyHomeMode.TODAY,
                             familyId = today.familyId,
-                            todayDate = today.date,
-                            dateLabel = formatFamilyHomeDateLabel(today.date),
+                            todayDate = todayDate,
+                            dateLabel = formatFamilyHomeDateLabel(todayDate, fallback = todayReference),
                             sections = sections,
                             totalTasks = today.tasks.size,
                             completedTasks = today.tasks.count { task -> task.status.countsAsDone },
+                            pendingValidationTasks = familyTaskPendingValidationCount(today.tasks),
+                            overdueTasks = buildFamilyTaskOverduePreview(overdueTasks),
+                            overdueTotalTasks = overdueTasks.size,
+                            upcomingSections =
+                                buildFamilyTaskUpcomingSections(
+                                    tasks = upcomingTasks,
+                                    today = todayReference,
+                                ),
+                            upcomingTotalTasks = upcomingTasks.size,
+                            upcomingStartDate = upcomingWindow.startDate.toString(),
+                            upcomingEndDate = upcomingWindow.endDate.toString(),
+                            hasMoreUpcomingTasks =
+                                hasMoreFamilyTaskUpcomingPreview(
+                                    tasks = upcomingTasks,
+                                    today = todayReference,
+                                ),
                             isWeekEmpty = false,
                             errorMessage = null,
+                            secondaryErrorMessage = secondaryErrors.joinToString(" ").takeIf { message -> message.isNotBlank() },
                         )
                     }
                 }
@@ -193,8 +234,17 @@ class FamilyHomeViewModel
                             sections = emptyList(),
                             totalTasks = 0,
                             completedTasks = 0,
+                            pendingValidationTasks = 0,
+                            overdueTasks = emptyList(),
+                            overdueTotalTasks = 0,
+                            upcomingSections = emptyList(),
+                            upcomingTotalTasks = 0,
+                            upcomingStartDate = null,
+                            upcomingEndDate = null,
+                            hasMoreUpcomingTasks = false,
                             isWeekEmpty = false,
                             errorMessage = throwable.toRemoteUserMessage("Impossible de charger Ma maison."),
+                            secondaryErrorMessage = null,
                         )
                     }
                 }
@@ -264,6 +314,14 @@ class FamilyHomeViewModel
                     sections = sections,
                     totalTasks = selectedTasks.size,
                     completedTasks = selectedTasks.count { task -> task.status.countsAsDone },
+                    pendingValidationTasks = familyTaskPendingValidationCount(selectedTasks),
+                    overdueTasks = emptyList(),
+                    overdueTotalTasks = 0,
+                    upcomingSections = emptyList(),
+                    upcomingTotalTasks = 0,
+                    upcomingStartDate = null,
+                    upcomingEndDate = null,
+                    hasMoreUpcomingTasks = false,
                     weekRangeLabel =
                         familyTaskWeekRangeLabel(
                             startDate = activeWeekWindow.startDate,
@@ -281,6 +339,7 @@ class FamilyHomeViewModel
                     isCurrentWeek = today in activeWeekWindow.startDate..activeWeekWindow.endDate,
                     isWeekEmpty = familyTaskWeekIsEmpty(weekOccurrences),
                     errorMessage = errorMessage,
+                    secondaryErrorMessage = null,
                 )
             }
         }
