@@ -82,6 +82,7 @@ fun SettingsScreen(
     onLogoutConfirmed: () -> Unit = {},
     onOpenPremium: () -> Unit = {},
     onOpenHousehold: () -> Unit = {},
+    onOpenNotifications: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val spacing = MaterialTheme.spacing
@@ -229,6 +230,12 @@ fun SettingsScreen(
                                     subtitle = "Parents, enfants et invitation d'un adulte.",
                                     onClick = onOpenHousehold,
                                 )
+                                ProfileActionRow(
+                                    icon = Icons.Outlined.Notifications,
+                                    title = "Notifications",
+                                    subtitle = "Resume quotidien des taches du foyer.",
+                                    onClick = onOpenNotifications,
+                                )
                             }
                             ProfileActionRow(
                                 icon = Icons.Outlined.Edit,
@@ -257,12 +264,6 @@ fun SettingsScreen(
                                 text = "Préférences",
                                 style = MaterialTheme.typography.titleLarge,
                                 color = StarWhite,
-                            )
-                            SettingSwitchRow(
-                                icon = Icons.Outlined.Notifications,
-                                title = "Notifications",
-                                checked = uiState.notificationsEnabled,
-                                onCheckedChange = viewModel::setNotificationsEnabled,
                             )
                             SettingSwitchRow(
                                 icon = Icons.Outlined.Palette,

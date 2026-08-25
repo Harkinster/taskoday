@@ -60,6 +60,8 @@ import com.example.taskoday.features.familyhome.FamilyTaskDetailScreen
 import com.example.taskoday.features.familyhome.FamilyTaskDetailViewModel
 import com.example.taskoday.features.familyhome.FamilyTaskListScreen
 import com.example.taskoday.features.familyhome.FamilyTaskListViewModel
+import com.example.taskoday.features.notifications.FamilyNotificationsScreen
+import com.example.taskoday.features.notifications.FamilyNotificationsViewModel
 import com.example.taskoday.features.home.HomeScreen
 import com.example.taskoday.features.home.HomeViewModel
 import com.example.taskoday.features.parent.ParentPlanningScreen
@@ -354,6 +356,14 @@ fun TaskodayApp() {
                 )
             }
 
+            composable(TaskodayDestination.FamilyNotifications.route) {
+                val viewModel: FamilyNotificationsViewModel = hiltViewModel()
+                FamilyNotificationsScreen(
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() },
+                )
+            }
+
             composable(
                 route = TaskodayDestination.FamilyTaskCreate.route,
                 arguments =
@@ -580,6 +590,7 @@ fun TaskodayApp() {
                     },
                     onOpenPremium = navigateToPremium,
                     onOpenHousehold = { navController.navigate(TaskodayDestination.FamilyHousehold.route) },
+                    onOpenNotifications = { navController.navigate(TaskodayDestination.FamilyNotifications.route) },
                 )
             }
 

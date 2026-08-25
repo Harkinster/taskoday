@@ -40,10 +40,6 @@ class SettingsViewModel
             refreshProfile()
         }
 
-        fun setNotificationsEnabled(enabled: Boolean) {
-            _uiState.update { it.copy(notificationsEnabled = enabled) }
-        }
-
         fun setDynamicColors(enabled: Boolean) {
             _uiState.update { it.copy(useDynamicColors = enabled) }
         }

@@ -71,6 +71,7 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.startup.runtime)
+    implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.google.hilt.android)
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.androidx.room.runtime)

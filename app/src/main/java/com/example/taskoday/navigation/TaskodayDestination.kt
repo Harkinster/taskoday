@@ -28,6 +28,8 @@ sealed class TaskodayDestination(
 
     data object FamilyHousehold : TaskodayDestination(route = "family_household", label = "Mon foyer")
 
+    data object FamilyNotifications : TaskodayDestination(route = "family_notifications", label = "Notifications")
+
     data object FamilyTaskCreate : TaskodayDestination(route = "family_home/create?date={date}", label = "Nouvelle tâche") {
         const val ARG_DATE: String = "date"
 

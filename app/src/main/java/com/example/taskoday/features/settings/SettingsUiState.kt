@@ -3,7 +3,6 @@ package com.example.taskoday.features.settings
 import com.example.taskoday.domain.model.ParentChild
 
 data class SettingsUiState(
-    val notificationsEnabled: Boolean = true,
     val useDynamicColors: Boolean = true,
     val appVersionLabel: String = "1.0",
     val isParentUser: Boolean = false,
