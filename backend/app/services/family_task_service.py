@@ -4,7 +4,8 @@ from datetime import date, datetime, time, timezone
 import unicodedata
 
 from fastapi import HTTPException, status
-from sqlalchemy import and_, delete, select
+from sqlalchemy import and_, delete, insert, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.child import ChildProfile
@@ -207,23 +208,38 @@ def is_task_scheduled_for_date(task: FamilyTask, target_date: date) -> bool:
 
 
 def get_or_create_occurrence(db: Session, *, task: FamilyTask, scheduled_date: date) -> FamilyTaskOccurrence:
-    occurrence = db.scalar(
-        select(FamilyTaskOccurrence).where(
-            FamilyTaskOccurrence.task_id == task.id,
-            FamilyTaskOccurrence.scheduled_date == scheduled_date,
-        )
-    )
+    occurrence = _find_occurrence(db, task_id=task.id, scheduled_date=scheduled_date)
     if occurrence is not None:
         return occurrence
 
-    occurrence = FamilyTaskOccurrence(
-        task=task,
-        scheduled_date=scheduled_date,
-        status=FamilyTaskOccurrenceStatus.TODO,
-    )
-    db.add(occurrence)
-    db.flush()
+    try:
+        with db.begin_nested():
+            db.execute(
+                insert(FamilyTaskOccurrence).values(
+                    task_id=task.id,
+                    scheduled_date=scheduled_date,
+                    status=FamilyTaskOccurrenceStatus.TODO,
+                )
+            )
+    except IntegrityError:
+        occurrence = _find_occurrence(db, task_id=task.id, scheduled_date=scheduled_date)
+        if occurrence is not None:
+            return occurrence
+        raise
+
+    occurrence = _find_occurrence(db, task_id=task.id, scheduled_date=scheduled_date)
+    if occurrence is None:
+        raise RuntimeError("Occurrence familiale creee mais introuvable.")
     return occurrence
+
+
+def _find_occurrence(db: Session, *, task_id: int, scheduled_date: date) -> FamilyTaskOccurrence | None:
+    return db.scalar(
+        select(FamilyTaskOccurrence).where(
+            FamilyTaskOccurrence.task_id == task_id,
+            FamilyTaskOccurrence.scheduled_date == scheduled_date,
+        )
+    )
 
 
 def get_or_create_occurrences_for_date(
