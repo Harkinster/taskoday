@@ -24,6 +24,7 @@ from app.models.gamification import (
     ItemInventory,
 )
 from app.models.pairing import PairingCode
+from app.models.refresh_token import RefreshToken
 from app.models.reward import ExternalReward, RewardCoupon, RewardRequest, RewardRequestStatus, ScaleTransaction, ScrollStatus
 from app.models.task import Mission, Quest, Routine, TaskCompletion, TaskStatus, TaskType
 from app.models.user import User, UserRole
@@ -55,6 +56,7 @@ __all__ = [
     "GuardianProgress",
     "ItemInventory",
     "PairingCode",
+    "RefreshToken",
     "Quest",
     "ExternalReward",
     "RewardCoupon",

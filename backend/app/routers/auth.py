@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -9,8 +9,21 @@ from app.dependencies import get_current_user
 from app.models.child import ChildProfile
 from app.models.family import Family, FamilyMember, FamilyMemberRole
 from app.models.user import User, UserRole
-from app.schemas.auth import AuthMeResponse, LoginRequest, RegisterChildRequest, RegisterParentRequest, TokenResponse
+from app.schemas.auth import (
+    AuthMeResponse,
+    LoginRequest,
+    RefreshTokenRequest,
+    RegisterChildRequest,
+    RegisterParentRequest,
+    TokenResponse,
+)
 from app.services.family_invite_service import accept_parent_invite, validate_parent_invite_code
+from app.services.refresh_token_service import (
+    issue_refresh_token,
+    refresh_token_expires_in_seconds,
+    revoke_refresh_token,
+    rotate_refresh_token,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -19,14 +32,21 @@ def _api_role(role: UserRole) -> str:
     return role.name
 
 
-def _build_token_response(user: User) -> TokenResponse:
+def _build_token_response(user: User, *, refresh_token: str) -> TokenResponse:
     token = create_access_token(subject=str(user.id), extra_claims={"role": _api_role(user.role)})
     return TokenResponse(
         access_token=token,
         token_type="bearer",
         expires_in=settings.jwt_expire_minutes * 60,
         role=_api_role(user.role),
+        refresh_token=refresh_token,
+        refresh_expires_in=refresh_token_expires_in_seconds(),
     )
+
+
+def _issue_token_response(db: Session, *, user: User) -> TokenResponse:
+    _, refresh_token = issue_refresh_token(db, user=user)
+    return _build_token_response(user, refresh_token=refresh_token)
 
 
 @router.post("/register-parent", status_code=status.HTTP_201_CREATED, response_model=TokenResponse)
@@ -66,10 +86,9 @@ def register_parent(payload: RegisterParentRequest, db: Session = Depends(get_db
         membership = FamilyMember(family_id=family.id, user_id=user.id, role=FamilyMemberRole.PARENT)
         db.add(membership)
 
+    token_response = _issue_token_response(db, user=user)
     db.commit()
-    db.refresh(user)
-
-    return _build_token_response(user)
+    return token_response
 
 
 @router.post("/register-child", status_code=status.HTTP_201_CREATED, response_model=TokenResponse)
@@ -92,10 +111,9 @@ def register_child(payload: RegisterChildRequest, db: Session = Depends(get_db))
     )
     db.add(profile)
 
+    token_response = _issue_token_response(db, user=user)
     db.commit()
-    db.refresh(user)
-
-    return _build_token_response(user)
+    return token_response
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -107,7 +125,24 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Utilisateur inactif.")
 
-    return _build_token_response(user)
+    token_response = _issue_token_response(db, user=user)
+    db.commit()
+    return token_response
+
+
+@router.post("/refresh", response_model=TokenResponse)
+def refresh(payload: RefreshTokenRequest, db: Session = Depends(get_db)):
+    user, _, refresh_token = rotate_refresh_token(db, token=payload.refresh_token)
+    token_response = _build_token_response(user, refresh_token=refresh_token)
+    db.commit()
+    return token_response
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout(payload: RefreshTokenRequest, db: Session = Depends(get_db)) -> Response:
+    revoke_refresh_token(db, token=payload.refresh_token)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/me", response_model=AuthMeResponse)

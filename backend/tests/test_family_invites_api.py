@@ -215,7 +215,14 @@ def test_register_parent_with_invite_joins_existing_family_without_creating_fami
         },
     )
     assert response.status_code == 201
-    invited_token = response.json()["access_token"]
+    assert response.json()["refresh_token"]
+
+    refreshed = client.post(
+        f"{API}/auth/refresh",
+        json={"refresh_token": response.json()["refresh_token"]},
+    )
+    assert refreshed.status_code == 200
+    invited_token = refreshed.json()["access_token"]
 
     me = client.get(f"{API}/auth/me", headers=_headers(invited_token))
     assert me.status_code == 200

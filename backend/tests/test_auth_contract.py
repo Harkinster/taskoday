@@ -88,7 +88,14 @@ def test_register_child_accepts_birth_date_and_returns_token_schema(client: Test
         },
     )
     assert response.status_code == 201
-    assert response.json().keys() == {"access_token", "token_type", "expires_in", "role"}
+    assert response.json().keys() == {
+        "access_token",
+        "token_type",
+        "expires_in",
+        "role",
+        "refresh_token",
+        "refresh_expires_in",
+    }
     assert response.json()["role"] == "CHILD"
 
     db = SessionLocal()

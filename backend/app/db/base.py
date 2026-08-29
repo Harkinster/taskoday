@@ -17,6 +17,7 @@ from app.models.gamification import (  # noqa: E402,F401
     ItemInventory,
 )
 from app.models.pairing import PairingCode  # noqa: E402,F401
+from app.models.refresh_token import RefreshToken  # noqa: E402,F401
 from app.models.reward import ExternalReward, RewardCoupon, RewardRequest, ScaleTransaction  # noqa: E402,F401
 from app.models.task import Mission, Quest, Routine, TaskCompletion  # noqa: E402,F401
 from app.models.user import User  # noqa: E402,F401

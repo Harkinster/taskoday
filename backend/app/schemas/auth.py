@@ -62,6 +62,12 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     expires_in: int
     role: str
+    refresh_token: str | None = None
+    refresh_expires_in: int | None = None
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str = Field(min_length=1, max_length=512)
 
 
 class AuthMeResponse(BaseModel):

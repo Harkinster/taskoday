@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     jwt_secret_key: str = "CHANGE_ME_LONG_RANDOM_SECRET"
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 120
+    refresh_token_expire_days: int = 30
 
     pairing_code_expire_minutes: int = 10
 
