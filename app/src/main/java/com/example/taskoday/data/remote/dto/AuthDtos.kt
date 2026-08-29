@@ -44,6 +44,15 @@ data class TokenResponseDto(
     val expiresIn: Int,
     @SerializedName("role")
     val role: String,
+    @SerializedName("refresh_token")
+    val refreshToken: String? = null,
+    @SerializedName("refresh_expires_in")
+    val refreshExpiresIn: Int? = null,
+)
+
+data class RefreshTokenRequestDto(
+    @SerializedName("refresh_token")
+    val refreshToken: String,
 )
 
 data class MeResponseDto(

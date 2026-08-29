@@ -5,9 +5,12 @@ import com.example.taskoday.data.remote.ApiClient
 import com.example.taskoday.data.remote.ApiPathPrefixInterceptor
 import com.example.taskoday.data.remote.auth.AuthApi
 import com.example.taskoday.data.remote.auth.AuthHeaderInterceptor
+import com.example.taskoday.data.remote.auth.AuthSessionApi
+import com.example.taskoday.data.remote.auth.AuthSessionClient
+import com.example.taskoday.data.remote.auth.RefreshTokenAuthenticator
+import com.example.taskoday.data.remote.auth.RetrofitAuthSessionClient
 import com.example.taskoday.data.remote.auth.SecureTokenStorage
 import com.example.taskoday.data.remote.auth.TokenStorage
-import com.example.taskoday.data.remote.auth.UnauthorizedInterceptor
 import com.example.taskoday.data.remote.children.ChildrenApi
 import com.example.taskoday.data.remote.family.FamilyApi
 import com.example.taskoday.data.remote.familytasks.FamilyTasksApi
@@ -26,6 +29,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
+import javax.inject.Named
 import okhttp3.OkHttpClient
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.logging.HttpLoggingInterceptor
@@ -62,18 +66,59 @@ object NetworkModule {
 
     @Provides
     @Singleton
+    @Named(SESSION_HTTP_CLIENT)
+    fun provideSessionOkHttpClient(
+        apiPathPrefixInterceptor: ApiPathPrefixInterceptor,
+        loggingInterceptor: HttpLoggingInterceptor,
+    ): OkHttpClient =
+        OkHttpClient
+            .Builder()
+            .addInterceptor(apiPathPrefixInterceptor)
+            .addInterceptor(loggingInterceptor)
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .build()
+
+    @Provides
+    @Singleton
+    @Named(SESSION_RETROFIT)
+    fun provideSessionRetrofit(
+        @Named(SESSION_HTTP_CLIENT) okHttpClient: OkHttpClient,
+        gson: Gson,
+        baseUrl: String,
+    ): Retrofit =
+        Retrofit
+            .Builder()
+            .baseUrl(baseUrl)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create(gson))
+            .build()
+
+    @Provides
+    @Singleton
+    fun provideAuthSessionApi(
+        @Named(SESSION_RETROFIT) retrofit: Retrofit,
+    ): AuthSessionApi = retrofit.create(AuthSessionApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideAuthSessionClient(impl: RetrofitAuthSessionClient): AuthSessionClient = impl
+
+    @Provides
+    @Singleton
     fun provideOkHttpClient(
         apiPathPrefixInterceptor: ApiPathPrefixInterceptor,
         authHeaderInterceptor: AuthHeaderInterceptor,
-        unauthorizedInterceptor: UnauthorizedInterceptor,
+        refreshTokenAuthenticator: RefreshTokenAuthenticator,
         loggingInterceptor: HttpLoggingInterceptor,
     ): OkHttpClient =
         OkHttpClient
             .Builder()
             .addInterceptor(apiPathPrefixInterceptor)
             .addInterceptor(authHeaderInterceptor)
-            .addInterceptor(unauthorizedInterceptor)
             .addInterceptor(loggingInterceptor)
+            .authenticator(refreshTokenAuthenticator)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
@@ -143,6 +188,9 @@ object NetworkModule {
 }
 
 internal val sensitiveHttpHeaders = listOf("Authorization")
+
+private const val SESSION_HTTP_CLIENT = "session_http_client"
+private const val SESSION_RETROFIT = "session_retrofit"
 
 internal fun taskodayHttpLogLevel(isDebug: Boolean): HttpLoggingInterceptor.Level =
     if (isDebug) {

@@ -79,13 +79,20 @@ fun LoginScreen(
         ) {
             LoginPanel {
                 if (uiState.isCheckingSession) {
-                    CircularProgressIndicator(color = MagicViolet, trackColor = ParchmentShadow.copy(alpha = 0.45f))
+                    if (!uiState.canRetrySession) {
+                        CircularProgressIndicator(color = MagicViolet, trackColor = ParchmentShadow.copy(alpha = 0.45f))
+                    }
                     Text(
-                        text = "Vérification de session...",
+                        text = uiState.errorMessage ?: "Vérification de session...",
                         modifier = Modifier.padding(top = spacing.small),
-                        color = TextMuted,
+                        color = if (uiState.canRetrySession) DangerGlow else TextMuted,
                         style = MaterialTheme.typography.bodyMedium,
                     )
+                    if (uiState.canRetrySession) {
+                        TextButton(onClick = viewModel::checkExistingSession) {
+                            Text("Réessayer")
+                        }
+                    }
                     return@LoginPanel
                 }
 

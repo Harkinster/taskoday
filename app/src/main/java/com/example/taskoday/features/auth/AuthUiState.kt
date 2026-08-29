@@ -9,4 +9,5 @@ data class AuthUiState(
     val isLocalMode: Boolean = false,
     val currentUser: AuthenticatedUser? = null,
     val errorMessage: String? = null,
+    val canRetrySession: Boolean = false,
 )

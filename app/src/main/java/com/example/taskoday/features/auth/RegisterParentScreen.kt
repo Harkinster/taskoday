@@ -65,12 +65,19 @@ fun RegisterParentScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                CircularProgressIndicator()
+                if (!uiState.canRetrySession) {
+                    CircularProgressIndicator()
+                }
                 Text(
-                    text = "Vérification de session...",
+                    text = uiState.errorMessage ?: "Vérification de session...",
                     modifier = Modifier.padding(top = spacing.small),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (uiState.canRetrySession) {
+                    TextButton(onClick = viewModel::checkExistingSession) {
+                        Text("Réessayer")
+                    }
+                }
             }
             return@Scaffold
         }

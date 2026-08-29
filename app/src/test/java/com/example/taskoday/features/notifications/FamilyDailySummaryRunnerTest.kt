@@ -256,6 +256,8 @@ private class FakeAuthRepository(
 
     override fun verifyParentPin(pin: String): Boolean = false
 
+    override fun logout() = Unit
+
     override fun clearSession() = Unit
 }
 

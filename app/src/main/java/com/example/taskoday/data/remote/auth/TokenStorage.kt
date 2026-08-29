@@ -1,9 +1,16 @@
 package com.example.taskoday.data.remote.auth
 
 interface TokenStorage {
-    fun getAccessToken(): String?
+    fun getSessionTokens(): SessionTokens?
 
-    fun saveAccessToken(token: String)
+    fun saveSessionTokens(
+        accessToken: String,
+        refreshToken: String?,
+        accessExpiresInSeconds: Int? = null,
+        refreshExpiresInSeconds: Int? = null,
+    )
+
+    fun getAccessToken(): String? = getSessionTokens()?.accessToken
 
     fun getActiveChildId(): Long?
 
@@ -19,3 +26,10 @@ interface TokenStorage {
 
     fun clear()
 }
+
+data class SessionTokens(
+    val accessToken: String,
+    val refreshToken: String?,
+    val accessExpiresAtEpochSeconds: Long?,
+    val refreshExpiresAtEpochSeconds: Long?,
+)

@@ -1,11 +1,13 @@
 package com.example.taskoday.data.repository
 
 import com.example.taskoday.data.remote.auth.AuthApi
+import com.example.taskoday.data.remote.auth.AuthSessionClient
 import com.example.taskoday.data.remote.auth.TokenStorage
 import com.example.taskoday.data.remote.children.ChildrenApi
 import com.example.taskoday.data.remote.dto.LoginRequestDto
 import com.example.taskoday.data.remote.dto.RegisterChildRequestDto
 import com.example.taskoday.data.remote.dto.RegisterParentRequestDto
+import com.example.taskoday.data.remote.dto.TokenResponseDto
 import com.example.taskoday.data.remote.dto.toDomain
 import com.example.taskoday.domain.model.AuthSession
 import com.example.taskoday.domain.model.AuthenticatedUser
@@ -20,6 +22,7 @@ class AuthRepositoryImpl
         private val authApi: AuthApi,
         private val childrenApi: ChildrenApi,
         private val tokenStorage: TokenStorage,
+        private val authSessionClient: AuthSessionClient,
     ) : AuthRepository {
         override suspend fun registerParent(
             email: String,
@@ -38,8 +41,8 @@ class AuthRepositoryImpl
                         inviteCode = inviteCode?.trim()?.takeIf { it.isNotBlank() },
                     ),
                 )
-            return response.toDomain().also { session ->
-                tokenStorage.saveAccessToken(session.accessToken)
+            return response.toDomain().also {
+                tokenStorage.save(response)
                 tokenStorage.clearActiveChildId()
             }
         }
@@ -60,8 +63,8 @@ class AuthRepositoryImpl
                         birthDate = normalizedBirthDate,
                     ),
                 )
-            return response.toDomain().also { session ->
-                tokenStorage.saveAccessToken(session.accessToken)
+            return response.toDomain().also {
+                tokenStorage.save(response)
                 tokenStorage.clearActiveChildId()
             }
         }
@@ -74,8 +77,8 @@ class AuthRepositoryImpl
                         password = password,
                     ),
                 )
-            return response.toDomain().also { session ->
-                tokenStorage.saveAccessToken(session.accessToken)
+            return response.toDomain().also {
+                tokenStorage.save(response)
                 tokenStorage.clearActiveChildId()
             }
         }
@@ -116,7 +119,27 @@ class AuthRepositoryImpl
 
         override fun verifyParentPin(pin: String): Boolean = tokenStorage.verifyParentPin(pin)
 
+        override fun logout() {
+            val currentRefreshToken = tokenStorage.getSessionTokens()?.refreshToken
+            try {
+                if (!currentRefreshToken.isNullOrBlank()) {
+                    runCatching { authSessionClient.logout(currentRefreshToken) }
+                }
+            } finally {
+                tokenStorage.clear()
+            }
+        }
+
         override fun clearSession() {
             tokenStorage.clear()
         }
     }
+
+private fun TokenStorage.save(response: TokenResponseDto) {
+    saveSessionTokens(
+        accessToken = response.accessToken,
+        refreshToken = response.refreshToken,
+        accessExpiresInSeconds = response.expiresIn,
+        refreshExpiresInSeconds = response.refreshExpiresIn,
+    )
+}

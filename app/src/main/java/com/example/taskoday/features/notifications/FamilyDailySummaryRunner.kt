@@ -1,5 +1,6 @@
 package com.example.taskoday.features.notifications
 
+import com.example.taskoday.data.remote.auth.SessionEventBus
 import com.example.taskoday.domain.repository.AuthRepository
 import com.example.taskoday.domain.repository.FamilyTasksRepository
 import java.io.IOException
@@ -17,8 +18,16 @@ class FamilyDailySummaryRunner
         private val authRepository: AuthRepository,
         private val familyTasksRepository: FamilyTasksRepository,
         private val publisher: FamilyDailySummaryNotificationPublisher,
+        private val sessionEventBus: SessionEventBus = SessionEventBus(),
     ) {
-        suspend fun run(settings: FamilyNotificationSettings): FamilyDailySummaryRunResult {
+        suspend fun run(settings: FamilyNotificationSettings): FamilyDailySummaryRunResult =
+            sessionEventBus.suppressUnauthorizedEvents {
+                runWithoutSessionNavigation(settings)
+            }
+
+        private suspend fun runWithoutSessionNavigation(
+            settings: FamilyNotificationSettings,
+        ): FamilyDailySummaryRunResult {
             if (!settings.dailySummaryEnabled) return FamilyDailySummaryRunResult.Disabled
             if (authRepository.getAccessToken().isNullOrBlank()) return FamilyDailySummaryRunResult.NoSession
 

@@ -39,29 +39,26 @@ class AuthViewModel
                         isAuthenticated = false,
                         currentUser = null,
                         isLocalMode = false,
+                        canRetrySession = false,
                     )
                 }
                 return
             }
 
-            _uiState.update { it.copy(isCheckingSession = true, errorMessage = null, isLocalMode = false) }
+            _uiState.update {
+                it.copy(
+                    isCheckingSession = true,
+                    errorMessage = null,
+                    isLocalMode = false,
+                    canRetrySession = false,
+                )
+            }
             viewModelScope.launch {
                 runCatching {
                     authRepository.fetchMe()
                 }.onSuccess { me ->
                     setAuthenticated(me)
-                }.onFailure { throwable ->
-                    authRepository.clearSession()
-                    _uiState.update {
-                        it.copy(
-                            isCheckingSession = false,
-                            isLoading = false,
-                            isAuthenticated = false,
-                            currentUser = null,
-                            errorMessage = throwable.toMessage(),
-                        )
-                    }
-                }
+                }.onFailure(::handleAuthenticationFailure)
             }
         }
 
@@ -71,24 +68,16 @@ class AuthViewModel
                 return
             }
 
-            _uiState.update { it.copy(isLoading = true, errorMessage = null, isLocalMode = false) }
+            _uiState.update {
+                it.copy(isLoading = true, errorMessage = null, isLocalMode = false, canRetrySession = false)
+            }
             viewModelScope.launch {
                 runCatching {
                     authRepository.login(email = email, password = password)
                     authRepository.fetchMe()
                 }.onSuccess { me ->
                     setAuthenticated(me)
-                }.onFailure { throwable ->
-                    authRepository.clearSession()
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            isAuthenticated = false,
-                            currentUser = null,
-                            errorMessage = throwable.toMessage(),
-                        )
-                    }
-                }
+                }.onFailure(::handleAuthenticationFailure)
             }
         }
 
@@ -112,7 +101,9 @@ class AuthViewModel
                 return
             }
 
-            _uiState.update { it.copy(isLoading = true, errorMessage = null, isLocalMode = false) }
+            _uiState.update {
+                it.copy(isLoading = true, errorMessage = null, isLocalMode = false, canRetrySession = false)
+            }
             viewModelScope.launch {
                 runCatching {
                     authRepository.registerParent(
@@ -125,17 +116,7 @@ class AuthViewModel
                     authRepository.fetchMe()
                 }.onSuccess { me ->
                     setAuthenticated(me)
-                }.onFailure { throwable ->
-                    authRepository.clearSession()
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            isAuthenticated = false,
-                            currentUser = null,
-                            errorMessage = throwable.toMessage(),
-                        )
-                    }
-                }
+                }.onFailure(::handleAuthenticationFailure)
             }
         }
 
@@ -151,7 +132,9 @@ class AuthViewModel
                 return
             }
 
-            _uiState.update { it.copy(isLoading = true, errorMessage = null, isLocalMode = false) }
+            _uiState.update {
+                it.copy(isLoading = true, errorMessage = null, isLocalMode = false, canRetrySession = false)
+            }
             viewModelScope.launch {
                 runCatching {
                     authRepository.registerChild(
@@ -163,17 +146,7 @@ class AuthViewModel
                     authRepository.fetchMe()
                 }.onSuccess { me ->
                     setAuthenticated(me)
-                }.onFailure { throwable ->
-                    authRepository.clearSession()
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            isAuthenticated = false,
-                            currentUser = null,
-                            errorMessage = throwable.toMessage(),
-                        )
-                    }
-                }
+                }.onFailure(::handleAuthenticationFailure)
             }
         }
 
@@ -185,18 +158,20 @@ class AuthViewModel
                     isAuthenticated = false,
                     isLocalMode = true,
                     errorMessage = null,
+                    canRetrySession = false,
                 )
             }
         }
 
         fun logout() {
-            authRepository.clearSession()
+            authRepository.logout()
             _uiState.value =
                 AuthUiState(
                     isCheckingSession = false,
                     isAuthenticated = false,
                     isLocalMode = false,
                     currentUser = null,
+                    canRetrySession = false,
                 )
         }
 
@@ -213,6 +188,21 @@ class AuthViewModel
                     isLocalMode = false,
                     currentUser = me,
                     errorMessage = null,
+                    canRetrySession = false,
+                )
+            }
+        }
+
+        private fun handleAuthenticationFailure(throwable: Throwable) {
+            val sessionStillStored = !authRepository.getAccessToken().isNullOrBlank()
+            _uiState.update {
+                it.copy(
+                    isCheckingSession = sessionStillStored,
+                    isLoading = false,
+                    isAuthenticated = false,
+                    currentUser = null,
+                    errorMessage = throwable.toMessage(),
+                    canRetrySession = sessionStillStored,
                 )
             }
         }

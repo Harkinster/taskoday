@@ -35,5 +35,7 @@ interface AuthRepository {
 
     fun verifyParentPin(pin: String): Boolean
 
+    fun logout()
+
     fun clearSession()
 }

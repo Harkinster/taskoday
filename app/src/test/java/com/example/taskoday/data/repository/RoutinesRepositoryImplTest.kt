@@ -70,6 +70,8 @@ private class FakeRoutineAuthRepository : AuthRepository {
     override fun hasParentPin(): Boolean = false
     override fun saveParentPin(pin: String) = Unit
     override fun verifyParentPin(pin: String): Boolean = false
+    override fun logout() = Unit
+
     override fun clearSession() = Unit
 }
 

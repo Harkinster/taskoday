@@ -234,11 +234,15 @@ fun TaskodayApp() {
 
                 SplashScreen(
                     message =
-                        if (uiState.isCheckingSession) {
+                        if (uiState.canRetrySession) {
+                            uiState.errorMessage ?: "Connexion indisponible. Votre session est conservée."
+                        } else if (uiState.isCheckingSession) {
                             "Verification de la session..."
                         } else {
                             "Preparation de l'application..."
                         },
+                    showProgress = !uiState.canRetrySession,
+                    onRetry = (viewModel::checkExistingSession).takeIf { uiState.canRetrySession },
                 )
 
                 LaunchedEffect(uiState.isCheckingSession, uiState.isAuthenticated, uiState.isLocalMode, uiState.currentUser) {

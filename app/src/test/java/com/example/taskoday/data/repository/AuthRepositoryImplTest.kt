@@ -1,6 +1,9 @@
 package com.example.taskoday.data.repository
 
 import com.example.taskoday.data.remote.auth.AuthApi
+import com.example.taskoday.data.remote.auth.AuthRefreshResult
+import com.example.taskoday.data.remote.auth.AuthSessionClient
+import com.example.taskoday.data.remote.auth.SessionTokens
 import com.example.taskoday.data.remote.auth.TokenStorage
 import com.example.taskoday.data.remote.children.ChildrenApi
 import com.example.taskoday.data.remote.dto.ApiEnvelopeDto
@@ -25,7 +28,7 @@ class AuthRepositoryImplTest {
     fun `register parent without invite keeps invite code null`() =
         runBlocking {
             val authApi = FakeAuthApi()
-            val repository = AuthRepositoryImpl(authApi, FakeChildrenApi(), MemoryTokenStorage())
+            val repository = AuthRepositoryImpl(authApi, FakeChildrenApi(), MemoryTokenStorage(), FakeAuthSessionClient())
 
             repository.registerParent(
                 email = "parent@example.test",
@@ -41,7 +44,7 @@ class AuthRepositoryImplTest {
     fun `register parent with invite sends trimmed code without changing case`() =
         runBlocking {
             val authApi = FakeAuthApi()
-            val repository = AuthRepositoryImpl(authApi, FakeChildrenApi(), MemoryTokenStorage())
+            val repository = AuthRepositoryImpl(authApi, FakeChildrenApi(), MemoryTokenStorage(), FakeAuthSessionClient())
 
             repository.registerParent(
                 email = "parent@example.test",
@@ -58,19 +61,33 @@ class AuthRepositoryImplTest {
     fun `login replaces token and clears active child`() =
         runBlocking {
             val storage = MemoryTokenStorage(accessToken = "old-token", activeChildId = 99L)
-            val repository = AuthRepositoryImpl(FakeAuthApi(), FakeChildrenApi(), storage)
+            val repository = AuthRepositoryImpl(FakeAuthApi(), FakeChildrenApi(), storage, FakeAuthSessionClient())
 
             repository.login(" parent@example.com ", "password123")
 
             assertEquals("new-token", repository.getAccessToken())
+            assertEquals("new-refresh", storage.getSessionTokens()?.refreshToken)
             assertNull(storage.getActiveChildId())
+        }
+
+    @Test
+    fun `register child stores access and refresh together`() =
+        runBlocking {
+            val storage = MemoryTokenStorage()
+            val repository = AuthRepositoryImpl(FakeAuthApi(), FakeChildrenApi(), storage, FakeAuthSessionClient())
+
+            repository.registerChild("child@example.com", "password123", "Child")
+
+            assertEquals("new-token", storage.getSessionTokens()?.accessToken)
+            assertEquals("new-refresh", storage.getSessionTokens()?.refreshToken)
+            assertEquals(1, storage.sessionWriteCount)
         }
 
     @Test
     fun `active child is read from storage until refresh is requested`() =
         runBlocking {
             val storage = MemoryTokenStorage(accessToken = "token", activeChildId = 77L)
-            val repository = AuthRepositoryImpl(FakeAuthApi(), FakeChildrenApi(), storage)
+            val repository = AuthRepositoryImpl(FakeAuthApi(), FakeChildrenApi(), storage, FakeAuthSessionClient())
 
             assertEquals(77L, repository.getActiveChildId())
             assertEquals(42L, repository.getActiveChildId(forceRefresh = true))
@@ -82,7 +99,8 @@ class AuthRepositoryImplTest {
         runBlocking {
             val storage = MemoryTokenStorage(accessToken = "token")
             val onlyChild = child(id = 18L, email = "only@example.com", displayName = "Only")
-            val repository = AuthRepositoryImpl(FakeAuthApi(), FakeChildrenApi(listOf(onlyChild)), storage)
+            val repository =
+                AuthRepositoryImpl(FakeAuthApi(), FakeChildrenApi(listOf(onlyChild)), storage, FakeAuthSessionClient())
 
             assertEquals(18L, repository.getActiveChildId(forceRefresh = true))
             assertEquals(18L, storage.getActiveChildId())
@@ -92,7 +110,7 @@ class AuthRepositoryImplTest {
     fun `refresh preserves stored active child when it is still accessible`() =
         runBlocking {
             val storage = MemoryTokenStorage(accessToken = "token", activeChildId = 99L)
-            val repository = AuthRepositoryImpl(FakeAuthApi(), FakeChildrenApi(), storage)
+            val repository = AuthRepositoryImpl(FakeAuthApi(), FakeChildrenApi(), storage, FakeAuthSessionClient())
 
             assertEquals(99L, repository.getActiveChildId(forceRefresh = true))
             assertEquals(99L, storage.getActiveChildId())
@@ -102,7 +120,8 @@ class AuthRepositoryImplTest {
     fun `refresh clears stale active child when no child is accessible`() =
         runBlocking {
             val storage = MemoryTokenStorage(accessToken = "token", activeChildId = 99L)
-            val repository = AuthRepositoryImpl(FakeAuthApi(), FakeChildrenApi(emptyList()), storage)
+            val repository =
+                AuthRepositoryImpl(FakeAuthApi(), FakeChildrenApi(emptyList()), storage, FakeAuthSessionClient())
 
             assertNull(repository.getActiveChildId(forceRefresh = true))
             assertNull(storage.getActiveChildId())
@@ -110,25 +129,88 @@ class AuthRepositoryImplTest {
 
     @Test
     fun `clear session removes token and active child`() {
-        val storage = MemoryTokenStorage(accessToken = "token", activeChildId = 42L)
-        val repository = AuthRepositoryImpl(FakeAuthApi(), FakeChildrenApi(), storage)
+        val storage = MemoryTokenStorage(accessToken = "token", refreshToken = "refresh", activeChildId = 42L)
+        val repository = AuthRepositoryImpl(FakeAuthApi(), FakeChildrenApi(), storage, FakeAuthSessionClient())
 
         repository.clearSession()
 
         assertNull(repository.getAccessToken())
+        assertNull(storage.getSessionTokens())
         assertNull(storage.getActiveChildId())
+    }
+
+    @Test
+    fun `old access-only session remains readable`() {
+        val storage = MemoryTokenStorage(accessToken = "legacy-token")
+
+        assertEquals("legacy-token", storage.getSessionTokens()?.accessToken)
+        assertNull(storage.getSessionTokens()?.refreshToken)
+    }
+
+    @Test
+    fun `logout revokes current refresh then clears local session`() {
+        val storage = MemoryTokenStorage(accessToken = "access", refreshToken = "current-refresh")
+        val sessionClient = FakeAuthSessionClient()
+        val repository = AuthRepositoryImpl(FakeAuthApi(), FakeChildrenApi(), storage, sessionClient)
+
+        repository.logout()
+
+        assertEquals(listOf("current-refresh"), sessionClient.logoutTokens)
+        assertNull(storage.getSessionTokens())
+    }
+
+    @Test
+    fun `logout without refresh clears locally without backend call`() {
+        val storage = MemoryTokenStorage(accessToken = "legacy-token")
+        val sessionClient = FakeAuthSessionClient()
+        val repository = AuthRepositoryImpl(FakeAuthApi(), FakeChildrenApi(), storage, sessionClient)
+
+        repository.logout()
+
+        assertEquals(emptyList<String>(), sessionClient.logoutTokens)
+        assertNull(storage.getSessionTokens())
+    }
+
+    @Test
+    fun `logout clears locally when backend call throws`() {
+        val storage = MemoryTokenStorage(accessToken = "access", refreshToken = "refresh")
+        val sessionClient = FakeAuthSessionClient(throwOnLogout = true)
+        val repository = AuthRepositoryImpl(FakeAuthApi(), FakeChildrenApi(), storage, sessionClient)
+
+        repository.logout()
+
+        assertNull(storage.getSessionTokens())
     }
 }
 
 private class MemoryTokenStorage(
     private var accessToken: String? = null,
+    private var refreshToken: String? = null,
     private var activeChildId: Long? = null,
     private var parentPin: String? = null,
 ) : TokenStorage {
-    override fun getAccessToken(): String? = accessToken
+    var sessionWriteCount: Int = 0
+        private set
 
-    override fun saveAccessToken(token: String) {
-        accessToken = token
+    override fun getSessionTokens(): SessionTokens? =
+        accessToken?.let {
+            SessionTokens(
+                accessToken = it,
+                refreshToken = refreshToken,
+                accessExpiresAtEpochSeconds = null,
+                refreshExpiresAtEpochSeconds = null,
+            )
+        }
+
+    override fun saveSessionTokens(
+        accessToken: String,
+        refreshToken: String?,
+        accessExpiresInSeconds: Int?,
+        refreshExpiresInSeconds: Int?,
+    ) {
+        this.accessToken = accessToken
+        this.refreshToken = refreshToken
+        sessionWriteCount += 1
     }
 
     override fun getActiveChildId(): Long? = activeChildId
@@ -151,6 +233,7 @@ private class MemoryTokenStorage(
 
     override fun clear() {
         accessToken = null
+        refreshToken = null
         activeChildId = null
     }
 }
@@ -182,7 +265,22 @@ private class FakeAuthApi : AuthApi {
             tokenType = "bearer",
             expiresIn = 3600,
             role = "PARENT",
+            refreshToken = "new-refresh",
+            refreshExpiresIn = 2_592_000,
         )
+}
+
+private class FakeAuthSessionClient(
+    private val throwOnLogout: Boolean = false,
+) : AuthSessionClient {
+    val logoutTokens = mutableListOf<String>()
+
+    override fun refresh(refreshToken: String): AuthRefreshResult = error("Not used")
+
+    override fun logout(refreshToken: String) {
+        if (throwOnLogout) error("offline")
+        logoutTokens += refreshToken
+    }
 }
 
 private class FakeChildrenApi(

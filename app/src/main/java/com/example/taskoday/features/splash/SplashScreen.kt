@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,6 +31,7 @@ fun SplashScreen(
     headline: String = "Taskoday",
     message: String = "Connexion au royaume...",
     showProgress: Boolean = true,
+    onRetry: (() -> Unit)? = null,
 ) {
     val spacing = MaterialTheme.spacing
     val optionalHeadline = headline.takeIf { it.isNotBlank() && it != "Taskoday" }
@@ -79,6 +81,11 @@ fun SplashScreen(
                         color = NeonCyan,
                         trackColor = ArcaneViolet.copy(alpha = 0.28f),
                     )
+                }
+                if (onRetry != null) {
+                    TextButton(onClick = onRetry) {
+                        Text("Réessayer", color = NeonCyan)
+                    }
                 }
             }
         }
