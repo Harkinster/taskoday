@@ -95,8 +95,14 @@ fun TaskodayApp() {
     var recentNestRewardCrystals by rememberSaveable { mutableStateOf(0) }
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
+    val visibleTopLevelDestinations =
+        if (localChildMode) {
+            TopLevelDestinations.filterNot { it == TaskodayDestination.FamilyHome }
+        } else {
+            TopLevelDestinations
+        }
     val currentTopLevelIndex =
-        TopLevelDestinations.indexOfFirst { destination ->
+        visibleTopLevelDestinations.indexOfFirst { destination ->
             currentDestination?.hierarchy?.any { it.route == destination.route } == true
         }
     val isProfileDestination =
@@ -156,8 +162,8 @@ fun TaskodayApp() {
                                 accumulatedDrag < -swipeThresholdPx -> currentTopLevelIndex + 1
                                 else -> -1
                             }
-                        if (targetIndex in TopLevelDestinations.indices) {
-                            navigateToTopLevel(TopLevelDestinations[targetIndex])
+                        if (targetIndex in visibleTopLevelDestinations.indices) {
+                            navigateToTopLevel(visibleTopLevelDestinations[targetIndex])
                         }
                         accumulatedDrag = 0f
                     },
@@ -202,7 +208,7 @@ fun TaskodayApp() {
                     if (showBottomBar) {
                         Box {
                             TaskodayBottomBar(
-                                destinations = TopLevelDestinations,
+                                destinations = visibleTopLevelDestinations,
                                 currentDestination = currentDestination,
                                 onNavigate = navigateToTopLevel,
                             )
