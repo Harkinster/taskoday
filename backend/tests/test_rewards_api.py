@@ -136,6 +136,65 @@ def test_external_reward_request_approval_creates_coupon_and_spends_scales(clien
     assert used.json()["data"]["coupon"]["status"] == "used"
 
 
+def test_parent_local_child_mode_can_request_only_own_active_child_reward_without_spending(client) -> None:
+    parent_token = _register_parent(client, "shop.local.parent@example.com", "Famille Local")
+    other_parent_token = _register_parent(client, "shop.local.other@example.com", "Famille Autre")
+    child_token = _register_child(client, "shop.local.child@example.com", "Local")
+    child_id = _attach_child(client, parent_token, child_token)
+    _complete_routine_mission_and_quest(client, parent_token, child_token, child_id)
+
+    active_reward = client.post(
+        f"/api/v1/children/{child_id}/wishes",
+        headers={"Authorization": f"Bearer {parent_token}"},
+        json={"title": "Choisir le film", "cost_scales": 5, "is_active": True},
+    )
+    assert active_reward.status_code == 201
+
+    balance_before = client.get(
+        f"/api/v1/children/{child_id}/flammeches",
+        headers={"Authorization": f"Bearer {parent_token}"},
+    )
+    assert balance_before.status_code == 200
+    assert balance_before.json()["data"]["balance"] == 20
+
+    requested = client.post(
+        f"/api/v1/wishes/{active_reward.json()['data']['id']}/requests",
+        headers={"Authorization": f"Bearer {parent_token}"},
+        json={"note": "Mode enfant local"},
+    )
+    assert requested.status_code == 201
+    assert requested.json()["data"]["status"] == "pending"
+
+    balance_after = client.get(
+        f"/api/v1/children/{child_id}/flammeches",
+        headers={"Authorization": f"Bearer {parent_token}"},
+    )
+    assert balance_after.status_code == 200
+    assert balance_after.json()["data"]["balance"] == 20
+
+    foreign_parent = client.post(
+        f"/api/v1/wishes/{active_reward.json()['data']['id']}/requests",
+        headers={"Authorization": f"Bearer {other_parent_token}"},
+        json={},
+    )
+    assert foreign_parent.status_code == 403
+
+    inactive_reward = client.post(
+        f"/api/v1/children/{child_id}/wishes",
+        headers={"Authorization": f"Bearer {parent_token}"},
+        json={"title": "Souhait masque", "cost_scales": 1, "is_active": False},
+    )
+    assert inactive_reward.status_code == 201
+
+    inactive_request = client.post(
+        f"/api/v1/wishes/{inactive_reward.json()['data']['id']}/requests",
+        headers={"Authorization": f"Bearer {parent_token}"},
+        json={},
+    )
+    assert inactive_request.status_code == 400
+    assert inactive_request.json()["error"]["message"] == "Recompense inactive."
+
+
 def test_reward_refusal_and_access_control_do_not_spend_scales(client) -> None:
     parent_a = _register_parent(client, "shop.parent.a@example.com", "Famille A")
     parent_b = _register_parent(client, "shop.parent.b@example.com", "Famille B")

@@ -168,8 +168,8 @@ def create_reward_request(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    if current_user.role != UserRole.CHILD:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Seul l'enfant peut demander une recompense.")
+    if current_user.role not in {UserRole.CHILD, UserRole.PARENT}:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Action non autorisee.")
     reward = resolve_accessible_reward(db, current_user=current_user, reward_id=reward_id)
     try:
         reward_request = request_reward(
