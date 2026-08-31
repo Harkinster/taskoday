@@ -51,6 +51,7 @@ import com.example.taskoday.core.ui.component.fantasy.ParentPinDialog
 import com.example.taskoday.core.ui.component.fantasy.RewardToast
 import com.example.taskoday.core.ui.component.fantasy.RoutineItemRow
 import com.example.taskoday.core.ui.component.fantasy.TaskodayTopBar
+import com.example.taskoday.core.ui.theme.ArcaneViolet
 import com.example.taskoday.core.ui.theme.CrystalBlue
 import com.example.taskoday.core.ui.theme.EmberOrange
 import com.example.taskoday.core.ui.theme.InkMuted
@@ -198,6 +199,12 @@ fun HomeScreen(
                             },
                         )
                     }
+                    item {
+                        ChildAdventureBanner(
+                            completed = completedCount,
+                            total = planningItems.size,
+                        )
+                    }
                 }
 
                 item {
@@ -327,6 +334,7 @@ fun HomeScreen(
                                 pendingCompletionKeys = uiState.pendingCompletionKeys,
                                 pendingManagementKeys = uiState.pendingManagementKeys,
                                 canManageActions = canManageActions,
+                                isLocalChildMode = isLocalChildMode,
                             )
                         }
                     }
@@ -859,6 +867,41 @@ private fun ChildJournalCard(onOpenJournal: () -> Unit) {
 }
 
 @Composable
+private fun ChildAdventureBanner(
+    completed: Int,
+    total: Int,
+) {
+    val remaining = (total - completed).coerceAtLeast(0)
+    val message =
+        when {
+            total == 0 -> "Rien à faire pour le moment."
+            remaining > 0 -> "Encore quelques pas pour aider ton gardien."
+            else -> "Bravo, aventure du jour terminée !"
+        }
+
+    FantasyCard(tone = FantasyTone.Violet) {
+        Text(
+            text = "Mon aventure du jour",
+            style = MaterialTheme.typography.titleLarge,
+            color = WoodBrownDark,
+            maxLines = 1,
+        )
+        Text(
+            text = "$completed/$total actions terminées",
+            style = MaterialTheme.typography.headlineSmall,
+            color = ArcaneViolet,
+            maxLines = 1,
+        )
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyMedium,
+            color = InkMuted,
+            maxLines = 2,
+        )
+    }
+}
+
+@Composable
 private fun DailyProgressCard(
     title: String,
     completed: Int,
@@ -892,6 +935,7 @@ private fun TodayActionSection(
     pendingCompletionKeys: Set<String>,
     pendingManagementKeys: Set<String>,
     canManageActions: Boolean,
+    isLocalChildMode: Boolean,
 ) {
     val doneCount = section.items.count { it.isCompleted }
 
@@ -936,14 +980,26 @@ private fun TodayActionSection(
                 title = item.title,
                 emoji = item.emoji,
                 done = item.isCompleted,
-                subtitle = item.description ?: "${item.dayPart.label()} • ${formatPlanningTime(item)}",
+                subtitle =
+                    if (isLocalChildMode) {
+                        "${item.itemType.childLabel()} • ${item.dayPart.label()} • ${formatPlanningTime(item)}"
+                    } else {
+                        item.description ?: "${item.dayPart.label()} • ${formatPlanningTime(item)}"
+                    },
                 statusLabel =
                     when {
                         isSubmitting -> "Validation..."
+                        isLocalChildMode && item.isCompleted -> "Déjà terminé"
+                        isLocalChildMode -> "J’ai terminé"
                         item.isCompleted -> "Terminé"
                         else -> "À faire"
                     },
-                rewardLabel = "Récompense : ${item.reward.compactLabel()}",
+                rewardLabel =
+                    if (isLocalChildMode) {
+                        "Gains : ${item.reward.compactLabel()}"
+                    } else {
+                        "Récompense : ${item.reward.compactLabel()}"
+                    },
                 actionEnabled = !item.isCompleted && !isSubmitting,
                 isSubmitting = isSubmitting,
                 onClick = openTaskAction,
@@ -1047,6 +1103,13 @@ private fun actionTypeAsset(itemType: PlanningItemType): Int =
         PlanningItemType.ROUTINE -> NestAssets.interfaceAsset("flammeche")
         PlanningItemType.MISSION -> NestAssets.interfaceAsset("crystal")
         PlanningItemType.QUEST -> NestAssets.interfaceAsset("nid")
+    }
+
+private fun PlanningItemType.childLabel(): String =
+    when (this) {
+        PlanningItemType.ROUTINE -> "Routine"
+        PlanningItemType.MISSION -> "Mission"
+        PlanningItemType.QUEST -> "Quête"
     }
 
 private fun formatPlanningTime(item: HomePlanningItem): String {
