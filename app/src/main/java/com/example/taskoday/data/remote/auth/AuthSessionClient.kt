@@ -57,7 +57,7 @@ class RetrofitAuthSessionClient
                             call: Call<Unit>,
                             response: Response<Unit>,
                         ) {
-                            response.raw().close()
+                            response.errorBody()?.close()
                         }
 
                         override fun onFailure(
