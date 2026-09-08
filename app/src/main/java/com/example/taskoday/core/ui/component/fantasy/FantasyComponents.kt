@@ -52,6 +52,7 @@ import com.example.taskoday.core.ui.theme.CarvedWoodDark
 import com.example.taskoday.core.ui.theme.DangerGlow
 import com.example.taskoday.core.ui.theme.EmberOrange
 import com.example.taskoday.core.ui.theme.LeafGreenSoft
+import com.example.taskoday.core.ui.theme.MagicViolet
 import com.example.taskoday.core.ui.theme.NebulaViolet
 import com.example.taskoday.core.ui.theme.NeonBlue
 import com.example.taskoday.core.ui.theme.NeonCyan
@@ -85,24 +86,17 @@ fun FantasyScreenBackground(
         Canvas(modifier = Modifier.fillMaxSize()) {
             val width = size.width
             val height = size.height
-
-            drawLine(
-                color = SoftGold.copy(alpha = 0.12f),
-                start = Offset(width * 0.08f, height * 0.20f),
-                end = Offset(width * 0.92f, height * 0.20f),
-                strokeWidth = 1.6f,
+            drawCircle(
+                color = MagicViolet.copy(alpha = 0.14f),
+                radius = width * 0.78f,
+                center = Offset(width * 0.94f, height * 0.02f),
             )
-
-            for (i in 0..26) {
-                val x = (((i * 67) % 100) / 100f) * width
-                val y = (((i * 37 + 19) % 100) / 100f) * height
-                val radius = if (i % 4 == 0) 1.8f else 1.0f
-                drawCircle(
-                    color = SoftGold.copy(alpha = 0.13f),
-                    radius = radius,
-                    center = Offset(x, y),
-                )
-            }
+            drawLine(
+                color = SoftGold.copy(alpha = 0.10f),
+                start = Offset(width * 0.10f, height * 0.16f),
+                end = Offset(width * 0.90f, height * 0.16f),
+                strokeWidth = 1.2f,
+            )
         }
         content()
     }
@@ -145,8 +139,8 @@ fun TaskodayBrand(
     compact: Boolean = false,
 ) {
     val onClick = LocalTaskodayBrandClick.current
-    val logoWidth = if (compact) 178.dp else 238.dp
-    val logoHeight = if (compact) 102.dp else 136.dp
+    val logoWidth = if (compact) 118.dp else 154.dp
+    val logoHeight = if (compact) 40.dp else 52.dp
     val brandModifier =
         modifier
             .width(logoWidth)
@@ -267,8 +261,8 @@ fun FantasyHeader(
 @Composable
 fun GlowingCard(
     modifier: Modifier = Modifier,
-    shape: RoundedCornerShape = RoundedCornerShape(20.dp),
-    backgroundColor: Color = ParchmentCream.copy(alpha = 0.94f),
+    shape: RoundedCornerShape = RoundedCornerShape(16.dp),
+    backgroundColor: Color = ParchmentLight.copy(alpha = 0.98f),
     contentPadding: PaddingValues = PaddingValues(16.dp),
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -277,14 +271,7 @@ fun GlowingCard(
             modifier
                 .clip(shape)
                 .background(backgroundColor)
-                .border(
-                    width = 1.dp,
-                    brush =
-                        Brush.linearGradient(
-                            colors = listOf(NeonCyan.copy(alpha = 0.78f), ArcaneViolet.copy(alpha = 0.74f)),
-                        ),
-                    shape = shape,
-                ),
+                .border(width = 1.dp, color = ArcaneViolet.copy(alpha = 0.24f), shape = shape),
     ) {
         Column(
             modifier =
@@ -323,11 +310,7 @@ fun NeonBadge(
             modifier
                 .clip(RoundedCornerShape(100.dp))
                 .background(toneColor.copy(alpha = 0.16f))
-                .border(
-                    width = 1.dp,
-                    color = toneColor.copy(alpha = 0.76f),
-                    shape = RoundedCornerShape(100.dp),
-                )
+                .border(width = 1.dp, color = toneColor.copy(alpha = 0.45f), shape = RoundedCornerShape(100.dp))
                 .padding(horizontal = 10.dp, vertical = 4.dp),
     ) {
         Text(
@@ -383,8 +366,8 @@ fun NeonPrimaryButton(
         shape = RoundedCornerShape(14.dp),
         colors =
             ButtonDefaults.buttonColors(
-                containerColor = NeonBlue,
-                contentColor = StarWhite,
+                containerColor = MagicViolet,
+                contentColor = ParchmentLight,
                 disabledContainerColor = ParchmentShadow,
                 disabledContentColor = TextMuted,
             ),

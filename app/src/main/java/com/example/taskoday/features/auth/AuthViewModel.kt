@@ -2,6 +2,7 @@ package com.example.taskoday.features.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.taskoday.data.demo.DemoModeStore
 import com.example.taskoday.domain.model.AuthenticatedUser
 import com.example.taskoday.domain.repository.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -22,6 +23,7 @@ class AuthViewModel
     @Inject
     constructor(
         private val authRepository: AuthRepository,
+        private val demoModeStore: DemoModeStore,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(AuthUiState())
         val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
@@ -29,6 +31,9 @@ class AuthViewModel
         init {
             checkExistingSession()
         }
+
+        /** Keeps the ViewModel convenient to construct in the existing JVM tests. */
+        constructor(authRepository: AuthRepository) : this(authRepository, DemoModeStore())
 
         fun checkExistingSession() {
             val accessToken = authRepository.getAccessToken()
@@ -38,12 +43,15 @@ class AuthViewModel
                         isCheckingSession = false,
                         isAuthenticated = false,
                         currentUser = null,
-                        isLocalMode = false,
+                        isLocalMode = demoModeStore.isEnabled,
                         canRetrySession = false,
                     )
                 }
                 return
             }
+
+            // A real session always takes precedence over the DEBUG-only demo path.
+            demoModeStore.setEnabled(false)
 
             _uiState.update {
                 it.copy(
@@ -71,6 +79,7 @@ class AuthViewModel
             _uiState.update {
                 it.copy(isLoading = true, errorMessage = null, isLocalMode = false, canRetrySession = false)
             }
+            demoModeStore.setEnabled(false)
             viewModelScope.launch {
                 runCatching {
                     authRepository.login(email = email, password = password)
@@ -104,6 +113,7 @@ class AuthViewModel
             _uiState.update {
                 it.copy(isLoading = true, errorMessage = null, isLocalMode = false, canRetrySession = false)
             }
+            demoModeStore.setEnabled(false)
             viewModelScope.launch {
                 runCatching {
                     authRepository.registerParent(
@@ -135,6 +145,7 @@ class AuthViewModel
             _uiState.update {
                 it.copy(isLoading = true, errorMessage = null, isLocalMode = false, canRetrySession = false)
             }
+            demoModeStore.setEnabled(false)
             viewModelScope.launch {
                 runCatching {
                     authRepository.registerChild(
@@ -151,6 +162,7 @@ class AuthViewModel
         }
 
         fun continueInLocalMode() {
+            demoModeStore.setEnabled(true)
             _uiState.update {
                 it.copy(
                     isCheckingSession = false,
@@ -165,6 +177,7 @@ class AuthViewModel
 
         fun logout() {
             authRepository.logout()
+            demoModeStore.setEnabled(false)
             _uiState.value =
                 AuthUiState(
                     isCheckingSession = false,
@@ -180,6 +193,7 @@ class AuthViewModel
         }
 
         private fun setAuthenticated(me: AuthenticatedUser) {
+            demoModeStore.setEnabled(false)
             _uiState.update {
                 it.copy(
                     isCheckingSession = false,

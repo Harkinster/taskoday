@@ -1,6 +1,7 @@
 package com.example.taskoday.data.repository
 
 import com.example.taskoday.data.remote.planning.PlanningApi
+import com.example.taskoday.data.demo.DemoModeStore
 import com.example.taskoday.domain.model.CompletionReward
 import com.example.taskoday.domain.model.PlanningItemType
 import com.example.taskoday.domain.model.RemotePlanningRef
@@ -20,8 +21,12 @@ class PlanningSyncRepositoryImpl
         private val routinesRepository: RoutinesRepository,
         private val missionsRepository: MissionsRepository,
         private val questsRepository: QuestsRepository,
+        private val demoModeStore: DemoModeStore,
     ) : PlanningSyncRepository {
         override suspend fun syncDay(dayStartMillis: Long): PlanningSyncResult {
+            if (demoModeStore.isEnabled) {
+                return PlanningSyncResult(usedRemoteData = false)
+            }
             val routinesSyncResult = routinesRepository.syncRoutinesForDay(dayStartMillis)
             val missionsSyncResult = missionsRepository.syncMissions()
             val questsSyncResult = questsRepository.syncQuests()

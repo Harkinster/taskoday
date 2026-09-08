@@ -123,7 +123,7 @@ fun QuestsScreen(
                     Modifier
                         .fillMaxSize()
                         .padding(horizontal = spacing.medium),
-                contentPadding = PaddingValues(top = spacing.large, bottom = 148.dp),
+                contentPadding = PaddingValues(top = spacing.large, bottom = 92.dp),
                 verticalArrangement = Arrangement.spacedBy(spacing.medium),
             ) {
                 item {

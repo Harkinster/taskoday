@@ -10,6 +10,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
@@ -32,6 +36,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.Lifecycle
@@ -56,6 +62,8 @@ import com.example.taskoday.core.ui.theme.CrystalBlue
 import com.example.taskoday.core.ui.theme.EmberOrange
 import com.example.taskoday.core.ui.theme.InkMuted
 import com.example.taskoday.core.ui.theme.MossGreen
+import com.example.taskoday.core.ui.theme.ParchmentCream
+import com.example.taskoday.core.ui.theme.ParchmentLight
 import com.example.taskoday.core.ui.theme.SoftGold
 import com.example.taskoday.core.ui.theme.WoodBrownDark
 import com.example.taskoday.core.ui.theme.spacing
@@ -90,6 +98,7 @@ fun HomeScreen(
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
     var showReturnParentPinDialog by rememberSaveable { mutableStateOf(false) }
     var returnParentPinError by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedHomeView by rememberSaveable { mutableStateOf(HomeListView.TODAY) }
     var pendingDeleteRoutine by remember { mutableStateOf<TaskForDay?>(null) }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
@@ -177,7 +186,7 @@ fun HomeScreen(
                     Modifier
                         .fillMaxSize()
                         .padding(horizontal = spacing.medium),
-                contentPadding = PaddingValues(top = spacing.large, bottom = 148.dp),
+                contentPadding = PaddingValues(top = spacing.large, bottom = 92.dp),
                 verticalArrangement = Arrangement.spacedBy(spacing.medium),
             ) {
                 item {
@@ -217,6 +226,22 @@ fun HomeScreen(
                             },
                         onOpenCalendar = { showDatePicker = true },
                     )
+                }
+
+                item {
+                    HomeViewSelector(
+                        selected = selectedHomeView,
+                        onSelected = { selectedHomeView = it },
+                    )
+                }
+
+                val overdueCount = planningItems.count { item ->
+                    !item.isCompleted && item.dueDate?.let { dueDate -> dueDate < System.currentTimeMillis() } == true
+                }
+                if (overdueCount > 0) {
+                    item {
+                        HomeOverdueSummary(count = overdueCount)
+                    }
                 }
 
                 if (showParentDashboard) {
@@ -605,19 +630,95 @@ private fun RoutineDateHeader(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = dateLabel,
-            style = MaterialTheme.typography.titleMedium,
-            color = SoftGold,
-            maxLines = 1,
-        )
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = "Ma maison",
+                style = MaterialTheme.typography.headlineMedium,
+                color = ParchmentLight,
+                maxLines = 1,
+            )
+            Text(
+                text = dateLabel,
+                style = MaterialTheme.typography.bodyMedium,
+                color = ParchmentCream.copy(alpha = 0.70f),
+                maxLines = 1,
+            )
+        }
         IconButton(onClick = onOpenCalendar) {
             Icon(
                 imageVector = Icons.Outlined.CalendarMonth,
                 contentDescription = "Calendrier",
-                tint = SoftGold,
+                tint = ParchmentCream.copy(alpha = 0.72f),
             )
         }
+    }
+}
+
+private enum class HomeListView(val label: String) {
+    TODAY("Aujourd’hui"),
+    WEEK("Semaine"),
+    ALL("Toutes"),
+}
+
+@Composable
+private fun HomeViewSelector(
+    selected: HomeListView,
+    onSelected: (HomeListView) -> Unit,
+) {
+    val shape = RoundedCornerShape(12.dp)
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(shape)
+                .background(Color.White.copy(alpha = 0.07f))
+                .border(1.dp, ParchmentLight.copy(alpha = 0.10f), shape)
+                .padding(3.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        HomeListView.entries.forEach { view ->
+            val isSelected = view == selected
+            Text(
+                text = view.label,
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(9.dp))
+                        .background(if (isSelected) ParchmentLight else Color.Transparent)
+                        .clickable { onSelected(view) }
+                        .padding(vertical = 8.dp),
+                style = MaterialTheme.typography.labelLarge,
+                color = if (isSelected) WoodBrownDark else ParchmentCream.copy(alpha = 0.68f),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+@Composable
+private fun HomeOverdueSummary(count: Int) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .background(EmberOrange.copy(alpha = 0.12f))
+                .border(1.dp, EmberOrange.copy(alpha = 0.26f), RoundedCornerShape(10.dp))
+                .padding(horizontal = 12.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = if (count == 1) "1 tâche en retard" else "$count tâches en retard",
+            style = MaterialTheme.typography.labelLarge,
+            color = ParchmentCream,
+        )
+        Spacer(modifier = Modifier.weight(1f))
+        Text(
+            text = "À reprendre quand tu peux",
+            style = MaterialTheme.typography.bodySmall,
+            color = ParchmentCream.copy(alpha = 0.68f),
+        )
     }
 }
 
@@ -990,6 +1091,7 @@ private fun TodayActionSection(
                     when {
                         isSubmitting -> "Validation..."
                         isLocalChildMode && item.isCompleted -> "Déjà terminé"
+                        !item.isCompleted && item.dueDate?.let { dueDate -> dueDate < System.currentTimeMillis() } == true -> "En retard"
                         isLocalChildMode -> "J’ai terminé"
                         item.isCompleted -> "Terminé"
                         else -> "À faire"
@@ -1000,6 +1102,7 @@ private fun TodayActionSection(
                     } else {
                         "Récompense : ${item.reward.compactLabel()}"
                     },
+                isOverdue = !item.isCompleted && item.dueDate?.let { dueDate -> dueDate < System.currentTimeMillis() } == true,
                 actionEnabled = !item.isCompleted && !isSubmitting,
                 isSubmitting = isSubmitting,
                 onClick = openTaskAction,

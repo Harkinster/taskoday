@@ -66,7 +66,9 @@ import com.example.taskoday.core.ui.theme.CarvedWoodDark
 import com.example.taskoday.core.ui.theme.DangerGlow
 import com.example.taskoday.core.ui.theme.EmberOrange
 import com.example.taskoday.core.ui.theme.GlowHalo
+import com.example.taskoday.core.ui.theme.InkMuted
 import com.example.taskoday.core.ui.theme.MagicViolet
+import com.example.taskoday.core.ui.theme.MagicVioletSoft
 import com.example.taskoday.core.ui.theme.NeonBlue
 import com.example.taskoday.core.ui.theme.NeonBorderEnd
 import com.example.taskoday.core.ui.theme.NeonBorderStart
@@ -77,6 +79,7 @@ import com.example.taskoday.core.ui.theme.NightBlue850
 import com.example.taskoday.core.ui.theme.NightBlue900
 import com.example.taskoday.core.ui.theme.ParchmentCream
 import com.example.taskoday.core.ui.theme.ParchmentLight
+import com.example.taskoday.core.ui.theme.RoyalPurpleDark
 import com.example.taskoday.core.ui.theme.SoftGold
 import com.example.taskoday.core.ui.theme.StarWhite
 import com.example.taskoday.core.ui.theme.SuccessGlow
@@ -197,23 +200,11 @@ fun TaskodayHeader(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .shadow(elevation = 6.dp, shape = RoundedCornerShape(metrics.cardCornerLarge), clip = false)
                     .clip(RoundedCornerShape(metrics.cardCornerLarge))
-                    .background(taskodayReadableHeaderBrush())
-                    .border(
-                        width = metrics.cardStrokeStrong,
-                        brush = taskodayNeonBorderBrush(),
-                        shape = RoundedCornerShape(metrics.cardCornerLarge),
-                    )
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                    .background(Color.White.copy(alpha = 0.06f))
+                    .border(1.dp, ParchmentLight.copy(alpha = 0.12f), RoundedCornerShape(metrics.cardCornerLarge))
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
         ) {
-            Canvas(modifier = Modifier.matchParentSize()) {
-                drawCircle(
-                    color = GlowHalo.copy(alpha = 0.14f),
-                    radius = size.minDimension * 0.72f,
-                    center = Offset(size.width * 0.02f, size.height * 0.04f),
-                )
-            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -224,8 +215,8 @@ fun TaskodayHeader(
                         Modifier
                             .size(38.dp)
                             .clip(CircleShape)
-                            .background(taskodayGoldBrush())
-                            .border(1.2.dp, MagicViolet.copy(alpha = 0.72f), CircleShape)
+                            .background(MagicViolet.copy(alpha = 0.22f))
+                            .border(1.dp, SoftGold.copy(alpha = 0.42f), CircleShape)
                             .padding(6.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -243,14 +234,14 @@ fun TaskodayHeader(
                     Text(
                         text = title,
                         style = MaterialTheme.typography.titleLarge,
-                        color = SoftGold,
+                        color = ParchmentLight,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
                         text = subtitle,
                         style = MaterialTheme.typography.bodySmall,
-                        color = ParchmentCream,
+                        color = ParchmentCream.copy(alpha = 0.72f),
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -270,46 +261,13 @@ fun NeonCard(
 ) {
     val borderTone = toneColor(tone)
     Box(
-            modifier =
+        modifier =
             modifier
-                .shadow(elevation = 7.dp, shape = shape, clip = false)
+                .shadow(elevation = 3.dp, shape = shape, clip = false)
                 .clip(shape)
-                .background(taskodayReadablePanelBrush(tone))
-                .border(
-                    width = MaterialTheme.fantasyMetrics.cardStrokeStrong,
-                    brush =
-                        Brush.linearGradient(
-                            listOf(
-                                ParchmentLight.copy(alpha = 0.96f),
-                                SoftGold.copy(alpha = 0.94f),
-                                borderTone.copy(alpha = 0.82f),
-                                NeonBorderEnd.copy(alpha = 0.70f),
-                            ),
-                        ),
-                    shape = shape,
-                ),
+                .background(ParchmentLight.copy(alpha = 0.98f))
+                .border(width = 1.dp, color = borderTone.copy(alpha = 0.24f), shape = shape),
     ) {
-        Canvas(modifier = Modifier.matchParentSize()) {
-            drawCircle(
-                color = GlowHalo.copy(alpha = 0.11f),
-                radius = size.minDimension * 0.60f,
-                center = Offset(size.width * 0.95f, size.height * 0.05f),
-            )
-            drawLine(
-                color = SoftGold.copy(alpha = 0.82f),
-                start = Offset(size.width * 0.08f, size.height * 0.04f),
-                end = Offset(size.width * 0.92f, size.height * 0.04f),
-                strokeWidth = 2f,
-                cap = StrokeCap.Round,
-            )
-            drawLine(
-                color = WoodBrownDark.copy(alpha = 0.12f),
-                start = Offset(size.width * 0.10f, size.height - 5f),
-                end = Offset(size.width * 0.90f, size.height - 5f),
-                strokeWidth = 2f,
-                cap = StrokeCap.Round,
-            )
-        }
         Column(
             modifier =
                 Modifier
@@ -326,7 +284,7 @@ fun XpProgressBar(
     progress: Float,
     modifier: Modifier = Modifier,
     height: Dp = 8.dp,
-    trackColor: Color = TextDimmed.copy(alpha = 0.45f),
+    trackColor: Color = InkMuted.copy(alpha = 0.18f),
 ) {
     val clamped = progress.coerceIn(0f, 1f)
     Box(
@@ -378,7 +336,7 @@ fun CircularProgressBadge(
             )
             val inner = this.size.minDimension * 0.35f
             drawCircle(
-                color = NightBlue900.copy(alpha = 0.94f),
+                color = ParchmentLight.copy(alpha = 0.96f),
                 radius = inner,
                 center = center,
             )
@@ -414,13 +372,13 @@ fun NeonButton(
         modifier =
             modifier
                 .defaultMinSize(minHeight = 38.dp)
-                .shadow(elevation = if (enabled) 6.dp else 0.dp, shape = shape, clip = false)
+                .shadow(elevation = if (enabled) 2.dp else 0.dp, shape = shape, clip = false)
                 .clip(shape)
                 .background(taskodayReadableButtonBrush(style, enabled))
                 .clickable(enabled = enabled, onClick = onClick)
                 .border(
-                    width = MaterialTheme.fantasyMetrics.cardStrokeStrong,
-                    color = if (style == NeonButtonStyle.Filled) MagicViolet.copy(alpha = 0.62f) else SoftGold.copy(alpha = 0.84f),
+                    width = 1.dp,
+                    color = if (style == NeonButtonStyle.Filled) MagicViolet.copy(alpha = 0.62f) else MagicViolet.copy(alpha = 0.34f),
                     shape = shape,
                 ),
         contentAlignment = Alignment.Center,
@@ -437,12 +395,11 @@ fun NeonButton(
         Text(
             text = text,
             style = MaterialTheme.typography.labelLarge,
-            color =
-                when {
-                    !enabled -> TextMuted
-                    style == NeonButtonStyle.Filled -> WoodBrownDark
-                    else -> ParchmentLight
-                },
+            color = when {
+                !enabled -> TextMuted
+                style == NeonButtonStyle.Filled -> ParchmentLight
+                else -> MagicViolet
+            },
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -568,6 +525,7 @@ fun RoutineItemRow(
     modifier: Modifier = Modifier,
     subtitle: String? = null,
     statusLabel: String? = null,
+    isOverdue: Boolean = false,
     rewardLabel: String? = null,
     actionEnabled: Boolean = true,
     isSubmitting: Boolean = false,
@@ -583,14 +541,20 @@ fun RoutineItemRow(
                 .clip(RoundedCornerShape(12.dp))
                 .background(
                     if (done) {
-                        Brush.horizontalGradient(listOf(ParchmentLight, ParchmentCream, SuccessGlow.copy(alpha = 0.12f)))
+                        Brush.horizontalGradient(listOf(ParchmentLight, Color(0xFFEAF5EE)))
+                    } else if (isOverdue) {
+                        Brush.horizontalGradient(listOf(ParchmentLight, Color(0xFFFFF3ED)))
                     } else {
-                        taskodayParchmentBrush()
+                        Brush.horizontalGradient(listOf(ParchmentLight, ParchmentCream))
                     },
                 )
                 .border(
-                    width = 1.2.dp,
-                    color = if (done) SuccessGlow.copy(alpha = 0.72f) else SoftGold.copy(alpha = 0.62f),
+                    width = 1.dp,
+                    color = when {
+                        done -> SuccessGlow.copy(alpha = 0.52f)
+                        isOverdue -> EmberOrange.copy(alpha = 0.48f)
+                        else -> MagicViolet.copy(alpha = 0.18f)
+                    },
                     shape = RoundedCornerShape(12.dp),
                 )
                 .clickable(enabled = onClick != null, onClick = { onClick?.invoke() })
@@ -603,14 +567,14 @@ fun RoutineItemRow(
                 Modifier
                     .size(38.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(taskodayGoldBrush())
-                    .border(1.dp, MagicViolet.copy(alpha = 0.56f), RoundedCornerShape(10.dp)),
+                    .background(MagicViolet.copy(alpha = 0.10f))
+                    .border(1.dp, MagicViolet.copy(alpha = 0.18f), RoundedCornerShape(10.dp)),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = Icons.Outlined.Star,
                 contentDescription = null,
-                tint = MagicViolet,
+                tint = MagicViolet.copy(alpha = 0.82f),
                 modifier = Modifier.size(20.dp),
             )
         }
@@ -737,12 +701,8 @@ fun MissionCard(
                 .fillMaxWidth()
                 .shadow(elevation = 5.dp, shape = shape, clip = false)
                 .clip(shape)
-                .background(taskodayParchmentBrush())
-                .border(
-                    width = 1.4.dp,
-                    brush = Brush.linearGradient(listOf(SoftGold.copy(alpha = 0.96f), toneColor(tone).copy(alpha = 0.76f), SoftGold.copy(alpha = 0.72f))),
-                    shape = shape,
-                )
+                .background(ParchmentLight.copy(alpha = 0.98f))
+                .border(width = 1.dp, color = toneColor(tone).copy(alpha = 0.26f), shape = shape)
                 .clickable(onClick = onClick),
     ) {
         Canvas(modifier = Modifier.matchParentSize()) {
@@ -752,7 +712,7 @@ fun MissionCard(
                 center = Offset(size.width * 0.06f, size.height * 0.16f),
             )
             drawLine(
-                color = SoftGold.copy(alpha = 0.42f),
+                color = toneColor(tone).copy(alpha = 0.20f),
                 start = Offset(size.width * 0.10f, 6f),
                 end = Offset(size.width * 0.90f, 6f),
                 strokeWidth = 2f,
@@ -773,7 +733,7 @@ fun MissionCard(
                     Modifier
                         .size(60.dp)
                         .clip(CircleShape)
-                        .border(1.4.dp, SoftGold.copy(alpha = 0.90f), CircleShape),
+                        .border(1.dp, toneColor(tone).copy(alpha = 0.28f), CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 FantasySkinSurface(
@@ -784,7 +744,7 @@ fun MissionCard(
                 Icon(
                     imageVector = Icons.Outlined.Star,
                     contentDescription = null,
-                    tint = SoftGold,
+                    tint = toneColor(tone).copy(alpha = 0.82f),
                     modifier = Modifier.size(25.dp),
                 )
             }
@@ -1094,29 +1054,25 @@ private fun ReferenceQuestCard(
         modifier =
             modifier
                 .fillMaxWidth()
-                .shadow(elevation = 8.dp, shape = shape, clip = false)
+                .shadow(elevation = 4.dp, shape = shape, clip = false)
                 .clip(shape)
-                .background(taskodayQuestCardBrush())
-                .border(
-                    width = 1.6.dp,
-                    brush = Brush.linearGradient(listOf(SoftGold, NeonBorderEnd, SoftGold.copy(alpha = 0.72f))),
-                    shape = shape,
-                )
+                .background(ParchmentLight.copy(alpha = 0.98f))
+                .border(width = 1.dp, color = MagicViolet.copy(alpha = 0.30f), shape = shape)
                 .clickable(onClick = onAction),
     ) {
         Canvas(modifier = Modifier.matchParentSize()) {
             drawCircle(
-                color = GlowHalo.copy(alpha = 0.20f),
+                color = MagicViolet.copy(alpha = 0.07f),
                 radius = size.minDimension * 0.68f,
                 center = Offset(size.width * 0.02f, size.height * 0.05f),
             )
             drawCircle(
-                color = SoftGold.copy(alpha = 0.08f),
+                color = SoftGold.copy(alpha = 0.04f),
                 radius = size.minDimension * 0.54f,
                 center = Offset(size.width * 0.86f, size.height * 0.18f),
             )
             drawLine(
-                color = SoftGold.copy(alpha = 0.50f),
+                color = MagicViolet.copy(alpha = 0.16f),
                 start = Offset(size.width * 0.07f, 5f),
                 end = Offset(size.width * 0.93f, 5f),
                 strokeWidth = 2f,
@@ -1137,8 +1093,8 @@ private fun ReferenceQuestCard(
                         Modifier
                             .size(66.dp)
                             .clip(RoundedCornerShape(18.dp))
-                            .background(MagicViolet.copy(alpha = 0.30f))
-                            .border(1.5.dp, SoftGold.copy(alpha = 0.94f), RoundedCornerShape(18.dp)),
+                            .background(MagicViolet.copy(alpha = 0.10f))
+                            .border(1.dp, MagicViolet.copy(alpha = 0.24f), RoundedCornerShape(18.dp)),
                     contentAlignment = Alignment.Center,
                 ) {
                     FantasySkinSurface(
@@ -1149,7 +1105,7 @@ private fun ReferenceQuestCard(
                     Icon(
                         imageVector = Icons.Outlined.Star,
                         contentDescription = null,
-                        tint = SoftGold,
+                        tint = MagicViolet,
                         modifier = Modifier.size(27.dp),
                     )
                 }
@@ -1160,7 +1116,7 @@ private fun ReferenceQuestCard(
                     Text(
                         text = title,
                         style = MaterialTheme.typography.titleMedium,
-                        color = SoftGold,
+                        color = WoodBrownDark,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -1168,7 +1124,7 @@ private fun ReferenceQuestCard(
                         Text(
                             text = description,
                             style = MaterialTheme.typography.bodySmall,
-                            color = ParchmentCream,
+                        color = TextMuted,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -1176,7 +1132,7 @@ private fun ReferenceQuestCard(
                     Text(
                         text = dayPartLabel,
                         style = MaterialTheme.typography.bodySmall,
-                        color = ParchmentCream.copy(alpha = 0.82f),
+                        color = TextMuted,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -1189,8 +1145,8 @@ private fun ReferenceQuestCard(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                FantasyInfoChip(text = xpLabel, accent = SoftGold, dark = true, modifier = Modifier.weight(1f))
-                FantasyInfoChip(text = if (done) "Terminée" else actionLabel, accent = if (done) SuccessGlow else SoftGold, dark = true, modifier = Modifier.weight(1f))
+                FantasyInfoChip(text = xpLabel, accent = MagicViolet, modifier = Modifier.weight(1f))
+                FantasyInfoChip(text = if (done) "Terminée" else actionLabel, accent = if (done) SuccessGlow else MagicViolet, modifier = Modifier.weight(1f))
             }
             if (canManage && (onEdit != null || onDelete != null)) {
                 Row(
@@ -1349,20 +1305,33 @@ fun RewardsCard(
                         Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(NightBlue900.copy(alpha = 0.6f))
+                            .background(MagicViolet.copy(alpha = 0.07f))
                             .border(
                                 width = 1.dp,
-                                color = NeonBorderEnd.copy(alpha = 0.54f),
+                                color = MagicViolet.copy(alpha = 0.18f),
                                 shape = RoundedCornerShape(12.dp),
                             )
                             .padding(vertical = 8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    Text(
-                        text = reward.emoji,
-                        style = MaterialTheme.typography.titleLarge,
-                    )
+                    val rewardAsset =
+                        when {
+                            reward.label.contains("flamm", ignoreCase = true) -> R.drawable.v2_resource_flammeche
+                            reward.label.contains("crist", ignoreCase = true) -> R.drawable.v2_resource_crystal
+                            reward.label.contains("xp", ignoreCase = true) -> R.drawable.v2_resource_xp
+                            else -> null
+                        }
+                    if (rewardAsset != null) {
+                        Image(
+                            painter = painterResource(id = rewardAsset),
+                            contentDescription = reward.label,
+                            modifier = Modifier.size(28.dp),
+                            contentScale = ContentScale.Fit,
+                        )
+                    } else {
+                        Text(text = reward.emoji, style = MaterialTheme.typography.titleLarge)
+                    }
                     Text(
                         text = reward.value,
                         style = MaterialTheme.typography.labelLarge,
@@ -1510,6 +1479,123 @@ fun FantasyBottomNavigation(
     }
 }
 
+/** The V2 navigation keeps the chrome quiet so the day's work stays primary. */
+@Composable
+fun TaskodayV2BottomNavigation(
+    destinations: List<TaskodayDestination>,
+    currentDestination: NavDestination?,
+    onNavigate: (TaskodayDestination) -> Unit,
+    modifier: Modifier = Modifier,
+    attentionDestinationRoutes: Set<String> = emptySet(),
+    notificationBadges: Map<String, Int> = emptyMap(),
+) {
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(64.dp)
+                .background(Color(0xFF120C20).copy(alpha = 0.97f))
+                .border(1.dp, ParchmentLight.copy(alpha = 0.10f)),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        destinations.forEach { destination ->
+            val selected = currentDestination?.hierarchy?.any { it.route == destination.route } == true
+            Column(
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clickable { onNavigate(destination) }
+                        .padding(vertical = 6.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
+            ) {
+                Box(
+                    modifier =
+                        Modifier
+                            .size(if (selected) 30.dp else 26.dp)
+                            .clip(RoundedCornerShape(9.dp))
+                            .background(if (selected) MagicViolet.copy(alpha = 0.90f) else Color.Transparent)
+                            .border(
+                                width = if (selected) 1.dp else 0.dp,
+                                color = MagicVioletSoft.copy(alpha = 0.56f),
+                                shape = RoundedCornerShape(9.dp),
+                            ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    val v2Icon = taskodayV2NavIcon(destination.route)
+                    if (v2Icon != null) {
+                        Image(
+                            painter = painterResource(id = v2Icon),
+                            contentDescription = destination.label,
+                            modifier = Modifier.size(if (selected) 21.dp else 19.dp),
+                            contentScale = ContentScale.Fit,
+                        )
+                    } else {
+                        destination.icon?.let { icon ->
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = destination.label,
+                                tint = if (selected) ParchmentLight else ParchmentCream.copy(alpha = 0.66f),
+                                modifier = Modifier.size(if (selected) 18.dp else 17.dp),
+                            )
+                        }
+                    }
+                    if (destination.route in attentionDestinationRoutes || destination.route in notificationBadges) {
+                        val badge = notificationBadges[destination.route]
+                        if (badge != null && badge > 0) {
+                            Box(
+                                modifier =
+                                    Modifier
+                                        .align(Alignment.TopEnd)
+                                        .clip(RoundedCornerShape(100.dp))
+                                        .background(SoftGold)
+                                        .padding(horizontal = 4.dp, vertical = 1.dp),
+                            ) {
+                                Text(
+                                    text = badge.coerceAtMost(99).toString(),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = WoodBrownDark,
+                                    maxLines = 1,
+                                )
+                            }
+                        } else {
+                            Box(
+                                modifier = Modifier.align(Alignment.TopEnd).size(7.dp).clip(CircleShape).background(SoftGold),
+                            )
+                        }
+                    }
+                }
+                Text(
+                    text = destination.label,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (selected) ParchmentLight else ParchmentCream.copy(alpha = 0.64f),
+                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    softWrap = false,
+                )
+                if (selected) {
+                    Box(
+                        modifier = Modifier.width(18.dp).height(2.dp).clip(RoundedCornerShape(100.dp)).background(SoftGold),
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun taskodayV2NavIcon(route: String): Int? =
+    when (route) {
+        TaskodayDestination.FamilyHome.route -> R.drawable.v2_nav_family_parent
+        TaskodayDestination.Home.route -> R.drawable.v2_nav_routine
+        TaskodayDestination.Tasks.route -> R.drawable.v2_nav_mission
+        TaskodayDestination.Quests.route -> R.drawable.v2_nav_quest
+        TaskodayDestination.Nest.route -> R.drawable.v2_nav_home
+        else -> null
+    }
+
 @Composable
 fun QuestLevelBadge(
     level: Int,
@@ -1602,18 +1688,18 @@ private fun FantasyActionMedallion(
     Box(
         modifier =
             Modifier
-                .size(42.dp)
-                .shadow(elevation = 4.dp, shape = shape, clip = false)
+                .size(36.dp)
+                .shadow(elevation = 2.dp, shape = shape, clip = false)
                 .clip(shape)
-                .background(if (dark) Brush.verticalGradient(listOf(MagicViolet, WoodBrownDark)) else taskodayGoldBrush())
-                .border(1.2.dp, SoftGold.copy(alpha = 0.88f), shape)
+                .background(if (dark) MagicViolet.copy(alpha = 0.88f) else MagicViolet.copy(alpha = 0.10f))
+                .border(1.dp, if (dark) MagicViolet else MagicViolet.copy(alpha = 0.28f), shape)
                 .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
             contentDescription = null,
-            tint = if (dark) SoftGold else WoodBrownDark,
+            tint = if (dark) ParchmentLight else MagicViolet,
             modifier = Modifier.size(26.dp),
         )
     }
@@ -1711,8 +1797,8 @@ private fun taskodayReadableButtonBrush(style: NeonButtonStyle, enabled: Boolean
         Brush.verticalGradient(listOf(ParchmentCream.copy(alpha = 0.88f), TextDimmed.copy(alpha = 0.28f)))
     } else {
         when (style) {
-            NeonButtonStyle.Filled -> taskodayGoldBrush()
-            NeonButtonStyle.Outline -> Brush.verticalGradient(listOf(NightBlue850, MagicViolet, WoodBrownDark))
+            NeonButtonStyle.Filled -> Brush.verticalGradient(listOf(MagicViolet, RoyalPurpleDark))
+            NeonButtonStyle.Outline -> Brush.verticalGradient(listOf(ParchmentLight, ParchmentCream))
         }
     }
 

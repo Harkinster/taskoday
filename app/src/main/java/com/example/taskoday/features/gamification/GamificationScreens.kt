@@ -1509,7 +1509,7 @@ private fun GamificationScaffold(
         FantasyScreenBackground(modifier = Modifier.statusBarsPadding().padding(innerPadding)) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(horizontal = MaterialTheme.spacing.medium),
-                contentPadding = PaddingValues(top = MaterialTheme.spacing.large, bottom = 148.dp),
+                contentPadding = PaddingValues(top = MaterialTheme.spacing.large, bottom = 92.dp),
                 verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
                 content = content,
             )

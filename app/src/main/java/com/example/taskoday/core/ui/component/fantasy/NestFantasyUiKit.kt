@@ -57,6 +57,7 @@ import com.example.taskoday.core.ui.theme.NestNightBlue
 import com.example.taskoday.core.ui.theme.ParchmentCream
 import com.example.taskoday.core.ui.theme.ParchmentLight
 import com.example.taskoday.core.ui.theme.ParchmentShadow
+import com.example.taskoday.core.ui.theme.RoyalPurpleDark
 import com.example.taskoday.core.ui.theme.SoftGold
 import com.example.taskoday.core.ui.theme.SoftGoldPale
 import com.example.taskoday.core.ui.theme.WoodBrown
@@ -90,11 +91,11 @@ private fun fantasyCardBrush(tone: FantasyTone): Brush =
             when (tone) {
                 FantasyTone.Night,
                 FantasyTone.Violet,
-                -> listOf(ParchmentLight, ParchmentCream, Color(0xFFF3E7FF), Color(0xFFE7D2F6))
-                FantasyTone.Wood -> listOf(ParchmentLight, ParchmentCream, Color(0xFFF2D9B4), Color(0xFFE7C08D))
-                FantasyTone.Ember -> listOf(ParchmentLight, ParchmentCream, Color(0xFFFFD9AD), Color(0xFFFFBE82))
-                FantasyTone.Moss -> listOf(ParchmentLight, ParchmentCream, Color(0xFFEAF4D6), Color(0xFFD7E6B6))
-                FantasyTone.Gold -> listOf(ParchmentLight, ParchmentCream, Color(0xFFFFE9B8), Color(0xFFFFD987))
+                -> listOf(ParchmentLight, Color(0xFFF7F1FF))
+                FantasyTone.Wood -> listOf(ParchmentLight, Color(0xFFF7F2EF))
+                FantasyTone.Ember -> listOf(ParchmentLight, Color(0xFFFFF2ED))
+                FantasyTone.Moss -> listOf(ParchmentLight, Color(0xFFF0F8F2))
+                FantasyTone.Gold -> listOf(ParchmentLight, Color(0xFFFFF9EF))
             },
     )
 
@@ -103,18 +104,17 @@ private fun fantasyButtonBrush(style: FantasyButtonStyle, enabled: Boolean): Bru
         Brush.verticalGradient(listOf(ParchmentCream.copy(alpha = 0.92f), ParchmentShadow.copy(alpha = 0.70f)))
     } else {
         when (style) {
-            FantasyButtonStyle.Filled -> taskodayGoldBrush()
-            FantasyButtonStyle.Outline -> Brush.verticalGradient(listOf(MagicVioletSoft, MagicViolet, WoodBrownDark))
-            FantasyButtonStyle.Quiet -> Brush.verticalGradient(listOf(ParchmentLight, ParchmentCream, Color(0xFFFFE6AF)))
+            FantasyButtonStyle.Filled -> Brush.verticalGradient(listOf(MagicViolet, RoyalPurpleDark))
+            FantasyButtonStyle.Outline -> Brush.verticalGradient(listOf(ParchmentLight, ParchmentCream))
+            FantasyButtonStyle.Quiet -> Brush.verticalGradient(listOf(ParchmentLight, ParchmentCream))
         }
     }
 
 private fun fantasyButtonTextColor(style: FantasyButtonStyle, enabled: Boolean): Color =
     when {
         !enabled -> InkMuted
-        style == FantasyButtonStyle.Filled -> WoodBrownDark
-        style == FantasyButtonStyle.Quiet -> WoodBrownDark
-        else -> ParchmentLight
+        style == FantasyButtonStyle.Filled -> ParchmentLight
+        else -> MagicViolet
     }
 
 private fun fantasyBadgeBrush(tone: FantasyTone): Brush =
@@ -148,36 +148,21 @@ fun FantasyCard(
         modifier =
             modifier
                 .defaultMinSize(minHeight = 58.dp)
-                .shadow(elevation = 7.dp, shape = shape, clip = false)
+                .shadow(elevation = 3.dp, shape = shape, clip = false)
                 .clip(shape)
                 .background(fantasyCardBrush(tone))
                 .border(
-                    width = 1.6.dp,
-                    brush =
-                        Brush.linearGradient(
-                            listOf(
-                                SoftGoldPale.copy(alpha = 0.98f),
-                                SoftGold.copy(alpha = 0.92f),
-                                tone.accent.copy(alpha = 0.78f),
-                                ParchmentShadow.copy(alpha = 0.88f),
-                            ),
-                    ),
+                    width = 1.dp,
+                    color = tone.accent.copy(alpha = 0.22f),
                     shape = shape,
                 ),
     ) {
         Canvas(modifier = Modifier.matchParentSize()) {
             drawLine(
-                color = SoftGoldPale.copy(alpha = 0.54f),
+                color = tone.accent.copy(alpha = 0.10f),
                 start = Offset(size.width * 0.08f, 5f),
                 end = Offset(size.width * 0.92f, 5f),
-                strokeWidth = 2.2f,
-                cap = StrokeCap.Round,
-            )
-            drawLine(
-                color = WoodBrown.copy(alpha = 0.18f),
-                start = Offset(size.width * 0.08f, size.height - 5f),
-                end = Offset(size.width * 0.92f, size.height - 5f),
-                strokeWidth = 2f,
+                strokeWidth = 1.4f,
                 cap = StrokeCap.Round,
             )
         }
@@ -216,7 +201,7 @@ fun FantasyButton(
     val buttonModifier =
             modifier
                 .defaultMinSize(minHeight = 38.dp)
-                .shadow(elevation = if (enabled) 6.dp else 0.dp, shape = shape, clip = false)
+                .shadow(elevation = if (enabled) 2.dp else 0.dp, shape = shape, clip = false)
                 .clip(shape)
                 .background(fantasyButtonBrush(style, enabled))
                 .clickable(enabled = enabled, onClick = onClick)
@@ -236,15 +221,15 @@ fun FantasyButton(
         modifier =
             buttonModifier
                 .border(
-                    width = if (style == FantasyButtonStyle.Filled) 1.2.dp else 1.3.dp,
-                    color = if (style == FantasyButtonStyle.Filled) MagicViolet.copy(alpha = 0.56f) else SoftGold.copy(alpha = 0.82f),
+                    width = 1.dp,
+                    color = if (style == FantasyButtonStyle.Filled) MagicViolet.copy(alpha = 0.62f) else MagicViolet.copy(alpha = 0.24f),
                     shape = shape,
                 ),
         contentAlignment = Alignment.Center,
     ) {
         Canvas(modifier = Modifier.matchParentSize()) {
             drawLine(
-                color = SoftGoldPale.copy(alpha = if (enabled) 0.58f else 0.22f),
+                color = Color.Transparent,
                 start = Offset(size.width * 0.12f, 3.5f),
                 end = Offset(size.width * 0.88f, 3.5f),
                 strokeWidth = 1.8f,
@@ -272,7 +257,7 @@ fun FantasyCompactButton(
                 .widthIn(min = 72.dp, max = 108.dp)
                 .defaultMinSize(minHeight = 34.dp),
         shape = RoundedCornerShape(100.dp),
-        border = BorderStroke(1.dp, if (enabled) SoftGold.copy(alpha = 0.88f) else MagicViolet.copy(alpha = 0.36f)),
+        border = BorderStroke(1.dp, if (enabled) MagicViolet.copy(alpha = 0.36f) else MagicViolet.copy(alpha = 0.18f)),
         colors =
             ButtonDefaults.outlinedButtonColors(
                 containerColor = ParchmentLight.copy(alpha = 0.84f),
@@ -373,10 +358,10 @@ fun FantasyScreenHeader(
         modifier =
             modifier
                 .fillMaxWidth()
-                .shadow(elevation = 6.dp, shape = shape, clip = false)
+                .shadow(elevation = 2.dp, shape = shape, clip = false)
                 .clip(shape)
-                .background(fantasyHeaderBrush())
-                .border(1.8.dp, SoftGold.copy(alpha = 0.86f), shape),
+                .background(Color.White.copy(alpha = 0.06f))
+                .border(1.dp, ParchmentLight.copy(alpha = 0.12f), shape),
     ) {
         Canvas(modifier = Modifier.matchParentSize()) {
             drawCircle(
@@ -398,7 +383,7 @@ fun FantasyScreenHeader(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleLarge,
-                    color = SoftGoldPale,
+                    color = ParchmentLight,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -426,7 +411,7 @@ fun FantasyProgressBar(
             modifier
                 .height(height)
                 .clip(RoundedCornerShape(100.dp))
-                .background(ParchmentShadow.copy(alpha = 0.7f)),
+                .background(InkMuted.copy(alpha = 0.18f)),
     ) {
         Box(
             modifier =

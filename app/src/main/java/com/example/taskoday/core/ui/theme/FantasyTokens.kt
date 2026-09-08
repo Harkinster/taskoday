@@ -11,14 +11,14 @@ import androidx.compose.ui.unit.dp
 
 @Immutable
 data class FantasyMetrics(
-    val cardCorner: Dp = 20.dp,
-    val cardCornerLarge: Dp = 26.dp,
-    val chipCorner: Dp = 12.dp,
-    val buttonCorner: Dp = 16.dp,
+    val cardCorner: Dp = 16.dp,
+    val cardCornerLarge: Dp = 20.dp,
+    val chipCorner: Dp = 10.dp,
+    val buttonCorner: Dp = 12.dp,
     val avatarRing: Dp = 2.dp,
     val cardStroke: Dp = 1.2.dp,
     val cardStrokeStrong: Dp = 1.8.dp,
-    val sectionGap: Dp = 14.dp,
+    val sectionGap: Dp = 12.dp,
 )
 
 val LocalFantasyMetrics = staticCompositionLocalOf { FantasyMetrics() }
@@ -35,22 +35,21 @@ fun taskodayWorldBackgroundBrush(): Brush =
     Brush.verticalGradient(
         colors =
             listOf(
-                Color(0xFF170B2B),
-                RoyalPurpleDark,
-                Color(0xFF3A1F38),
-                CarvedWoodDark,
-                Color(0xFF7C522B),
+                BackgroundTop,
+                Color(0xFF21143A),
+                Color(0xFF171025),
+                BackgroundBottom,
             ),
     )
 
 fun taskodayParchmentBrush(): Brush =
     Brush.verticalGradient(
-        colors = listOf(ParchmentLight, ParchmentCream, Color(0xFFFFDFA0)),
+        colors = listOf(ParchmentLight, ParchmentCream),
     )
 
 fun taskodayWoodPanelBrush(): Brush =
     Brush.verticalGradient(
-        colors = listOf(CarvedWoodLight, CarvedWood, CarvedWoodDark, RoyalPurpleDark),
+        colors = listOf(Color(0xFF4A3158), Color(0xFF281A3B)),
     )
 
 fun taskodayCrestBrush(): Brush =
@@ -60,7 +59,7 @@ fun taskodayCrestBrush(): Brush =
 
 fun taskodayGoldBrush(): Brush =
     Brush.verticalGradient(
-        colors = listOf(LogoGoldLight, LogoGold, LogoGoldDeep),
+        colors = listOf(LogoGoldLight, LogoGold),
     )
 
 fun taskodayLeafAccentBrush(): Brush =

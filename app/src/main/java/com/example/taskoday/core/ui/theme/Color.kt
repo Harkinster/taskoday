@@ -2,26 +2,28 @@ package com.example.taskoday.core.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val LogoGold = Color(0xFFFFC247)
-val LogoGoldDeep = Color(0xFFE28A1F)
-val LogoGoldLight = Color(0xFFFFE7A2)
-val RoyalPurple = Color(0xFF5C318F)
-val RoyalPurpleDark = Color(0xFF2E205C)
-val RoyalPurpleSoft = Color(0xFF9B72D7)
-val ShieldPurple = Color(0xFF7140B0)
-val FlameOrange = Color(0xFFE46425)
-val FlameOrangeSoft = Color(0xFFFF8B41)
-val SkyGold = Color(0xFFFFE3A7)
-val SkyBlueSoft = Color(0xFFDCEFF4)
-val ValleyMist = Color(0xFFE7F0D4)
-val LeafGreen = Color(0xFF5F8B43)
-val LeafGreenSoft = Color(0xFFA7C871)
-val CrystalBlue = Color(0xFF3F91B7)
-val CrystalBlueLight = Color(0xFFAADBEA)
-val CarvedWood = Color(0xFF875225)
-val CarvedWoodDark = Color(0xFF3B2417)
-val CarvedWoodLight = Color(0xFFB97938)
-val SoftRed = Color(0xFFC95C52)
+// Taskoday V2 palette: a quiet aubergine canvas with warm, readable surfaces.
+// Gold is intentionally reserved for focus states and rare premium accents.
+val LogoGold = Color(0xFFD2B36C)
+val LogoGoldDeep = Color(0xFFA98445)
+val LogoGoldLight = Color(0xFFF1DCA5)
+val RoyalPurple = Color(0xFF7352B8)
+val RoyalPurpleDark = Color(0xFF2A183F)
+val RoyalPurpleSoft = Color(0xFFA18BD8)
+val ShieldPurple = Color(0xFF8864D2)
+val FlameOrange = Color(0xFFD97852)
+val FlameOrangeSoft = Color(0xFFE9A07B)
+val SkyGold = Color(0xFFF0D8A3)
+val SkyBlueSoft = Color(0xFFE7E7F3)
+val ValleyMist = Color(0xFFE6EEE8)
+val LeafGreen = Color(0xFF4C8A70)
+val LeafGreenSoft = Color(0xFFA8D0B7)
+val CrystalBlue = Color(0xFF4F8FBF)
+val CrystalBlueLight = Color(0xFFA9D7EA)
+val CarvedWood = Color(0xFF765A50)
+val CarvedWoodDark = Color(0xFF171022)
+val CarvedWoodLight = Color(0xFFA48170)
+val SoftRed = Color(0xFFC96B68)
 
 val EmberOrange = FlameOrange
 val EmberOrangeSoft = FlameOrangeSoft
@@ -29,22 +31,22 @@ val SoftGold = LogoGold
 val SoftGoldPale = LogoGoldLight
 val MagicViolet = RoyalPurple
 val MagicVioletSoft = RoyalPurpleSoft
-val NestNightBlue = Color(0xFF252D5C)
-val NestNightBlueSoft = Color(0xFF47527F)
-val ParchmentCream = Color(0xFFFFEDC9)
-val ParchmentLight = Color(0xFFFFF8EA)
-val ParchmentShadow = Color(0xFFE9C783)
+val NestNightBlue = Color(0xFF222044)
+val NestNightBlueSoft = Color(0xFF40396B)
+val ParchmentCream = Color(0xFFFFF6E9)
+val ParchmentLight = Color(0xFFFFFCF7)
+val ParchmentShadow = Color(0xFFD8C9BC)
 val WoodBrown = CarvedWood
-val WoodBrownDark = CarvedWoodDark
+val WoodBrownDark = Color(0xFF251B2E)
 val MossGreen = LeafGreen
 val MossGreenSoft = LeafGreenSoft
-val InkBrown = Color(0xFF2D2118)
-val InkMuted = Color(0xFF6B5745)
+val InkBrown = Color(0xFF2B2231)
+val InkMuted = Color(0xFF726777)
 
 val NightBlue950 = NestNightBlue
 val NightBlue900 = NestNightBlueSoft
-val NightBlue850 = Color(0xFF566B9A)
-val NightBlue800 = Color(0xFF6C82AF)
+val NightBlue850 = Color(0xFF5C547F)
+val NightBlue800 = Color(0xFF77709A)
 
 val NebulaViolet = RoyalPurple
 val ArcaneViolet = ShieldPurple
@@ -65,8 +67,8 @@ val SuccessGlow = MossGreen
 val WarningGlow = SoftGold
 val DangerGlow = SoftRed
 
-val BackgroundTop = Color(0xFF170B2B)
-val BackgroundBottom = CarvedWoodDark
+val BackgroundTop = Color(0xFF1A102B)
+val BackgroundBottom = Color(0xFF100A1B)
 
 val NeonBorderStart = SoftGold
 val NeonBorderEnd = MagicVioletSoft

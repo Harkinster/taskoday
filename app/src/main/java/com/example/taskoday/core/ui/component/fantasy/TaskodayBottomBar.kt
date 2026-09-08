@@ -14,12 +14,14 @@ fun TaskodayBottomBar(
     onNavigate: (TaskodayDestination) -> Unit,
     modifier: Modifier = Modifier,
     attentionDestinationRoutes: Set<String> = emptySet(),
+    notificationBadges: Map<String, Int> = emptyMap(),
 ) {
-    FantasyBottomNavigation(
+    TaskodayV2BottomNavigation(
         destinations = destinations,
         currentDestination = currentDestination,
         onNavigate = onNavigate,
         modifier = modifier.padding(horizontal = 0.dp),
         attentionDestinationRoutes = attentionDestinationRoutes,
+        notificationBadges = notificationBadges,
     )
 }
