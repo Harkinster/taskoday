@@ -85,6 +85,9 @@ import com.example.taskoday.core.ui.theme.StarWhite
 import com.example.taskoday.core.ui.theme.SuccessGlow
 import com.example.taskoday.core.ui.theme.SurfaceGlass
 import com.example.taskoday.core.ui.theme.SurfacePanel
+import com.example.taskoday.core.ui.theme.SurfaceSuccess
+import com.example.taskoday.core.ui.theme.SurfaceSuccessSoft
+import com.example.taskoday.core.ui.theme.SurfaceWarning
 import com.example.taskoday.core.ui.theme.TextDimmed
 import com.example.taskoday.core.ui.theme.TextMuted
 import com.example.taskoday.core.ui.theme.WarningGlow
@@ -541,9 +544,9 @@ fun RoutineItemRow(
                 .clip(RoundedCornerShape(12.dp))
                 .background(
                     if (done) {
-                        Brush.horizontalGradient(listOf(ParchmentLight, Color(0xFFEAF5EE)))
+                        Brush.horizontalGradient(listOf(ParchmentLight, SurfaceSuccessSoft))
                     } else if (isOverdue) {
-                        Brush.horizontalGradient(listOf(ParchmentLight, Color(0xFFFFF3ED)))
+                        Brush.horizontalGradient(listOf(ParchmentLight, SurfaceWarning))
                     } else {
                         Brush.horizontalGradient(listOf(ParchmentLight, ParchmentCream))
                     },
@@ -689,68 +692,60 @@ fun MissionCard(
     done: Boolean,
     modifier: Modifier = Modifier,
     tone: NeonTone = if (done) NeonTone.Success else NeonTone.Blue,
+    isOverdue: Boolean = false,
     onClick: () -> Unit,
     onToggleDone: () -> Unit,
     onEdit: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null,
 ) {
-    val shape = RoundedCornerShape(18.dp)
-    Box(
+    val shape = RoundedCornerShape(14.dp)
+    Row(
         modifier =
             modifier
                 .fillMaxWidth()
-                .shadow(elevation = 5.dp, shape = shape, clip = false)
+                .shadow(elevation = 2.dp, shape = shape, clip = false)
                 .clip(shape)
-                .background(ParchmentLight.copy(alpha = 0.98f))
-                .border(width = 1.dp, color = toneColor(tone).copy(alpha = 0.26f), shape = shape)
-                .clickable(onClick = onClick),
+                .background(
+                    when {
+                        done -> SurfaceSuccess
+                        isOverdue -> SurfaceWarning
+                        else -> ParchmentLight
+                    },
+                )
+                .border(
+                    width = 1.dp,
+                    color =
+                        when {
+                            done -> SuccessGlow.copy(alpha = 0.35f)
+                            isOverdue -> EmberOrange.copy(alpha = 0.45f)
+                            else -> MagicViolet.copy(alpha = 0.16f)
+                        },
+                    shape = shape,
+                )
+                .clickable(onClick = onClick)
+                .padding(horizontal = 11.dp, vertical = 9.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Canvas(modifier = Modifier.matchParentSize()) {
-            drawCircle(
-                color = toneColor(tone).copy(alpha = 0.10f),
-                radius = size.minDimension * 0.48f,
-                center = Offset(size.width * 0.06f, size.height * 0.16f),
-            )
-            drawLine(
-                color = toneColor(tone).copy(alpha = 0.20f),
-                start = Offset(size.width * 0.10f, 6f),
-                end = Offset(size.width * 0.90f, 6f),
-                strokeWidth = 2f,
-                cap = StrokeCap.Round,
-            )
-        }
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(10.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
             Box(
                 modifier =
                     Modifier
-                        .size(60.dp)
+                        .size(40.dp)
                         .clip(CircleShape)
-                        .border(1.dp, toneColor(tone).copy(alpha = 0.28f), CircleShape),
+                        .background(toneColor(tone).copy(alpha = 0.10f))
+                        .border(1.dp, toneColor(tone).copy(alpha = 0.26f), CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
-                FantasySkinSurface(
-                    asset = FantasySkinAssets.iconFrameGold,
-                    fallbackBrush = taskodayWoodPanelBrush(),
-                    modifier = Modifier.matchParentSize(),
-                ) {}
                 Icon(
                     imageVector = Icons.Outlined.Star,
                     contentDescription = null,
                     tint = toneColor(tone).copy(alpha = 0.82f),
-                    modifier = Modifier.size(25.dp),
+                    modifier = Modifier.size(19.dp),
                 )
             }
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
                 Text(
                     text = title,
@@ -784,29 +779,20 @@ fun MissionCard(
                     Text(
                         text = statusLabel,
                         style = MaterialTheme.typography.labelMedium,
-                        color = toneColor(tone),
+                        color = if (isOverdue) EmberOrange else toneColor(tone),
                     )
                 }
                 XpProgressBar(progress = progress, modifier = Modifier.fillMaxWidth())
             }
-            FantasyActionMedallion(onClick = onClick)
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            FantasyInfoChip(text = "Objectif $completionLabel", accent = MagicViolet, modifier = Modifier.weight(1f))
-            FantasyInfoChip(text = statusLabel, accent = toneColor(tone), modifier = Modifier.weight(1f))
             Box(
                 modifier =
                     Modifier
-                        .size(34.dp)
+                        .size(32.dp)
                         .clip(CircleShape)
                         .background(if (done) SuccessGlow.copy(alpha = 0.20f) else ParchmentCream.copy(alpha = 0.88f))
                         .border(
-                            width = 1.4.dp,
-                            color = if (done) SuccessGlow else ArcaneViolet,
+                            width = 1.2.dp,
+                            color = if (done) SuccessGlow else MagicViolet,
                             shape = CircleShape,
                         )
                         .clickable(onClick = onToggleDone),
@@ -818,6 +804,12 @@ fun MissionCard(
                         contentDescription = null,
                         tint = SuccessGlow,
                         modifier = Modifier.size(17.dp),
+                    )
+                } else {
+                    Text(
+                        text = completionLabel,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MagicViolet,
                     )
                 }
             }
@@ -847,9 +839,7 @@ fun MissionCard(
                 }
             }
         }
-        }
     }
-}
 
 @Composable
 fun QuestCard(
@@ -1049,30 +1039,30 @@ private fun ReferenceQuestCard(
     onEdit: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null,
 ) {
-    val shape = RoundedCornerShape(20.dp)
+    val shape = RoundedCornerShape(14.dp)
     Box(
         modifier =
             modifier
                 .fillMaxWidth()
-                .shadow(elevation = 4.dp, shape = shape, clip = false)
+                .shadow(elevation = 2.dp, shape = shape, clip = false)
                 .clip(shape)
                 .background(ParchmentLight.copy(alpha = 0.98f))
-                .border(width = 1.dp, color = MagicViolet.copy(alpha = 0.30f), shape = shape)
+                .border(width = 1.dp, color = MagicViolet.copy(alpha = 0.18f), shape = shape)
                 .clickable(onClick = onAction),
     ) {
         Canvas(modifier = Modifier.matchParentSize()) {
             drawCircle(
-                color = MagicViolet.copy(alpha = 0.07f),
-                radius = size.minDimension * 0.68f,
+                color = MagicViolet.copy(alpha = 0.045f),
+                radius = size.minDimension * 0.54f,
                 center = Offset(size.width * 0.02f, size.height * 0.05f),
             )
             drawCircle(
-                color = SoftGold.copy(alpha = 0.04f),
-                radius = size.minDimension * 0.54f,
+                color = SoftGold.copy(alpha = 0.025f),
+                radius = size.minDimension * 0.42f,
                 center = Offset(size.width * 0.86f, size.height * 0.18f),
             )
             drawLine(
-                color = MagicViolet.copy(alpha = 0.16f),
+                color = MagicViolet.copy(alpha = 0.10f),
                 start = Offset(size.width * 0.07f, 5f),
                 end = Offset(size.width * 0.93f, 5f),
                 strokeWidth = 2f,
@@ -1091,22 +1081,17 @@ private fun ReferenceQuestCard(
                 Box(
                     modifier =
                         Modifier
-                            .size(66.dp)
-                            .clip(RoundedCornerShape(18.dp))
-                            .background(MagicViolet.copy(alpha = 0.10f))
-                            .border(1.dp, MagicViolet.copy(alpha = 0.24f), RoundedCornerShape(18.dp)),
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MagicViolet.copy(alpha = 0.10f))
+                        .border(1.dp, MagicViolet.copy(alpha = 0.20f), RoundedCornerShape(12.dp)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    FantasySkinSurface(
-                        asset = FantasySkinAssets.iconFrameGold,
-                        fallbackBrush = taskodayWoodPanelBrush(),
-                        modifier = Modifier.matchParentSize(),
-                    ) {}
                     Icon(
                         imageVector = Icons.Outlined.Star,
                         contentDescription = null,
                         tint = MagicViolet,
-                        modifier = Modifier.size(27.dp),
+                        modifier = Modifier.size(20.dp),
                     )
                 }
                 Column(
@@ -1115,7 +1100,7 @@ private fun ReferenceQuestCard(
                 ) {
                     Text(
                         text = title,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.bodyLarge,
                         color = WoodBrownDark,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -1146,7 +1131,16 @@ private fun ReferenceQuestCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 FantasyInfoChip(text = xpLabel, accent = MagicViolet, modifier = Modifier.weight(1f))
-                FantasyInfoChip(text = if (done) "Terminée" else actionLabel, accent = if (done) SuccessGlow else MagicViolet, modifier = Modifier.weight(1f))
+                FantasyInfoChip(
+                    text = if (done) "Terminée" else "En cours",
+                    accent = if (done) SuccessGlow else MagicViolet,
+                    modifier = Modifier.weight(1f),
+                )
+                FantasyCompactButton(
+                    text = actionLabel,
+                    onClick = onAction,
+                    modifier = Modifier.widthIn(min = 82.dp, max = 104.dp),
+                )
             }
             if (canManage && (onEdit != null || onDelete != null)) {
                 Row(

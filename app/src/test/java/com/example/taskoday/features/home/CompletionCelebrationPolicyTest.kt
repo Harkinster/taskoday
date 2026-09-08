@@ -39,8 +39,8 @@ class CompletionCelebrationPolicyTest {
     }
 
     @Test
-    fun localOnlyModeDoesNotSeeServerCompletionCelebration() {
-        assertFalse(
+    fun localOnlyModeSeesLightweightDemoCompletionFeedback() {
+        assertTrue(
             shouldShowCompletionCelebration(
                 isParentUser = false,
                 isLocalChildMode = false,

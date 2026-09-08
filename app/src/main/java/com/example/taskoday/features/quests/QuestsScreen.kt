@@ -49,7 +49,9 @@ import com.example.taskoday.core.ui.component.fantasy.NeonCard
 import com.example.taskoday.core.ui.component.fantasy.NeonTone
 import com.example.taskoday.core.ui.component.fantasy.ProgressHeroCard
 import com.example.taskoday.core.ui.component.fantasy.QuestCard
-import com.example.taskoday.core.ui.component.fantasy.TaskodayHeader
+import com.example.taskoday.core.ui.component.fantasy.TaskodayPageHeading
+import com.example.taskoday.core.ui.component.fantasy.TaskodaySectionHeading
+import com.example.taskoday.core.ui.component.fantasy.TaskodayTopBar
 import com.example.taskoday.core.ui.theme.MagicViolet
 import com.example.taskoday.core.ui.theme.NeonCyan
 import com.example.taskoday.core.ui.theme.ParchmentLight
@@ -127,11 +129,18 @@ fun QuestsScreen(
                 verticalArrangement = Arrangement.spacedBy(spacing.medium),
             ) {
                 item {
-                    TaskodayHeader(
-                        title = "Quête",
-                        subtitle = "Accomplis des actions, gagne de l XP et deviens legendaire.",
+                    TaskodayTopBar(
                         avatarInitials = "AB",
+                        compact = true,
+                        showNotification = false,
                         onAvatarClick = onOpenProfile,
+                    )
+                }
+
+                item {
+                    TaskodayPageHeading(
+                        title = "Quêtes",
+                        subtitle = "Un peu d’aventure pour donner du relief à ta journée.",
                     )
                 }
 
@@ -146,12 +155,12 @@ fun QuestsScreen(
 
                 item {
                     ProgressHeroCard(
-                        title = "Quête du jour",
+                        title = "Progression des quêtes",
                         completed = completedCount,
                         total = uiState.quests.size,
                         progress = questProgress,
-                        subtitle = "Progression des quêtes du jour.",
-                        accent = NeonTone.Cyan,
+                        subtitle = "Chaque étape compte.",
+                        accent = NeonTone.Violet,
                     )
                 }
 
@@ -233,13 +242,21 @@ fun QuestsScreen(
                                 color = StarWhite,
                             )
                             Text(
-                                text = "Passe dans l onglet Missions pour preparer de nouveaux objectifs.",
+                                text =
+                                    if (isLocalChildMode) {
+                                        "Ton parent pourra ajouter une quête ici."
+                                    } else {
+                                        "Ajoute une quête pour préparer un nouvel objectif."
+                                    },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = TextMuted,
                             )
                         }
                     }
                 } else {
+                    item {
+                        TaskodaySectionHeading(title = "Quêtes du jour", count = uiState.quests.size)
+                    }
                     items(uiState.quests, key = { it.quest.id }) { item ->
                         val checked = item.isCompletedForDay
                         QuestCard(
@@ -304,6 +321,7 @@ private fun DateControlsCard(
                 style = MaterialTheme.typography.titleMedium,
                 color = StarWhite,
                 modifier = Modifier.weight(1f),
+                maxLines = 1,
             )
             IconButton(onClick = onNext) {
                 Icon(

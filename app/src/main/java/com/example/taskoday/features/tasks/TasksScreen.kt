@@ -33,8 +33,9 @@ import com.example.taskoday.core.ui.component.fantasy.NeonCard
 import com.example.taskoday.core.ui.component.fantasy.NeonTone
 import com.example.taskoday.core.ui.component.fantasy.ProgressHeroCard
 import com.example.taskoday.core.ui.component.fantasy.TaskodayTopBar
+import com.example.taskoday.core.ui.component.fantasy.TaskodayPageHeading
+import com.example.taskoday.core.ui.component.fantasy.TaskodaySectionHeading
 import com.example.taskoday.core.ui.theme.NeonCyan
-import com.example.taskoday.core.ui.theme.SoftGold
 import com.example.taskoday.core.ui.theme.StarWhite
 import com.example.taskoday.core.ui.theme.TextMuted
 import com.example.taskoday.core.ui.theme.WarningGlow
@@ -101,13 +102,20 @@ fun TasksScreen(
                 }
 
                 item {
+                    TaskodayPageHeading(
+                        title = "Missions",
+                        subtitle = "Des objectifs un peu plus importants, étape par étape.",
+                    )
+                }
+
+                item {
                     ProgressHeroCard(
-                        title = "À faire aujourd'hui",
+                        title = "Progression des missions",
                         completed = doneCount,
                         total = total,
                         progress = progress,
-                        subtitle = "Complète tes missions pour progresser.",
-                        accent = NeonTone.Blue,
+                        subtitle = "Avance à ton rythme aujourd’hui.",
+                        accent = NeonTone.Violet,
                     )
                 }
 
@@ -137,7 +145,12 @@ fun TasksScreen(
                                 color = StarWhite,
                             )
                             Text(
-                                text = "Crée ta première mission pour lancer ton aventure.",
+                                text =
+                                    if (isLocalChildMode) {
+                                        "Ton parent pourra ajouter une mission ici."
+                                    } else {
+                                        "Crée ta première mission pour lancer la journée."
+                                    },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = TextMuted,
                             )
@@ -219,11 +232,7 @@ private fun MissionSection(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
     ) {
-        Text(
-            text = "$title (${tasks.size})",
-            style = MaterialTheme.typography.titleMedium,
-            color = SoftGold,
-        )
+        TaskodaySectionHeading(title = title, count = tasks.size)
 
         if (tasks.isEmpty()) {
             Text(
@@ -247,6 +256,7 @@ private fun MissionSection(
                 completionLabel = completionLabelFrom(task.status),
                 done = done,
                 tone = toneFrom(task.status),
+                isOverdue = !done && task.dueDate?.let { dueDate -> dueDate < System.currentTimeMillis() } == true,
                 onClick = { onTaskClick(task.id) },
                 onToggleDone = { if (!done) onMarkTaskDone(task.id) },
                 onEdit = if (canManageTask) ({ onEditTask(task.id) }) else null,
@@ -258,7 +268,7 @@ private fun MissionSection(
 
 private fun toneFrom(status: TaskStatus): NeonTone =
     when (status) {
-        TaskStatus.TODO -> NeonTone.Warning
+        TaskStatus.TODO -> NeonTone.Violet
         TaskStatus.IN_PROGRESS -> NeonTone.Blue
         TaskStatus.DONE -> NeonTone.Success
     }

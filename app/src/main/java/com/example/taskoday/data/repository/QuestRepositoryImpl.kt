@@ -55,7 +55,11 @@ class QuestRepositoryImpl
 
         override suspend fun setQuestCompletedForDay(questId: Long, dayStartMillis: Long, completed: Boolean) {
             if (demoModeStore.isEnabled) {
-                demoDataSource.setCompleted(completed)
+                demoDataSource.setCompleted(
+                    questId = questId,
+                    dayStartMillis = dayStartMillis,
+                    completed = completed,
+                )
                 return
             }
             if (completed) {

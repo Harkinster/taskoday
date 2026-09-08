@@ -58,6 +58,9 @@ val NeonPurple = MagicViolet
 val SurfacePanel = ParchmentLight.copy(alpha = 0.98f)
 val SurfacePanelAlt = ParchmentCream.copy(alpha = 0.98f)
 val SurfaceGlass = ParchmentCream.copy(alpha = 0.92f)
+val SurfaceSuccess = Color(0xFFF2F8F3)
+val SurfaceSuccessSoft = Color(0xFFEAF5EE)
+val SurfaceWarning = Color(0xFFFFF3ED)
 val OutlineGlow = SoftGold
 val StarWhite = InkBrown
 val TextMuted = InkMuted

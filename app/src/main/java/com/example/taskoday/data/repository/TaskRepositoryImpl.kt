@@ -71,7 +71,9 @@ class TaskRepositoryImpl
         }
 
         override suspend fun updateTaskStatus(taskId: Long, status: TaskStatus) {
-            if (!demoModeStore.isEnabled) {
+            if (demoModeStore.isEnabled) {
+                demoDataSource.setStatus(taskId = taskId, status = status)
+            } else {
                 taskDao.updateStatus(taskId = taskId, status = status, updatedAt = System.currentTimeMillis())
             }
         }

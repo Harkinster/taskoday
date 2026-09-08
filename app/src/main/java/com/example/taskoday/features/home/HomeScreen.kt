@@ -1,5 +1,10 @@
 package com.example.taskoday.features.home
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,12 +43,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.zIndex
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.delay
 import com.example.taskoday.core.ui.component.fantasy.FantasyAssetBubble
 import com.example.taskoday.core.ui.component.fantasy.FantasyButton
 import com.example.taskoday.core.ui.component.fantasy.FantasyButtonStyle
@@ -53,6 +62,8 @@ import com.example.taskoday.core.ui.component.fantasy.FantasyScreenBackground
 import com.example.taskoday.core.ui.component.fantasy.FantasyStateCard
 import com.example.taskoday.core.ui.component.fantasy.FantasyTone
 import com.example.taskoday.core.ui.component.fantasy.NestAssets
+import com.example.taskoday.core.ui.component.fantasy.NeonCard
+import com.example.taskoday.core.ui.component.fantasy.NeonTone
 import com.example.taskoday.core.ui.component.fantasy.ParentPinDialog
 import com.example.taskoday.core.ui.component.fantasy.RewardToast
 import com.example.taskoday.core.ui.component.fantasy.RoutineItemRow
@@ -131,6 +142,16 @@ fun HomeScreen(
             isLocalChildMode = isLocalChildMode,
             usingRemoteData = uiState.usingRemoteData,
         )
+    val lightDemoFeedback =
+        uiState.completionFeedback
+            ?.takeIf { !uiState.usingRemoteData && !uiState.isParentUser }
+
+    LaunchedEffect(lightDemoFeedback) {
+        if (lightDemoFeedback != null) {
+            delay(1_000L)
+            viewModel.clearCompletionFeedback()
+        }
+    }
     val emptyActionsTitle = if (showParentDashboard) "Aucune action pour l’instant" else "Rien à faire pour le moment"
     val emptyActionsMessage =
         if (showParentDashboard) {
@@ -365,6 +386,16 @@ fun HomeScreen(
                     }
                 }
             }
+
+            Box(
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 72.dp, start = 16.dp, end = 16.dp)
+                        .zIndex(2f),
+            ) {
+                DemoRewardFeedbackOverlay(feedback = lightDemoFeedback)
+            }
         }
     }
 
@@ -520,6 +551,49 @@ private fun CompletionCelebrationDialog(
                     modifier = Modifier.weight(1f),
                     style = FantasyButtonStyle.Filled,
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DemoRewardFeedbackOverlay(feedback: CompletionFeedback?) {
+    AnimatedVisibility(
+        visible = feedback != null,
+        enter = fadeIn() + slideInVertically(initialOffsetY = { -it / 2 }),
+        exit = fadeOut() + slideOutVertically(targetOffsetY = { -it / 2 }),
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .shadow(4.dp, RoundedCornerShape(14.dp))
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(ParchmentLight)
+                    .border(1.dp, ArcaneViolet.copy(alpha = 0.24f), RoundedCornerShape(14.dp))
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            feedback?.let { value ->
+                Text(
+                    text = "✓",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MossGreen,
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                    Text(
+                        text = "Action terminée",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = WoodBrownDark,
+                    )
+                    Text(
+                        text = value.reward?.compactLabel().takeUnless { it.isNullOrBlank() }
+                            ?: value.actionTitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = InkMuted,
+                        maxLines = 1,
+                    )
+                }
             }
         }
     }
@@ -1040,7 +1114,10 @@ private fun TodayActionSection(
 ) {
     val doneCount = section.items.count { it.isCompleted }
 
-    FantasyCard(tone = section.tone) {
+    NeonCard(
+        tone = section.neonTone(),
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 10.dp),
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -1058,7 +1135,7 @@ private fun TodayActionSection(
                 )
                 Text(
                     text = section.title,
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.titleMedium,
                     color = WoodBrownDark,
                     maxLines = 1,
                 )
@@ -1126,6 +1203,13 @@ private data class HomeSection(
     val tone: FantasyTone,
     val items: List<HomePlanningItem>,
 )
+
+private fun HomeSection.neonTone(): NeonTone =
+    when (itemType) {
+        PlanningItemType.ROUTINE -> NeonTone.Success
+        PlanningItemType.MISSION -> NeonTone.Warning
+        PlanningItemType.QUEST -> NeonTone.Violet
+    }
 
 private data class HomePlanningItem(
     val key: String,
@@ -1264,7 +1348,9 @@ internal fun shouldShowCompletionCelebration(
     isParentUser: Boolean,
     isLocalChildMode: Boolean,
     usingRemoteData: Boolean,
-): Boolean = usingRemoteData && (!isParentUser || isLocalChildMode)
+): Boolean =
+    (usingRemoteData && (!isParentUser || isLocalChildMode)) ||
+        (!usingRemoteData && !isParentUser)
 
 private fun feedbackMessage(feedback: CompletionFeedback): String {
     val rewardLabel = feedback.reward?.compactLabel().orEmpty()

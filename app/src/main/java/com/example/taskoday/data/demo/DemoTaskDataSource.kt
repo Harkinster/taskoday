@@ -11,6 +11,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 
 /** In-memory, deterministic data for the DEBUG-only visual/demo path. */
@@ -19,17 +20,18 @@ class DemoTaskDataSource
     @Inject
     constructor() {
         private val checkedByDay = MutableStateFlow<Map<Long, Set<Long>>>(emptyMap())
+        private val statusById = MutableStateFlow<Map<Long, TaskStatus>>(emptyMap())
 
-        fun observeTasks(): Flow<List<Task>> = kotlinx.coroutines.flow.flowOf(tasks())
+        fun observeTasks(): Flow<List<Task>> = statusById.map { tasks() }
 
         fun observeMissionTasks(): Flow<List<Task>> =
-            kotlinx.coroutines.flow.flowOf(tasks().filter { task -> !task.isDaily })
+            statusById.map { tasks().filter { task -> !task.isDaily } }
 
         fun observeTask(taskId: Long): Flow<Task?> =
-            kotlinx.coroutines.flow.flowOf(tasks().firstOrNull { task -> task.id == taskId })
+            statusById.map { tasks().firstOrNull { task -> task.id == taskId } }
 
         fun observeTasksForDay(dayStartMillis: Long): Flow<List<TaskForDay>> =
-            checkedByDay.map { checkedMap ->
+            combine(checkedByDay, statusById) { checkedMap, _ ->
                 val checked = checkedMap[dayStartMillis] ?: defaultCheckedIds()
                 tasks().map { task -> TaskForDay(task = task, isChecked = task.id in checked) }
             }
@@ -49,11 +51,16 @@ class DemoTaskDataSource
             }
         }
 
-        fun clear() {
-            checkedByDay.value = emptyMap()
+        fun setStatus(taskId: Long, status: TaskStatus) {
+            statusById.value = statusById.value + (taskId to status)
         }
 
-        private fun defaultCheckedIds(): Set<Long> = setOf(COMPLETED_TASK_ID)
+        fun clear() {
+            checkedByDay.value = emptyMap()
+            statusById.value = emptyMap()
+        }
+
+        private fun defaultCheckedIds(): Set<Long> = setOf(COMPLETED_TASK_ID, COMPLETED_MISSION_ID)
 
         private fun tasks(): List<Task> {
             val today = DateTimeUtils.startOfDayMillis()
@@ -115,7 +122,21 @@ class DemoTaskDataSource
                     createdAt = now,
                     updatedAt = now,
                 ),
-            )
+                Task(
+                    id = COMPLETED_MISSION_ID,
+                    title = "Préparer la carte familiale",
+                    emoji = "✓",
+                    description = "La mission est déjà accomplie pour aujourd’hui",
+                    dueDate = today + 11 * MILLIS_PER_HOUR,
+                    priority = TaskPriority.NORMAL,
+                    status = TaskStatus.DONE,
+                    taskType = TaskType.ONE_TIME,
+                    dayPart = DayPart.MATINEE,
+                    scheduledDate = today,
+                    createdAt = now,
+                    updatedAt = now,
+                ),
+            ).map { task -> task.copy(status = statusById.value[task.id] ?: task.status) }
         }
 
         private companion object {
@@ -123,6 +144,7 @@ class DemoTaskDataSource
             const val COMPLETED_TASK_ID = 7002L
             const val OVERDUE_TASK_ID = 7003L
             const val MISSION_TASK_ID = 7004L
+            const val COMPLETED_MISSION_ID = 7005L
             const val MILLIS_PER_HOUR = 60L * 60L * 1000L
         }
     }
