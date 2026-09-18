@@ -5,6 +5,7 @@ import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Pets
 import androidx.compose.material.icons.outlined.Redeem
 import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -20,7 +21,7 @@ sealed class TaskodayDestination(
 
     data object RegisterParent : TaskodayDestination(route = "auth/register", label = "Inscription")
 
-    data object Nest : TaskodayDestination(route = "nest", label = "Le Nid", icon = Icons.Outlined.Home)
+    data object Nest : TaskodayDestination(route = "nest", label = "Le Nid", icon = Icons.Outlined.Pets)
 
     data object FamilyHome : TaskodayDestination(route = "family_home", label = "Ma maison", icon = Icons.Outlined.Home)
 

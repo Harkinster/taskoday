@@ -207,12 +207,14 @@ fun TaskodayApp() {
                 bottomBar = {
                     if (showBottomBar) {
                         Box {
+                            val showQuickAdd = !localChildMode && quickAddUiState.canOpenQuickAdd
                             TaskodayBottomBar(
                                 destinations = visibleTopLevelDestinations,
                                 currentDestination = currentDestination,
                                 onNavigate = navigateToTopLevel,
+                                modifier = if (showQuickAdd) Modifier.padding(end = 44.dp) else Modifier,
                             )
-                            if (!localChildMode && quickAddUiState.canOpenQuickAdd) {
+                            if (showQuickAdd) {
                                 QuickAddFab(
                                     uiState = quickAddUiState,
                                     onRefresh = quickAddViewModel::refresh,
@@ -221,8 +223,8 @@ fun TaskodayApp() {
                                     onCreateQuest = openCreateQuest,
                                     modifier =
                                         Modifier
-                                            .align(Alignment.TopEnd)
-                                            .padding(top = 8.dp, end = 10.dp),
+                                            .align(Alignment.CenterEnd)
+                                            .padding(end = 3.dp),
                                 )
                             }
                         }
@@ -428,7 +430,7 @@ fun TaskodayApp() {
                     onOpenTask = { taskId -> navController.navigate(TaskodayDestination.TaskDetail.createRoute(taskId)) },
                     onEditTask = { taskId -> navController.navigate(TaskodayDestination.TaskEdit.createRoute(taskId)) },
                     onOpenProfile = navigateToProfile,
-                    onAddAction = { navController.navigate(TaskodayDestination.ParentPlanning.createRoute()) },
+                    onAddAction = { navController.navigate(TaskodayDestination.ParentPlanning.createRoute("routine")) },
                     onOpenJournal = { navController.navigate(TaskodayDestination.ActivityJournal.route) },
                     onOpenWishes = { navController.navigate(TaskodayDestination.Shop.createRoute(TaskodayDestination.Shop.SECTION_WISHES)) },
                     onOpenNest = { navigateToTopLevel(TaskodayDestination.Nest) },

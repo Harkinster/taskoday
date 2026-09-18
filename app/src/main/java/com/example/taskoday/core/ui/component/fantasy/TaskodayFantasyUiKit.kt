@@ -170,7 +170,7 @@ fun TaskodayTopBar(
 
         UserAvatarBadge(
             initials = avatarInitials,
-            size = if (compact) 40.dp else 44.dp,
+            size = if (compact) 32.dp else 40.dp,
             onClick = onAvatarClick,
         )
         trailingContent()
@@ -1487,9 +1487,8 @@ fun TaskodayV2BottomNavigation(
         modifier =
             modifier
                 .fillMaxWidth()
-                .height(64.dp)
-                .background(Color(0xFF120C20).copy(alpha = 0.97f))
-                .border(1.dp, ParchmentLight.copy(alpha = 0.10f)),
+                .height(56.dp)
+                .background(Color(0xFF151020).copy(alpha = 0.98f)),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1501,40 +1500,25 @@ fun TaskodayV2BottomNavigation(
                         .weight(1f)
                         .fillMaxHeight()
                         .clickable { onNavigate(destination) }
-                        .padding(vertical = 6.dp),
+                        .padding(vertical = 4.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
+                verticalArrangement = Arrangement.spacedBy(1.dp, Alignment.CenterVertically),
             ) {
                 Box(
                     modifier =
                         Modifier
-                            .size(if (selected) 30.dp else 26.dp)
-                            .clip(RoundedCornerShape(9.dp))
-                            .background(if (selected) MagicViolet.copy(alpha = 0.90f) else Color.Transparent)
-                            .border(
-                                width = if (selected) 1.dp else 0.dp,
-                                color = MagicVioletSoft.copy(alpha = 0.56f),
-                                shape = RoundedCornerShape(9.dp),
-                            ),
+                            .size(24.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (selected) ParchmentLight.copy(alpha = 0.10f) else Color.Transparent),
                     contentAlignment = Alignment.Center,
                 ) {
-                    val v2Icon = taskodayV2NavIcon(destination.route)
-                    if (v2Icon != null) {
-                        Image(
-                            painter = painterResource(id = v2Icon),
+                    destination.icon?.let { icon ->
+                        Icon(
+                            imageVector = icon,
                             contentDescription = destination.label,
-                            modifier = Modifier.size(if (selected) 21.dp else 19.dp),
-                            contentScale = ContentScale.Fit,
+                            tint = if (selected) ParchmentLight else ParchmentCream.copy(alpha = 0.55f),
+                            modifier = Modifier.size(18.dp),
                         )
-                    } else {
-                        destination.icon?.let { icon ->
-                            Icon(
-                                imageVector = icon,
-                                contentDescription = destination.label,
-                                tint = if (selected) ParchmentLight else ParchmentCream.copy(alpha = 0.66f),
-                                modifier = Modifier.size(if (selected) 18.dp else 17.dp),
-                            )
-                        }
                     }
                     if (destination.route in attentionDestinationRoutes || destination.route in notificationBadges) {
                         val badge = notificationBadges[destination.route]
@@ -1563,18 +1547,13 @@ fun TaskodayV2BottomNavigation(
                 }
                 Text(
                     text = destination.label,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = if (selected) ParchmentLight else ParchmentCream.copy(alpha = 0.64f),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (selected) ParchmentLight else ParchmentCream.copy(alpha = 0.58f),
                     fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     softWrap = false,
                 )
-                if (selected) {
-                    Box(
-                        modifier = Modifier.width(18.dp).height(2.dp).clip(RoundedCornerShape(100.dp)).background(SoftGold),
-                    )
-                }
             }
         }
     }

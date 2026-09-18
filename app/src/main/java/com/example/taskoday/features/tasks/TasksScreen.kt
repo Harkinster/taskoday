@@ -245,18 +245,19 @@ private fun MissionSection(
 
         tasks.forEach { task ->
             val done = task.status == TaskStatus.DONE
+            val isOverdue = !done && task.dueDate?.let { dueDate -> dueDate < System.currentTimeMillis() } == true
             val canManageTask = manageableTaskIds.contains(task.id)
             MissionCard(
                 title = task.title,
                 description = task.description,
                 emoji = task.emoji,
                 dueLabel = task.dueDate?.let { "Avant ${DateTimeUtils.formatTimeOnly(it)}" },
-                statusLabel = task.status.label(),
+                statusLabel = if (isOverdue) "En retard" else task.status.label(),
                 progress = progressFrom(task.status),
                 completionLabel = completionLabelFrom(task.status),
                 done = done,
                 tone = toneFrom(task.status),
-                isOverdue = !done && task.dueDate?.let { dueDate -> dueDate < System.currentTimeMillis() } == true,
+                isOverdue = isOverdue,
                 onClick = { onTaskClick(task.id) },
                 onToggleDone = { if (!done) onMarkTaskDone(task.id) },
                 onEdit = if (canManageTask) ({ onEditTask(task.id) }) else null,

@@ -64,34 +64,24 @@ fun QuickAddFab(
     Box(
         modifier =
             modifier
-                .size(46.dp)
-                .shadow(elevation = 6.dp, shape = CircleShape, clip = false)
+                .size(38.dp)
+                .shadow(elevation = 2.dp, shape = CircleShape, clip = false)
                 .clip(CircleShape)
-                .background(taskodayGoldBrush())
+                .background(MagicViolet)
                 .clickable {
                     onRefresh()
                     showDialog = true
                 }
-                .border(1.5.dp, MagicViolet.copy(alpha = 0.78f), CircleShape)
+                .border(1.dp, ParchmentLight.copy(alpha = 0.22f), CircleShape)
                 .testTag(TaskodayTestTags.TasksAddFab),
         contentAlignment = Alignment.Center,
     ) {
-        Box(
-            modifier =
-                Modifier
-                    .size(34.dp)
-                    .clip(CircleShape)
-                    .background(Brush.verticalGradient(listOf(MagicViolet, WoodBrownDark)))
-                    .border(1.dp, SoftGold.copy(alpha = 0.86f), CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Add,
-                contentDescription = "Ajouter",
-                modifier = Modifier.size(23.dp),
-                tint = SoftGold,
-            )
-        }
+        Icon(
+            imageVector = Icons.Outlined.Add,
+            contentDescription = "Ajouter",
+            modifier = Modifier.size(20.dp),
+            tint = ParchmentLight,
+        )
     }
 
     if (showDialog) {

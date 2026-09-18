@@ -139,8 +139,8 @@ fun TaskodayBrand(
     compact: Boolean = false,
 ) {
     val onClick = LocalTaskodayBrandClick.current
-    val logoWidth = if (compact) 118.dp else 154.dp
-    val logoHeight = if (compact) 40.dp else 52.dp
+    val logoWidth = if (compact) 88.dp else 136.dp
+    val logoHeight = if (compact) 30.dp else 46.dp
     val brandModifier =
         modifier
             .width(logoWidth)
@@ -175,8 +175,8 @@ fun UserAvatarBadge(
                     Brush.verticalGradient(listOf(ArcaneViolet, NestNightBlue, CarvedWoodDark)),
             )
             .border(
-                width = 1.6.dp,
-                color = SoftGold.copy(alpha = 0.90f),
+                width = 1.dp,
+                color = ParchmentCream.copy(alpha = 0.46f),
                 shape = CircleShape,
             )
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
@@ -188,7 +188,7 @@ fun UserAvatarBadge(
         Text(
             text = initials.take(2).uppercase(),
             style = MaterialTheme.typography.titleSmall,
-            color = SoftGold,
+            color = ParchmentLight,
             fontWeight = FontWeight.SemiBold,
         )
     }

@@ -129,12 +129,13 @@ fun HomeScreen(
         } else {
             uiState.questsForDay.filter { it.quest.id > 0L }
         }
-    val planningItems = buildPlanningItems(visibleTasksForDay, visibleQuestsForDay)
+    val planningItems =
+        buildPlanningItems(visibleTasksForDay, visibleQuestsForDay)
+            .filter { item -> item.itemType == PlanningItemType.ROUTINE }
     val completedCount = planningItems.count { it.isCompleted }
-    val todoCount = planningItems.size - completedCount
     val progress = if (planningItems.isEmpty()) 0f else completedCount.toFloat() / planningItems.size.toFloat()
     val sections = buildActionSections(planningItems)
-    val showParentDashboard = uiState.isParentUser && uiState.usingRemoteData && !isLocalChildMode
+    val isParentRoutineView = uiState.isParentUser && !isLocalChildMode
     val canManageActions = uiState.canManageActions && !isLocalChildMode
     val shouldShowChildCompletionFeedback =
         shouldShowCompletionCelebration(
@@ -152,22 +153,12 @@ fun HomeScreen(
             viewModel.clearCompletionFeedback()
         }
     }
-    val emptyActionsTitle = if (showParentDashboard) "Aucune action pour l’instant" else "Rien à faire pour le moment"
+    val emptyActionsTitle = if (isParentRoutineView) "Aucune routine pour l’instant" else "Rien à faire pour le moment"
     val emptyActionsMessage =
-        if (showParentDashboard) {
-            "Ajoutez une routine, une mission ou une quête pour lancer la journée."
+        if (isParentRoutineView) {
+            "Ajoutez une routine pour structurer la journée."
         } else {
             "Demande à ton parent d’ajouter une routine ou une mission."
-        }
-    val parentOnboardingStep =
-        if (showParentDashboard) {
-            parentOnboardingStep(
-                hasActiveChild = !uiState.activeChildLabel.isNullOrBlank(),
-                hasParentPin = uiState.hasParentPin,
-                hasAnyAction = planningItems.isNotEmpty(),
-            )
-        } else {
-            null
         }
 
     val selectedDate =
@@ -265,41 +256,7 @@ fun HomeScreen(
                     }
                 }
 
-                if (showParentDashboard) {
-                    item {
-                        ParentDashboardCard(
-                            childLabel = uiState.activeChildLabel ?: "Enfant sélectionné",
-                            xp = uiState.remoteXp ?: 0,
-                            flammeches = uiState.remoteFlammeches ?: 0,
-                            crystals = uiState.remoteCrystals ?: 0,
-                            todoCount = todoCount,
-                            completedCount = completedCount,
-                            pendingWishCount = uiState.pendingWishCount,
-                            availableScrollCount = uiState.availableScrollCount,
-                        )
-                    }
-
-                    parentOnboardingStep?.let { step ->
-                        item {
-                            ParentOnboardingCard(
-                                step = step,
-                                onOpenProfile = onOpenProfile,
-                                onAddAction = onAddAction,
-                            )
-                        }
-                    }
-
-                    item {
-                        ParentShortcutsCard(
-                            onAddAction = onAddAction,
-                            onOpenJournal = onOpenJournal,
-                            onOpenWishes = onOpenWishes,
-                            onOpenNest = onOpenNest,
-                            onEnterLocalChildMode = onEnterLocalChildMode,
-                            canEnterLocalChildMode = uiState.hasParentPin,
-                        )
-                    }
-                } else if (uiState.usingRemoteData) {
+                if (!isParentRoutineView && uiState.usingRemoteData) {
                     item {
                         ChildJournalCard(onOpenJournal = onOpenJournal)
                     }
@@ -307,7 +264,7 @@ fun HomeScreen(
 
                 item {
                     DailyProgressCard(
-                        title = "Actions du jour",
+                        title = "Routines du jour",
                         completed = completedCount,
                         total = planningItems.size,
                         progress = progress,
@@ -343,9 +300,9 @@ fun HomeScreen(
                                 assetDescription = null,
                                 tone = FantasyTone.Moss,
                             )
-                            if (showParentDashboard) {
+                            if (isParentRoutineView) {
                                 FantasyButton(
-                                    text = "Ajouter une action",
+                                    text = "Ajouter une routine",
                                     onClick = onAddAction,
                                     modifier = Modifier.fillMaxWidth(),
                                     style = FantasyButtonStyle.Filled,
@@ -706,7 +663,7 @@ private fun RoutineDateHeader(
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
-                text = "Ma maison",
+                text = "Routine",
                 style = MaterialTheme.typography.headlineMedium,
                 color = ParchmentLight,
                 maxLines = 1,

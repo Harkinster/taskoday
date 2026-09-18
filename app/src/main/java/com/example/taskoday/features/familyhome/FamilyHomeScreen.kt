@@ -1,6 +1,8 @@
 package com.example.taskoday.features.familyhome
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,6 +44,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -116,8 +119,8 @@ fun FamilyHomeScreen(
                     Modifier
                         .fillMaxSize()
                         .padding(horizontal = spacing.medium),
-                contentPadding = PaddingValues(top = spacing.large, bottom = 92.dp),
-                verticalArrangement = Arrangement.spacedBy(spacing.medium),
+                contentPadding = PaddingValues(top = 10.dp, bottom = 72.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 item {
                     TaskodayTopBar(
@@ -210,21 +213,15 @@ fun FamilyHomeScreen(
                         }
                     }
 
-                    item {
-                        FamilyHomeSectionTitle(
-                            title = "Aujourd'hui",
-                            detail =
-                                if (uiState.totalTasks > 0) {
-                                    "${uiState.completedTasks} / ${uiState.totalTasks} terminées"
-                                } else {
-                                    null
-                                },
-                        )
-                    }
-
                     if (uiState.sections.isEmpty()) {
                         item { EmptyFamilyHomeCard() }
                     } else {
+                        item {
+                            FamilyHomeSectionTitle(
+                                title = "Aujourd'hui",
+                                detail = "${uiState.completedTasks} / ${uiState.totalTasks} terminées",
+                            )
+                        }
                         items(
                             items = uiState.sections,
                             key = { section -> section.key },
@@ -298,123 +295,66 @@ private fun FamilyHomeHeader(
     onShowToday: () -> Unit,
     onShowWeek: () -> Unit,
 ) {
-    val progress = if (totalTasks == 0) 0f else completedTasks.toFloat() / totalTasks.toFloat()
     val subtitle =
         when (mode) {
             FamilyHomeMode.TODAY -> dateLabel
             FamilyHomeMode.WEEK -> weekRangeLabel
         }
-    ElevatedCard(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        colors =
-            CardDefaults.elevatedCardColors(
-                containerColor = ParchmentLight.copy(alpha = 0.98f),
-                contentColor = InkBrown,
-            ),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                Text(
+                    text = "Ma maison",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = ParchmentLight,
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = ParchmentCream.copy(alpha = 0.72f),
+                )
+            }
+            TextButton(
+                onClick = { onAddTask(creationDate) },
+                colors = ButtonDefaults.textButtonColors(contentColor = ParchmentLight),
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        text = "Ma maison",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = InkBrown,
-                    )
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = InkMuted,
-                    )
-                }
                 Icon(
-                    imageVector = Icons.Outlined.Home,
+                    imageVector = Icons.Outlined.Add,
                     contentDescription = null,
-                    tint = WoodBrown,
-                    modifier = Modifier.size(30.dp),
+                    modifier = Modifier.size(17.dp),
                 )
-            }
-
-            if (mode == FamilyHomeMode.TODAY && (totalTasks > 0 || overdueTotalTasks > 0 || pendingValidationTasks > 0)) {
-                Text(
-                    text =
-                        buildList {
-                            if (totalTasks > 0) add("$completedTasks / $totalTasks terminées")
-                            if (pendingValidationTasks > 0) add("$pendingValidationTasks à valider")
-                            if (overdueTotalTasks > 0) add("$overdueTotalTasks en retard")
-                        }.joinToString(" · "),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = InkMuted,
-                )
-            }
-
-            FamilyHomeModeSwitch(
-                mode = mode,
-                onShowToday = onShowToday,
-                onShowWeek = onShowWeek,
-            )
-
-            OutlinedButton(
-                onClick = onOpenAllTasks,
-                shape = RoundedCornerShape(8.dp),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("Toutes les tâches")
-            }
-
-            if (totalTasks > 0) {
-                LinearProgressIndicator(
-                    progress = { progress },
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MossGreen,
-                    trackColor = ParchmentCream,
-                )
-                Text(
-                    text = "$completedTasks / $totalTasks tâches terminées",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = InkMuted,
-                )
-                Button(
-                    onClick = { onAddTask(creationDate) },
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = WoodBrown, contentColor = ParchmentLight),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Ajouter une tâche")
-                }
-            } else {
-                Text(
-                    text =
-                        if (mode == FamilyHomeMode.TODAY) {
-                            "Aucune tâche planifiée aujourd'hui."
-                        } else {
-                            "S\u00e9lectionne un jour pour suivre la semaine."
-                        },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = InkMuted,
-                )
-                Button(
-                    onClick = { onAddTask(creationDate) },
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = WoodBrown, contentColor = ParchmentLight),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Ajouter une tâche")
-                }
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Ajouter")
             }
         }
+
+        if (mode == FamilyHomeMode.TODAY && (totalTasks > 0 || overdueTotalTasks > 0 || pendingValidationTasks > 0)) {
+            Text(
+                text =
+                    buildList {
+                        if (totalTasks > 0) add("$completedTasks / $totalTasks terminées")
+                        if (pendingValidationTasks > 0) add("$pendingValidationTasks à valider")
+                        if (overdueTotalTasks > 0) add("$overdueTotalTasks en retard")
+                    }.joinToString(" · "),
+                style = MaterialTheme.typography.bodySmall,
+                color = ParchmentCream.copy(alpha = 0.72f),
+            )
+        }
+
+        FamilyHomeModeSwitch(
+            mode = mode,
+            onShowToday = onShowToday,
+            onShowWeek = onShowWeek,
+            onOpenAllTasks = onOpenAllTasks,
+        )
     }
 }
 
@@ -423,6 +363,7 @@ private fun FamilyHomeModeSwitch(
     mode: FamilyHomeMode,
     onShowToday: () -> Unit,
     onShowWeek: () -> Unit,
+    onOpenAllTasks: () -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -435,9 +376,15 @@ private fun FamilyHomeModeSwitch(
             modifier = Modifier.weight(1f),
         )
         FamilyHomeModeButton(
-            label = "Semaine",
+            label = "À venir",
             selected = mode == FamilyHomeMode.WEEK,
             onClick = onShowWeek,
+            modifier = Modifier.weight(1f),
+        )
+        FamilyHomeModeButton(
+            label = "Toutes",
+            selected = false,
+            onClick = onOpenAllTasks,
             modifier = Modifier.weight(1f),
         )
     }
@@ -450,23 +397,24 @@ private fun FamilyHomeModeButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    if (selected) {
-        Button(
-            onClick = onClick,
-            modifier = modifier,
-            shape = RoundedCornerShape(8.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = WoodBrown, contentColor = ParchmentLight),
-        ) {
-            Text(label)
-        }
-    } else {
-        OutlinedButton(
-            onClick = onClick,
-            modifier = modifier,
-            shape = RoundedCornerShape(8.dp),
-        ) {
-            Text(label)
-        }
+    val shape = RoundedCornerShape(10.dp)
+    Box(
+        modifier =
+            modifier
+                .clip(shape)
+                .background(if (selected) ParchmentLight else Color.White.copy(alpha = 0.05f))
+                .border(1.dp, ParchmentLight.copy(alpha = if (selected) 0f else 0.12f), shape)
+                .clickable(onClick = onClick)
+                .padding(vertical = 8.dp, horizontal = 4.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+            color = if (selected) InkBrown else ParchmentCream.copy(alpha = 0.74f),
+            maxLines = 1,
+        )
     }
 }
 
@@ -608,13 +556,13 @@ private fun FamilyHomeSectionTitle(
             text = title,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
-            color = InkBrown,
+            color = ParchmentLight,
         )
         detail?.let {
             Text(
                 text = it,
                 style = MaterialTheme.typography.labelLarge,
-                color = InkMuted,
+                color = ParchmentCream.copy(alpha = 0.70f),
             )
         }
     }
@@ -750,60 +698,46 @@ private fun FamilyUpcomingSectionCard(
     onShowWeek: () -> Unit,
     onOpenTask: (Long) -> Unit,
 ) {
-    ElevatedCard(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        colors =
-            CardDefaults.elevatedCardColors(
-                containerColor = ParchmentLight.copy(alpha = 0.97f),
-                contentColor = InkBrown,
-            ),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+            Text(
+                text = "À venir",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = ParchmentLight,
+            )
+            Text(
+                text = "$totalCount sur 7 jours",
+                style = MaterialTheme.typography.labelMedium,
+                color = ParchmentCream.copy(alpha = 0.70f),
+            )
+        }
+        sections.forEach { section ->
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    text = "À venir",
-                    style = MaterialTheme.typography.titleMedium,
+                    text = section.label,
+                    style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold,
-                    color = InkBrown,
+                    color = ParchmentCream.copy(alpha = 0.82f),
                 )
-                Text(
-                    text = "$totalCount sur 7 jours",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = InkMuted,
-                )
-            }
-            sections.forEach { section ->
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = section.label,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = WoodBrown,
+                section.tasks.forEach { row ->
+                    FamilyUpcomingRow(
+                        task = row.task,
+                        onOpenTask = onOpenTask,
                     )
-                    section.tasks.forEach { row ->
-                        FamilyUpcomingRow(
-                            task = row.task,
-                            onOpenTask = onOpenTask,
-                        )
-                    }
                 }
             }
-            if (hasMore) {
-                OutlinedButton(
-                    onClick = onShowWeek,
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text("Voir la semaine")
-                }
+        }
+        if (hasMore) {
+            TextButton(onClick = onShowWeek) {
+                Text("Voir la semaine")
             }
         }
     }
@@ -820,11 +754,11 @@ private fun FamilyUpcomingRow(
                 .fillMaxWidth()
                 .clickable(enabled = task.taskId > 0L) { onOpenTask(task.taskId) },
         shape = RoundedCornerShape(8.dp),
-        color = ParchmentCream.copy(alpha = 0.76f),
+        color = ParchmentLight.copy(alpha = 0.96f),
         contentColor = InkBrown,
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Top,
         ) {
@@ -1047,28 +981,25 @@ private fun EmptyFamilyWeekCard(
 
 @Composable
 private fun EmptyFamilyHomeCard() {
-    ElevatedCard(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        colors =
-            CardDefaults.elevatedCardColors(
-                containerColor = ParchmentLight.copy(alpha = 0.97f),
-                contentColor = InkBrown,
-            ),
+        shape = RoundedCornerShape(10.dp),
+        color = ParchmentLight.copy(alpha = 0.96f),
+        contentColor = InkBrown,
     ) {
         Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(
-                text = "Tout est calme à la maison aujourd'hui.",
+                text = "Aucune tâche aujourd'hui",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = InkBrown,
             )
             Text(
-                text = "Ajoute une tâche quand la journée a besoin d'un petit repère.",
-                style = MaterialTheme.typography.bodyMedium,
+                text = "Utilise + pour ajouter un repère à la journée.",
+                style = MaterialTheme.typography.bodySmall,
                 color = InkMuted,
             )
         }
