@@ -426,7 +426,7 @@ fun ProgressHeroCard(
         modifier = modifier.fillMaxWidth(),
         tone = accent,
         shape = RoundedCornerShape(MaterialTheme.fantasyMetrics.cardCornerLarge),
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 7.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -435,8 +435,8 @@ fun ProgressHeroCard(
         ) {
             CircularProgressBadge(
                 progress = progress,
-                size = 60.dp,
-                strokeWidth = 7.dp,
+                size = 50.dp,
+                strokeWidth = 6.dp,
                 centerText = if (total <= 0) "0%" else "${(progress * 100f).toInt()}%",
                 completed = completed == total && total > 0,
             )
@@ -605,8 +605,8 @@ fun RoutineItemRow(
                 Text(
                     text = rewardLabel,
                     style = MaterialTheme.typography.labelSmall,
-                    color = EmberOrange,
-                    maxLines = 2,
+                    color = TextMuted,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
@@ -723,14 +723,14 @@ fun MissionCard(
                     shape = shape,
                 )
                 .clickable(onClick = onClick)
-                .padding(horizontal = 11.dp, vertical = 9.dp),
+                .padding(horizontal = 10.dp, vertical = 7.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
             Box(
                 modifier =
                     Modifier
-                        .size(40.dp)
+                        .size(34.dp)
                         .clip(CircleShape)
                         .background(toneColor(tone).copy(alpha = 0.10f))
                         .border(1.dp, toneColor(tone).copy(alpha = 0.26f), CircleShape),
@@ -740,7 +740,7 @@ fun MissionCard(
                     imageVector = Icons.Outlined.Star,
                     contentDescription = null,
                     tint = toneColor(tone).copy(alpha = 0.82f),
-                    modifier = Modifier.size(19.dp),
+                    modifier = Modifier.size(17.dp),
                 )
             }
             Column(
@@ -782,7 +782,9 @@ fun MissionCard(
                         color = if (isOverdue) EmberOrange else toneColor(tone),
                     )
                 }
-                XpProgressBar(progress = progress, modifier = Modifier.fillMaxWidth())
+                if (!done && completionLabel != "0/1" && completionLabel != "1/1") {
+                    XpProgressBar(progress = progress, modifier = Modifier.fillMaxWidth())
+                }
             }
             Box(
                 modifier =
@@ -1070,8 +1072,8 @@ private fun ReferenceQuestCard(
             )
         }
         Column(
-            modifier = Modifier.fillMaxWidth().padding(10.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 5.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1081,7 +1083,7 @@ private fun ReferenceQuestCard(
                 Box(
                     modifier =
                         Modifier
-                        .size(44.dp)
+                        .size(36.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(MagicViolet.copy(alpha = 0.10f))
                         .border(1.dp, MagicViolet.copy(alpha = 0.20f), RoundedCornerShape(12.dp)),
@@ -1110,7 +1112,7 @@ private fun ReferenceQuestCard(
                             text = description,
                             style = MaterialTheme.typography.bodySmall,
                         color = TextMuted,
-                            maxLines = 2,
+                            maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
@@ -1121,13 +1123,12 @@ private fun ReferenceQuestCard(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    XpProgressBar(progress = progress, modifier = Modifier.fillMaxWidth())
                 }
                 FantasyActionMedallion(onClick = onAction, dark = true)
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 FantasyInfoChip(text = xpLabel, accent = MagicViolet, modifier = Modifier.weight(1f))
@@ -1691,7 +1692,7 @@ private fun FantasyInfoChip(
                 .clip(RoundedCornerShape(100.dp))
                 .background(if (dark) MagicViolet.copy(alpha = 0.32f) else ParchmentLight.copy(alpha = 0.76f))
                 .border(1.dp, accent.copy(alpha = 0.72f), RoundedCornerShape(100.dp))
-                .padding(horizontal = 8.dp, vertical = 4.dp),
+                .padding(horizontal = 6.dp, vertical = 2.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1699,11 +1700,11 @@ private fun FantasyInfoChip(
             imageVector = Icons.Outlined.Star,
             contentDescription = null,
             tint = accent,
-            modifier = Modifier.size(12.dp),
+            modifier = Modifier.size(10.dp),
         )
         Text(
             text = text,
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelSmall,
             color = if (dark) ParchmentCream else WoodBrownDark,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,

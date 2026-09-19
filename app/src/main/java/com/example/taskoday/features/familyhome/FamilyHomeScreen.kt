@@ -213,7 +213,7 @@ fun FamilyHomeScreen(
                         }
                     }
 
-                    if (uiState.sections.isEmpty()) {
+                    if (uiState.sections.isEmpty() && uiState.overdueTotalTasks == 0) {
                         item { EmptyFamilyHomeCard() }
                     } else {
                         item {
@@ -439,8 +439,8 @@ private fun FamilyHomeWeekControls(
             ),
     ) {
         Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -558,7 +558,7 @@ private fun FamilyHomeSectionTitle(
             fontWeight = FontWeight.SemiBold,
             color = ParchmentLight,
         )
-        detail?.let {
+        detail?.takeIf { !it.startsWith("0 / 0") }?.let {
             Text(
                 text = it,
                 style = MaterialTheme.typography.labelLarge,
@@ -578,19 +578,10 @@ private fun FamilyOverdueSectionCard(
     onOpenTask: (Long) -> Unit,
 ) {
     val today = parseFamilyTaskDateInput(todayDate.orEmpty()) ?: java.time.LocalDate.now()
-    ElevatedCard(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        colors =
-            CardDefaults.elevatedCardColors(
-                containerColor = WarningGlow.copy(alpha = 0.16f),
-                contentColor = InkBrown,
-            ),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -620,7 +611,6 @@ private fun FamilyOverdueSectionCard(
                 )
             }
         }
-    }
 }
 
 @Composable
@@ -642,8 +632,8 @@ private fun FamilyOverdueRow(
         contentColor = InkBrown,
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -792,19 +782,10 @@ private fun FamilyMemberSectionCard(
     onQuickAction: (FamilyTaskTodayItem) -> Unit,
     onOpenTask: (Long) -> Unit,
 ) {
-    ElevatedCard(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        colors =
-            CardDefaults.elevatedCardColors(
-                containerColor = ParchmentLight.copy(alpha = 0.96f),
-                contentColor = InkBrown,
-            ),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -831,7 +812,6 @@ private fun FamilyMemberSectionCard(
                     onOpenTask = onOpenTask,
                 )
             }
-        }
     }
 }
 
@@ -853,8 +833,8 @@ private fun FamilyTaskRowCard(
         contentColor = InkBrown,
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1057,7 +1037,6 @@ private fun FamilyTaskTodayItem.details(): List<String> =
         )?.let { add("Échéance $it") }
         familyTaskOccurrenceRecurrenceLabel(recurrenceLabel)?.let { add(it) }
         if (validationRequired) add("Validation requise")
-        if (gamificationEnabled) add("Gamification active")
     }
 
 private fun FamilyTaskQuickAction.icon() =

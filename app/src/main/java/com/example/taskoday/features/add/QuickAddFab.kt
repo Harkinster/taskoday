@@ -64,8 +64,8 @@ fun QuickAddFab(
     Box(
         modifier =
             modifier
-                .size(38.dp)
-                .shadow(elevation = 2.dp, shape = CircleShape, clip = false)
+                .size(34.dp)
+                .shadow(elevation = 1.dp, shape = CircleShape, clip = false)
                 .clip(CircleShape)
                 .background(MagicViolet)
                 .clickable {
@@ -79,7 +79,7 @@ fun QuickAddFab(
         Icon(
             imageVector = Icons.Outlined.Add,
             contentDescription = "Ajouter",
-            modifier = Modifier.size(20.dp),
+            modifier = Modifier.size(18.dp),
             tint = ParchmentLight,
         )
     }

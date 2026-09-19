@@ -89,7 +89,7 @@ fun TasksScreen(
                     Modifier
                         .fillMaxSize()
                         .padding(horizontal = spacing.medium),
-                contentPadding = PaddingValues(top = spacing.large, bottom = 92.dp),
+                contentPadding = PaddingValues(top = 10.dp, bottom = 72.dp),
                 verticalArrangement = Arrangement.spacedBy(spacing.medium),
             ) {
                 item {

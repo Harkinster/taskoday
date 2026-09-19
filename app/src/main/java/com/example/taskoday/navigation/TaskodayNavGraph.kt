@@ -3,6 +3,7 @@ package com.example.taskoday.navigation
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -204,6 +205,7 @@ fun TaskodayApp() {
         ) {
             Scaffold(
                 containerColor = Color.Transparent,
+                contentWindowInsets = WindowInsets(0, 0, 0, 0),
                 bottomBar = {
                     if (showBottomBar) {
                         Box {

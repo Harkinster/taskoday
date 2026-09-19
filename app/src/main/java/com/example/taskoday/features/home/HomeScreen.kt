@@ -198,7 +198,7 @@ fun HomeScreen(
                     Modifier
                         .fillMaxSize()
                         .padding(horizontal = spacing.medium),
-                contentPadding = PaddingValues(top = spacing.large, bottom = 92.dp),
+                contentPadding = PaddingValues(top = 10.dp, bottom = 72.dp),
                 verticalArrangement = Arrangement.spacedBy(spacing.medium),
             ) {
                 item {
@@ -1042,17 +1042,15 @@ private fun DailyProgressCard(
     subtitle: String,
     badgeLabel: String,
 ) {
-    FantasyCard(tone = FantasyTone.Moss) {
-        Text(text = title, style = MaterialTheme.typography.titleLarge, color = WoodBrownDark)
+    FantasyCard(tone = FantasyTone.Moss, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 7.dp)) {
+        Text(text = title, style = MaterialTheme.typography.titleMedium, color = WoodBrownDark)
         Text(text = "$completed/$total terminées", style = MaterialTheme.typography.headlineSmall, color = MossGreen)
-        FantasyProgressBar(progress = progress, modifier = Modifier.fillMaxWidth())
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(text = subtitle, style = MaterialTheme.typography.bodyMedium, color = InkMuted, modifier = Modifier.weight(1f))
-            Text(text = badgeLabel, style = MaterialTheme.typography.labelLarge, color = EmberOrange)
+            Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = InkMuted)
         }
     }
 }

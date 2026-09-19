@@ -125,7 +125,7 @@ fun QuestsScreen(
                     Modifier
                         .fillMaxSize()
                         .padding(horizontal = spacing.medium),
-                contentPadding = PaddingValues(top = spacing.large, bottom = 92.dp),
+                contentPadding = PaddingValues(top = 10.dp, bottom = 72.dp),
                 verticalArrangement = Arrangement.spacedBy(spacing.medium),
             ) {
                 item {
@@ -303,7 +303,7 @@ private fun DateControlsCard(
     onNext: () -> Unit,
     onToday: () -> Unit,
 ) {
-    NeonCard(tone = NeonTone.Blue) {
+    NeonCard(tone = NeonTone.Blue, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
