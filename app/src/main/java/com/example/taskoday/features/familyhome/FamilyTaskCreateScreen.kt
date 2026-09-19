@@ -43,10 +43,16 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -71,6 +77,7 @@ fun FamilyTaskCreateScreen(
     viewModel: FamilyTaskCreateViewModel,
     onBack: () -> Unit,
     onCreated: () -> Unit,
+    quickMode: Boolean = false,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val spacing = MaterialTheme.spacing
@@ -100,7 +107,7 @@ fun FamilyTaskCreateScreen(
                 verticalArrangement = Arrangement.spacedBy(spacing.medium),
             ) {
                 item {
-                    FamilyTaskCreateHeader(isEditing = uiState.isEditing, onBack = onBack)
+                    FamilyTaskCreateHeader(isEditing = uiState.isEditing, quickMode = quickMode, onBack = onBack)
                 }
 
                 if (uiState.isLoadingTask) {
@@ -108,40 +115,29 @@ fun FamilyTaskCreateScreen(
                         LoadingTaskCard()
                     }
                 } else {
-                    item {
-                        FamilyTaskCreateFormCard(
-                            uiState = uiState,
-                            onTitleChanged = viewModel::onTitleChanged,
-                            onDescriptionChanged = viewModel::onDescriptionChanged,
-                            onDateChanged = viewModel::onDateChanged,
-                            onTimeChanged = viewModel::onTimeChanged,
-                            onClearTime = viewModel::clearTime,
-                        )
-                    }
-
-                    item {
-                        AssigneesCard(
-                            uiState = uiState,
-                            onSelectHouse = viewModel::selectHouseTask,
-                            onToggleAssignee = viewModel::toggleAssignee,
-                        )
-                    }
-
-                    item {
-                        RecurrenceCard(
-                            uiState = uiState,
-                            onRecurrenceChanged = viewModel::onRecurrenceChanged,
-                            onToggleWeekday = viewModel::toggleWeekday,
-                        )
-                    }
-
-                    item {
-                        TaskOptionsCard(
-                            uiState = uiState,
-                            onValidationRequiredChanged = viewModel::onValidationRequiredChanged,
-                            onGamificationEnabledChanged = viewModel::onGamificationEnabledChanged,
-                            onPriorityChanged = viewModel::onPriorityChanged,
-                        )
+                    if (quickMode) {
+                        item {
+                            QuickTaskForm(
+                                uiState = uiState,
+                                onTitleChanged = viewModel::onTitleChanged,
+                                onDateChanged = viewModel::onDateChanged,
+                                onTimeChanged = viewModel::onTimeChanged,
+                                onClearTime = viewModel::clearTime,
+                                onSelectHouse = viewModel::selectHouseTask,
+                                onToggleAssignee = viewModel::toggleAssignee,
+                                onRecurrenceChanged = viewModel::onRecurrenceChanged,
+                                onToggleWeekday = viewModel::toggleWeekday,
+                                onDescriptionChanged = viewModel::onDescriptionChanged,
+                                onValidationRequiredChanged = viewModel::onValidationRequiredChanged,
+                                onGamificationEnabledChanged = viewModel::onGamificationEnabledChanged,
+                                onPriorityChanged = viewModel::onPriorityChanged,
+                            )
+                        }
+                    } else {
+                        item { FamilyTaskCreateFormCard(uiState, viewModel::onTitleChanged, viewModel::onDescriptionChanged, viewModel::onDateChanged, viewModel::onTimeChanged, viewModel::clearTime) }
+                        item { AssigneesCard(uiState, viewModel::selectHouseTask, viewModel::toggleAssignee) }
+                        item { RecurrenceCard(uiState, viewModel::onRecurrenceChanged, viewModel::toggleWeekday) }
+                        item { TaskOptionsCard(uiState, viewModel::onValidationRequiredChanged, viewModel::onGamificationEnabledChanged, viewModel::onPriorityChanged) }
                     }
                 }
 
@@ -200,8 +196,72 @@ fun FamilyTaskCreateScreen(
 }
 
 @Composable
+private fun QuickTaskForm(
+    uiState: FamilyTaskCreateUiState,
+    onTitleChanged: (String) -> Unit,
+    onDateChanged: (String) -> Unit,
+    onTimeChanged: (String) -> Unit,
+    onClearTime: () -> Unit,
+    onSelectHouse: () -> Unit,
+    onToggleAssignee: (Long) -> Unit,
+    onRecurrenceChanged: (FamilyTaskRecurrence) -> Unit,
+    onToggleWeekday: (Int) -> Unit,
+    onDescriptionChanged: (String) -> Unit,
+    onValidationRequiredChanged: (Boolean) -> Unit,
+    onGamificationEnabledChanged: (Boolean) -> Unit,
+    onPriorityChanged: (FamilyTaskPriority) -> Unit,
+) {
+    var showMore by remember { mutableStateOf(false) }
+    val requester = remember { FocusRequester() }
+    val keyboard = LocalSoftwareKeyboardController.current
+    val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        requester.requestFocus()
+        keyboard?.show()
+    }
+    val today = LocalDate.now()
+    FamilyTaskCreateCard(title = "Que faut-il faire ?") {
+        OutlinedTextField(
+            value = uiState.title,
+            onValueChange = onTitleChanged,
+            placeholder = { Text("Ex. Ranger sa chambre") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().focusRequester(requester),
+        )
+        Text("Pour qui ?", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = InkBrown)
+        Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(selected = uiState.isHouseTask, onClick = onSelectHouse, label = { Text("Tout le monde") })
+            uiState.members.forEach { member ->
+                FilterChip(selected = member.userId in uiState.selectedAssigneeUserIds, onClick = { onToggleAssignee(member.userId) }, label = { Text(member.displayName) })
+            }
+        }
+        Text("Quand ?", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = InkBrown)
+        Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(selected = uiState.date == today.toString(), onClick = { onDateChanged(today.toString()) }, label = { Text("Aujourd'hui") })
+            FilterChip(selected = uiState.date == today.plusDays(1).toString(), onClick = { onDateChanged(today.plusDays(1).toString()) }, label = { Text("Demain") })
+            FilterChip(selected = false, onClick = { onDateChanged(today.toString()) }, label = { Text("Cette semaine") })
+            FilterChip(selected = false, onClick = {
+                val selected = parseFamilyTaskDateInput(uiState.date) ?: today
+                DatePickerDialog(context, { _, year, month, day -> onDateChanged(LocalDate.of(year, month + 1, day).toString()) }, selected.year, selected.monthValue - 1, selected.dayOfMonth).show()
+            }, label = { Text("Choisir") })
+        }
+        TextButton(onClick = {
+            val selected = parseFamilyTaskTimeInput(uiState.time) ?: LocalTime.now()
+            TimePickerDialog(context, { _, hour, minute -> onTimeChanged(String.format(Locale.US, "%02d:%02d", hour, minute)) }, selected.hour, selected.minute, true).show()
+        }) { Text(if (uiState.time.isBlank()) "+ Ajouter une heure" else "Heure : ${uiState.time}") }
+        TextButton(onClick = { showMore = !showMore }) { Text(if (showMore) "Moins d'options" else "Plus d'options") }
+        if (showMore) {
+            OutlinedTextField(value = uiState.description, onValueChange = onDescriptionChanged, label = { Text("Note (facultatif)") }, minLines = 2, maxLines = 3, modifier = Modifier.fillMaxWidth())
+            RecurrenceCard(uiState, onRecurrenceChanged, onToggleWeekday)
+            TaskOptionsCard(uiState, onValidationRequiredChanged, onGamificationEnabledChanged, onPriorityChanged)
+        }
+    }
+}
+
+@Composable
 private fun FamilyTaskCreateHeader(
     isEditing: Boolean,
+    quickMode: Boolean = false,
     onBack: () -> Unit,
 ) {
     ElevatedCard(

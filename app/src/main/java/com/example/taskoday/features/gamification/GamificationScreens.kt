@@ -199,27 +199,6 @@ fun NestScreen(
             )
         }
         item {
-            val guardianXp = progress?.guardian?.xp ?: if (uiState.hasRemoteSession) 0 else 50
-            GuardianProgressCard(
-                xp = guardianXp,
-                levelName = progress?.nest?.name ?: "Nid paisible",
-                nextLevelLabel = "Niveau ${progress?.guardian?.level?.plus(1) ?: if (uiState.hasRemoteSession) 1 else 2}",
-                progress = (guardianXp % 100) / 100f,
-            )
-        }
-        progress?.chestProgress?.let { chestProgress ->
-            item {
-                ChestCard(
-                    points = chestProgress.points,
-                    pointsRequired = chestProgress.pointsRequired,
-                    unopenedChests = chestProgress.unopenedChests,
-                    title = "Progression du prochain coffre",
-                    assetResId = NestAssets.chestAsset("common"),
-                    contentDescription = "Progression coffre",
-                )
-            }
-        }
-        item {
             NestHubTiles(
                 onOpenInventory = onOpenInventory,
                 onOpenDragons = onOpenDragons,
@@ -493,7 +472,7 @@ private fun RecentNestRewardCard(
     onDismiss: () -> Unit,
 ) {
     val rows = recentNestRewardRows(reward)
-    FantasyCard(tone = FantasyTone.Gold, contentPadding = PaddingValues(14.dp)) {
+    FantasyCard(tone = FantasyTone.Gold, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -709,7 +688,7 @@ private fun NestCurrencyBar(
     onOpenWishes: () -> Unit,
     onOpenChests: () -> Unit,
 ) {
-    FantasyCard(tone = FantasyTone.Night, contentPadding = PaddingValues(10.dp)) {
+    FantasyCard(tone = FantasyTone.Night, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 5.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
@@ -753,16 +732,16 @@ private fun CurrencyPill(
                 .border(1.dp, tone.accent.copy(alpha = 0.62f), shape),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(7.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            FantasyAssetBubble(assetResId = assetResId, contentDescription = label, size = 30.dp)
+            FantasyAssetBubble(assetResId = assetResId, contentDescription = label, size = 24.dp)
             Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
-                Text(text = value, style = MaterialTheme.typography.titleSmall, color = WoodBrownDark, maxLines = 1)
+                Text(text = value, style = MaterialTheme.typography.labelLarge, color = WoodBrownDark, maxLines = 1)
                 Text(
                     text = label,
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.labelSmall,
                     color = InkMuted,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -910,12 +889,6 @@ private fun ActiveNestDisplayCard(
             overflow = TextOverflow.Ellipsis,
         )
         FantasyProgressBar(progress = dragon?.progress ?: egg?.progress ?: 0f)
-        FantasyButton(
-            text = "Voir le Bestiaire",
-            onClick = onOpenBestiary,
-            style = FantasyButtonStyle.Quiet,
-            modifier = Modifier.fillMaxWidth(),
-        )
     }
 }
 
@@ -941,12 +914,12 @@ private fun NestActiveEggCard(
         return
     }
 
-    FantasyCard(tone = FantasyTone.Gold, contentPadding = PaddingValues(14.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+    FantasyCard(tone = FantasyTone.Gold, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 5.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             FantasyAssetBubble(
                 assetResId = egg.assetResId,
                 contentDescription = egg.contentDescription,
-                size = 64.dp,
+                size = 44.dp,
             )
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
@@ -973,9 +946,7 @@ private fun NestActiveEggCard(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            FantasyBadge(text = "${egg.progressPercent}%", tone = FantasyTone.Violet)
         }
-        FantasyProgressBar(progress = egg.progress)
         egg.nextStateLabel?.let { nextState ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -992,7 +963,7 @@ private fun NestActiveEggCard(
                 )
             }
         }
-        Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             if (egg.resourceRows.isEmpty()) {
                 Text(
                     text = "Aucune ressource requise pour le moment.",
@@ -1017,7 +988,7 @@ private fun NestActiveEggCard(
         FantasyButton(
             text = "Voir mes œufs",
             onClick = onOpenEggs,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.align(Alignment.Start),
             style = FantasyButtonStyle.Outline,
         )
     }

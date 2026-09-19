@@ -1,10 +1,11 @@
 package com.example.taskoday.features.settings
 
+import com.example.taskoday.BuildConfig
 import com.example.taskoday.domain.model.ParentChild
 
 data class SettingsUiState(
     val useDynamicColors: Boolean = true,
-    val appVersionLabel: String = "1.0",
+    val appVersionLabel: String = "Taskoday Beta · ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
     val isParentUser: Boolean = false,
     val familyIds: List<Long> = emptyList(),
     val selectedFamilyId: Long? = null,

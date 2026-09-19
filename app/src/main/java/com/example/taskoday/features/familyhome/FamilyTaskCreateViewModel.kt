@@ -25,6 +25,7 @@ class FamilyTaskCreateViewModel
     ) : ViewModel() {
         private val taskId: Long? = savedStateHandle.get<Long>("taskId")?.takeIf { it > 0L }
         private val prefilledDate: String? = savedStateHandle.get<String>("date")
+        private val quickMode: Boolean = savedStateHandle.get<Boolean>("quick") == true
         private val _uiState =
             MutableStateFlow(
                 FamilyTaskCreateUiState(
@@ -55,6 +56,10 @@ class FamilyTaskCreateViewModel
                             it.copy(
                                 isLoadingMembers = false,
                                 members = members,
+                                selectedAssigneeUserIds =
+                                    if (quickMode && it.selectedAssigneeUserIds.isEmpty() && members.size == 1) {
+                                        setOf(members.first().userId)
+                                    } else it.selectedAssigneeUserIds,
                                 errorMessage = null,
                             )
                         }
@@ -180,6 +185,7 @@ class FamilyTaskCreateViewModel
                         gamificationEnabled = current.gamificationEnabled,
                         priority = current.priority,
                     ),
+                    requireAssignee = quickMode,
                 )
             val input = validation.input
             if (!validation.isValid || input == null) {

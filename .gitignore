@@ -13,5 +13,10 @@
 .externalNativeBuild
 .cxx
 local.properties
+*.jks
+*.keystore
+*.p12
+signing.properties
+qa/
 .maestro-cli/
 maestro.zip

@@ -176,19 +176,9 @@ fun TaskodayApp() {
         } else {
             Modifier
         }
-    val openCreateRoutine: () -> Unit = {
+    val openCreateTask: () -> Unit = {
         if (!localChildMode && quickAddUiState.canOpenQuickAdd) {
-            navController.navigate(TaskodayDestination.ParentPlanning.createRoute("routine"))
-        }
-    }
-    val openCreateMission: () -> Unit = {
-        if (!localChildMode && quickAddUiState.canOpenQuickAdd) {
-            navController.navigate(TaskodayDestination.ParentPlanning.createRoute("mission"))
-        }
-    }
-    val openCreateQuest: () -> Unit = {
-        if (!localChildMode && quickAddUiState.canOpenQuickAdd) {
-            navController.navigate(TaskodayDestination.ParentPlanning.createRoute("quest"))
+            navController.navigate(TaskodayDestination.FamilyTaskCreate.createRoute(quick = true))
         }
     }
 
@@ -220,9 +210,7 @@ fun TaskodayApp() {
                                 QuickAddFab(
                                     uiState = quickAddUiState,
                                     onRefresh = quickAddViewModel::refresh,
-                                    onCreateRoutine = openCreateRoutine,
-                                    onCreateMission = openCreateMission,
-                                    onCreateQuest = openCreateQuest,
+                                    onCreateTask = openCreateTask,
                                     modifier =
                                         Modifier
                                             .align(Alignment.CenterEnd)
@@ -387,13 +375,18 @@ fun TaskodayApp() {
                             nullable = true
                             defaultValue = null
                         },
+                        navArgument(TaskodayDestination.FamilyTaskCreate.ARG_QUICK) {
+                            type = NavType.BoolType
+                            defaultValue = false
+                        },
                     ),
-            ) {
+            ) { entry ->
                 val viewModel: FamilyTaskCreateViewModel = hiltViewModel()
                 FamilyTaskCreateScreen(
                     viewModel = viewModel,
                     onBack = { navController.popBackStack() },
                     onCreated = { navController.popBackStack() },
+                    quickMode = entry.arguments?.getBoolean(TaskodayDestination.FamilyTaskCreate.ARG_QUICK) == true,
                 )
             }
 

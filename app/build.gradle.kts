@@ -11,19 +11,43 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.taskoday"
+        applicationId = "com.harkinster.taskoday"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.0-beta01"
         buildConfigField("String", "TASKODAY_BASE_URL", "\"https://harkserv.ddns.net/taskoday-api/\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    val betaStoreFile = providers.gradleProperty("taskodayKeystorePath").orElse(providers.environmentVariable("TASKODAY_KEYSTORE_PATH")).orNull
+    val betaStorePassword = providers.gradleProperty("taskodayKeystorePassword").orElse(providers.environmentVariable("TASKODAY_KEYSTORE_PASSWORD")).orNull
+    val betaKeyAlias = providers.gradleProperty("taskodayKeyAlias").orElse(providers.environmentVariable("TASKODAY_KEY_ALIAS")).orNull
+    val betaKeyPassword = providers.gradleProperty("taskodayKeyPassword").orElse(providers.environmentVariable("TASKODAY_KEY_PASSWORD")).orNull
+    val betaSigningReady = listOf(betaStoreFile, betaStorePassword, betaKeyAlias, betaKeyPassword).all { !it.isNullOrBlank() }
+
+    signingConfigs {
+        create("beta") {
+            if (betaSigningReady) {
+                storeFile = file(requireNotNull(betaStoreFile))
+                storePassword = requireNotNull(betaStorePassword)
+                keyAlias = requireNotNull(betaKeyAlias)
+                keyPassword = requireNotNull(betaKeyPassword)
+            }
+        }
+    }
+
+    if (gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) } && !betaSigningReady) {
+        throw GradleException(
+            "Signature bêta absente. Fournir taskodayKeystorePath/taskodayKeystorePassword/taskodayKeyAlias/taskodayKeyPassword dans gradle.properties utilisateur ou via TASKODAY_*.",
+        )
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("beta")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

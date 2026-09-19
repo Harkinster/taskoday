@@ -32,7 +32,10 @@ data class FamilyTaskCreateValidation(
         get() = input != null && errorMessage == null
 }
 
-fun validateFamilyTaskCreateForm(form: FamilyTaskCreateForm): FamilyTaskCreateValidation {
+fun validateFamilyTaskCreateForm(
+    form: FamilyTaskCreateForm,
+    requireAssignee: Boolean = false,
+): FamilyTaskCreateValidation {
     val title = form.title.trim()
     if (title.isBlank()) {
         return FamilyTaskCreateValidation(errorMessage = "Le titre est obligatoire.")
@@ -40,6 +43,9 @@ fun validateFamilyTaskCreateForm(form: FamilyTaskCreateForm): FamilyTaskCreateVa
 
     if (form.recurrence == FamilyTaskRecurrence.SELECTED_WEEKDAYS && form.selectedWeekdays.isEmpty()) {
         return FamilyTaskCreateValidation(errorMessage = "Choisis au moins un jour.")
+    }
+    if (requireAssignee && form.assigneeUserIds.isEmpty()) {
+        return FamilyTaskCreateValidation(errorMessage = "Choisis la personne responsable.")
     }
 
     val dueDate =
