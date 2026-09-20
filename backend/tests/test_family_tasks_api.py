@@ -4,6 +4,7 @@ from typing import Generator
 
 from app.db.session import get_db
 from app.models.family_task import FamilyTaskOccurrence, FamilyTaskOccurrenceStatus
+from app.services.family_task_service import occurrence_payload
 
 
 API = "/api/v1"
@@ -312,7 +313,7 @@ def test_create_family_tasks_with_assignments_recurrence_and_today_view(client) 
 
 
 def test_completion_validation_reopen_and_next_recurrent_occurrence(client) -> None:
-    parent_token, _, family_id = _register_parent(client, "family-tasks-flow")
+    parent_token, parent_id, family_id = _register_parent(client, "family-tasks-flow")
     child_token, child_id = _register_child_and_attach(client, parent_token, "family-tasks-flow")
     today = date.today()
     tomorrow = today + timedelta(days=1)
@@ -359,6 +360,13 @@ def test_completion_validation_reopen_and_next_recurrent_occurrence(client) -> N
     )
     assert pending.status_code == 200
     assert pending.json()["data"]["status"] == "PENDING_VALIDATION"
+    assert pending.json()["data"]["completed_by"] == child_id
+    assert pending.json()["data"]["completed_by_user"] == {
+        "user_id": child_id,
+        "display_name": "Child family-tasks-flow",
+    }
+    assert pending.json()["data"]["validated_by"] is None
+    assert pending.json()["data"]["validated_by_user"] is None
 
     validated = client.post(
         f"{API}/task-occurrences/{validation_occurrence_id}/validate",
@@ -366,6 +374,15 @@ def test_completion_validation_reopen_and_next_recurrent_occurrence(client) -> N
     )
     assert validated.status_code == 200
     assert validated.json()["data"]["status"] == "VALIDATED"
+    assert validated.json()["data"]["completed_by_user"] == {
+        "user_id": child_id,
+        "display_name": "Child family-tasks-flow",
+    }
+    assert validated.json()["data"]["validated_by"] == parent_id
+    assert validated.json()["data"]["validated_by_user"] == {
+        "user_id": parent_id,
+        "display_name": "parent.family-tasks-flow",
+    }
 
     reopened = client.post(
         f"{API}/task-occurrences/{validation_occurrence_id}/reopen",
@@ -375,6 +392,8 @@ def test_completion_validation_reopen_and_next_recurrent_occurrence(client) -> N
     assert reopened.json()["data"]["status"] == "TODO"
     assert reopened.json()["data"]["completed_by"] is None
     assert reopened.json()["data"]["validated_by"] is None
+    assert reopened.json()["data"]["completed_by_user"] is None
+    assert reopened.json()["data"]["validated_by_user"] is None
 
     daily_task = _create_task(
         client,
@@ -399,6 +418,104 @@ def test_completion_validation_reopen_and_next_recurrent_occurrence(client) -> N
     assert tomorrow_daily["task_id"] == daily_task["id"]
     assert tomorrow_daily["occurrence_id"] != today_daily["occurrence_id"]
     assert tomorrow_daily["status"] == "TODO"
+
+
+def test_occurrence_payload_exposes_completion_and_validation_actors(client) -> None:
+    parent_token, parent_id, family_id = _register_parent(client, "family-task-actors")
+    child_token, child_id = _register_child_and_attach(client, parent_token, "family-task-actors")
+    today = date.today()
+
+    _create_task(
+        client,
+        parent_token,
+        family_id,
+        {
+            "title": "Tache acteur enfant",
+            "due_at": _due_at(today),
+            "assignee_user_ids": [child_id],
+        },
+    )
+    child_item = _item_by_title(_today(client, parent_token, family_id, today), "Tache acteur enfant")
+    assert child_item["completed_by"] is None
+    assert child_item["completed_by_user"] is None
+    assert child_item["validated_by"] is None
+    assert child_item["validated_by_user"] is None
+
+    completed = client.post(
+        f"{API}/task-occurrences/{child_item['occurrence_id']}/complete",
+        headers=_headers(child_token),
+    )
+    assert completed.status_code == 200
+    completed_payload = completed.json()["data"]
+    assert completed_payload["completed_by"] == child_id
+    assert completed_payload["completed_by_user"] == {"user_id": child_id, "display_name": "Child family-task-actors"}
+
+    _create_task(
+        client,
+        parent_token,
+        family_id,
+        {
+            "title": "Tache maison acteur parent",
+            "due_at": _due_at(today, 9),
+            "validation_required": True,
+        },
+    )
+    house_item = _item_by_title(_today(client, parent_token, family_id, today), "Tache maison acteur parent")
+    parent_completed = client.post(
+        f"{API}/task-occurrences/{house_item['occurrence_id']}/complete",
+        headers=_headers(parent_token),
+    )
+    assert parent_completed.status_code == 200
+    parent_completed_payload = parent_completed.json()["data"]
+    assert parent_completed_payload["completed_by"] == parent_id
+    assert parent_completed_payload["completed_by_user"]["user_id"] == parent_id
+    assert parent_completed_payload["completed_by_user"]["display_name"] == "parent.family-task-actors"
+
+    validated = client.post(
+        f"{API}/task-occurrences/{house_item['occurrence_id']}/validate",
+        headers=_headers(parent_token),
+    )
+    assert validated.status_code == 200
+    validated_payload = validated.json()["data"]
+    assert validated_payload["completed_by_user"]["user_id"] == parent_id
+    assert validated_payload["validated_by"] == parent_id
+    assert validated_payload["validated_by_user"] == {"user_id": parent_id, "display_name": "parent.family-task-actors"}
+
+    reopened = client.post(
+        f"{API}/task-occurrences/{house_item['occurrence_id']}/reopen",
+        headers=_headers(parent_token),
+    )
+    assert reopened.status_code == 200
+    reopened_payload = reopened.json()["data"]
+    assert reopened_payload["completed_by"] is None
+    assert reopened_payload["completed_by_user"] is None
+    assert reopened_payload["validated_by"] is None
+    assert reopened_payload["validated_by_user"] is None
+
+
+def test_occurrence_payload_ignores_missing_actor_user(client) -> None:
+    parent_token, _, family_id = _register_parent(client, "family-task-missing-actor")
+    today = date.today()
+    _create_task(
+        client,
+        parent_token,
+        family_id,
+        {"title": "Tache acteur absent", "due_at": _due_at(today)},
+    )
+    item = _item_by_title(_today(client, parent_token, family_id, today), "Tache acteur absent")
+
+    with _db_session(client) as db:
+        occurrence = db.get(FamilyTaskOccurrence, item["occurrence_id"])
+        assert occurrence is not None
+        occurrence.completed_by_user_id = 999999999
+        occurrence.validated_by_user_id = 999999999
+        with db.no_autoflush:
+            payload = occurrence_payload(db, occurrence)
+
+    assert payload["completed_by"] == 999999999
+    assert payload["completed_by_user"] is None
+    assert payload["validated_by"] == 999999999
+    assert payload["validated_by_user"] is None
 
 
 def test_family_task_access_isolated_between_families(client) -> None:

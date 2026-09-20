@@ -381,8 +381,33 @@ def occurrence_payload(db: Session, occurrence: FamilyTaskOccurrence) -> dict:
         "priority": _enum_value(task.priority),
         "completed_at": occurrence.completed_at,
         "completed_by": occurrence.completed_by_user_id,
+        "completed_by_user": user_reference_payload(db, occurrence.completed_by_user_id),
         "validated_at": occurrence.validated_at,
         "validated_by": occurrence.validated_by_user_id,
+        "validated_by_user": user_reference_payload(db, occurrence.validated_by_user_id),
+    }
+
+
+def user_reference_payload(db: Session, user_id: int | None) -> dict | None:
+    if user_id is None:
+        return None
+
+    row = db.execute(
+        select(User, ChildProfile)
+        .join(ChildProfile, ChildProfile.user_id == User.id, isouter=True)
+        .where(User.id == user_id)
+    ).first()
+    if row is None:
+        return None
+
+    user, profile = row
+    return _user_reference_payload(user, profile)
+
+
+def _user_reference_payload(user: User, profile: ChildProfile | None) -> dict:
+    return {
+        "user_id": user.id,
+        "display_name": profile.display_name if profile else user.email.split("@")[0],
     }
 
 
@@ -401,10 +426,9 @@ def assignees_payload(db: Session, task: FamilyTask) -> list[dict]:
 
     return [
         {
-            "user_id": user.id,
+            **_user_reference_payload(user, profile),
             "role": _enum_name(membership.role),
             "email": user.email,
-            "display_name": profile.display_name if profile else user.email.split("@")[0],
         }
         for user, profile, membership in rows
     ]
