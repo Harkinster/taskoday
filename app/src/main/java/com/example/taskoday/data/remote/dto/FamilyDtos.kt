@@ -65,16 +65,23 @@ fun JsonElement.toFamilyInviteDto(gson: Gson): FamilyInviteDto =
 fun FamilyMemberDto.toDomain(): FamilyMember =
     FamilyMember(
         userId = userId,
-        displayName =
-            displayName
-                ?.trim()
-                ?.takeIf { it.isNotBlank() }
-                ?: email?.substringBefore("@")?.takeIf { it.isNotBlank() }
-                ?: "Membre #$userId",
+        displayName = humanizeMemberLabel(displayName, email, userId),
         email = email?.trim()?.takeIf { it.isNotBlank() },
         role = role.toFamilyMemberRole(),
         isActive = isActive ?: true,
     )
+
+fun humanizeMemberLabel(displayName: String?, email: String?, userId: Long): String {
+    val raw = (displayName ?: email)
+        ?.trim()
+        ?.substringBefore("@")
+        ?.takeIf { it.isNotBlank() }
+        ?: return "Membre #$userId"
+    if (!raw.matches(Regex("^[\\p{L}\\d]+[._-][\\p{L}\\d]+$"))) return raw
+    return raw.split(Regex("[._-]+"))
+        .filter { it.isNotBlank() }
+        .joinToString(" ") { part -> part.replaceFirstChar { char -> char.titlecase(Locale.FRANCE) } }
+}
 
 fun FamilyInviteDto.toDomain(): FamilyInvite =
     FamilyInvite(

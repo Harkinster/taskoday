@@ -377,12 +377,7 @@ fun FamilyTaskDefinitionDto.toDomain(): FamilyTaskDefinition {
 fun FamilyTaskMemberDto.toDomain(): FamilyTaskMember =
     FamilyTaskMember(
         userId = userId,
-        displayName =
-            displayName
-                ?.trim()
-                ?.takeIf { it.isNotBlank() }
-                ?: email?.substringBefore("@")
-                ?: "Membre #$userId",
+        displayName = humanizeMemberLabel(displayName, email, userId),
         email = email,
         role =
             if (role.equals("PARENT", ignoreCase = true)) {
@@ -429,14 +424,10 @@ fun FamilyTaskCreateInput.toUpdateRequestDto(): FamilyTaskUpdateRequestDto =
     )
 
 private fun FamilyTaskAssigneeDto.toDomainOrNull(): FamilyTaskAssignee? {
-    val label =
-        displayName
-            ?.trim()
-            ?.takeIf { it.isNotBlank() }
-            ?: id?.let { "Membre #$it" }
-            ?: return null
+    val memberId = id ?: return null
+    val label = humanizeMemberLabel(displayName, null, memberId)
     return FamilyTaskAssignee(
-        id = id,
+        id = memberId,
         displayName = label,
     )
 }

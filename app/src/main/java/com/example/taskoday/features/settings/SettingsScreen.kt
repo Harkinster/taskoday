@@ -374,7 +374,7 @@ fun SettingsScreen(
                                 color = StarWhite,
                             )
                             Text(
-                                text = "Accède à la gestion des routines, missions et quêtes d'un enfant.",
+                                text = "Accède à la gestion des activités d'un enfant.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = TextMuted,
                             )

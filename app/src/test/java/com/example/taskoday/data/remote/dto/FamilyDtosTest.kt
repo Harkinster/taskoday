@@ -56,4 +56,16 @@ class FamilyDtosTest {
         assertEquals("AbC-123", invite.code)
         assertEquals("2026-08-25T20:00:00Z", invite.expiresAt)
     }
+
+    @Test
+    fun `login-like member labels become readable names`() {
+        val member = FamilyMemberDto(userId = 10L, displayName = "laurens.matthieu", email = null).toDomain()
+
+        assertEquals("Laurens Matthieu", member.displayName)
+    }
+
+    @Test
+    fun `email-like labels use a readable fallback`() {
+        assertEquals("Laurens Matthieu", humanizeMemberLabel("laurens.matthieu@yahoo.fr", null, 10L))
+    }
 }

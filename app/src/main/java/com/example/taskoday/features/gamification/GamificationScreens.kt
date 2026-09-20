@@ -149,7 +149,7 @@ fun NestScreen(
         item {
             FantasyHeader(
                 title = "Le Nid",
-                subtitle = "Le Gardien fait grandir son refuge avec ses routines, missions et quêtes.",
+                subtitle = "Le Gardien fait grandir son refuge grâce aux aventures de la famille.",
                 assetResId = NestAssets.interfaceAsset("nid"),
                 assetDescription = null,
                 onAvatarClick = onOpenProfile,
@@ -195,7 +195,7 @@ fun NestScreen(
             ActiveNestDisplayCard(
                 dragon = activeDragon,
                 egg = activeNestEgg,
-                onOpenBestiary = onOpenDragons,
+                onOpenEggs = onOpenEggs,
             )
         }
         item {
@@ -756,7 +756,7 @@ private fun CurrencyPill(
 private fun ActiveNestDisplayCard(
     dragon: DragonUiItem?,
     egg: EggUiItem?,
-    onOpenBestiary: () -> Unit,
+    onOpenEggs: () -> Unit,
 ) {
     if (dragon == null && egg == null) {
         FantasyStateCard(
@@ -764,8 +764,9 @@ private fun ActiveNestDisplayCard(
             message = "Découvre un œuf ou un dragon pour choisir un compagnon.",
             assetResId = NestAssets.interfaceAsset("egg_locked"),
             assetDescription = "Compagnon à découvrir",
+            compact = true,
         )
-        FantasyButton(text = "Ouvrir le Bestiaire", onClick = onOpenBestiary, style = FantasyButtonStyle.Outline)
+        FantasyButton(text = "Voir mes œufs", onClick = onOpenEggs, style = FantasyButtonStyle.Outline)
         return
     }
     val statusLabel = dragon?.let { "Compagnon du Nid" } ?: "Œuf suivi"
@@ -1116,9 +1117,8 @@ private fun NestHubTile(
                     text = subtitle,
                     style = MaterialTheme.typography.labelMedium,
                     color = InkMuted,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    softWrap = false,
                 )
             }
         }

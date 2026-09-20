@@ -252,7 +252,7 @@ fun FamilyHomeScreen(
                             if (uiState.isWeekEmpty) {
                                 EmptyFamilyWeekCard(
                                     title = "Rien de prévu cette semaine.",
-                                    message = "Ajoute une tâche si la maison a besoin d'un repère.",
+                                    message = "Rien de prévu pour la maison aujourd'hui.",
                                 )
                             } else {
                                 EmptyFamilyWeekCard(
@@ -978,7 +978,7 @@ private fun EmptyFamilyHomeCard() {
                 color = InkBrown,
             )
             Text(
-                text = "Utilise + pour ajouter un repère à la journée.",
+                text = "Rien de prévu pour la maison aujourd'hui.",
                 style = MaterialTheme.typography.bodySmall,
                 color = InkMuted,
             )

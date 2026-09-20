@@ -734,8 +734,13 @@ fun FantasyStateCard(
     assetResId: Int = NestAssets.interfaceAsset("nid"),
     assetDescription: String? = null,
     loading: Boolean = false,
+    compact: Boolean = false,
 ) {
-    FantasyCard(modifier = modifier.fillMaxWidth(), tone = tone) {
+    FantasyCard(
+        modifier = modifier.fillMaxWidth(),
+        tone = tone,
+        contentPadding = if (compact) PaddingValues(horizontal = 10.dp, vertical = 8.dp) else PaddingValues(horizontal = 13.dp, vertical = 11.dp),
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
