@@ -219,7 +219,7 @@ private fun FamilyTaskDefinitionCard(
             DetailLine(label = "Date", value = task.dateLabel())
             DetailLine(label = "Heure", value = task.timeLabel())
             DetailLine(label = "Priorité", value = familyTaskPriorityFormLabel(task.priority))
-            DetailLine(label = "Récurrence", value = familyTaskRecurrenceSummary(task.recurrence, task.selectedWeekdays))
+            DetailLine(label = "Récurrence", value = familyTaskRecurrenceSummary(task.recurrence, task.selectedWeekdays, task.recurrenceInterval))
             DetailLine(label = "Validation parent", value = task.validationRequired.yesNoLabel())
             DetailLine(label = "Gamification", value = task.gamificationEnabled.yesNoLabel())
             DetailLine(

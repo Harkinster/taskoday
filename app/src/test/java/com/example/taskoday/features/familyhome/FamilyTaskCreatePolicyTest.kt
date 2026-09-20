@@ -125,6 +125,18 @@ class FamilyTaskCreatePolicyTest {
         assertEquals("Chaque semaine", familyTaskRecurrenceSummary(FamilyTaskRecurrence.WEEKLY, emptyList()))
         assertEquals("Lun. • Mer. • Ven.", familyTaskRecurrenceSummary(FamilyTaskRecurrence.SELECTED_WEEKDAYS, listOf(1, 3, 5)))
         assertEquals("Certains jours", familyTaskRecurrenceSummary(FamilyTaskRecurrence.SELECTED_WEEKDAYS, emptyList()))
+        assertEquals("Tous les 2 mardis", familyTaskRecurrenceSummary(FamilyTaskRecurrence.SELECTED_WEEKDAYS, listOf(2), 2))
+        assertEquals("Lundi et mercredi toutes les 3 semaines", familyTaskRecurrenceSummary(FamilyTaskRecurrence.SELECTED_WEEKDAYS, listOf(1, 3), 3))
+    }
+
+    @Test
+    fun `custom recurrence validates interval minimum and selected weekdays`() {
+        val noDay = validateFamilyTaskCreateForm(validForm(recurrence = FamilyTaskRecurrence.SELECTED_WEEKDAYS, selectedWeekdays = emptySet(), recurrenceInterval = 0))
+        assertFalse(noDay.isValid)
+        val daily = validateFamilyTaskCreateForm(validForm(recurrence = FamilyTaskRecurrence.DAILY, recurrenceInterval = 0)).input
+        assertEquals(1, daily?.recurrenceInterval)
+        val capped = validateFamilyTaskCreateForm(validForm(recurrence = FamilyTaskRecurrence.DAILY, recurrenceInterval = 99)).input
+        assertEquals(52, capped?.recurrenceInterval)
     }
 
     @Test
@@ -169,6 +181,7 @@ class FamilyTaskCreatePolicyTest {
         validationRequired: Boolean = false,
         gamificationEnabled: Boolean = false,
         priority: FamilyTaskPriority = FamilyTaskPriority.NORMAL,
+        recurrenceInterval: Int = 1,
     ): FamilyTaskCreateForm =
         FamilyTaskCreateForm(
             title = title,
@@ -181,5 +194,6 @@ class FamilyTaskCreatePolicyTest {
             validationRequired = validationRequired,
             gamificationEnabled = gamificationEnabled,
             priority = priority,
+            recurrenceInterval = recurrenceInterval,
         )
 }

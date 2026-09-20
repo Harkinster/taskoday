@@ -116,12 +116,33 @@ class FamilyTaskCreateViewModel
             _uiState.update {
                 it.copy(
                     recurrence = value,
+                    isCustomRecurrence = false,
+                    recurrenceInterval = 1,
                     selectedWeekdays =
                         if (value == FamilyTaskRecurrence.SELECTED_WEEKDAYS) {
                             it.selectedWeekdays
                         } else {
                             emptySet()
                         },
+                    errorMessage = null,
+                )
+            }
+        }
+
+        fun customizeRecurrence() {
+            _uiState.update { it.copy(isCustomRecurrence = true, recurrence = FamilyTaskRecurrence.DAILY, recurrenceInterval = 1, selectedWeekdays = emptySet(), errorMessage = null) }
+        }
+
+        fun onRecurrenceIntervalChanged(value: Int) {
+            _uiState.update { it.copy(recurrenceInterval = value.coerceIn(1, 52), errorMessage = null) }
+        }
+
+        fun onCustomRecurrenceUnitChanged(value: CustomRecurrenceUnit) {
+            _uiState.update {
+                it.copy(
+                    customRecurrenceUnit = value,
+                    recurrence = if (value == CustomRecurrenceUnit.DAYS) FamilyTaskRecurrence.DAILY else FamilyTaskRecurrence.SELECTED_WEEKDAYS,
+                    selectedWeekdays = if (value == CustomRecurrenceUnit.DAYS) emptySet() else it.selectedWeekdays,
                     errorMessage = null,
                 )
             }
@@ -179,6 +200,7 @@ class FamilyTaskCreateViewModel
                         date = current.date,
                         time = current.time,
                         recurrence = current.recurrence,
+                        recurrenceInterval = current.recurrenceInterval,
                         selectedWeekdays = current.selectedWeekdays,
                         assigneeUserIds = current.selectedAssigneeUserIds,
                         validationRequired = current.validationRequired,
@@ -238,6 +260,9 @@ private fun FamilyTaskCreateUiState.withTask(task: FamilyTaskDefinition): Family
                 dueAt = task.dueAt,
             ),
         recurrence = task.recurrence,
+        recurrenceInterval = task.recurrenceInterval.coerceIn(1, 52),
+        isCustomRecurrence = task.recurrenceInterval > 1,
+        customRecurrenceUnit = if (task.recurrence == FamilyTaskRecurrence.DAILY) CustomRecurrenceUnit.DAYS else CustomRecurrenceUnit.WEEKS,
         selectedWeekdays = task.selectedWeekdays.toSet(),
         selectedAssigneeUserIds = task.assignees.mapNotNull { assignee -> assignee.id }.toSet(),
         validationRequired = task.validationRequired,

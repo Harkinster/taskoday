@@ -39,6 +39,7 @@ data class FamilyTaskCreateInput(
     val validationRequired: Boolean,
     val gamificationEnabled: Boolean,
     val priority: FamilyTaskPriority,
+    val recurrenceInterval: Int = 1,
 )
 
 data class FamilyTaskDefinition(
@@ -57,6 +58,7 @@ data class FamilyTaskDefinition(
     val gamificationEnabled: Boolean,
     val priority: FamilyTaskPriority,
     val active: Boolean,
+    val recurrenceInterval: Int = 1,
 )
 
 data class FamilyTaskTodayItem(
@@ -74,6 +76,9 @@ data class FamilyTaskTodayItem(
     val gamificationEnabled: Boolean,
     val priority: FamilyTaskPriority,
     val recurrenceLabel: String? = null,
+    val recurrence: FamilyTaskRecurrence = FamilyTaskRecurrence.NONE,
+    val recurrenceInterval: Int = 1,
+    val selectedWeekdays: List<Int> = emptyList(),
 )
 
 data class FamilyTaskAssignee(

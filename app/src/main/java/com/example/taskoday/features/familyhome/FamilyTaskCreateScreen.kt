@@ -144,6 +144,9 @@ fun FamilyTaskCreateScreen(
                                 onToggleAssignee = viewModel::toggleAssignee,
                                 onRecurrenceChanged = viewModel::onRecurrenceChanged,
                                 onToggleWeekday = viewModel::toggleWeekday,
+                                onCustomizeRecurrence = viewModel::customizeRecurrence,
+                                onIntervalChanged = viewModel::onRecurrenceIntervalChanged,
+                                onCustomUnitChanged = viewModel::onCustomRecurrenceUnitChanged,
                                 onDescriptionChanged = viewModel::onDescriptionChanged,
                                 onValidationRequiredChanged = viewModel::onValidationRequiredChanged,
                                 onGamificationEnabledChanged = viewModel::onGamificationEnabledChanged,
@@ -153,7 +156,7 @@ fun FamilyTaskCreateScreen(
                     } else {
                         item { FamilyTaskCreateFormCard(uiState, viewModel::onTitleChanged, viewModel::onDescriptionChanged, viewModel::onDateChanged, viewModel::onTimeChanged, viewModel::clearTime) }
                         item { AssigneesCard(uiState, viewModel::selectHouseTask, viewModel::toggleAssignee) }
-                        item { RecurrenceCard(uiState, viewModel::onRecurrenceChanged, viewModel::toggleWeekday) }
+                        item { RecurrenceCard(uiState, viewModel::onRecurrenceChanged, viewModel::toggleWeekday, viewModel::customizeRecurrence, viewModel::onRecurrenceIntervalChanged, viewModel::onCustomRecurrenceUnitChanged) }
                         item { TaskOptionsCard(uiState, viewModel::onValidationRequiredChanged, viewModel::onGamificationEnabledChanged, viewModel::onPriorityChanged) }
                     }
                 }
@@ -180,6 +183,9 @@ private fun QuickTaskForm(
     onToggleAssignee: (Long) -> Unit,
     onRecurrenceChanged: (FamilyTaskRecurrence) -> Unit,
     onToggleWeekday: (Int) -> Unit,
+    onCustomizeRecurrence: () -> Unit,
+    onIntervalChanged: (Int) -> Unit,
+    onCustomUnitChanged: (CustomRecurrenceUnit) -> Unit,
     onDescriptionChanged: (String) -> Unit,
     onValidationRequiredChanged: (Boolean) -> Unit,
     onGamificationEnabledChanged: (Boolean) -> Unit,
@@ -226,7 +232,7 @@ private fun QuickTaskForm(
         TextButton(onClick = { showMore = !showMore }) { Text(if (showMore) "Moins d'options" else "Plus d'options") }
         if (showMore) {
             OutlinedTextField(value = uiState.description, onValueChange = onDescriptionChanged, label = { Text("Note (facultatif)") }, minLines = 2, maxLines = 3, modifier = Modifier.fillMaxWidth())
-            RecurrenceCard(uiState, onRecurrenceChanged, onToggleWeekday)
+            RecurrenceCard(uiState, onRecurrenceChanged, onToggleWeekday, onCustomizeRecurrence, onIntervalChanged, onCustomUnitChanged)
             TaskOptionsCard(uiState, onValidationRequiredChanged, onGamificationEnabledChanged, onPriorityChanged)
         }
     }
@@ -419,21 +425,37 @@ private fun RecurrenceCard(
     uiState: FamilyTaskCreateUiState,
     onRecurrenceChanged: (FamilyTaskRecurrence) -> Unit,
     onToggleWeekday: (Int) -> Unit,
+    onCustomizeRecurrence: () -> Unit,
+    onIntervalChanged: (Int) -> Unit,
+    onCustomUnitChanged: (CustomRecurrenceUnit) -> Unit,
 ) {
-    FamilyTaskCreateCard(title = "Récurrence") {
+    FamilyTaskCreateCard(title = "Répéter") {
         Row(
             modifier = Modifier.horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             FamilyTaskRecurrence.entries.forEach { recurrence ->
                 FilterChip(
-                    selected = uiState.recurrence == recurrence,
+                    selected = !uiState.isCustomRecurrence && uiState.recurrence == recurrence,
                     onClick = { onRecurrenceChanged(recurrence) },
                     label = { Text(familyTaskRecurrenceLabel(recurrence)) },
                 )
             }
+            FilterChip(selected = uiState.isCustomRecurrence, onClick = onCustomizeRecurrence, label = { Text("Personnaliser") })
         }
-        if (uiState.recurrence == FamilyTaskRecurrence.SELECTED_WEEKDAYS) {
+        if (uiState.isCustomRecurrence) {
+            Text("Répéter toutes les", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = InkBrown)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { onIntervalChanged(uiState.recurrenceInterval - 1) }) { Text("−") }
+                Text(uiState.recurrenceInterval.toString(), style = MaterialTheme.typography.titleMedium)
+                OutlinedButton(onClick = { onIntervalChanged(uiState.recurrenceInterval + 1) }) { Text("+") }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(selected = uiState.customRecurrenceUnit == CustomRecurrenceUnit.DAYS, onClick = { onCustomUnitChanged(CustomRecurrenceUnit.DAYS) }, label = { Text("jours") })
+                FilterChip(selected = uiState.customRecurrenceUnit == CustomRecurrenceUnit.WEEKS, onClick = { onCustomUnitChanged(CustomRecurrenceUnit.WEEKS) }, label = { Text("semaines") })
+            }
+        }
+        if (uiState.recurrence == FamilyTaskRecurrence.SELECTED_WEEKDAYS && (!uiState.isCustomRecurrence || uiState.customRecurrenceUnit == CustomRecurrenceUnit.WEEKS)) {
             Row(
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),

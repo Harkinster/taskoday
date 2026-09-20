@@ -22,6 +22,7 @@ data class FamilyTaskCreateForm(
     val validationRequired: Boolean,
     val gamificationEnabled: Boolean,
     val priority: FamilyTaskPriority,
+    val recurrenceInterval: Int = 1,
 )
 
 data class FamilyTaskCreateValidation(
@@ -44,6 +45,7 @@ fun validateFamilyTaskCreateForm(
     if (form.recurrence == FamilyTaskRecurrence.SELECTED_WEEKDAYS && form.selectedWeekdays.isEmpty()) {
         return FamilyTaskCreateValidation(errorMessage = "Choisis au moins un jour.")
     }
+    val recurrenceInterval = form.recurrenceInterval.coerceIn(1, 52)
     if (requireAssignee && form.assigneeUserIds.isEmpty()) {
         return FamilyTaskCreateValidation(errorMessage = "Choisis la personne responsable.")
     }
@@ -72,6 +74,7 @@ fun validateFamilyTaskCreateForm(
                 priority =
                     form.priority.takeUnless { it == FamilyTaskPriority.UNKNOWN }
                         ?: FamilyTaskPriority.NORMAL,
+                recurrenceInterval = recurrenceInterval,
             ),
     )
 }
@@ -217,18 +220,34 @@ fun familyTaskRecurrenceLabel(recurrence: FamilyTaskRecurrence): String =
 fun familyTaskRecurrenceSummary(
     recurrence: FamilyTaskRecurrence,
     selectedWeekdays: List<Int>,
+    recurrenceInterval: Int,
 ): String =
     when (recurrence) {
-        FamilyTaskRecurrence.NONE -> "Une seule fois"
-        FamilyTaskRecurrence.DAILY -> "Tous les jours"
-        FamilyTaskRecurrence.WEEKLY -> "Chaque semaine"
+        FamilyTaskRecurrence.NONE -> "Jamais"
+        FamilyTaskRecurrence.DAILY -> if (recurrenceInterval <= 1) "Tous les jours" else "Tous les ${recurrenceInterval} jours"
+        FamilyTaskRecurrence.WEEKLY -> if (recurrenceInterval <= 1) "Chaque semaine" else "Toutes les ${recurrenceInterval} semaines"
         FamilyTaskRecurrence.SELECTED_WEEKDAYS ->
             selectedWeekdays
-                .mapNotNull { day -> familyTaskShortWeekdayLabels[day] }
                 .takeIf { it.isNotEmpty() }
-                ?.joinToString(" • ")
+                ?.let { days ->
+                    if (recurrenceInterval <= 1) {
+                        days.mapNotNull { day -> familyTaskShortWeekdayLabels[day] }.joinToString(" • ")
+                    } else {
+                        val labels = days.mapNotNull { day -> familyTaskLongWeekdayLabels[day] }
+                        val normalizedLabels = labels.mapIndexed { index, label -> if (index == 0) label else label.lowercase(Locale.FRANCE) }
+                        val dayLabel = if (normalizedLabels.size == 1) normalizedLabels.single() else normalizedLabels.dropLast(1).joinToString(", ") + " et " + normalizedLabels.last()
+                        if (labels.size == 1) "Tous les ${recurrenceInterval} ${dayLabel.lowercase(Locale.FRANCE)}s" else "$dayLabel toutes les ${recurrenceInterval} semaines"
+                    }
+                }
                 ?: "Certains jours"
     }
+
+fun familyTaskRecurrenceSummary(
+    recurrence: FamilyTaskRecurrence,
+    selectedWeekdays: List<Int>,
+): String =
+    if (recurrence == FamilyTaskRecurrence.NONE) "Une seule fois"
+    else familyTaskRecurrenceSummary(recurrence, selectedWeekdays, 1)
 
 fun familyTaskPriorityFormLabel(priority: FamilyTaskPriority): String =
     when (priority) {
@@ -264,3 +283,6 @@ private val familyTaskShortWeekdayLabels: Map<Int, String> =
         6 to "Sam.",
         7 to "Dim.",
     )
+
+private val familyTaskLongWeekdayLabels: Map<Int, String> =
+    mapOf(1 to "Lundi", 2 to "Mardi", 3 to "Mercredi", 4 to "Jeudi", 5 to "Vendredi", 6 to "Samedi", 7 to "Dimanche")

@@ -341,6 +341,24 @@ class FamilyTaskDtosTest {
     }
 
     @Test
+    fun `legacy task definition defaults missing recurrence interval to one`() {
+        val payload = JsonParser.parseString("[{\"id\": 7, \"recurrence\": \"DAILY\"}]")
+        val task = payload.toFamilyTaskDefinitionDtos(gson).single().toDomain()
+        assertEquals(1, task.recurrenceInterval)
+    }
+
+    @Test
+    fun `recurrence interval is written for daily and selected weekdays`() {
+        val input = FamilyTaskCreateInput("Daily", null, "2026-08-22", null, FamilyTaskRecurrence.DAILY, emptyList(), emptyList(), false, false, FamilyTaskPriority.NORMAL, 2)
+        val dailyJson = JsonParser.parseString(gson.toJson(input.toRequestDto())).asJsonObject
+        assertEquals(2, dailyJson["recurrence_interval"].asInt)
+        val selected = input.copy(recurrence = FamilyTaskRecurrence.SELECTED_WEEKDAYS, selectedWeekdays = listOf(2))
+        val selectedJson = JsonParser.parseString(gson.toJson(selected.toRequestDto())).asJsonObject
+        assertEquals(2, selectedJson["recurrence_interval"].asInt)
+        assertEquals(2, selectedJson["selected_weekdays"].asJsonArray.single().asInt)
+    }
+
+    @Test
     fun `update request maps editable fields to backend snake case`() {
         val request =
             FamilyTaskCreateInput(

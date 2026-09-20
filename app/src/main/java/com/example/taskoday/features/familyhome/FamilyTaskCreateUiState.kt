@@ -15,6 +15,9 @@ data class FamilyTaskCreateUiState(
     val date: String = LocalDate.now().toString(),
     val time: String = "",
     val recurrence: FamilyTaskRecurrence = FamilyTaskRecurrence.NONE,
+    val recurrenceInterval: Int = 1,
+    val isCustomRecurrence: Boolean = false,
+    val customRecurrenceUnit: CustomRecurrenceUnit = CustomRecurrenceUnit.DAYS,
     val selectedWeekdays: Set<Int> = emptySet(),
     val selectedAssigneeUserIds: Set<Long> = emptySet(),
     val validationRequired: Boolean = false,
@@ -30,3 +33,5 @@ data class FamilyTaskCreateUiState(
     val isHouseTask: Boolean
         get() = selectedAssigneeUserIds.isEmpty()
 }
+
+enum class CustomRecurrenceUnit { DAYS, WEEKS }

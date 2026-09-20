@@ -60,7 +60,7 @@ fun FamilyTaskDefinition.scheduleLabel(): String =
 
 fun FamilyTaskDefinition.listMetadataLabels(): List<String> =
     buildList {
-        add(familyTaskRecurrenceSummary(recurrence, selectedWeekdays))
+        add(familyTaskRecurrenceSummary(recurrence, selectedWeekdays, recurrenceInterval))
         familyTaskPriorityListLabel(priority)?.let { add(it) }
         if (validationRequired) add("Validation parent")
         if (gamificationEnabled) add("Gamification")
@@ -85,4 +85,3 @@ private fun familyTaskPriorityListLabel(priority: FamilyTaskPriority): String? =
         FamilyTaskPriority.HIGH -> "Prioritaire"
         FamilyTaskPriority.URGENT -> "Urgent"
     }
-

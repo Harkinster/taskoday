@@ -68,6 +68,10 @@ data class FamilyTaskOccurrenceDto(
     val priority: String? = null,
     @SerializedName(value = "recurrence", alternate = ["recurrence_label", "repeat_label"])
     val recurrenceLabel: String? = null,
+    @SerializedName(value = "recurrence_interval", alternate = ["recurrenceInterval"])
+    val recurrenceInterval: Int? = null,
+    @SerializedName(value = "selected_weekdays", alternate = ["selectedWeekdays"])
+    val selectedWeekdays: List<Int> = emptyList(),
 )
 
 data class FamilyTaskAssigneeDto(
@@ -98,6 +102,8 @@ data class FamilyTaskDefinitionDto(
     val hasDueTime: Boolean? = null,
     @SerializedName("recurrence")
     val recurrence: String? = null,
+    @SerializedName(value = "recurrence_interval", alternate = ["recurrenceInterval"])
+    val recurrenceInterval: Int? = null,
     @SerializedName(value = "selected_weekdays", alternate = ["selectedWeekdays"])
     val selectedWeekdays: List<Int> = emptyList(),
     @SerializedName(value = "validation_required", alternate = ["validationRequired"])
@@ -137,6 +143,8 @@ data class FamilyTaskCreateRequestDto(
     val dueTime: JsonElement,
     @SerializedName("recurrence")
     val recurrence: String,
+    @SerializedName("recurrence_interval")
+    val recurrenceInterval: Int = 1,
     @SerializedName("selected_weekdays")
     val selectedWeekdays: List<Int>? = null,
     @SerializedName("assignee_user_ids")
@@ -161,6 +169,8 @@ data class FamilyTaskUpdateRequestDto(
     val dueTime: JsonElement,
     @SerializedName("recurrence")
     val recurrence: String,
+    @SerializedName("recurrence_interval")
+    val recurrenceInterval: Int = 1,
     @SerializedName("selected_weekdays")
     val selectedWeekdays: List<Int>? = null,
     @SerializedName("assignee_user_ids")
@@ -187,6 +197,7 @@ class FamilyTaskCreateRequestDtoJsonAdapter : TypeAdapter<FamilyTaskCreateReques
         out.name("due_date").value(value.dueDate)
         out.writeDueTime(value.dueTime)
         out.name("recurrence").value(value.recurrence)
+        out.name("recurrence_interval").value(value.recurrenceInterval.coerceAtLeast(1))
         value.selectedWeekdays?.let { selectedWeekdays -> out.writeIntArray("selected_weekdays", selectedWeekdays) }
         out.writeLongArray("assignee_user_ids", value.assigneeUserIds)
         out.name("validation_required").value(value.validationRequired)
@@ -214,6 +225,7 @@ class FamilyTaskUpdateRequestDtoJsonAdapter : TypeAdapter<FamilyTaskUpdateReques
         out.name("due_date").value(value.dueDate)
         out.writeDueTime(value.dueTime)
         out.name("recurrence").value(value.recurrence)
+        out.name("recurrence_interval").value(value.recurrenceInterval.coerceAtLeast(1))
         out.writeIntArray("selected_weekdays", value.selectedWeekdays.orEmpty())
         out.writeLongArray("assignee_user_ids", value.assigneeUserIds)
         out.name("validation_required").value(value.validationRequired)
@@ -302,6 +314,9 @@ fun FamilyTaskOccurrenceDto.toDomain(): FamilyTaskTodayItem {
         gamificationEnabled = gamificationEnabled ?: false,
         priority = FamilyTaskPriority.fromBackend(priority),
         recurrenceLabel = recurrenceLabel?.trim()?.takeIf { it.isNotBlank() },
+        recurrence = FamilyTaskRecurrence.fromBackend(recurrenceLabel),
+        recurrenceInterval = recurrenceInterval?.coerceAtLeast(1) ?: 1,
+        selectedWeekdays = selectedWeekdays.filter { it in 1..7 }.distinct().sorted(),
     )
 }
 
@@ -330,6 +345,7 @@ fun FamilyTaskDefinitionDto.toDomain(): FamilyTaskDefinition {
         hasDueTime = resolveHasDueTime(hasDueTime = hasDueTime, dueTime = dueTime, dueAt = dueAt),
         dueAt = dueAt?.trim()?.takeIf { it.isNotBlank() },
         recurrence = FamilyTaskRecurrence.fromBackend(recurrence),
+        recurrenceInterval = recurrenceInterval?.coerceAtLeast(1) ?: 1,
         selectedWeekdays = selectedWeekdays.filter { day -> day in 1..7 }.distinct().sorted(),
         validationRequired = validationRequired ?: false,
         gamificationEnabled = gamificationEnabled ?: false,
@@ -365,6 +381,7 @@ fun FamilyTaskCreateInput.toRequestDto(): FamilyTaskCreateRequestDto =
         dueDate = dueDate,
         dueTime = dueTime.toDueTimeJsonElement(),
         recurrence = recurrence.name,
+        recurrenceInterval = recurrenceInterval.coerceAtLeast(1),
         selectedWeekdays = selectedWeekdays.takeIf { recurrence == FamilyTaskRecurrence.SELECTED_WEEKDAYS },
         assigneeUserIds = assigneeUserIds,
         validationRequired = validationRequired,
@@ -379,6 +396,7 @@ fun FamilyTaskCreateInput.toUpdateRequestDto(): FamilyTaskUpdateRequestDto =
         dueDate = dueDate,
         dueTime = dueTime.toDueTimeJsonElement(),
         recurrence = recurrence.name,
+        recurrenceInterval = recurrenceInterval.coerceAtLeast(1),
         selectedWeekdays =
             if (recurrence == FamilyTaskRecurrence.SELECTED_WEEKDAYS) {
                 selectedWeekdays
