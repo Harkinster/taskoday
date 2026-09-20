@@ -85,6 +85,7 @@ def create_family_task(
         due_date=due_date,
         due_time=due_time,
         recurrence=recurrence,
+        recurrence_interval=payload.recurrence_interval,
         selected_weekdays=selected_weekdays,
         validation_required=payload.validation_required,
         gamification_enabled=payload.gamification_enabled,
@@ -233,6 +234,8 @@ def update_family_task(
         task.validation_required = data["validation_required"]
     if "gamification_enabled" in data:
         task.gamification_enabled = data["gamification_enabled"]
+    if "recurrence_interval" in data:
+        task.recurrence_interval = data["recurrence_interval"]
     if "active" in data:
         task.active = data["active"]
 

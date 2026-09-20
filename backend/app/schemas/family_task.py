@@ -12,6 +12,7 @@ class FamilyTaskCreateRequest(BaseModel):
     due_date: date | None = None
     due_time: time | None = None
     recurrence: str = Field(default="NONE", pattern="^(NONE|DAILY|WEEKLY|SELECTED_WEEKDAYS)$")
+    recurrence_interval: int = Field(default=1, ge=1)
     selected_weekdays: list[int | str] | None = None
     assignee_user_ids: list[int] = Field(default_factory=list)
     validation_required: bool = False
@@ -51,6 +52,7 @@ class FamilyTaskUpdateRequest(BaseModel):
     due_date: date | None = None
     due_time: time | None = None
     recurrence: str | None = Field(default=None, pattern="^(NONE|DAILY|WEEKLY|SELECTED_WEEKDAYS)$")
+    recurrence_interval: int | None = Field(default=None, ge=1)
     selected_weekdays: list[int | str] | None = None
     assignee_user_ids: list[int] | None = None
     validation_required: bool | None = None

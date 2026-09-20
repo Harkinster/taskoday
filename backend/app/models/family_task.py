@@ -1,7 +1,7 @@
 import enum
 from datetime import date, datetime, time
 
-from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, String, Text, Time, UniqueConstraint, func
+from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, Enum, ForeignKey, Integer, String, Text, Time, UniqueConstraint, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.declarative import Base
@@ -31,6 +31,7 @@ class FamilyTaskOccurrenceStatus(str, enum.Enum):
 
 class FamilyTask(Base):
     __tablename__ = "family_tasks"
+    __table_args__ = (CheckConstraint("recurrence_interval >= 1", name="ck_family_tasks_recurrence_interval_positive"),)
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     family_id: Mapped[int] = mapped_column(ForeignKey("families.id", ondelete="CASCADE"), nullable=False, index=True)
@@ -54,6 +55,7 @@ class FamilyTask(Base):
         index=True,
     )
     selected_weekdays: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    recurrence_interval: Mapped[int] = mapped_column(Integer, default=1, server_default=text("1"), nullable=False)
     validation_required: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     gamification_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)

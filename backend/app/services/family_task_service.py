@@ -199,11 +199,18 @@ def is_task_scheduled_for_date(task: FamilyTask, target_date: date) -> bool:
     if task.recurrence == FamilyTaskRecurrence.NONE:
         return target_date == start_date
     if task.recurrence == FamilyTaskRecurrence.DAILY:
-        return True
+        return (target_date - start_date).days % task.recurrence_interval == 0
     if task.recurrence == FamilyTaskRecurrence.WEEKLY:
-        return target_date.isoweekday() == start_date.isoweekday()
+        return (
+            target_date.isoweekday() == start_date.isoweekday()
+            and ((target_date - start_date).days // 7) % task.recurrence_interval == 0
+        )
     if task.recurrence == FamilyTaskRecurrence.SELECTED_WEEKDAYS:
-        return target_date.isoweekday() in set(parse_weekdays(task.selected_weekdays))
+        weeks_since_anchor = (target_date - start_date).days // 7
+        return (
+            target_date.isoweekday() in set(parse_weekdays(task.selected_weekdays))
+            and weeks_since_anchor % task.recurrence_interval == 0
+        )
     return False
 
 
@@ -340,6 +347,7 @@ def task_payload(db: Session, task: FamilyTask) -> dict:
         "has_due_time": task.due_time is not None,
         "due_time": task.due_time,
         "recurrence": _enum_value(task.recurrence),
+        "recurrence_interval": task.recurrence_interval,
         "selected_weekdays": parse_weekdays(task.selected_weekdays),
         "assignees": assignees_payload(db, task),
         "validation_required": task.validation_required,
@@ -364,6 +372,7 @@ def occurrence_payload(db: Session, occurrence: FamilyTaskOccurrence) -> dict:
         "has_due_time": task.due_time is not None,
         "due_time": task.due_time,
         "recurrence": _enum_value(task.recurrence),
+        "recurrence_interval": task.recurrence_interval,
         "status": _enum_value(occurrence.status),
         "validation_required": task.validation_required,
         "gamification_enabled": task.gamification_enabled,
