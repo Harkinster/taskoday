@@ -41,7 +41,7 @@ class AuthViewModelTest {
                 val viewModel = AuthViewModel(repository)
 
                 assertFalse(repository.sessionCleared)
-                assertTrue(viewModel.uiState.value.isCheckingSession)
+                assertFalse(viewModel.uiState.value.isCheckingSession)
                 assertTrue(viewModel.uiState.value.canRetrySession)
                 assertFalse(viewModel.uiState.value.isAuthenticated)
             } finally {

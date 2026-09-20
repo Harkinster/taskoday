@@ -325,13 +325,13 @@ private fun FamilyInviteCard(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = "Inviter un adulte",
+                text = "Ajouter un parent",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = InkBrown,
             )
             Text(
-                text = "Invitez un adulte à rejoindre votre foyer.",
+                text = "Créez un code famille à partager avec un parent.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = InkMuted,
             )
@@ -342,7 +342,7 @@ private fun FamilyInviteCard(
                 colors = ButtonDefaults.buttonColors(containerColor = WoodBrown, contentColor = ParchmentLight),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(if (isBusy) "Préparation..." else "Inviter un adulte")
+                Text(if (isBusy) "Préparation..." else "Créer un code famille")
             }
 
             invite?.let { currentInvite ->
@@ -411,20 +411,20 @@ private fun FamilyJoinCard(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = "Rejoindre un foyer",
+                text = "Rejoindre une famille",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = InkBrown,
             )
             Text(
-                text = "Saisissez le code reçu d'un autre parent.",
+                text = "Demandez le code famille à un parent.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = InkMuted,
             )
             OutlinedTextField(
                 value = code,
                 onValueChange = onCodeChange,
-                label = { Text("Code d'invitation") },
+                label = { Text("Code famille") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -435,7 +435,7 @@ private fun FamilyJoinCard(
                 colors = ButtonDefaults.buttonColors(containerColor = WoodBrown, contentColor = ParchmentLight),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(if (isBusy) "Jonction..." else "Rejoindre")
+                Text(if (isBusy) "Connexion..." else "Rejoindre ma famille")
             }
         }
     }

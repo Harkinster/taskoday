@@ -57,6 +57,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.taskoday.core.ui.component.fantasy.FantasyScreenBackground
+import com.example.taskoday.core.ui.component.FormBottomBar
 import com.example.taskoday.core.ui.theme.DangerGlow
 import com.example.taskoday.core.ui.theme.InkBrown
 import com.example.taskoday.core.ui.theme.InkMuted
@@ -91,6 +92,22 @@ fun FamilyTaskCreateScreen(
     Scaffold(
         containerColor = Color.Transparent,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        bottomBar = {
+            if (!uiState.isLoadingTask) {
+                FormBottomBar(
+                    onBack = onBack,
+                    onPrimary = viewModel::submit,
+                    primaryEnabled = !uiState.isSubmitting,
+                    primaryLabel = when {
+                        uiState.isSubmitting && uiState.isEditing -> "Enregistrement..."
+                        uiState.isSubmitting -> "Création..."
+                        uiState.isEditing -> "Enregistrer"
+                        else -> "Créer la tâche"
+                    },
+                    backLabel = "Annuler",
+                )
+            }
+        },
     ) { innerPadding ->
         FantasyScreenBackground(
             modifier =
@@ -147,49 +164,6 @@ fun FamilyTaskCreateScreen(
                     }
                 }
 
-                if (!uiState.isLoadingTask) {
-                    item {
-                        Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        OutlinedButton(
-                            onClick = onBack,
-                            enabled = !uiState.isSubmitting,
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Text("Annuler")
-                        }
-                        Button(
-                            onClick = viewModel::submit,
-                            enabled = !uiState.isSubmitting,
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = WoodBrown, contentColor = ParchmentLight),
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            if (uiState.isSubmitting) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(18.dp),
-                                    strokeWidth = 2.dp,
-                                    color = ParchmentLight,
-                                )
-                            } else {
-                                Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                when {
-                                    uiState.isSubmitting && uiState.isEditing -> "Enregistrement..."
-                                    uiState.isSubmitting -> "Création..."
-                                    uiState.isEditing -> "Enregistrer"
-                                    else -> "Créer la tâche"
-                                },
-                            )
-                        }
-                        }
-                    }
-                }
             }
         }
     }

@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import retrofit2.HttpException
 
 @HiltViewModel
@@ -62,11 +63,17 @@ class AuthViewModel
                 )
             }
             viewModelScope.launch {
-                runCatching {
-                    authRepository.fetchMe()
-                }.onSuccess { me ->
+                val me = try {
+                    withTimeoutOrNull(35_000L) { authRepository.fetchMe() }
+                } catch (throwable: Throwable) {
+                    handleAuthenticationFailure(throwable)
+                    return@launch
+                }
+                if (me == null) {
+                    handleAuthenticationFailure(SocketTimeoutException())
+                } else {
                     setAuthenticated(me)
-                }.onFailure(::handleAuthenticationFailure)
+                }
             }
         }
 
@@ -211,7 +218,7 @@ class AuthViewModel
             val sessionStillStored = !authRepository.getAccessToken().isNullOrBlank()
             _uiState.update {
                 it.copy(
-                    isCheckingSession = sessionStillStored,
+                    isCheckingSession = false,
                     isLoading = false,
                     isAuthenticated = false,
                     currentUser = null,
@@ -230,7 +237,11 @@ private fun Throwable.toMessage(): String =
     when (this) {
         is UnknownHostException, is ConnectException -> "Serveur indisponible. Vérifiez votre connexion."
         is SocketTimeoutException -> "Connexion au serveur expirée."
-        is HttpException -> "Erreur API (${code()})."
+        is HttpException -> when (code()) {
+            400, 409, 422 -> "Vérifiez les informations saisies puis réessayez."
+            401, 403 -> "Cette action n’est pas autorisée."
+            else -> "Impossible de créer le compte pour le moment."
+        }
         is IOException -> "Erreur réseau. Vérifiez votre connexion."
         else -> message ?: "Erreur inconnue."
     }

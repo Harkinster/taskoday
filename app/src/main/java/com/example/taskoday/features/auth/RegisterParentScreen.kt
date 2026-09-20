@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -24,9 +26,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.taskoday.core.ui.theme.spacing
+import com.example.taskoday.core.ui.component.FormBottomBar
 import com.example.taskoday.domain.model.AuthenticatedUser
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -55,7 +59,24 @@ fun RegisterParentScreen(
         }
     }
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Créer un compte") }) }) { innerPadding ->
+    Scaffold(
+        topBar = { TopAppBar(title = { Text("Créer un compte") }) },
+        bottomBar = {
+            if (!uiState.isCheckingSession) {
+                FormBottomBar(
+                    onBack = onBackToLogin,
+                    onPrimary = {
+                        when (selectedRole) {
+                            RegistrationRole.Parent -> viewModel.registerParent(email, password, familyName, parentBirthDate, parentInviteCode)
+                            RegistrationRole.Child -> viewModel.registerChild(email, password, childDisplayName, childBirthDate)
+                        }
+                    },
+                    primaryEnabled = !uiState.isLoading,
+                    primaryLabel = if (uiState.isLoading) "Création..." else "Continuer",
+                )
+            }
+        },
+    ) { innerPadding ->
         if (uiState.isCheckingSession) {
             Column(
                 modifier =
@@ -87,11 +108,21 @@ fun RegisterParentScreen(
                 Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .padding(spacing.medium),
+                    .padding(spacing.medium)
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = 88.dp),
             verticalArrangement = Arrangement.spacedBy(spacing.medium),
         ) {
             Text(
-                text = "Pour commencer, créez un compte parent. Vous pourrez ajouter un enfant juste après.",
+                text = "Qui utilisera ce compte ?",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = when (selectedRole) {
+                    RegistrationRole.Parent -> "Créez votre famille ou rejoignez une famille existante."
+                    RegistrationRole.Child -> "Créez votre compte, puis rejoignez votre famille avec le code d’un parent."
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -148,7 +179,7 @@ fun RegisterParentScreen(
                     },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(if (showParentInviteCode) "Masquer le code d'invitation" else "Vous avez un code d'invitation ?")
+                    Text(if (showParentInviteCode) "Masquer le code famille" else "Vous rejoignez déjà une famille ?")
                 }
 
                 if (showParentInviteCode) {
@@ -158,7 +189,7 @@ fun RegisterParentScreen(
                             parentInviteCode = it
                             viewModel.clearError()
                         },
-                        label = { Text("Code d'invitation") },
+                        label = { Text("Code famille") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -218,6 +249,8 @@ fun RegisterParentScreen(
                 )
             }
 
+            /* Registration is kept in the persistent bottom action bar. */
+            /*
             Button(
                 onClick = {
                     when (selectedRole) {
@@ -246,12 +279,13 @@ fun RegisterParentScreen(
                         "Création…"
                     } else {
                         when (selectedRole) {
-                            RegistrationRole.Parent -> "Créer mon compte parent"
-                            RegistrationRole.Child -> "Créer mon compte enfant"
+                            RegistrationRole.Parent -> "Continuer"
+                            RegistrationRole.Child -> "Continuer"
                         }
                     },
                 )
             }
+            */
 
             TextButton(
                 onClick = onBackToLogin,

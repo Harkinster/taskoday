@@ -994,12 +994,12 @@ private fun ParentPairingCard(
 ) {
     NeonCard(tone = NeonTone.Blue) {
         Text(
-            text = "Associer par code",
+            text = "Ajouter un enfant",
             style = MaterialTheme.typography.titleMedium,
             color = StarWhite,
         )
         Text(
-            text = "Option secondaire : saisis le code temporaire fourni par un compte enfant existant.",
+            text = "Saisissez le code famille fourni sur le compte de l’enfant.",
             style = MaterialTheme.typography.bodySmall,
             color = TextMuted,
         )
@@ -1027,7 +1027,7 @@ private fun ParentPairingCard(
         OutlinedTextField(
             value = pairingCodeInput,
             onValueChange = onPairingCodeInputChange,
-            label = { Text("Code enfant") },
+            label = { Text("Code famille") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -1070,12 +1070,12 @@ private fun ChildPairingCard(
 ) {
     NeonCard(tone = NeonTone.Violet) {
         Text(
-            text = "Code parent",
+            text = "Mon code famille",
             style = MaterialTheme.typography.titleMedium,
             color = StarWhite,
         )
         Text(
-            text = "Ce code est temporaire. Donne-le à ton parent pour associer ton compte.",
+            text = "Ce code est temporaire. Donne-le à un parent pour rejoindre votre famille.",
             style = MaterialTheme.typography.bodySmall,
             color = TextMuted,
         )

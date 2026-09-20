@@ -564,7 +564,7 @@ private fun Throwable?.toPairingMessage(): String =
                 400 -> "Code invalide ou expiré."
                 403 -> "Action non autorisée."
                 401 -> "Session expirée, reconnecte-toi."
-                else -> "Erreur API (${code()})."
+                else -> "Impossible de rejoindre la famille pour le moment."
             }
 
         is UnknownHostException, is ConnectException -> "Réseau indisponible, impossible de contacter le serveur."
@@ -583,7 +583,7 @@ private fun Throwable.toChildManagementMessage(): String =
                 404 -> "Enfant introuvable."
                 409 -> "Impossible de créer l’enfant avec ces informations."
                 422 -> "Vérifie le nom, l’email ou la date de naissance."
-                else -> "Erreur API (${code()})."
+                else -> "Impossible de modifier le profil pour le moment."
             }
 
         is UnknownHostException, is ConnectException -> "Réseau indisponible, impossible de modifier l’enfant."

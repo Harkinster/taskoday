@@ -246,7 +246,7 @@ fun TaskodayApp() {
                 )
 
                 LaunchedEffect(uiState.isCheckingSession, uiState.isAuthenticated, uiState.isLocalMode, uiState.currentUser) {
-                    if (!uiState.isCheckingSession) {
+                    if (!uiState.isCheckingSession && !uiState.canRetrySession) {
                         if (uiState.isAuthenticated || uiState.isLocalMode) {
                             navController.navigate(uiState.currentUser.preferredAppRoute(uiState.isLocalMode)) {
                                 popUpTo(TaskodayDestination.Splash.route) {
