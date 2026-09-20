@@ -1,6 +1,7 @@
 package com.example.taskoday.data.remote.dto
 
 import com.example.taskoday.domain.model.FamilyTaskAssignee
+import com.example.taskoday.domain.model.FamilyTaskActor
 import com.example.taskoday.domain.model.FamilyTaskCreateInput
 import com.example.taskoday.domain.model.FamilyTaskDefinition
 import com.example.taskoday.domain.model.FamilyTaskMember
@@ -72,6 +73,17 @@ data class FamilyTaskOccurrenceDto(
     val recurrenceInterval: Int? = null,
     @SerializedName(value = "selected_weekdays", alternate = ["selectedWeekdays"])
     val selectedWeekdays: List<Int> = emptyList(),
+    @SerializedName(value = "completed_by_user", alternate = ["completedByUser"])
+    val completedByUser: FamilyTaskActorDto? = null,
+    @SerializedName(value = "validated_by_user", alternate = ["validatedByUser"])
+    val validatedByUser: FamilyTaskActorDto? = null,
+)
+
+data class FamilyTaskActorDto(
+    @SerializedName(value = "user_id", alternate = ["userId"])
+    val userId: Long? = null,
+    @SerializedName(value = "display_name", alternate = ["displayName"])
+    val displayName: String? = null,
 )
 
 data class FamilyTaskAssigneeDto(
@@ -317,7 +329,15 @@ fun FamilyTaskOccurrenceDto.toDomain(): FamilyTaskTodayItem {
         recurrence = FamilyTaskRecurrence.fromBackend(recurrenceLabel),
         recurrenceInterval = recurrenceInterval?.coerceAtLeast(1) ?: 1,
         selectedWeekdays = selectedWeekdays.filter { it in 1..7 }.distinct().sorted(),
+        completedByUser = completedByUser?.toDomain(),
+        validatedByUser = validatedByUser?.toDomain(),
     )
+}
+
+private fun FamilyTaskActorDto.toDomain(): FamilyTaskActor? {
+    val id = userId ?: return null
+    val name = displayName?.trim()?.takeIf { it.isNotBlank() } ?: return null
+    return FamilyTaskActor(userId = id, displayName = name)
 }
 
 fun FamilyTaskOccurrencesRangeResponseDto.toDomain(

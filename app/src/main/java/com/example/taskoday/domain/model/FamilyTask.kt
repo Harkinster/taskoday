@@ -79,6 +79,13 @@ data class FamilyTaskTodayItem(
     val recurrence: FamilyTaskRecurrence = FamilyTaskRecurrence.NONE,
     val recurrenceInterval: Int = 1,
     val selectedWeekdays: List<Int> = emptyList(),
+    val completedByUser: FamilyTaskActor? = null,
+    val validatedByUser: FamilyTaskActor? = null,
+)
+
+data class FamilyTaskActor(
+    val userId: Long,
+    val displayName: String,
 )
 
 data class FamilyTaskAssignee(

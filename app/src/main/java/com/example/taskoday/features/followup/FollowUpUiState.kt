@@ -29,3 +29,14 @@ data class FollowUpUiState(
     val house: FollowUpMemberSummary? = null,
     val errorMessage: String? = null,
 )
+
+fun familyTaskCompletionActorLabels(task: FamilyTaskTodayItem): List<String> {
+    if (task.assignees.isNotEmpty() || !task.status.countsAsDone) return emptyList()
+    val completed = task.completedByUser ?: return emptyList()
+    val validated = task.validatedByUser
+    return if (task.validationRequired && validated != null) {
+        listOf("Faite par ${completed.displayName}", "Validée par ${validated.displayName}")
+    } else {
+        listOf("Terminée par ${completed.displayName}")
+    }
+}

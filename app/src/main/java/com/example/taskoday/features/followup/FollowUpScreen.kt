@@ -96,6 +96,11 @@ private fun FollowUpItemRow(item: FollowUpItem, onOpenFamilyTask: (Long) -> Unit
     }.padding(vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
         Column(Modifier.weight(1f)) {
             Text(item.title, color = ParchmentLight)
+            item.familyTask?.let { task ->
+                familyTaskCompletionActorLabels(task).forEach { actorLabel ->
+                    Text(actorLabel, color = InkMuted, style = MaterialTheme.typography.bodySmall)
+                }
+            }
             Text(when { item.overdue -> "En retard"; item.completed -> "Terminée"; else -> "À faire" }, color = if (item.overdue) DangerGlow else InkMuted, style = MaterialTheme.typography.bodySmall)
         }
     }
