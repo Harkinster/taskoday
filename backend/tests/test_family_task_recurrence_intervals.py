@@ -82,6 +82,58 @@ def test_selected_weekday_before_start_is_never_generated() -> None:
     assert is_task_scheduled_for_date(task, date(2026, 9, 23))
 
 
+def test_selected_monday_every_two_weeks_anchors_to_calendar_week() -> None:
+    task = _task(
+        start=date(2026, 9, 23),  # Wednesday
+        recurrence=FamilyTaskRecurrence.SELECTED_WEEKDAYS,
+        interval=2,
+        weekdays="1",
+    )
+
+    assert not is_task_scheduled_for_date(task, date(2026, 9, 28))
+    assert is_task_scheduled_for_date(task, date(2026, 10, 5))
+
+
+def test_selected_wednesday_every_two_weeks_from_midweek_start() -> None:
+    task = _task(
+        start=date(2026, 9, 23),  # Wednesday
+        recurrence=FamilyTaskRecurrence.SELECTED_WEEKDAYS,
+        interval=2,
+        weekdays="3",
+    )
+
+    assert is_task_scheduled_for_date(task, date(2026, 9, 23))
+    assert not is_task_scheduled_for_date(task, date(2026, 9, 30))
+    assert is_task_scheduled_for_date(task, date(2026, 10, 7))
+
+
+def test_selected_monday_wednesday_every_two_weeks_respects_start_date() -> None:
+    task = _task(
+        start=date(2026, 9, 23),  # Wednesday
+        recurrence=FamilyTaskRecurrence.SELECTED_WEEKDAYS,
+        interval=2,
+        weekdays="1,3",
+    )
+
+    assert not is_task_scheduled_for_date(task, date(2026, 9, 21))
+    assert is_task_scheduled_for_date(task, date(2026, 9, 23))
+    assert not is_task_scheduled_for_date(task, date(2026, 9, 28))
+    assert not is_task_scheduled_for_date(task, date(2026, 9, 30))
+    assert is_task_scheduled_for_date(task, date(2026, 10, 5))
+    assert is_task_scheduled_for_date(task, date(2026, 10, 7))
+
+
+def test_selected_weekday_interval_one_accepts_next_weekday_after_midweek_start() -> None:
+    task = _task(
+        start=date(2026, 9, 23),  # Wednesday
+        recurrence=FamilyTaskRecurrence.SELECTED_WEEKDAYS,
+        interval=1,
+        weekdays="1",
+    )
+
+    assert is_task_scheduled_for_date(task, date(2026, 9, 28))
+
+
 def test_interval_defaults_for_old_payloads_and_rejects_invalid_values() -> None:
     old_payload = {
         "title": "Ancienne tâche",

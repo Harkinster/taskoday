@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime, time, timezone
+from datetime import date, datetime, time, timedelta, timezone
 import unicodedata
 
 from fastapi import HTTPException, status
@@ -206,7 +206,9 @@ def is_task_scheduled_for_date(task: FamilyTask, target_date: date) -> bool:
             and ((target_date - start_date).days // 7) % task.recurrence_interval == 0
         )
     if task.recurrence == FamilyTaskRecurrence.SELECTED_WEEKDAYS:
-        weeks_since_anchor = (target_date - start_date).days // 7
+        anchor_week_start = start_date - timedelta(days=start_date.weekday())
+        target_week_start = target_date - timedelta(days=target_date.weekday())
+        weeks_since_anchor = (target_week_start - anchor_week_start).days // 7
         return (
             target_date.isoweekday() in set(parse_weekdays(task.selected_weekdays))
             and weeks_since_anchor % task.recurrence_interval == 0
