@@ -57,6 +57,8 @@ import com.example.taskoday.features.familyhome.FamilyHomeScreen
 import com.example.taskoday.features.familyhome.FamilyHomeViewModel
 import com.example.taskoday.features.exploration.ExplorationScreen
 import com.example.taskoday.features.exploration.ExplorationViewModel
+import com.example.taskoday.features.followup.FollowUpScreen
+import com.example.taskoday.features.followup.FollowUpViewModel
 import com.example.taskoday.features.familyhome.FamilyTaskCreateScreen
 import com.example.taskoday.features.familyhome.FamilyTaskCreateViewModel
 import com.example.taskoday.features.familyhome.FamilyTaskDetailScreen
@@ -88,6 +90,7 @@ import com.example.taskoday.features.tasks.edit.TaskEditViewModel
 fun TaskodayApp() {
     val navController = rememberNavController()
     var localChildMode by rememberSaveable { mutableStateOf(false) }
+    var activeChildRole by rememberSaveable { mutableStateOf(false) }
     val sessionEventsViewModel: SessionEventsViewModel = hiltViewModel()
     val quickAddViewModel: QuickAddViewModel = hiltViewModel()
     val quickAddUiState by quickAddViewModel.uiState.collectAsStateWithLifecycle()
@@ -100,7 +103,9 @@ fun TaskodayApp() {
     val currentDestination = navBackStackEntry?.destination
     val visibleTopLevelDestinations =
         if (localChildMode) {
-            TopLevelDestinations.filterNot { it == TaskodayDestination.FamilyHome }
+            TopLevelDestinations.filterNot { it == TaskodayDestination.FamilyHome || it == TaskodayDestination.FollowUp }
+        } else if (activeChildRole) {
+            TopLevelDestinations.filterNot { it == TaskodayDestination.FollowUp }
         } else {
             TopLevelDestinations
         }
@@ -134,6 +139,7 @@ fun TaskodayApp() {
     LaunchedEffect(sessionEventsViewModel, navController) {
         sessionEventsViewModel.unauthorizedEvents.collect {
             localChildMode = false
+            activeChildRole = false
             navController.navigate(TaskodayDestination.Login.route) {
                 popUpTo(navController.graph.id) {
                     inclusive = true
@@ -248,6 +254,7 @@ fun TaskodayApp() {
                 LaunchedEffect(uiState.isCheckingSession, uiState.isAuthenticated, uiState.isLocalMode, uiState.currentUser) {
                     if (!uiState.isCheckingSession && !uiState.canRetrySession) {
                         if (uiState.isAuthenticated || uiState.isLocalMode) {
+                            activeChildRole = uiState.currentUser?.role.equals("CHILD", ignoreCase = true)
                             navController.navigate(uiState.currentUser.preferredAppRoute(uiState.isLocalMode)) {
                                 popUpTo(TaskodayDestination.Splash.route) {
                                     inclusive = true
@@ -273,6 +280,7 @@ fun TaskodayApp() {
                     onOpenRegisterParent = { navController.navigate(TaskodayDestination.RegisterParent.route) },
                     onOpenApp = { user, isLocalMode ->
                         localChildMode = false
+                        activeChildRole = user?.role.equals("CHILD", ignoreCase = true)
                         navController.navigate(user.preferredAppRoute(isLocalMode)) {
                             popUpTo(TaskodayDestination.Login.route) {
                                 inclusive = true
@@ -290,6 +298,7 @@ fun TaskodayApp() {
                     onBackToLogin = { navController.popBackStack() },
                     onOpenApp = { user, isLocalMode ->
                         localChildMode = false
+                        activeChildRole = user?.role.equals("CHILD", ignoreCase = true)
                         navController.navigate(user.preferredAppRoute(isLocalMode)) {
                             popUpTo(TaskodayDestination.Login.route) {
                                 inclusive = true
@@ -453,6 +462,19 @@ fun TaskodayApp() {
             composable(TaskodayDestination.Exploration.route) {
                 val viewModel: ExplorationViewModel = hiltViewModel()
                 ExplorationScreen(viewModel = viewModel)
+            }
+
+            composable(TaskodayDestination.FollowUp.route) {
+                if (activeChildRole || localChildMode) {
+                    LaunchedEffect(Unit) { navController.navigate(TaskodayDestination.Exploration.route) { popUpTo(TaskodayDestination.FollowUp.route) { inclusive = true } } }
+                } else {
+                    val viewModel: FollowUpViewModel = hiltViewModel()
+                    FollowUpScreen(
+                        viewModel = viewModel,
+                        onOpenFamilyTask = { taskId -> navController.navigate(TaskodayDestination.FamilyTaskDetail.createRoute(taskId)) },
+                        onOpenLegacyTask = { taskId -> navController.navigate(TaskodayDestination.TaskDetail.createRoute(taskId)) },
+                    )
+                }
             }
 
             composable(TaskodayDestination.ActivityJournal.route) {

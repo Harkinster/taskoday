@@ -61,6 +61,8 @@ sealed class TaskodayDestination(
 
     data object Exploration : TaskodayDestination(route = "exploration", label = "Exploration", icon = Icons.Outlined.Explore)
 
+    data object FollowUp : TaskodayDestination(route = "follow_up", label = "Suivi", icon = Icons.Outlined.Person)
+
     data object Tasks :
         TaskodayDestination(route = "tasks", label = "Mission", icon = Icons.Outlined.Flag)
 
@@ -131,5 +133,6 @@ val TopLevelDestinations: List<TaskodayDestination> =
     listOf(
         TaskodayDestination.FamilyHome,
         TaskodayDestination.Exploration,
+        TaskodayDestination.FollowUp,
         TaskodayDestination.Nest,
     )
