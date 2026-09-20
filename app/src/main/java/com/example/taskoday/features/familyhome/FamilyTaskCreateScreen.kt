@@ -230,7 +230,7 @@ private fun QuickTaskForm(
         )
         Text("Pour qui ?", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = InkBrown)
         Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(selected = uiState.isHouseTask, onClick = onSelectHouse, label = { Text("Tout le monde") })
+            FilterChip(selected = uiState.isHouseTask, onClick = onSelectHouse, label = { Text("Maison") })
             uiState.members.forEach { member ->
                 FilterChip(selected = member.userId in uiState.selectedAssigneeUserIds, onClick = { onToggleAssignee(member.userId) }, label = { Text(member.displayName) })
             }

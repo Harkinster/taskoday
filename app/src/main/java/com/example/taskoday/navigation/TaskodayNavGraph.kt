@@ -55,6 +55,8 @@ import com.example.taskoday.features.gamification.RecentNestReward
 import com.example.taskoday.features.gamification.ScrollsScreen
 import com.example.taskoday.features.familyhome.FamilyHomeScreen
 import com.example.taskoday.features.familyhome.FamilyHomeViewModel
+import com.example.taskoday.features.exploration.ExplorationScreen
+import com.example.taskoday.features.exploration.ExplorationViewModel
 import com.example.taskoday.features.familyhome.FamilyTaskCreateScreen
 import com.example.taskoday.features.familyhome.FamilyTaskCreateViewModel
 import com.example.taskoday.features.familyhome.FamilyTaskDetailScreen
@@ -446,6 +448,11 @@ fun TaskodayApp() {
                         navigateToTopLevel(TaskodayDestination.Home)
                     },
                 )
+            }
+
+            composable(TaskodayDestination.Exploration.route) {
+                val viewModel: ExplorationViewModel = hiltViewModel()
+                ExplorationScreen(viewModel = viewModel)
             }
 
             composable(TaskodayDestination.ActivityJournal.route) {

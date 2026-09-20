@@ -185,7 +185,8 @@ class FamilyTaskCreateViewModel
                         gamificationEnabled = current.gamificationEnabled,
                         priority = current.priority,
                     ),
-                    requireAssignee = quickMode,
+                    // An empty assignee list is the explicit Maison target.
+                    requireAssignee = false,
                 )
             val input = validation.input
             if (!validation.isValid || input == null) {

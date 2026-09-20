@@ -28,6 +28,19 @@ class FamilyHomeUiPolicyTest {
     }
 
     @Test
+    fun `maison filter excludes personal and multi assigned tasks`() {
+        val member = FamilyTaskAssignee(id = 1L, displayName = "Ada")
+        val tasks =
+            listOf(
+                task(title = "Maison", assignees = emptyList()),
+                task(title = "Personnel", assignees = listOf(member)),
+                task(title = "Partagee", assignees = listOf(member, FamilyTaskAssignee(id = 2L, displayName = "Nino"))),
+            )
+
+        assertEquals(listOf("Maison"), familyHouseTasks(tasks).map { it.title })
+    }
+
+    @Test
     fun `tasks are grouped by assignee with done count`() {
         val ada = FamilyTaskAssignee(id = 1L, displayName = "Ada")
         val nino = FamilyTaskAssignee(id = 2L, displayName = "Nino")

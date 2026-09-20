@@ -58,6 +58,10 @@ fun buildFamilyTaskSections(tasks: List<FamilyTaskTodayItem>): List<FamilyTaskMe
         .sortedWith(compareBy<FamilyTaskMemberSection> { if (it.name == HOUSE_LABEL) 0 else 1 }.thenBy { it.name.lowercase(Locale.FRANCE) })
 }
 
+/** Tasks displayed by Ma Maison: only household tasks without an assignee. */
+fun familyHouseTasks(tasks: List<FamilyTaskTodayItem>): List<FamilyTaskTodayItem> =
+    tasks.filter { task -> task.assignees.isEmpty() }
+
 fun buildFamilyTaskOverduePreview(
     tasks: List<FamilyTaskTodayItem>,
     previewLimit: Int = FAMILY_TASK_OVERDUE_PREVIEW_LIMIT,

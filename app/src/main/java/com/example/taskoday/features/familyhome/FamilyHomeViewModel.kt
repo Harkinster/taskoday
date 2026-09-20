@@ -191,7 +191,10 @@ class FamilyHomeViewModel
                             .getOrNull()
                             ?.occurrences
                             .orEmpty()
-                    val sections = buildFamilyTaskSections(today.tasks)
+                    val houseTasks = familyHouseTasks(today.tasks)
+                    val houseOverdueTasks = familyHouseTasks(overdueTasks)
+                    val houseUpcomingTasks = familyHouseTasks(upcomingTasks)
+                    val sections = buildFamilyTaskSections(houseTasks)
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -200,22 +203,22 @@ class FamilyHomeViewModel
                             todayDate = todayDate,
                             dateLabel = formatFamilyHomeDateLabel(todayDate, fallback = todayReference),
                             sections = sections,
-                            totalTasks = today.tasks.size,
-                            completedTasks = today.tasks.count { task -> task.status.countsAsDone },
-                            pendingValidationTasks = familyTaskPendingValidationCount(today.tasks),
-                            overdueTasks = buildFamilyTaskOverduePreview(overdueTasks),
-                            overdueTotalTasks = overdueTasks.size,
+                            totalTasks = houseTasks.size,
+                            completedTasks = houseTasks.count { task -> task.status.countsAsDone },
+                            pendingValidationTasks = familyTaskPendingValidationCount(houseTasks),
+                            overdueTasks = buildFamilyTaskOverduePreview(houseOverdueTasks),
+                            overdueTotalTasks = houseOverdueTasks.size,
                             upcomingSections =
                                 buildFamilyTaskUpcomingSections(
-                                    tasks = upcomingTasks,
+                                    tasks = houseUpcomingTasks,
                                     today = todayReference,
                                 ),
-                            upcomingTotalTasks = upcomingTasks.size,
+                            upcomingTotalTasks = houseUpcomingTasks.size,
                             upcomingStartDate = upcomingWindow.startDate.toString(),
                             upcomingEndDate = upcomingWindow.endDate.toString(),
                             hasMoreUpcomingTasks =
                                 hasMoreFamilyTaskUpcomingPreview(
-                                    tasks = upcomingTasks,
+                                    tasks = houseUpcomingTasks,
                                     today = todayReference,
                                 ),
                             isWeekEmpty = false,
@@ -274,7 +277,7 @@ class FamilyHomeViewModel
                             weekStartDate = activeWeekWindow.startDate,
                             today = resolvedTodayDate(),
                         )
-                    weekOccurrences = range.occurrences
+                    weekOccurrences = familyHouseTasks(range.occurrences)
                     applyWeekSelection(
                         familyId = range.familyId,
                         isLoading = false,

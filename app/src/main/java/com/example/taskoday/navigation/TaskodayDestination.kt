@@ -2,6 +2,7 @@ package com.example.taskoday.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
@@ -57,6 +58,8 @@ sealed class TaskodayDestination(
     }
 
     data object Home : TaskodayDestination(route = "home", label = "Routine", icon = Icons.Outlined.Repeat)
+
+    data object Exploration : TaskodayDestination(route = "exploration", label = "Exploration", icon = Icons.Outlined.Explore)
 
     data object Tasks :
         TaskodayDestination(route = "tasks", label = "Mission", icon = Icons.Outlined.Flag)
@@ -127,8 +130,6 @@ sealed class TaskodayDestination(
 val TopLevelDestinations: List<TaskodayDestination> =
     listOf(
         TaskodayDestination.FamilyHome,
-        TaskodayDestination.Home,
-        TaskodayDestination.Tasks,
-        TaskodayDestination.Quests,
+        TaskodayDestination.Exploration,
         TaskodayDestination.Nest,
     )
