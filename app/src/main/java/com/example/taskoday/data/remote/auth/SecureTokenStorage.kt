@@ -59,6 +59,20 @@ class SecureTokenStorage
             preferences?.edit()?.remove(KEY_ACTIVE_CHILD_ID)?.apply()
         }
 
+        override fun getActiveFamilyId(): Long? {
+            val preferences = preferences ?: return null
+            if (!preferences.contains(KEY_ACTIVE_FAMILY_ID)) return null
+            return preferences.getLong(KEY_ACTIVE_FAMILY_ID, -1L).takeIf { it > 0L }
+        }
+
+        override fun saveActiveFamilyId(familyId: Long) {
+            preferences?.edit()?.putLong(KEY_ACTIVE_FAMILY_ID, familyId)?.apply()
+        }
+
+        override fun clearActiveFamilyId() {
+            preferences?.edit()?.remove(KEY_ACTIVE_FAMILY_ID)?.apply()
+        }
+
         override fun hasParentPin(): Boolean = !preferences?.getString(KEY_PARENT_PIN, null).isNullOrBlank()
 
         override fun saveParentPin(pin: String) {
@@ -79,6 +93,7 @@ class SecureTokenStorage
                 .remove(KEY_ACCESS_EXPIRES_AT)
                 .remove(KEY_REFRESH_EXPIRES_AT)
                 .remove(KEY_ACTIVE_CHILD_ID)
+                .remove(KEY_ACTIVE_FAMILY_ID)
                 .apply()
         }
 
@@ -106,6 +121,7 @@ class SecureTokenStorage
             const val KEY_ACCESS_EXPIRES_AT = "access_expires_at"
             const val KEY_REFRESH_EXPIRES_AT = "refresh_expires_at"
             const val KEY_ACTIVE_CHILD_ID = "active_child_id"
+            const val KEY_ACTIVE_FAMILY_ID = "active_family_id"
             const val KEY_PARENT_PIN = "parent_pin"
         }
     }

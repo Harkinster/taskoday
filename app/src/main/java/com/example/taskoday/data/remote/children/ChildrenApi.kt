@@ -12,10 +12,13 @@ import retrofit2.http.GET
 import retrofit2.http.PATCH
 import retrofit2.http.Path
 import retrofit2.http.POST
+import retrofit2.http.Query
 
 interface ChildrenApi {
     @GET("children")
-    suspend fun getChildren(): ApiEnvelopeDto<List<ChildResponseDto>>
+    suspend fun getChildren(
+        @Query("family_id") familyId: Long? = null,
+    ): ApiEnvelopeDto<List<ChildResponseDto>>
 
     @POST("children")
     suspend fun createChild(

@@ -44,10 +44,8 @@ fun RegisterParentScreen(
     val spacing = MaterialTheme.spacing
 
     var selectedRole by rememberSaveable { mutableStateOf(RegistrationRole.Parent) }
-    var familyName by rememberSaveable { mutableStateOf("") }
+    var parentDisplayName by rememberSaveable { mutableStateOf("") }
     var parentBirthDate by rememberSaveable { mutableStateOf("") }
-    var showParentInviteCode by rememberSaveable { mutableStateOf(false) }
-    var parentInviteCode by rememberSaveable { mutableStateOf("") }
     var childDisplayName by rememberSaveable { mutableStateOf("") }
     var childBirthDate by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
@@ -67,7 +65,7 @@ fun RegisterParentScreen(
                     onBack = onBackToLogin,
                     onPrimary = {
                         when (selectedRole) {
-                            RegistrationRole.Parent -> viewModel.registerParent(email, password, familyName, parentBirthDate, parentInviteCode)
+                            RegistrationRole.Parent -> viewModel.registerParent(parentDisplayName, parentBirthDate, email, password)
                             RegistrationRole.Child -> viewModel.registerChild(email, password, childDisplayName, childBirthDate)
                         }
                     },
@@ -120,7 +118,7 @@ fun RegisterParentScreen(
             )
             Text(
                 text = when (selectedRole) {
-                    RegistrationRole.Parent -> "Créez votre famille ou rejoignez une famille existante."
+                    RegistrationRole.Parent -> "Créez votre compte, puis créez ou rejoignez une famille."
                     RegistrationRole.Child -> "Créez votre compte, puis rejoignez votre famille avec le code d’un parent."
                 },
                 style = MaterialTheme.typography.bodyMedium,
@@ -151,12 +149,12 @@ fun RegisterParentScreen(
 
             if (selectedRole == RegistrationRole.Parent) {
                 OutlinedTextField(
-                    value = familyName,
+                    value = parentDisplayName,
                     onValueChange = {
-                        familyName = it
+                        parentDisplayName = it
                         viewModel.clearError()
                     },
-                    label = { Text("Nom de la famille") },
+                    label = { Text("Prénom ou pseudo *") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -167,33 +165,11 @@ fun RegisterParentScreen(
                         parentBirthDate = it
                         viewModel.clearError()
                     },
-                    label = { Text("Date de naissance (ex. 2018-01-01)") },
+                    label = { Text("Date de naissance * (YYYY-MM-DD)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
 
-                TextButton(
-                    onClick = {
-                        showParentInviteCode = !showParentInviteCode
-                        viewModel.clearError()
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(if (showParentInviteCode) "Masquer le code famille" else "Vous rejoignez déjà une famille ?")
-                }
-
-                if (showParentInviteCode) {
-                    OutlinedTextField(
-                        value = parentInviteCode,
-                        onValueChange = {
-                            parentInviteCode = it
-                            viewModel.clearError()
-                        },
-                        label = { Text("Code famille") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
             } else {
                 OutlinedTextField(
                     value = childDisplayName,
@@ -256,11 +232,10 @@ fun RegisterParentScreen(
                     when (selectedRole) {
                         RegistrationRole.Parent ->
                             viewModel.registerParent(
+                                displayName = parentDisplayName,
+                                birthDate = parentBirthDate,
                                 email = email,
                                 password = password,
-                                familyName = familyName,
-                                birthDate = parentBirthDate,
-                                inviteCode = parentInviteCode,
                             )
                         RegistrationRole.Child ->
                             viewModel.registerChild(

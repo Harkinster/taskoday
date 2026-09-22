@@ -3,6 +3,7 @@ package com.example.taskoday.data.remote.dto
 import com.example.taskoday.domain.model.FamilyInvite
 import com.example.taskoday.domain.model.FamilyMember
 import com.example.taskoday.domain.model.FamilyMemberRole
+import com.example.taskoday.domain.model.FamilySummary
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.annotations.SerializedName
@@ -28,6 +29,17 @@ data class FamilyInviteDto(
     @SerializedName(value = "expires_at", alternate = ["expiresAt", "expiration", "expires_on"])
     val expiresAt: String? = null,
 )
+
+data class CreateFamilyRequestDto(
+    @SerializedName("name") val name: String,
+)
+
+data class FamilySummaryDto(
+    @SerializedName("id") val id: Long,
+    @SerializedName("name") val name: String,
+)
+
+fun FamilySummaryDto.toDomain(): FamilySummary = FamilySummary(id = id, name = name)
 
 fun JsonElement.toFamilyMemberDtos(gson: Gson): List<FamilyMemberDto> =
     when {

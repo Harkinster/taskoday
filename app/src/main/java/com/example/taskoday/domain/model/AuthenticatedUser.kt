@@ -6,4 +6,6 @@ data class AuthenticatedUser(
     val role: String,
     val isActive: Boolean,
     val familyIds: List<Long>,
+    val displayName: String = email.substringBefore("@"),
+    val birthDate: String? = null,
 )

@@ -670,8 +670,10 @@ private fun String?.toPlanningFormType(): PlanningFormType =
     }
 
 private fun AuthenticatedUser?.preferredAppRoute(isLocalMode: Boolean): String =
-    if (!isLocalMode && this?.role?.equals("PARENT", ignoreCase = true) == true) {
-        TaskodayDestination.FamilyHome.route
-    } else {
-        TaskodayDestination.Home.route
+    when {
+        isLocalMode -> TaskodayDestination.Home.route
+        this?.role?.equals("PARENT", ignoreCase = true) == true && familyIds.isEmpty() ->
+            TaskodayDestination.FamilyHousehold.route
+        this?.role?.equals("PARENT", ignoreCase = true) == true -> TaskodayDestination.FamilyHome.route
+        else -> TaskodayDestination.Home.route
     }

@@ -27,6 +27,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -123,6 +124,35 @@ fun FamilyHouseholdScreen(
                     }
                 }
 
+                if (uiState.families.isNotEmpty()) {
+                    item {
+                        ElevatedCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.elevatedCardColors(containerColor = ParchmentLight.copy(alpha = 0.97f)),
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("Mes familles", style = MaterialTheme.typography.titleMedium, color = InkBrown)
+                                uiState.families.forEach { family ->
+                                    FilterChip(
+                                        selected = uiState.activeFamilyId == family.id,
+                                        onClick = { viewModel.selectFamily(family.id) },
+                                        label = { Text(family.name) },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                item {
+                    FamilyCreateCard(
+                        name = uiState.createFamilyName,
+                        isBusy = uiState.isCreateBusy,
+                        onNameChange = viewModel::updateCreateFamilyName,
+                        onCreate = viewModel::createFamily,
+                    )
+                }
+
                 item {
                     FamilyMemberGroupCard(
                         title = "Parents",
@@ -180,6 +210,33 @@ fun FamilyHouseholdScreen(
                         onJoin = viewModel::acceptInvite,
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FamilyCreateCard(
+    name: String,
+    isBusy: Boolean,
+    onNameChange: (String) -> Unit,
+    onCreate: () -> Unit,
+) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.elevatedCardColors(containerColor = ParchmentLight.copy(alpha = 0.97f)),
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("+ Créer une famille", style = MaterialTheme.typography.titleMedium, color = InkBrown)
+            OutlinedTextField(
+                value = name,
+                onValueChange = onNameChange,
+                label = { Text("Nom de la famille") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Button(onClick = onCreate, enabled = !isBusy, modifier = Modifier.fillMaxWidth()) {
+                Text(if (isBusy) "Création..." else "Créer la famille")
             }
         }
     }

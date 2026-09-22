@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -13,6 +13,7 @@ from app.models.task import Mission, Quest, Routine, TaskCompletion, TaskStatus,
 from app.models.user import User, UserRole
 from app.models.xp import XpHistory
 from app.schemas.child import ChildCreateRequest, ChildUpdateRequest
+from app.services.user_identity_service import display_name_for_user
 
 router = APIRouter(prefix="/children", tags=["children"])
 
@@ -21,7 +22,7 @@ def _child_response(user: User, profile: ChildProfile | None) -> dict:
     return {
         "id": user.id,
         "email": user.email,
-        "display_name": profile.display_name if profile else user.email.split("@")[0],
+        "display_name": display_name_for_user(user, profile),
         "avatar_url": profile.avatar_url if profile else None,
         "xp": profile.xp if profile else 0,
         "level": profile.level if profile else 1,
@@ -30,8 +31,30 @@ def _child_response(user: User, profile: ChildProfile | None) -> dict:
 
 
 @router.get("")
-def list_children(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def list_children(
+    family_id: int | None = Query(default=None, gt=0),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     child_ids = get_accessible_child_ids(db, current_user)
+    if family_id is not None:
+        is_member = db.scalar(
+            select(FamilyMember.id).where(
+                FamilyMember.family_id == family_id,
+                FamilyMember.user_id == current_user.id,
+            )
+        )
+        if is_member is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Famille introuvable.")
+        family_child_ids = set(
+            db.scalars(
+                select(FamilyMember.user_id).where(
+                    FamilyMember.family_id == family_id,
+                    FamilyMember.role == FamilyMemberRole.CHILD,
+                )
+            ).all()
+        )
+        child_ids = [child_id for child_id in child_ids if child_id in family_child_ids]
     if not child_ids:
         return success_response([])
 
@@ -59,13 +82,22 @@ def create_child(
     if current_user.role != UserRole.PARENT:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Action non autorisee.")
 
-    family_id = db.scalar(
-        select(FamilyMember.family_id)
-        .where(FamilyMember.user_id == current_user.id, FamilyMember.role == FamilyMemberRole.PARENT)
-        .order_by(FamilyMember.family_id.asc())
-    )
-    if family_id is None:
+    parent_family_ids = db.scalars(
+        select(FamilyMember.family_id).where(
+            FamilyMember.user_id == current_user.id,
+            FamilyMember.role == FamilyMemberRole.PARENT,
+        )
+    ).all()
+    if not parent_family_ids:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Aucune famille parent disponible.")
+    if payload.family_id is not None:
+        if payload.family_id not in parent_family_ids:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Famille introuvable.")
+        family_id = payload.family_id
+    elif len(parent_family_ids) == 1:
+        family_id = parent_family_ids[0]
+    else:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="family_id est requis avec plusieurs familles.")
 
     email = payload.email
     if email is None:
@@ -79,6 +111,7 @@ def create_child(
         email=str(email),
         password_hash=get_password_hash(uuid4().hex),
         role=UserRole.CHILD,
+        display_name=payload.display_name,
         birth_date=payload.birth_date,
     )
     db.add(child)
@@ -125,6 +158,7 @@ def update_child(
     update_data = payload.model_dump(exclude_unset=True)
     if "display_name" in update_data:
         profile.display_name = update_data["display_name"]
+        child.display_name = update_data["display_name"]
     if "avatar_url" in update_data:
         profile.avatar_url = update_data["avatar_url"]
 

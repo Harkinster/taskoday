@@ -17,13 +17,14 @@ from app.schemas.auth import (
     RegisterParentRequest,
     TokenResponse,
 )
-from app.services.family_invite_service import accept_parent_invite, validate_parent_invite_code
 from app.services.refresh_token_service import (
     issue_refresh_token,
     refresh_token_expires_in_seconds,
     revoke_refresh_token,
     rotate_refresh_token,
 )
+from app.services.family_invite_service import accept_parent_invite, validate_parent_invite_code
+from app.services.user_identity_service import user_display_name
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -57,20 +58,16 @@ def register_parent(payload: RegisterParentRequest, db: Session = Depends(get_db
 
     if payload.invite_code is not None:
         validate_parent_invite_code(db, code=payload.invite_code)
-    else:
-        assert payload.family_name is not None
-        existing_family = (
-            db.execute(select(Family.id).where(func.lower(Family.name) == payload.family_name.lower()))
-            .scalars()
-            .first()
-        )
-        if existing_family:
+    elif payload.family_name is not None:
+        existing_family = db.scalar(select(Family.id).where(func.lower(Family.name) == payload.family_name.lower()))
+        if existing_family is not None:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Nom de famille deja utilise.")
 
     user = User(
         email=payload.email,
         password_hash=get_password_hash(payload.password),
         role=UserRole.PARENT,
+        display_name=payload.display_name,
         birth_date=payload.birth_date,
     )
     db.add(user)
@@ -78,13 +75,11 @@ def register_parent(payload: RegisterParentRequest, db: Session = Depends(get_db
 
     if payload.invite_code is not None:
         accept_parent_invite(db, code=payload.invite_code, user=user)
-    else:
+    elif payload.family_name is not None:
         family = Family(name=payload.family_name, created_by_user_id=user.id)
         db.add(family)
         db.flush()
-
-        membership = FamilyMember(family_id=family.id, user_id=user.id, role=FamilyMemberRole.PARENT)
-        db.add(membership)
+        db.add(FamilyMember(family_id=family.id, user_id=user.id, role=FamilyMemberRole.PARENT))
 
     token_response = _issue_token_response(db, user=user)
     db.commit()
@@ -97,7 +92,13 @@ def register_child(payload: RegisterChildRequest, db: Session = Depends(get_db))
     if existing:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email deja utilise.")
 
-    user = User(email=payload.email, password_hash=get_password_hash(payload.password), role=UserRole.CHILD)
+    user = User(
+        email=payload.email,
+        password_hash=get_password_hash(payload.password),
+        role=UserRole.CHILD,
+        display_name=payload.display_name,
+        birth_date=payload.birth_date,
+    )
     db.add(user)
     db.flush()
 
@@ -163,4 +164,6 @@ def me(current_user: User = Depends(get_current_user), db: Session = Depends(get
         "role": _api_role(current_user.role),
         "is_active": current_user.is_active,
         "family_ids": family_ids,
+        "display_name": user_display_name(db, current_user),
+        "birth_date": current_user.birth_date,
     }

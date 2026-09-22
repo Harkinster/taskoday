@@ -12,6 +12,7 @@ data class SettingsUiState(
     val profileName: String = "Profil",
     val profileSubtitle: String = "Chargement du profil...",
     val profileEmail: String = "",
+    val profileBirthDate: String = "",
     val profileInitials: String = "TL",
     val totalXp: Int = 0,
     val level: Int = 1,
@@ -36,4 +37,6 @@ data class SettingsUiState(
     val parentPinSuccessMessage: String? = null,
     val parentPinErrorMessage: String? = null,
     val profileErrorMessage: String? = null,
+    val profileSuccessMessage: String? = null,
+    val isProfileSaving: Boolean = false,
 )

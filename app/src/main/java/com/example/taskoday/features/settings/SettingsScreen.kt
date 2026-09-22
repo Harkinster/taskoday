@@ -166,6 +166,19 @@ fun SettingsScreen(
                     )
                 }
 
+                if (!isLocalChildMode) {
+                    item {
+                        ProfileIdentityCard(
+                            displayName = uiState.profileName,
+                            birthDate = uiState.profileBirthDate,
+                            email = uiState.profileEmail,
+                            isSaving = uiState.isProfileSaving,
+                            successMessage = uiState.profileSuccessMessage,
+                            onSave = viewModel::updateProfile,
+                        )
+                    }
+                }
+
                 if (isLocalChildMode) {
                     item {
                         LocalChildModeSettingsCard(
@@ -237,11 +250,6 @@ fun SettingsScreen(
                                     onClick = onOpenNotifications,
                                 )
                             }
-                            ProfileActionRow(
-                                icon = Icons.Outlined.Edit,
-                                title = "Modifier le profil",
-                                subtitle = "Nom, pseudo et biographie.",
-                            )
                             ProfileActionRow(
                                 icon = Icons.Outlined.Image,
                                 title = "Modifier la photo",
@@ -419,6 +427,44 @@ fun SettingsScreen(
                 }
             },
         )
+    }
+}
+
+@Composable
+private fun ProfileIdentityCard(
+    displayName: String,
+    birthDate: String,
+    email: String,
+    isSaving: Boolean,
+    successMessage: String?,
+    onSave: (String, String) -> Unit,
+) {
+    var editedName by rememberSaveable(displayName) { mutableStateOf(displayName) }
+    var editedBirthDate by rememberSaveable(birthDate) { mutableStateOf(birthDate) }
+    NeonCard(tone = NeonTone.Blue) {
+        Text("Mon profil", style = MaterialTheme.typography.titleMedium, color = StarWhite)
+        OutlinedTextField(
+            value = editedName,
+            onValueChange = { editedName = it },
+            label = { Text("Prénom ou pseudo") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = editedBirthDate,
+            onValueChange = { editedBirthDate = it },
+            label = { Text("Date de naissance (YYYY-MM-DD)") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Text(email, style = MaterialTheme.typography.bodySmall, color = TextMuted)
+        NeonButton(
+            text = if (isSaving) "Enregistrement..." else "Enregistrer",
+            onClick = { onSave(editedName, editedBirthDate) },
+            enabled = !isSaving,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        successMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = NeonCyan) }
     }
 }
 

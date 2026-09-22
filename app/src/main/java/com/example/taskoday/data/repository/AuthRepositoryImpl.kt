@@ -25,25 +25,24 @@ class AuthRepositoryImpl
         private val authSessionClient: AuthSessionClient,
     ) : AuthRepository {
         override suspend fun registerParent(
+            displayName: String,
+            birthDate: String,
             email: String,
             password: String,
-            familyName: String,
-            birthDate: String,
-            inviteCode: String?,
         ): AuthSession {
             val response =
                 authApi.registerParent(
                     RegisterParentRequestDto(
+                        displayName = displayName.trim(),
                         email = email.trim(),
                         password = password,
-                        familyName = familyName.trim(),
                         birthDate = birthDate.trim(),
-                        inviteCode = inviteCode?.trim()?.takeIf { it.isNotBlank() },
                     ),
                 )
             return response.toDomain().also {
                 tokenStorage.save(response)
                 tokenStorage.clearActiveChildId()
+                tokenStorage.clearActiveFamilyId()
             }
         }
 
@@ -66,6 +65,7 @@ class AuthRepositoryImpl
             return response.toDomain().also {
                 tokenStorage.save(response)
                 tokenStorage.clearActiveChildId()
+                tokenStorage.clearActiveFamilyId()
             }
         }
 
@@ -80,6 +80,7 @@ class AuthRepositoryImpl
             return response.toDomain().also {
                 tokenStorage.save(response)
                 tokenStorage.clearActiveChildId()
+                tokenStorage.clearActiveFamilyId()
             }
         }
 
@@ -92,7 +93,7 @@ class AuthRepositoryImpl
                 tokenStorage.getActiveChildId()?.let { return it }
             }
 
-            val children = childrenApi.getChildren().data
+            val children = childrenApi.getChildren(getActiveFamilyId()).data
             if (children.isEmpty()) {
                 tokenStorage.clearActiveChildId()
                 return null
@@ -109,6 +110,25 @@ class AuthRepositoryImpl
 
         override fun setActiveChildId(childId: Long) {
             if (childId > 0L) tokenStorage.saveActiveChildId(childId)
+        }
+
+        override suspend fun getActiveFamilyId(forceRefresh: Boolean): Long? {
+            val familyIds = fetchMe().familyIds.distinct()
+            if (familyIds.isEmpty()) {
+                tokenStorage.clearActiveFamilyId()
+                return null
+            }
+            val stored = tokenStorage.getActiveFamilyId()
+            val selected = stored?.takeIf(familyIds::contains) ?: familyIds.singleOrNull()
+            if (selected != null) tokenStorage.saveActiveFamilyId(selected)
+            return selected
+        }
+
+        override fun setActiveFamilyId(familyId: Long) {
+            if (familyId > 0L) {
+                tokenStorage.saveActiveFamilyId(familyId)
+                tokenStorage.clearActiveChildId()
+            }
         }
 
         override fun hasParentPin(): Boolean = tokenStorage.hasParentPin()

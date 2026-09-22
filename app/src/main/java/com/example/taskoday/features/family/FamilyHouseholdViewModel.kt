@@ -31,15 +31,54 @@ class FamilyHouseholdViewModel
         fun refresh() {
             viewModelScope.launch {
                 _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-                familyRepository
-                    .fetchMembers()
-                    .onSuccess { members -> publishMembers(members) }
+                familyRepository.fetchFamilies().onSuccess { families ->
+                    val activeFamilyId = familyRepository.getActiveFamilyId()
+                    if (families.isEmpty()) {
+                        _uiState.update { it.copy(isLoading = false, families = emptyList(), activeFamilyId = null, members = emptyList()) }
+                    } else if (activeFamilyId == null) {
+                        _uiState.update { it.copy(isLoading = false, families = families, activeFamilyId = null, members = emptyList()) }
+                    } else {
+                        familyRepository.fetchMembers()
+                            .onSuccess { members ->
+                                _uiState.update { it.copy(families = families, activeFamilyId = activeFamilyId) }
+                                publishMembers(members)
+                            }
+                            .onFailure { throwable -> publishLoadFailure(throwable) }
+                    }
+                }.onFailure { throwable -> publishLoadFailure(throwable) }
+            }
+        }
+
+        fun selectFamily(familyId: Long) {
+            familyRepository.setActiveFamilyId(familyId)
+            _uiState.update { it.copy(activeFamilyId = familyId, members = emptyList()) }
+            refresh()
+        }
+
+        fun updateCreateFamilyName(value: String) {
+            _uiState.update { it.copy(createFamilyName = value, errorMessage = null, message = null) }
+        }
+
+        fun createFamily() {
+            val name = _uiState.value.createFamilyName.trim()
+            if (name.isBlank()) {
+                _uiState.update { it.copy(errorMessage = "Nom de la famille requis.") }
+                return
+            }
+            viewModelScope.launch {
+                _uiState.update { it.copy(isCreateBusy = true, errorMessage = null, message = null) }
+                familyRepository.createFamily(name)
+                    .onSuccess {
+                        _uiState.update { state ->
+                            state.copy(isCreateBusy = false, createFamilyName = "", message = "Famille créée.")
+                        }
+                        refresh()
+                    }
                     .onFailure { throwable ->
                         _uiState.update {
                             it.copy(
-                                isLoading = false,
-                                members = emptyList(),
-                                errorMessage = throwable.toRemoteUserMessage("Impossible de charger le foyer."),
+                                isCreateBusy = false,
+                                errorMessage = throwable.toRemoteUserMessage("Impossible de créer la famille."),
                             )
                         }
                     }
@@ -126,6 +165,16 @@ class FamilyHouseholdViewModel
                     isLoading = false,
                     members = members,
                     errorMessage = null,
+                )
+            }
+        }
+
+        private fun publishLoadFailure(throwable: Throwable) {
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    members = emptyList(),
+                    errorMessage = throwable.toRemoteUserMessage("Impossible de charger le foyer."),
                 )
             }
         }

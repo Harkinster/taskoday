@@ -6,6 +6,7 @@ import com.example.taskoday.data.remote.dto.ChildProfileResponseDto
 import com.example.taskoday.data.remote.dto.ChildResponseDto
 import com.example.taskoday.data.remote.dto.ChildStatsDto
 import com.example.taskoday.data.remote.dto.XpHistoryItemDto
+import com.example.taskoday.data.remote.dto.UpdateProfileRequestDto
 import com.example.taskoday.data.remote.profile.ProfileApi
 import com.example.taskoday.domain.model.ChildProfile
 import com.example.taskoday.domain.model.ChildProfileDashboard
@@ -25,6 +26,12 @@ class ProfileRepositoryImpl
         private val childrenApi: ChildrenApi,
         private val profileApi: ProfileApi,
     ) : ProfileRepository {
+        override suspend fun updateMyProfile(displayName: String, birthDate: String): Result<Unit> =
+            runCatching {
+                profileApi.updateMe(UpdateProfileRequestDto(displayName.trim(), birthDate.trim()))
+                Unit
+            }
+
         override suspend fun fetchActiveChildProfile(): ChildProfile = fetchActiveChildDashboard().profile
 
         override suspend fun fetchActiveChildDashboard(): ChildProfileDashboard {

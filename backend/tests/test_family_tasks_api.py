@@ -479,7 +479,10 @@ def test_occurrence_payload_exposes_completion_and_validation_actors(client) -> 
     validated_payload = validated.json()["data"]
     assert validated_payload["completed_by_user"]["user_id"] == parent_id
     assert validated_payload["validated_by"] == parent_id
-    assert validated_payload["validated_by_user"] == {"user_id": parent_id, "display_name": "parent.family-task-actors"}
+    assert validated_payload["validated_by_user"] == {
+        "user_id": parent_id,
+        "display_name": "parent.family-task-actors",
+    }
 
     reopened = client.post(
         f"{API}/task-occurrences/{house_item['occurrence_id']}/reopen",

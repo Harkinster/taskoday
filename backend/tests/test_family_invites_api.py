@@ -186,8 +186,9 @@ def test_invite_acceptance_refuses_invalid_accounts_and_codes(client) -> None:
 
     other_parent_token, _, _ = _register_parent(client, "invite-refusals-other")
     other_family = client.post(f"{API}/family-invites/{invite['code']}/accept", headers=_headers(other_parent_token))
-    assert other_family.status_code == 409
-    assert other_family.json()["error"]["message"] == "Ce compte appartient deja a un foyer."
+    assert other_family.status_code == 200
+    other_me = client.get(f"{API}/auth/me", headers=_headers(other_parent_token))
+    assert family_id in other_me.json()["family_ids"]
 
     expired_invite = _create_invite(client, parent_token, family_id)
     with _db_session(client) as db:

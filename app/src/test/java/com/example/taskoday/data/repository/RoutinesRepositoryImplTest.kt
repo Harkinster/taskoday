@@ -55,11 +55,10 @@ private fun unusedPlanningApi(): PlanningApi =
 
 private class FakeRoutineAuthRepository : AuthRepository {
     override suspend fun registerParent(
+        displayName: String,
+        birthDate: String,
         email: String,
         password: String,
-        familyName: String,
-        birthDate: String,
-        inviteCode: String?,
     ): AuthSession = error("Not used")
     override suspend fun registerChild(email: String, password: String, displayName: String, birthDate: String?): AuthSession = error("Not used")
     override suspend fun login(email: String, password: String): AuthSession = error("Not used")
@@ -78,7 +77,7 @@ private class FakeRoutineAuthRepository : AuthRepository {
 private class FakeRoutineChildrenApi(
     private val completed: Boolean,
 ) : ChildrenApi {
-    override suspend fun getChildren(): ApiEnvelopeDto<List<ChildResponseDto>> = error("Not used")
+    override suspend fun getChildren(familyId: Long?): ApiEnvelopeDto<List<ChildResponseDto>> = error("Not used")
     override suspend fun createChild(payload: ChildCreateRequestDto): ApiEnvelopeDto<ChildResponseDto> = error("Not used")
     override suspend fun getChild(childId: Long): ApiEnvelopeDto<ChildResponseDto> = error("Not used")
     override suspend fun getProfile(childId: Long): ApiEnvelopeDto<ChildProfileResponseDto> = error("Not used")

@@ -98,15 +98,14 @@ class AuthViewModel
         }
 
         fun registerParent(
+            displayName: String,
+            birthDate: String,
             email: String,
             password: String,
-            familyName: String,
-            birthDate: String,
-            inviteCode: String? = null,
         ) {
-            if (email.isBlank() || password.isBlank() || familyName.isBlank() || birthDate.isBlank()) {
+            if (displayName.isBlank() || email.isBlank() || password.isBlank() || birthDate.isBlank()) {
                 _uiState.update {
-                    it.copy(errorMessage = "Email, mot de passe, nom de famille et date de naissance sont requis.")
+                    it.copy(errorMessage = "Prénom ou pseudo, date de naissance, email et mot de passe sont requis.")
                 }
                 return
             }
@@ -124,11 +123,10 @@ class AuthViewModel
             viewModelScope.launch {
                 runCatching {
                     authRepository.registerParent(
+                        displayName = displayName,
+                        birthDate = normalizedBirthDate,
                         email = email,
                         password = password,
-                        familyName = familyName,
-                        birthDate = normalizedBirthDate,
-                        inviteCode = inviteCode?.trim()?.takeIf { it.isNotBlank() },
                     )
                     authRepository.fetchMe()
                 }.onSuccess { me ->

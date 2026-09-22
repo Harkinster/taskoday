@@ -5,16 +5,14 @@ import com.example.taskoday.domain.model.AuthenticatedUser
 import com.google.gson.annotations.SerializedName
 
 data class RegisterParentRequestDto(
+    @SerializedName("display_name")
+    val displayName: String,
     @SerializedName("email")
     val email: String,
     @SerializedName("password")
     val password: String,
-    @SerializedName("family_name")
-    val familyName: String,
     @SerializedName("birth_date")
     val birthDate: String,
-    @SerializedName("invite_code")
-    val inviteCode: String? = null,
 )
 
 data class RegisterChildRequestDto(
@@ -66,6 +64,15 @@ data class MeResponseDto(
     val isActive: Boolean,
     @SerializedName("family_ids")
     val familyIds: List<Long>,
+    @SerializedName("display_name")
+    val displayName: String? = null,
+    @SerializedName("birth_date")
+    val birthDate: String? = null,
+)
+
+data class UpdateProfileRequestDto(
+    @SerializedName("display_name") val displayName: String,
+    @SerializedName("birth_date") val birthDate: String,
 )
 
 fun TokenResponseDto.toDomain(): AuthSession =
@@ -83,4 +90,6 @@ fun MeResponseDto.toDomain(): AuthenticatedUser =
         role = role,
         isActive = isActive,
         familyIds = familyIds,
+        displayName = displayName ?: email.substringBefore("@"),
+        birthDate = birthDate,
     )

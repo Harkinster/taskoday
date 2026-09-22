@@ -8,6 +8,8 @@ from app.models.child import ChildProfile
 from app.models.family import FamilyMember, FamilyMemberRole
 from app.models.user import User, UserRole
 from app.models.xp import XpHistory
+from app.schemas.profile import ProfileUpdateRequest
+from app.services.user_identity_service import display_name_for_user, user_display_name
 
 router = APIRouter(tags=["profile"])
 
@@ -21,7 +23,8 @@ def profile_me(db: Session = Depends(get_db), current_user: User = Depends(get_c
                 "id": current_user.id,
                 "email": current_user.email,
                 "role": current_user.role.value,
-                "display_name": profile.display_name if profile else current_user.email.split("@")[0],
+                "display_name": display_name_for_user(current_user, profile),
+                "birth_date": current_user.birth_date,
                 "avatar_url": profile.avatar_url if profile else None,
                 "xp": profile.xp if profile else 0,
                 "level": profile.level if profile else 1,
@@ -46,9 +49,44 @@ def profile_me(db: Session = Depends(get_db), current_user: User = Depends(get_c
             "id": current_user.id,
             "email": current_user.email,
             "role": current_user.role.value,
+            "display_name": user_display_name(db, current_user),
+            "birth_date": current_user.birth_date,
             "families_count": len(set(family_ids)),
             "children_count": child_count,
         }
+    )
+
+
+@router.patch("/profile/me")
+def update_profile_me(
+    payload: ProfileUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    updates = payload.model_dump(exclude_unset=True)
+    if "display_name" in updates:
+        current_user.display_name = updates["display_name"]
+    if "birth_date" in updates:
+        current_user.birth_date = updates["birth_date"]
+
+    profile = db.scalar(select(ChildProfile).where(ChildProfile.user_id == current_user.id))
+    if profile is not None:
+        if "display_name" in updates:
+            profile.display_name = updates["display_name"]
+        if "birth_date" in updates:
+            profile.birth_date = updates["birth_date"]
+
+    db.commit()
+    db.refresh(current_user)
+    return success_response(
+        {
+            "id": current_user.id,
+            "email": current_user.email,
+            "role": current_user.role.value,
+            "display_name": user_display_name(db, current_user),
+            "birth_date": current_user.birth_date,
+        },
+        message="Profil mis a jour.",
     )
 
 
@@ -61,7 +99,7 @@ def child_profile(child_id: int, db: Session = Depends(get_db), current_user: Us
         {
             "id": child.id,
             "email": child.email,
-            "display_name": profile.display_name if profile else child.email.split("@")[0],
+            "display_name": display_name_for_user(child, profile),
             "avatar_url": profile.avatar_url if profile else None,
             "xp": profile.xp if profile else 0,
             "level": profile.level if profile else 1,

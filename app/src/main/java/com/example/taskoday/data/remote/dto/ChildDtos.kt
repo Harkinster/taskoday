@@ -47,6 +47,8 @@ data class ChildCreateRequestDto(
     val email: String? = null,
     @SerializedName("birth_date")
     val birthDate: String? = null,
+    @SerializedName("family_id")
+    val familyId: Long? = null,
 )
 
 data class ChildUpdateRequestDto(

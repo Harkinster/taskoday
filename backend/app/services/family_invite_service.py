@@ -130,8 +130,6 @@ def _ensure_user_can_join_family(db: Session, *, user: User, family_id: int) -> 
     family_ids = db.scalars(select(FamilyMember.family_id).where(FamilyMember.user_id == user.id)).all()
     if family_id in family_ids:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Ce compte appartient deja a ce foyer.")
-    if family_ids:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Ce compte appartient deja a un foyer.")
 
 
 def _ensure_family_parent(db: Session, *, family_id: int, user: User) -> FamilyMember:

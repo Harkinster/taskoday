@@ -25,36 +25,20 @@ import org.junit.Test
 
 class AuthRepositoryImplTest {
     @Test
-    fun `register parent without invite keeps invite code null`() =
+    fun `register parent sends simple identity without family`() =
         runBlocking {
             val authApi = FakeAuthApi()
             val repository = AuthRepositoryImpl(authApi, FakeChildrenApi(), MemoryTokenStorage(), FakeAuthSessionClient())
 
             repository.registerParent(
+                displayName = " Test ",
+                birthDate = "1990-01-01",
                 email = "parent@example.test",
                 password = "password123",
-                familyName = "Famille Test",
-                birthDate = "1990-01-01",
             )
 
-            assertNull(authApi.lastRegisterParentPayload?.inviteCode)
-        }
-
-    @Test
-    fun `register parent with invite sends trimmed code without changing case`() =
-        runBlocking {
-            val authApi = FakeAuthApi()
-            val repository = AuthRepositoryImpl(authApi, FakeChildrenApi(), MemoryTokenStorage(), FakeAuthSessionClient())
-
-            repository.registerParent(
-                email = "parent@example.test",
-                password = "password123",
-                familyName = "Famille Test",
-                birthDate = "1990-01-01",
-                inviteCode = "  AbC-123  ",
-            )
-
-            assertEquals("AbC-123", authApi.lastRegisterParentPayload?.inviteCode)
+            assertEquals("Test", authApi.lastRegisterParentPayload?.displayName)
+            assertEquals("1990-01-01", authApi.lastRegisterParentPayload?.birthDate)
         }
 
     @Test
@@ -92,6 +76,22 @@ class AuthRepositoryImplTest {
             assertEquals(77L, repository.getActiveChildId())
             assertEquals(42L, repository.getActiveChildId(forceRefresh = true))
             assertEquals(42L, storage.getActiveChildId())
+        }
+
+    @Test
+    fun `active family is persisted validated and not chosen arbitrarily`() =
+        runBlocking {
+            val stored = MemoryTokenStorage(accessToken = "token", activeFamilyId = 9L)
+            val multiple = AuthRepositoryImpl(FakeAuthApi(listOf(4L, 9L)), FakeChildrenApi(), stored, FakeAuthSessionClient())
+            assertEquals(9L, multiple.getActiveFamilyId())
+
+            val withoutChoice = AuthRepositoryImpl(FakeAuthApi(listOf(4L, 9L)), FakeChildrenApi(), MemoryTokenStorage(), FakeAuthSessionClient())
+            assertNull(withoutChoice.getActiveFamilyId())
+
+            val singleStorage = MemoryTokenStorage()
+            val single = AuthRepositoryImpl(FakeAuthApi(listOf(4L)), FakeChildrenApi(), singleStorage, FakeAuthSessionClient())
+            assertEquals(4L, single.getActiveFamilyId())
+            assertEquals(4L, singleStorage.getActiveFamilyId())
         }
 
     @Test
@@ -187,6 +187,7 @@ private class MemoryTokenStorage(
     private var accessToken: String? = null,
     private var refreshToken: String? = null,
     private var activeChildId: Long? = null,
+    private var activeFamilyId: Long? = null,
     private var parentPin: String? = null,
 ) : TokenStorage {
     var sessionWriteCount: Int = 0
@@ -223,6 +224,16 @@ private class MemoryTokenStorage(
         activeChildId = null
     }
 
+    override fun getActiveFamilyId(): Long? = activeFamilyId
+
+    override fun saveActiveFamilyId(familyId: Long) {
+        activeFamilyId = familyId
+    }
+
+    override fun clearActiveFamilyId() {
+        activeFamilyId = null
+    }
+
     override fun hasParentPin(): Boolean = !parentPin.isNullOrBlank()
 
     override fun saveParentPin(pin: String) {
@@ -235,10 +246,13 @@ private class MemoryTokenStorage(
         accessToken = null
         refreshToken = null
         activeChildId = null
+        activeFamilyId = null
     }
 }
 
-private class FakeAuthApi : AuthApi {
+private class FakeAuthApi(
+    private val familyIds: List<Long> = listOf(7L),
+) : AuthApi {
     var lastRegisterParentPayload: RegisterParentRequestDto? = null
 
     override suspend fun registerParent(payload: RegisterParentRequestDto): TokenResponseDto {
@@ -256,7 +270,7 @@ private class FakeAuthApi : AuthApi {
             email = "parent@example.com",
             role = "PARENT",
             isActive = true,
-            familyIds = listOf(7L),
+            familyIds = familyIds,
         )
 
     private fun tokenResponse(): TokenResponseDto =
@@ -286,7 +300,7 @@ private class FakeAuthSessionClient(
 private class FakeChildrenApi(
     private val children: List<ChildResponseDto> = defaultChildren(),
 ) : ChildrenApi {
-    override suspend fun getChildren(): ApiEnvelopeDto<List<ChildResponseDto>> =
+    override suspend fun getChildren(familyId: Long?): ApiEnvelopeDto<List<ChildResponseDto>> =
         ApiEnvelopeDto(
             success = true,
             data = children,

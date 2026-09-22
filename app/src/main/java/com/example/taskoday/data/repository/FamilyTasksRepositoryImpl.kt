@@ -144,8 +144,5 @@ class FamilyTasksRepositoryImpl
             }
 
         private suspend fun resolveFamilyId(): Long =
-            resolveFamilyId(authRepository.fetchMe().familyIds)
-
-        private fun resolveFamilyId(familyIds: List<Long>): Long =
-            familyIds.firstOrNull() ?: error("Aucune famille active pour ce compte.")
+            authRepository.getActiveFamilyId() ?: error("Aucune famille active pour ce compte.")
     }

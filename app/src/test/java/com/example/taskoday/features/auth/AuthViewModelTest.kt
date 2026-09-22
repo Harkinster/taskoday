@@ -73,11 +73,10 @@ private class FakeAuthRepository(
     var sessionCleared: Boolean = false
 
     override suspend fun registerParent(
+        displayName: String,
+        birthDate: String,
         email: String,
         password: String,
-        familyName: String,
-        birthDate: String,
-        inviteCode: String?,
     ): AuthSession = error("Not used")
 
     override suspend fun registerChild(

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -8,6 +8,7 @@ from app.models.child import ChildProfile
 from app.models.family import Family, FamilyMember, FamilyMemberRole
 from app.models.user import User, UserRole
 from app.schemas.family import FamilyCreateRequest
+from app.services.user_identity_service import display_name_for_user
 
 router = APIRouter(prefix="/families", tags=["families"])
 
@@ -20,6 +21,10 @@ def create_family(
 ):
     if current_user.role != UserRole.PARENT:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Action non autorisee.")
+
+    existing_family = db.scalar(select(Family.id).where(func.lower(Family.name) == payload.name.lower()))
+    if existing_family is not None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Nom de famille deja utilise.")
 
     family = Family(name=payload.name, created_by_user_id=current_user.id)
     db.add(family)
@@ -90,7 +95,7 @@ def family_children(
             {
                 "id": user.id,
                 "email": user.email,
-                "display_name": profile.display_name if profile else user.email.split("@")[0],
+                "display_name": display_name_for_user(user, profile),
                 "avatar_url": profile.avatar_url if profile else None,
                 "xp": profile.xp if profile else 0,
                 "level": profile.level if profile else 1,
@@ -125,7 +130,7 @@ def family_members(
         members.append(
             {
                 "user_id": user.id,
-                "display_name": profile.display_name if profile else user.email.split("@")[0],
+                "display_name": display_name_for_user(user, profile),
                 "role": membership.role.name,
                 "email": user.email,
                 "is_active": user.is_active,

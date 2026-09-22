@@ -5,11 +5,10 @@ import com.example.taskoday.domain.model.AuthenticatedUser
 
 interface AuthRepository {
     suspend fun registerParent(
+        displayName: String,
+        birthDate: String,
         email: String,
         password: String,
-        familyName: String,
-        birthDate: String,
-        inviteCode: String? = null,
     ): AuthSession
 
     suspend fun registerChild(
@@ -28,6 +27,10 @@ interface AuthRepository {
     suspend fun getActiveChildId(forceRefresh: Boolean = false): Long?
 
     fun setActiveChildId(childId: Long)
+
+    suspend fun getActiveFamilyId(forceRefresh: Boolean = false): Long? = fetchMe().familyIds.singleOrNull()
+
+    fun setActiveFamilyId(familyId: Long) = Unit
 
     fun hasParentPin(): Boolean
 

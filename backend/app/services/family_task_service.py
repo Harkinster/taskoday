@@ -18,6 +18,7 @@ from app.models.family_task import (
     FamilyTaskRecurrence,
 )
 from app.models.user import User, UserRole
+from app.services.user_identity_service import display_name_for_user, user_reference_payload
 
 
 WEEKDAY_ALIASES = {
@@ -388,29 +389,6 @@ def occurrence_payload(db: Session, occurrence: FamilyTaskOccurrence) -> dict:
     }
 
 
-def user_reference_payload(db: Session, user_id: int | None) -> dict | None:
-    if user_id is None:
-        return None
-
-    row = db.execute(
-        select(User, ChildProfile)
-        .join(ChildProfile, ChildProfile.user_id == User.id, isouter=True)
-        .where(User.id == user_id)
-    ).first()
-    if row is None:
-        return None
-
-    user, profile = row
-    return _user_reference_payload(user, profile)
-
-
-def _user_reference_payload(user: User, profile: ChildProfile | None) -> dict:
-    return {
-        "user_id": user.id,
-        "display_name": profile.display_name if profile else user.email.split("@")[0],
-    }
-
-
 def assignees_payload(db: Session, task: FamilyTask) -> list[dict]:
     rows = db.execute(
         select(User, ChildProfile, FamilyMember)
@@ -426,9 +404,10 @@ def assignees_payload(db: Session, task: FamilyTask) -> list[dict]:
 
     return [
         {
-            **_user_reference_payload(user, profile),
+            "user_id": user.id,
             "role": _enum_name(membership.role),
             "email": user.email,
+            "display_name": display_name_for_user(user, profile),
         }
         for user, profile, membership in rows
     ]

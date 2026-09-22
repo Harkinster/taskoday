@@ -44,7 +44,26 @@ class SettingsViewModel
             _uiState.update { it.copy(useDynamicColors = enabled) }
         }
 
+        fun updateProfile(displayName: String, birthDate: String) {
+            if (displayName.isBlank() || !Regex("""\d{4}-\d{2}-\d{2}""").matches(birthDate.trim())) {
+                _uiState.update { it.copy(profileErrorMessage = "Pseudo et date de naissance valide requis.") }
+                return
+            }
+            viewModelScope.launch {
+                _uiState.update { it.copy(isProfileSaving = true, profileErrorMessage = null, profileSuccessMessage = null) }
+                profileRepository.updateMyProfile(displayName, birthDate)
+                    .onSuccess {
+                        _uiState.update { it.copy(isProfileSaving = false, profileSuccessMessage = "Profil mis à jour.") }
+                        refreshProfile()
+                    }
+                    .onFailure { error ->
+                        _uiState.update { it.copy(isProfileSaving = false, profileErrorMessage = error.toMessage()) }
+                    }
+            }
+        }
+
         fun selectFamily(familyId: Long) {
+            authRepository.setActiveFamilyId(familyId)
             _uiState.update { it.copy(selectedFamilyId = familyId, pairingErrorMessage = null, pairingSuccessMessage = null) }
         }
 
@@ -426,10 +445,7 @@ class SettingsViewModel
                 val me = meResult.getOrNull()
                 val isParent = me?.role.equals("PARENT", ignoreCase = true)
                 val familyIds = me?.familyIds?.distinct().orEmpty()
-                val preferredFamilyId =
-                    _uiState.value.selectedFamilyId
-                        ?.takeIf { familyIds.contains(it) }
-                        ?: if (familyIds.size == 1) familyIds.first() else familyIds.firstOrNull()
+                val preferredFamilyId = runCatching { authRepository.getActiveFamilyId() }.getOrNull()
 
                 val activeChildResult = runCatching { authRepository.getActiveChildId(forceRefresh = true) }
                 val activeChildId = activeChildResult.getOrNull()
@@ -455,6 +471,7 @@ class SettingsViewModel
                         profileName = identity.name,
                         profileSubtitle = identity.subtitle,
                         profileEmail = identity.email,
+                        profileBirthDate = me?.birthDate.orEmpty(),
                         profileInitials = initialsFrom(identity.name),
                         totalXp = xp,
                         level = level,

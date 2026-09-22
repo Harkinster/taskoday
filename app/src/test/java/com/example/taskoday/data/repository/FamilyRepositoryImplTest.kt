@@ -1,6 +1,8 @@
 package com.example.taskoday.data.repository
 
 import com.example.taskoday.data.remote.dto.ApiEnvelopeDto
+import com.example.taskoday.data.remote.dto.CreateFamilyRequestDto
+import com.example.taskoday.data.remote.dto.FamilySummaryDto
 import com.example.taskoday.data.remote.family.FamilyApi
 import com.example.taskoday.domain.model.AuthSession
 import com.example.taskoday.domain.model.AuthenticatedUser
@@ -56,6 +58,12 @@ private class FakeFamilyApi : FamilyApi {
     var lastMembersFamilyId: Long? = null
     var acceptedCode: String? = null
 
+    override suspend fun getMyFamilies(): ApiEnvelopeDto<List<FamilySummaryDto>> =
+        ApiEnvelopeDto(success = true, data = listOf(FamilySummaryDto(4L, "Famille Test")))
+
+    override suspend fun createFamily(payload: CreateFamilyRequestDto): ApiEnvelopeDto<FamilySummaryDto> =
+        ApiEnvelopeDto(success = true, data = FamilySummaryDto(5L, payload.name))
+
     override suspend fun getFamilyMembers(familyId: Long): ApiEnvelopeDto<JsonElement> {
         lastMembersFamilyId = familyId
         return envelope(
@@ -98,11 +106,10 @@ private class FakeAuthRepository(
     var fetchMeCalls: Int = 0
 
     override suspend fun registerParent(
+        displayName: String,
+        birthDate: String,
         email: String,
         password: String,
-        familyName: String,
-        birthDate: String,
-        inviteCode: String?,
     ): AuthSession = error("Not used")
 
     override suspend fun registerChild(

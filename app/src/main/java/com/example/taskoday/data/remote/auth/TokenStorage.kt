@@ -18,6 +18,12 @@ interface TokenStorage {
 
     fun clearActiveChildId()
 
+    fun getActiveFamilyId(): Long? = null
+
+    fun saveActiveFamilyId(familyId: Long) = Unit
+
+    fun clearActiveFamilyId() = Unit
+
     fun hasParentPin(): Boolean
 
     fun saveParentPin(pin: String)

@@ -22,6 +22,7 @@ class ChildCreateRequest(BaseModel):
     display_name: str = Field(min_length=1, max_length=120)
     email: EmailStr | None = None
     birth_date: date | None = None
+    family_id: int | None = Field(default=None, gt=0)
 
     @field_validator("display_name")
     @classmethod
