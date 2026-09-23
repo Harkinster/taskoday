@@ -120,6 +120,9 @@ class AuthRepositoryImpl
             }
             val stored = tokenStorage.getActiveFamilyId()
             val selected = stored?.takeIf(familyIds::contains) ?: familyIds.singleOrNull()
+            if (stored != null && selected == null) {
+                tokenStorage.clearActiveFamilyId()
+            }
             if (selected != null) tokenStorage.saveActiveFamilyId(selected)
             return selected
         }

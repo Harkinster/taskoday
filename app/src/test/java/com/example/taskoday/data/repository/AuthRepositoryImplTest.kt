@@ -95,6 +95,36 @@ class AuthRepositoryImplTest {
         }
 
     @Test
+    fun `stale active family is cleared when it no longer exists`() =
+        runBlocking {
+            val storage = MemoryTokenStorage(accessToken = "token", activeFamilyId = 99L)
+            val repository = AuthRepositoryImpl(FakeAuthApi(listOf(4L, 9L)), FakeChildrenApi(), storage, FakeAuthSessionClient())
+
+            assertNull(repository.getActiveFamilyId())
+            assertNull(storage.getActiveFamilyId())
+        }
+
+    @Test
+    fun `zero families clears any persisted active family`() =
+        runBlocking {
+            val storage = MemoryTokenStorage(accessToken = "token", activeFamilyId = 99L)
+            val repository = AuthRepositoryImpl(FakeAuthApi(emptyList()), FakeChildrenApi(), storage, FakeAuthSessionClient())
+
+            assertNull(repository.getActiveFamilyId())
+            assertNull(storage.getActiveFamilyId())
+        }
+
+    @Test
+    fun `explicit family switch is persisted`() {
+        val storage = MemoryTokenStorage(accessToken = "token")
+        val repository = AuthRepositoryImpl(FakeAuthApi(listOf(4L, 9L)), FakeChildrenApi(), storage, FakeAuthSessionClient())
+
+        repository.setActiveFamilyId(9L)
+
+        assertEquals(9L, storage.getActiveFamilyId())
+    }
+
+    @Test
     fun `refresh automatically selects the only accessible child`() =
         runBlocking {
             val storage = MemoryTokenStorage(accessToken = "token")

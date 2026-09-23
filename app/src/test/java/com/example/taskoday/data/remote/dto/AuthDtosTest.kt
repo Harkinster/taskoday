@@ -57,4 +57,51 @@ class AuthDtosTest {
 
         assertEquals("{\"refresh_token\":\"refresh-value\"}", json)
     }
+
+    @Test
+    fun `register parent request uses display name and birth date fields`() {
+        val json = gson.toJson(
+            RegisterParentRequestDto(
+                displayName = "Matthieu",
+                birthDate = "1990-09-21",
+                email = "parent@example.test",
+                password = "secret",
+            ),
+        )
+
+        assertEquals(
+            "{\"display_name\":\"Matthieu\",\"email\":\"parent@example.test\",\"password\":\"secret\",\"birth_date\":\"1990-09-21\"}",
+            json,
+        )
+    }
+
+    @Test
+    fun `legacy me payload without identity fields remains compatible`() {
+        val user = gson.fromJson(
+            """
+            {
+              "id": 7,
+              "email": "legacy@example.test",
+              "role": "PARENT",
+              "is_active": true,
+              "family_ids": []
+            }
+            """.trimIndent(),
+            MeResponseDto::class.java,
+        ).toDomain()
+
+        assertEquals("legacy", user.displayName)
+        assertNull(user.birthDate)
+        assertEquals(emptyList<Long>(), user.familyIds)
+    }
+
+    @Test
+    fun `profile update request uses display name and birth date`() {
+        val json = gson.toJson(UpdateProfileRequestDto("Matthieu", "1990-09-21"))
+
+        assertEquals(
+            "{\"display_name\":\"Matthieu\",\"birth_date\":\"1990-09-21\"}",
+            json,
+        )
+    }
 }
