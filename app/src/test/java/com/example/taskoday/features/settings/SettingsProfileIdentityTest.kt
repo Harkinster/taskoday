@@ -7,16 +7,27 @@ import org.junit.Test
 
 class SettingsProfileIdentityTest {
     @Test
-    fun `parent identity comes from connected account instead of active child`() {
+    fun `parent identity prefers display name from connected account instead of active child`() {
         val identity =
             resolveProfileIdentity(
-                me = authenticatedUser(email = "parent-one@example.com", role = "PARENT"),
+                me = authenticatedUser(email = "parent-one@example.com", role = "PARENT", displayName = "Matthieu"),
                 childProfile = childProfile(displayName = "Test Child", email = "child@example.com"),
             )
 
-        assertEquals("parent-one@example.com", identity.name)
+        assertEquals("Matthieu", identity.name)
         assertEquals("parent-one@example.com", identity.email)
         assertEquals("Parent • parent-one@example.com", identity.subtitle)
+    }
+
+    @Test
+    fun `parent identity falls back to email when display name is missing`() {
+        val identity =
+            resolveProfileIdentity(
+                me = authenticatedUser(email = "parent-one@example.com", role = "PARENT", displayName = " "),
+                childProfile = null,
+            )
+
+        assertEquals("parent-one@example.com", identity.name)
     }
 
     @Test
@@ -48,6 +59,7 @@ class SettingsProfileIdentityTest {
 private fun authenticatedUser(
     email: String,
     role: String,
+    displayName: String = email.substringBefore("@"),
 ): AuthenticatedUser =
     AuthenticatedUser(
         id = 1L,
@@ -55,6 +67,7 @@ private fun authenticatedUser(
         role = role,
         isActive = true,
         familyIds = emptyList(),
+        displayName = displayName,
     )
 
 private fun childProfile(

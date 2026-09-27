@@ -522,7 +522,10 @@ internal fun resolveProfileIdentity(
         }
     val name =
         if (isParent) {
-            email.ifBlank { "Compte parent" }
+            me?.displayName
+                ?.trim()
+                ?.takeIf { it.isNotEmpty() }
+                ?: email.ifBlank { "Compte parent" }
         } else {
             childProfile
                 ?.displayName
