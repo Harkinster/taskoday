@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.taskoday.data.repository.toRemoteUserMessage
 import com.example.taskoday.domain.model.FamilyTaskTodayItem
 import com.example.taskoday.domain.repository.FamilyTasksRepository
+import com.example.taskoday.domain.repository.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
 import javax.inject.Inject
@@ -19,6 +20,7 @@ class FamilyHomeViewModel
     @Inject
     constructor(
         private val familyTasksRepository: FamilyTasksRepository,
+        private val authRepository: AuthRepository,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(FamilyHomeUiState())
         val uiState: StateFlow<FamilyHomeUiState> = _uiState.asStateFlow()
@@ -102,7 +104,7 @@ class FamilyHomeViewModel
         }
 
         fun runQuickAction(task: FamilyTaskTodayItem) {
-            val action = quickActionFor(task) ?: return
+            val action = _uiState.value.access.quickAction(task) ?: return
             if (!canRunQuickAction(task)) return
 
             viewModelScope.launch {
@@ -161,6 +163,7 @@ class FamilyHomeViewModel
         }
 
         private suspend fun loadToday(showLoading: Boolean) {
+            resolveAccess()
             if (showLoading) {
                 _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             }
@@ -191,9 +194,9 @@ class FamilyHomeViewModel
                             .getOrNull()
                             ?.occurrences
                             .orEmpty()
-                    val houseTasks = familyHouseTasks(today.tasks)
-                    val houseOverdueTasks = familyHouseTasks(overdueTasks)
-                    val houseUpcomingTasks = familyHouseTasks(upcomingTasks)
+                    val houseTasks = visibleHouseTasks(today.tasks)
+                    val houseOverdueTasks = visibleHouseTasks(overdueTasks)
+                    val houseUpcomingTasks = visibleHouseTasks(upcomingTasks)
                     val sections = buildFamilyTaskSections(houseTasks)
                     _uiState.update {
                         it.copy(
@@ -258,6 +261,7 @@ class FamilyHomeViewModel
             weekStartDate: LocalDate,
             preferredSelectedDate: LocalDate?,
         ) {
+            resolveAccess()
             val requestedWindow = familyTaskWeekWindowContaining(weekStartDate)
             if (showLoading) {
                 _uiState.update { it.copy(isLoading = true, mode = FamilyHomeMode.WEEK, errorMessage = null) }
@@ -277,7 +281,7 @@ class FamilyHomeViewModel
                             weekStartDate = activeWeekWindow.startDate,
                             today = resolvedTodayDate(),
                         )
-                    weekOccurrences = familyHouseTasks(range.occurrences)
+                    weekOccurrences = visibleHouseTasks(range.occurrences)
                     applyWeekSelection(
                         familyId = range.familyId,
                         isLoading = false,
@@ -346,6 +350,15 @@ class FamilyHomeViewModel
                 )
             }
         }
+
+        private suspend fun resolveAccess() {
+            val access = runCatching { FamilyTaskAccessPolicy.forUser(authRepository.fetchMe()) }
+                .getOrDefault(FamilyTaskAccessPolicy())
+            _uiState.update { it.copy(access = access) }
+        }
+
+        private fun visibleHouseTasks(tasks: List<FamilyTaskTodayItem>): List<FamilyTaskTodayItem> =
+            familyHouseTasks(tasks).filter { _uiState.value.access.canView(it.assignees) }
 
         private fun resolvedTodayDate(): LocalDate =
             parseFamilyTaskDateInput(_uiState.value.todayDate.orEmpty()) ?: LocalDate.now()

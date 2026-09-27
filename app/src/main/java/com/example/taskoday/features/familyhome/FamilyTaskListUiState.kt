@@ -4,6 +4,7 @@ import com.example.taskoday.domain.model.FamilyTaskDefinition
 import com.example.taskoday.domain.model.FamilyTaskMember
 
 data class FamilyTaskListUiState(
+    val access: FamilyTaskAccessPolicy = FamilyTaskAccessPolicy(),
     val isLoading: Boolean = true,
     val tasks: List<FamilyTaskDefinition> = emptyList(),
     val visibleTasks: List<FamilyTaskDefinition> = emptyList(),
@@ -17,4 +18,3 @@ data class FamilyTaskListFilterOption(
     val key: String,
     val label: String,
 )
-

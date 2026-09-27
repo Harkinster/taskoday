@@ -141,7 +141,7 @@ fun FamilyHomeScreen(
                         pendingValidationTasks = uiState.pendingValidationTasks,
                         overdueTotalTasks = uiState.overdueTotalTasks,
                         creationDate = creationDate,
-                        onAddTask = onAddTask,
+                        onAddTask = onAddTask.takeIf { uiState.access.canManage },
                         onOpenAllTasks = onOpenAllTasks,
                         onShowToday = viewModel::showToday,
                         onShowWeek = viewModel::showWeek,
@@ -203,6 +203,7 @@ fun FamilyHomeScreen(
                     if (uiState.overdueTotalTasks > 0) {
                         item {
                             FamilyOverdueSectionCard(
+                                access = uiState.access,
                                 totalCount = uiState.overdueTotalTasks,
                                 rows = uiState.overdueTasks,
                                 todayDate = uiState.todayDate,
@@ -227,6 +228,7 @@ fun FamilyHomeScreen(
                             key = { section -> section.key },
                         ) { section ->
                             FamilyMemberSectionCard(
+                                access = uiState.access,
                                 section = section,
                                 actingOccurrenceId = uiState.actingOccurrenceId,
                                 onQuickAction = viewModel::runQuickAction,
@@ -267,6 +269,7 @@ fun FamilyHomeScreen(
                             key = { section -> section.key },
                         ) { section ->
                             FamilyMemberSectionCard(
+                                access = uiState.access,
                                 section = section,
                                 actingOccurrenceId = uiState.actingOccurrenceId,
                                 onQuickAction = viewModel::runQuickAction,
@@ -290,7 +293,7 @@ private fun FamilyHomeHeader(
     pendingValidationTasks: Int,
     overdueTotalTasks: Int,
     creationDate: String?,
-    onAddTask: (String?) -> Unit,
+    onAddTask: ((String?) -> Unit)?,
     onOpenAllTasks: () -> Unit,
     onShowToday: () -> Unit,
     onShowWeek: () -> Unit,
@@ -322,7 +325,7 @@ private fun FamilyHomeHeader(
                     color = ParchmentCream.copy(alpha = 0.72f),
                 )
             }
-            TextButton(
+            if (onAddTask != null) TextButton(
                 onClick = { onAddTask(creationDate) },
                 colors = ButtonDefaults.textButtonColors(contentColor = ParchmentLight),
             ) {
@@ -570,6 +573,7 @@ private fun FamilyHomeSectionTitle(
 
 @Composable
 private fun FamilyOverdueSectionCard(
+    access: FamilyTaskAccessPolicy,
     totalCount: Int,
     rows: List<FamilyTaskRow>,
     todayDate: String?,
@@ -603,6 +607,7 @@ private fun FamilyOverdueSectionCard(
             }
             rows.forEach { row ->
                 FamilyOverdueRow(
+                    access = access,
                     task = row.task,
                     today = today,
                     isActing = actingOccurrenceId == row.task.occurrenceId,
@@ -615,13 +620,14 @@ private fun FamilyOverdueSectionCard(
 
 @Composable
 private fun FamilyOverdueRow(
+    access: FamilyTaskAccessPolicy,
     task: FamilyTaskTodayItem,
     today: java.time.LocalDate,
     isActing: Boolean,
     onQuickAction: (FamilyTaskTodayItem) -> Unit,
     onOpenTask: (Long) -> Unit,
 ) {
-    val action = quickActionFor(task)
+    val action = access.quickAction(task)
     Surface(
         modifier =
             Modifier
@@ -777,6 +783,7 @@ private fun FamilyUpcomingRow(
 
 @Composable
 private fun FamilyMemberSectionCard(
+    access: FamilyTaskAccessPolicy,
     section: FamilyTaskMemberSection,
     actingOccurrenceId: Long?,
     onQuickAction: (FamilyTaskTodayItem) -> Unit,
@@ -806,6 +813,7 @@ private fun FamilyMemberSectionCard(
 
             section.tasks.forEach { row ->
                 FamilyTaskRowCard(
+                    access = access,
                     task = row.task,
                     isActing = actingOccurrenceId == row.task.occurrenceId,
                     onQuickAction = onQuickAction,
@@ -817,12 +825,13 @@ private fun FamilyMemberSectionCard(
 
 @Composable
 private fun FamilyTaskRowCard(
+    access: FamilyTaskAccessPolicy,
     task: FamilyTaskTodayItem,
     isActing: Boolean,
     onQuickAction: (FamilyTaskTodayItem) -> Unit,
     onOpenTask: (Long) -> Unit,
 ) {
-    val action = quickActionFor(task)
+    val action = access.quickAction(task)
     Surface(
         modifier =
             Modifier

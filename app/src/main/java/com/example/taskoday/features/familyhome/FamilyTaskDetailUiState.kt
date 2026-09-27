@@ -4,6 +4,7 @@ import com.example.taskoday.domain.model.FamilyTaskDefinition
 import com.example.taskoday.domain.model.FamilyTaskTodayItem
 
 data class FamilyTaskDetailUiState(
+    val access: FamilyTaskAccessPolicy = FamilyTaskAccessPolicy(),
     val isLoading: Boolean = true,
     val task: FamilyTaskDefinition? = null,
     val todayOccurrence: FamilyTaskTodayItem? = null,

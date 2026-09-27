@@ -2,6 +2,18 @@ package com.example.taskoday.features.exploration
 
 import com.example.taskoday.domain.model.FamilyTaskRecurrence
 import com.example.taskoday.domain.model.FamilyTaskTodayItem
+import com.example.taskoday.data.repository.RemotePlanningIdCodec
+import com.example.taskoday.domain.model.TaskForDay
+import com.example.taskoday.domain.model.QuestForDay
+
+/** Production Exploration accepts only cache entries identified by the remote sync codec.
+ * Local/demo data remains available to explicit offline/preview consumers, not this screen.
+ */
+fun remoteExplorationTasks(tasks: List<TaskForDay>): List<TaskForDay> =
+    tasks.filter { RemotePlanningIdCodec.decodeTaskId(it.task.id) != null }
+
+fun remoteExplorationQuests(quests: List<QuestForDay>): List<QuestForDay> =
+    quests.filter { RemotePlanningIdCodec.decodeQuestId(it.quest.id) != null }
 
 enum class ExplorationCategory {
     PERSONAL_TASK,

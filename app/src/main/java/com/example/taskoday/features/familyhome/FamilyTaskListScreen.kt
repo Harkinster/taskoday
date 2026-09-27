@@ -101,7 +101,7 @@ fun FamilyTaskListScreen(
                     FamilyTaskListHeader(
                         totalTasks = uiState.tasks.count { task -> task.active },
                         onBack = onBack,
-                        onAddTask = onAddTask,
+                        onAddTask = onAddTask.takeIf { uiState.access.canManage },
                     )
                 }
 
@@ -126,7 +126,7 @@ fun FamilyTaskListScreen(
 
                 if (uiState.visibleTasks.isEmpty()) {
                     item {
-                        EmptyFamilyTaskListCard(onAddTask = onAddTask)
+                        EmptyFamilyTaskListCard(onAddTask = onAddTask.takeIf { uiState.access.canManage })
                     }
                 } else {
                     items(
@@ -148,7 +148,7 @@ fun FamilyTaskListScreen(
 private fun FamilyTaskListHeader(
     totalTasks: Int,
     onBack: () -> Unit,
-    onAddTask: () -> Unit,
+    onAddTask: (() -> Unit)?,
 ) {
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
@@ -190,7 +190,7 @@ private fun FamilyTaskListHeader(
                 Icon(Icons.Outlined.Home, contentDescription = null, tint = WoodBrown, modifier = Modifier.size(28.dp))
             }
 
-            Button(
+            if (onAddTask != null) Button(
                 onClick = onAddTask,
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = WoodBrown, contentColor = ParchmentLight),
@@ -277,7 +277,7 @@ private fun FamilyTaskDefinitionListCard(
 }
 
 @Composable
-private fun EmptyFamilyTaskListCard(onAddTask: () -> Unit) {
+private fun EmptyFamilyTaskListCard(onAddTask: (() -> Unit)?) {
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
@@ -298,11 +298,11 @@ private fun EmptyFamilyTaskListCard(onAddTask: () -> Unit) {
                 color = InkBrown,
             )
             Text(
-                text = "Crée une tâche pour organiser la maison sans passer par une occurrence du jour.",
+                text = if (onAddTask != null) "Crée une tâche pour organiser la maison sans passer par une occurrence du jour." else "Aucune tâche accessible pour le moment.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = InkMuted,
             )
-            OutlinedButton(
+            if (onAddTask != null) OutlinedButton(
                 onClick = onAddTask,
                 shape = RoundedCornerShape(8.dp),
                 modifier = Modifier.fillMaxWidth(),
@@ -341,4 +341,3 @@ private fun FamilyTaskListMessage(
         }
     }
 }
-

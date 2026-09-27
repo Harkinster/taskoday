@@ -113,7 +113,7 @@ fun FamilyTaskDetailScreen(
                                 FamilyTaskDefinitionCard(task = task, todayOccurrence = uiState.todayOccurrence)
                             }
 
-                            item {
+                            if (uiState.access.canManage) item {
                                 FamilyTaskDetailActions(
                                     task = task,
                                     isDeleting = uiState.isDeleting,
@@ -134,7 +134,7 @@ fun FamilyTaskDetailScreen(
         }
     }
 
-    if (uiState.showDeleteConfirmation) {
+    if (uiState.access.canManage && uiState.showDeleteConfirmation) {
         DeleteFamilyTaskDialog(
             isDeleting = uiState.isDeleting,
             onConfirm = viewModel::deleteTask,

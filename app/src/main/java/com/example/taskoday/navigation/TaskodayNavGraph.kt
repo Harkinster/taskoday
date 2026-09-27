@@ -101,14 +101,7 @@ fun TaskodayApp() {
     var recentNestRewardCrystals by rememberSaveable { mutableStateOf(0) }
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
-    val visibleTopLevelDestinations =
-        if (localChildMode) {
-            TopLevelDestinations.filterNot { it == TaskodayDestination.FamilyHome || it == TaskodayDestination.FollowUp }
-        } else if (activeChildRole) {
-            TopLevelDestinations.filterNot { it == TaskodayDestination.FollowUp }
-        } else {
-            TopLevelDestinations
-        }
+    val visibleTopLevelDestinations = visibleAccountDestinations(activeChildRole, localChildMode)
     val currentTopLevelIndex =
         visibleTopLevelDestinations.indexOfFirst { destination ->
             currentDestination?.hierarchy?.any { it.route == destination.route } == true
@@ -345,7 +338,11 @@ fun TaskodayApp() {
                 FamilyHomeScreen(
                     viewModel = viewModel,
                     onOpenProfile = navigateToProfile,
-                    onAddTask = { date -> navController.navigate(TaskodayDestination.FamilyTaskCreate.createRoute(date)) },
+                    onAddTask = { date ->
+                        if (!localChildMode && viewModel.uiState.value.access.canManage) {
+                            navController.navigate(TaskodayDestination.FamilyTaskCreate.createRoute(date))
+                        }
+                    },
                     onOpenAllTasks = { navController.navigate(TaskodayDestination.FamilyTasksList.route) },
                     onOpenTask = { taskId -> navController.navigate(TaskodayDestination.FamilyTaskDetail.createRoute(taskId)) },
                 )
@@ -356,7 +353,11 @@ fun TaskodayApp() {
                 FamilyTaskListScreen(
                     viewModel = viewModel,
                     onBack = { navController.popBackStack() },
-                    onAddTask = { navController.navigate(TaskodayDestination.FamilyTaskCreate.createRoute()) },
+                    onAddTask = {
+                        if (!localChildMode && viewModel.uiState.value.access.canManage) {
+                            navController.navigate(TaskodayDestination.FamilyTaskCreate.createRoute())
+                        }
+                    },
                     onOpenTask = { taskId -> navController.navigate(TaskodayDestination.FamilyTaskDetail.createRoute(taskId)) },
                 )
             }
@@ -409,7 +410,11 @@ fun TaskodayApp() {
                 FamilyTaskDetailScreen(
                     viewModel = viewModel,
                     onBack = { navController.popBackStack() },
-                    onEdit = { taskId -> navController.navigate(TaskodayDestination.FamilyTaskEdit.createRoute(taskId)) },
+                    onEdit = { taskId ->
+                        if (!localChildMode && viewModel.uiState.value.access.canManage) {
+                            navController.navigate(TaskodayDestination.FamilyTaskEdit.createRoute(taskId))
+                        }
+                    },
                     onDeleted = { navController.popBackStack() },
                 )
             }

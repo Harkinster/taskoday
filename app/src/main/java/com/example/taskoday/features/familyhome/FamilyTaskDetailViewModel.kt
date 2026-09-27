@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.taskoday.data.repository.toRemoteUserMessage
 import com.example.taskoday.domain.repository.FamilyTasksRepository
+import com.example.taskoday.domain.repository.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +20,7 @@ class FamilyTaskDetailViewModel
     constructor(
         savedStateHandle: SavedStateHandle,
         private val familyTasksRepository: FamilyTasksRepository,
+        private val authRepository: AuthRepository,
     ) : ViewModel() {
         private val taskId: Long = savedStateHandle.get<Long>("taskId") ?: 0L
         private val _uiState = MutableStateFlow(FamilyTaskDetailUiState())
@@ -43,9 +45,17 @@ class FamilyTaskDetailViewModel
 
             viewModelScope.launch {
                 _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+                val access = runCatching { FamilyTaskAccessPolicy.forUser(authRepository.fetchMe()) }
+                    .getOrDefault(FamilyTaskAccessPolicy())
+                _uiState.update { it.copy(access = access) }
                 familyTasksRepository
                     .fetchTask(taskId)
                     .onSuccess { task ->
+                        if (!access.canView(task.assignees)) {
+                            _uiState.update { it.copy(isLoading = false, task = null, todayOccurrence = null,
+                                errorMessage = "Cette tâche n'est pas accessible à ce compte.") }
+                            return@onSuccess
+                        }
                         val todayOccurrence =
                             familyTasksRepository
                                 .fetchToday()
@@ -75,6 +85,7 @@ class FamilyTaskDetailViewModel
         }
 
         fun requestDelete() {
+            if (!_uiState.value.access.canManage) return
             _uiState.update { it.copy(showDeleteConfirmation = true, errorMessage = null) }
         }
 
@@ -83,7 +94,7 @@ class FamilyTaskDetailViewModel
         }
 
         fun deleteTask() {
-            if (_uiState.value.isDeleting || taskId <= 0L) return
+            if (!_uiState.value.access.canManage || _uiState.value.isDeleting || taskId <= 0L) return
 
             viewModelScope.launch {
                 _uiState.update {

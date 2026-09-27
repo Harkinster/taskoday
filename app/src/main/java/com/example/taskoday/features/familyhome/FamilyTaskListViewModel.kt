@@ -6,6 +6,7 @@ import com.example.taskoday.data.repository.toRemoteUserMessage
 import com.example.taskoday.domain.model.FamilyTaskDefinition
 import com.example.taskoday.domain.model.FamilyTaskMember
 import com.example.taskoday.domain.repository.FamilyTasksRepository
+import com.example.taskoday.domain.repository.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +20,7 @@ class FamilyTaskListViewModel
     @Inject
     constructor(
         private val familyTasksRepository: FamilyTasksRepository,
+        private val authRepository: AuthRepository,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(FamilyTaskListUiState())
         val uiState: StateFlow<FamilyTaskListUiState> = _uiState.asStateFlow()
@@ -30,6 +32,9 @@ class FamilyTaskListViewModel
         fun refresh() {
             viewModelScope.launch {
                 _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+                val access = runCatching { FamilyTaskAccessPolicy.forUser(authRepository.fetchMe()) }
+                    .getOrDefault(FamilyTaskAccessPolicy())
+                _uiState.update { it.copy(access = access) }
                 val tasksResult = familyTasksRepository.fetchTasks()
                 val membersResult = familyTasksRepository.fetchMembers()
 
@@ -71,14 +76,17 @@ class FamilyTaskListViewModel
             selectedFilterKey: String,
             isLoading: Boolean = false,
         ) {
-            val filters = buildFamilyTaskListFilters(members)
+            val access = _uiState.value.access
+            val allowedTasks = tasks.filter { access.canView(it.assignees) }
+            val allowedMembers = members.filter { access.canManage || it.userId == access.userId }
+            val filters = buildFamilyTaskListFilters(allowedMembers)
             val safeFilterKey = filters.firstOrNull { filter -> filter.key == selectedFilterKey }?.key ?: FAMILY_TASK_FILTER_ALL
             _uiState.update {
                 it.copy(
                     isLoading = isLoading,
-                    tasks = tasks,
-                    visibleTasks = filterFamilyTaskDefinitions(tasks = tasks, filterKey = safeFilterKey),
-                    members = members,
+                    tasks = allowedTasks,
+                    visibleTasks = filterFamilyTaskDefinitions(tasks = allowedTasks, filterKey = safeFilterKey),
+                    members = allowedMembers,
                     filters = filters,
                     selectedFilterKey = safeFilterKey,
                     errorMessage = null,

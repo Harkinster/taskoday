@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.taskoday.core.util.DateTimeUtils
 import com.example.taskoday.data.repository.RemotePlanningIdCodec
+import com.example.taskoday.features.familyhome.FamilyTaskAccessPolicy
 import com.example.taskoday.domain.model.TaskForDay
 import com.example.taskoday.domain.model.TaskStatus
 import com.example.taskoday.domain.repository.AuthRepository
@@ -53,24 +54,31 @@ class ExplorationViewModel
                 _uiState.update { it.copy(isLoading = true, errorMessage = null) }
                 runCatching {
                     val me = authRepository.fetchMe()
+                    val access = FamilyTaskAccessPolicy.forUser(me)
                     val familyMembers = familyTasksRepository.fetchMembers().getOrThrow()
                     val children = runCatching { childrenRepository.fetchChildren() }.getOrDefault(emptyList())
                     val members =
-                        familyMembers.map { member ->
+                        familyMembers.filter { access.canManage || it.userId == me.id }.map { member ->
                             val childLabel =
                                 children.firstOrNull { child ->
-                                    child.id == member.userId || child.email.equals(member.email, ignoreCase = true)
+                                    !member.email.isNullOrBlank() && child.email.equals(member.email, ignoreCase = true)
                                 }?.displayName
                             ExplorationMember(member.userId, childLabel ?: member.displayName)
                         }
                     childProfileIds =
                         members.mapNotNull { member ->
-                            children.firstOrNull { child -> child.displayName.equals(member.displayName, ignoreCase = true) }
+                            val email = familyMembers.firstOrNull { it.userId == member.id }?.email
+                            children.firstOrNull { child -> !email.isNullOrBlank() && child.email.equals(email, ignoreCase = true) }
                                 ?.let { child -> member.id to child.id }
                         }.toMap()
+                    if (!access.canManage) {
+                        val ownChildId = authRepository.getActiveChildId(forceRefresh = true)
+                        childProfileIds = ownChildId?.let { mapOf(me.id to it) }.orEmpty()
+                    }
                     val selected = resolveSelection(me.id, members, _uiState.value.selectedMemberId)
                     _uiState.update {
                         it.copy(
+                            access = access,
                             members = members,
                             selectedMemberId = selected.first,
                             selectedMemberName = selected.second,
@@ -79,7 +87,7 @@ class ExplorationViewModel
                     loadSelectedMember(selected.first, selected.second)
                 }.onFailure { error ->
                     _uiState.update {
-                        it.copy(isLoading = false, errorMessage = error.message ?: "Exploration indisponible.")
+                        ExplorationUiState(isLoading = false, errorMessage = error.message ?: "Exploration indisponible.")
                     }
                 }
             }
@@ -93,6 +101,7 @@ class ExplorationViewModel
 
         fun toggleFamilyTask(item: ExplorationTask) {
             val occurrence = item.occurrence
+            if (_uiState.value.access.quickAction(occurrence) == null) return
             if (occurrence.occurrenceId <= 0L) return
             val key = "family-${occurrence.occurrenceId}"
             if (_uiState.value.actingKey != null) return
@@ -118,6 +127,8 @@ class ExplorationViewModel
         }
 
         private fun toggleLegacyTask(item: TaskForDay) {
+            if (RemotePlanningIdCodec.decodeTaskId(item.task.id) == null) return
+            if (item.isCompleted && !_uiState.value.access.canManage) return
             val key = "task-${item.task.id}"
             if (_uiState.value.actingKey != null) return
             _uiState.update { it.copy(actingKey = key, errorMessage = null) }
@@ -150,19 +161,22 @@ class ExplorationViewModel
             val house = allToday.filter { it.assignees.isEmpty() }
             val overdueHouse = overdue.filter { it.assignees.isEmpty() }
             val childId = memberId?.let { childProfileIds[it] }
+            var routinesSynced = false
+            var missionsSynced = false
+            var questsSynced = false
             if (childId != null) {
                 authRepository.setActiveChildId(childId)
-                routinesRepository.syncRoutinesForDay(DateTimeUtils.startOfDayMillis())
-                missionsRepository.syncMissions()
-                questsRepository.syncQuests()
-            } else {
-                // A parent member has no child planning cache to display.
-                taskRepository.clearRemoteRoutineCache()
-                taskRepository.clearRemoteMissionCache()
-                questRepository.clearRemoteCache()
+                routinesSynced = routinesRepository.syncRoutinesForDay(DateTimeUtils.startOfDayMillis()).usedRemoteData
+                missionsSynced = missionsRepository.syncMissions().usedRemoteData
+                questsSynced = questsRepository.syncQuests().usedRemoteData
             }
-            val tasks = taskRepository.observeTasksForDay(DateTimeUtils.startOfDayMillis()).first()
-            val quests = questRepository.observeQuestsForDay(DateTimeUtils.startOfDayMillis()).first()
+            // Never fall back to seeds or a previous member's cache when sync is unavailable.
+            val tasks = if (childId != null) remoteExplorationTasks(
+                taskRepository.observeTasksForDay(DateTimeUtils.startOfDayMillis()).first()
+            ).filter { if (it.isRoutineItem()) routinesSynced else missionsSynced } else emptyList()
+            val quests = if (questsSynced) remoteExplorationQuests(
+                questRepository.observeQuestsForDay(DateTimeUtils.startOfDayMillis()).first()
+            ) else emptyList()
             _uiState.update {
                 it.copy(
                     isLoading = false,

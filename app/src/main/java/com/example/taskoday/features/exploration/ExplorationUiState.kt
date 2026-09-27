@@ -10,6 +10,7 @@ data class ExplorationMember(
 )
 
 data class ExplorationUiState(
+    val access: com.example.taskoday.features.familyhome.FamilyTaskAccessPolicy = com.example.taskoday.features.familyhome.FamilyTaskAccessPolicy(),
     val isLoading: Boolean = true,
     val members: List<ExplorationMember> = emptyList(),
     val selectedMemberId: Long? = null,

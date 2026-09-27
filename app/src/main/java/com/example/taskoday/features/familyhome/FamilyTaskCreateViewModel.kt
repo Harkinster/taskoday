@@ -8,6 +8,7 @@ import com.example.taskoday.domain.model.FamilyTaskDefinition
 import com.example.taskoday.domain.model.FamilyTaskPriority
 import com.example.taskoday.domain.model.FamilyTaskRecurrence
 import com.example.taskoday.domain.repository.FamilyTasksRepository
+import com.example.taskoday.domain.repository.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,6 +23,7 @@ class FamilyTaskCreateViewModel
     constructor(
         savedStateHandle: SavedStateHandle,
         private val familyTasksRepository: FamilyTasksRepository,
+        private val authRepository: AuthRepository,
     ) : ViewModel() {
         private val taskId: Long? = savedStateHandle.get<Long>("taskId")?.takeIf { it > 0L }
         private val prefilledDate: String? = savedStateHandle.get<String>("date")
@@ -218,6 +220,12 @@ class FamilyTaskCreateViewModel
 
             viewModelScope.launch {
                 _uiState.update { it.copy(isSubmitting = true, errorMessage = null) }
+                val canManage = runCatching { FamilyTaskAccessPolicy.forUser(authRepository.fetchMe()).canManage }
+                    .getOrDefault(false)
+                if (!canManage) {
+                    _uiState.update { it.copy(isSubmitting = false, errorMessage = "Action réservée aux parents.") }
+                    return@launch
+                }
                 val result =
                     if (current.isEditing && current.taskId != null) {
                         familyTasksRepository.updateTask(current.taskId, input)

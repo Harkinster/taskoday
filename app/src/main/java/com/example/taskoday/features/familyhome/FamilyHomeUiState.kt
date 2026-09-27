@@ -1,6 +1,7 @@
 package com.example.taskoday.features.familyhome
 
 data class FamilyHomeUiState(
+    val access: FamilyTaskAccessPolicy = FamilyTaskAccessPolicy(),
     val isLoading: Boolean = true,
     val mode: FamilyHomeMode = FamilyHomeMode.TODAY,
     val familyId: Long? = null,
