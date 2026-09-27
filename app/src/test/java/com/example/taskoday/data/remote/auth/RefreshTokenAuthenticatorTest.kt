@@ -14,6 +14,39 @@ import org.junit.Test
 
 class RefreshTokenAuthenticatorTest {
     @Test
+    fun `refresh completing after logout cannot restore the session`() {
+        val storage = MemorySessionTokenStorage("access-a", "refresh-a")
+        val client = object : AuthSessionClient {
+            override fun refresh(refreshToken: String): AuthRefreshResult {
+                storage.clear()
+                return success("access-b", "refresh-b")
+            }
+            override fun logout(refreshToken: String) = Unit
+        }
+
+        assertNull(authenticator(storage, client).authenticate(null, unauthorizedResponse("access-a")))
+        assertNull(storage.getSessionTokens())
+        assertEquals(0, storage.sessionWriteCount)
+    }
+
+    @Test
+    fun `refresh completing after another login cannot replace the new account`() {
+        val storage = MemorySessionTokenStorage("access-a", "refresh-a")
+        val client = object : AuthSessionClient {
+            override fun refresh(refreshToken: String): AuthRefreshResult {
+                storage.saveSessionTokens("other-access", "other-refresh", null, null)
+                return success("access-b", "refresh-b")
+            }
+            override fun logout(refreshToken: String) = Unit
+        }
+
+        assertNull(authenticator(storage, client).authenticate(null, unauthorizedResponse("access-a")))
+        assertEquals("other-access", storage.getSessionTokens()?.accessToken)
+        assertEquals("other-refresh", storage.getSessionTokens()?.refreshToken)
+        assertEquals(1, storage.sessionWriteCount)
+    }
+
+    @Test
     fun `401 refresh success stores rotated pair and retries once`() {
         val storage = MemorySessionTokenStorage(accessToken = "access-a", refreshToken = "refresh-a")
         val client = FakeAuthSessionClient(success("access-b", "refresh-b"))

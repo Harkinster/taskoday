@@ -91,6 +91,7 @@ class TaskDetailViewModel
         }
 
         fun updateStatus(status: TaskStatus) {
+            if (status != TaskStatus.DONE && !uiState.value.canManageTask) return
             val id = uiState.value.task?.id ?: return
             if (!pendingStatusTaskIds.add(id)) return
             viewModelScope.launch {
@@ -114,6 +115,7 @@ class TaskDetailViewModel
         }
 
         fun deleteTask() {
+            if (!uiState.value.canManageTask) return
             val id = uiState.value.task?.id ?: return
             viewModelScope.launch {
                 val remoteRef = RemotePlanningIdCodec.decodeTaskId(id)

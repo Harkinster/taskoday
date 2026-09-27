@@ -144,6 +144,7 @@ class QuestsViewModel
         }
 
         fun setQuestCompleted(item: QuestForDay, checked: Boolean) {
+            if (!checked && !_uiState.value.canManageQuests) return
             val dayStart = selectedDay.value
             if (!pendingCompletionQuestIds.add(item.quest.id)) return
             viewModelScope.launch {

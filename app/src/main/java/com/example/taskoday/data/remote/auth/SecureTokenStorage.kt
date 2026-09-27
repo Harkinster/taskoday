@@ -16,6 +16,7 @@ class SecureTokenStorage
     ) : TokenStorage {
         private val preferences: SharedPreferences? by lazy { createPreferences(context) }
 
+        @Synchronized
         override fun getSessionTokens(): SessionTokens? {
             val preferences = preferences ?: return null
             val accessToken = preferences.getString(KEY_ACCESS_TOKEN, null)?.takeIf { it.isNotBlank() } ?: return null
@@ -27,6 +28,7 @@ class SecureTokenStorage
             )
         }
 
+        @Synchronized
         override fun saveSessionTokens(
             accessToken: String,
             refreshToken: String?,
@@ -84,6 +86,7 @@ class SecureTokenStorage
 
         override fun verifyParentPin(pin: String): Boolean = preferences?.getString(KEY_PARENT_PIN, null) == pin
 
+        @Synchronized
         override fun clear() {
             val preferences = preferences ?: return
             preferences

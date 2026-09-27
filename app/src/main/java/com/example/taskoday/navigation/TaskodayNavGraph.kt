@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -363,6 +364,7 @@ fun TaskodayApp() {
             }
 
             composable(TaskodayDestination.FamilyHousehold.route) {
+                if (!ParentDestinationAccess(quickAddUiState.isLoading, quickAddUiState.canOpenQuickAdd, activeChildRole, localChildMode) { navController.popBackStack() }) return@composable
                 val viewModel: FamilyHouseholdViewModel = hiltViewModel()
                 FamilyHouseholdScreen(
                     viewModel = viewModel,
@@ -371,6 +373,7 @@ fun TaskodayApp() {
             }
 
             composable(TaskodayDestination.FamilyNotifications.route) {
+                if (!ParentDestinationAccess(quickAddUiState.isLoading, quickAddUiState.canOpenQuickAdd, activeChildRole, localChildMode) { navController.popBackStack() }) return@composable
                 val viewModel: FamilyNotificationsViewModel = hiltViewModel()
                 FamilyNotificationsScreen(
                     viewModel = viewModel,
@@ -393,6 +396,7 @@ fun TaskodayApp() {
                         },
                     ),
             ) { entry ->
+                if (!ParentDestinationAccess(quickAddUiState.isLoading, quickAddUiState.canOpenQuickAdd, activeChildRole, localChildMode) { navController.popBackStack() }) return@composable
                 val viewModel: FamilyTaskCreateViewModel = hiltViewModel()
                 FamilyTaskCreateScreen(
                     viewModel = viewModel,
@@ -423,6 +427,7 @@ fun TaskodayApp() {
                 route = TaskodayDestination.FamilyTaskEdit.route,
                 arguments = listOf(navArgument(TaskodayDestination.FamilyTaskEdit.ARG_TASK_ID) { type = NavType.LongType }),
             ) {
+                if (!ParentDestinationAccess(quickAddUiState.isLoading, quickAddUiState.canOpenQuickAdd, activeChildRole, localChildMode) { navController.popBackStack() }) return@composable
                 val viewModel: FamilyTaskCreateViewModel = hiltViewModel()
                 FamilyTaskCreateScreen(
                     viewModel = viewModel,
@@ -470,6 +475,7 @@ fun TaskodayApp() {
             }
 
             composable(TaskodayDestination.FollowUp.route) {
+                if (!ParentDestinationAccess(quickAddUiState.isLoading, quickAddUiState.canOpenQuickAdd, activeChildRole, localChildMode) { navController.navigate(TaskodayDestination.Exploration.route) { popUpTo(TaskodayDestination.FollowUp.route) { inclusive = true } } }) return@composable
                 if (activeChildRole || localChildMode) {
                     LaunchedEffect(Unit) { navController.navigate(TaskodayDestination.Exploration.route) { popUpTo(TaskodayDestination.FollowUp.route) { inclusive = true } } }
                 } else {
@@ -596,6 +602,7 @@ fun TaskodayApp() {
                         },
                     ),
             ) {
+                if (!ParentDestinationAccess(quickAddUiState.isLoading, quickAddUiState.canOpenQuickAdd, activeChildRole, localChildMode) { navController.popBackStack() }) return@composable
                 val viewModel: TaskEditViewModel = hiltViewModel()
                 TaskEditScreen(
                     viewModel = viewModel,
@@ -649,6 +656,7 @@ fun TaskodayApp() {
                         },
                     ),
             ) { entry ->
+                if (!ParentDestinationAccess(quickAddUiState.isLoading, quickAddUiState.canOpenQuickAdd, activeChildRole, localChildMode) { navController.popBackStack() }) return@composable
                 val viewModel: ParentPlanningViewModel = hiltViewModel()
                 val initialFormType = entry.arguments?.getString(TaskodayDestination.ParentPlanning.ARG_TYPE).toPlanningFormType()
                 ParentPlanningScreen(
@@ -666,6 +674,24 @@ fun TaskodayApp() {
 }
 
 private val MENU_SWIPE_THRESHOLD_DP = 90.dp
+
+/** Check before creating the destination ViewModel, not only when displaying its entry button. */
+@Composable
+private fun ParentDestinationAccess(
+    isLoading: Boolean,
+    verifiedParentSession: Boolean,
+    isChild: Boolean,
+    localChildMode: Boolean,
+    onDenied: () -> Unit,
+): Boolean {
+    if (isLoading) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+        return false
+    }
+    val allowed = canEnterParentDestination(verifiedParentSession, isChild, localChildMode)
+    if (!allowed) LaunchedEffect(Unit) { onDenied() }
+    return allowed
+}
 
 private fun String?.toPlanningFormType(): PlanningFormType =
     when (this?.lowercase()) {

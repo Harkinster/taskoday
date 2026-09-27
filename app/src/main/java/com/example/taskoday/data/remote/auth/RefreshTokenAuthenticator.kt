@@ -32,7 +32,6 @@ class RefreshTokenAuthenticator
             return synchronized(refreshLock) {
                 val storedTokens = tokenStorage.getSessionTokens()
                 if (storedTokens == null) {
-                    notifyInvalidSession()
                     return@synchronized null
                 }
 
@@ -53,13 +52,17 @@ class RefreshTokenAuthenticator
                         if (refreshed.accessToken.isBlank() || rotatedRefreshToken.isNullOrBlank()) {
                             return@synchronized null
                         }
-                        tokenStorage.saveSessionTokens(
-                            accessToken = refreshed.accessToken,
-                            refreshToken = rotatedRefreshToken,
-                            accessExpiresInSeconds = refreshed.expiresIn,
-                            refreshExpiresInSeconds = refreshed.refreshExpiresIn,
-                        )
-                        response.request.withBearerToken(refreshed.accessToken)
+                        synchronized(tokenStorage) storageUpdate@{
+                            // A logout or a new login may have completed while refresh was in flight.
+                            if (tokenStorage.getSessionTokens() != storedTokens) return@storageUpdate null
+                            tokenStorage.saveSessionTokens(
+                                accessToken = refreshed.accessToken,
+                                refreshToken = rotatedRefreshToken,
+                                accessExpiresInSeconds = refreshed.expiresIn,
+                                refreshExpiresInSeconds = refreshed.refreshExpiresIn,
+                            )
+                            response.request.withBearerToken(refreshed.accessToken)
+                        }
                     }
 
                     is AuthRefreshResult.HttpFailure -> {
@@ -75,9 +78,11 @@ class RefreshTokenAuthenticator
         }
 
         private fun invalidateSessionIfCurrent(failedAccessToken: String) {
-            if (tokenStorage.getAccessToken() == failedAccessToken) {
-                tokenStorage.clear()
-                notifyInvalidSession()
+            synchronized(tokenStorage) {
+                if (tokenStorage.getAccessToken() == failedAccessToken) {
+                    tokenStorage.clear()
+                    notifyInvalidSession()
+                }
             }
         }
 

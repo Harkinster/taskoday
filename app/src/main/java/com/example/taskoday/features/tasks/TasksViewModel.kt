@@ -112,6 +112,7 @@ class TasksViewModel
         }
 
         fun deleteTask(taskId: Long) {
+            if (taskId !in uiState.value.manageableTaskIds) return
             viewModelScope.launch {
                 val remoteRef = RemotePlanningIdCodec.decodeTaskId(taskId)
                 if (remoteRef?.itemType == PlanningItemType.MISSION) {
