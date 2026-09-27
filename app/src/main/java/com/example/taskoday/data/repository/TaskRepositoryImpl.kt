@@ -12,6 +12,7 @@ import com.example.taskoday.domain.model.Task
 import com.example.taskoday.domain.model.TaskForDay
 import com.example.taskoday.domain.model.TaskStatus
 import com.example.taskoday.domain.repository.TaskRepository
+import com.example.taskoday.domain.repository.AuthRepository
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
@@ -26,25 +27,26 @@ class TaskRepositoryImpl
         private val taskCheckDao: TaskCheckDao,
         private val demoModeStore: DemoModeStore,
         private val demoDataSource: DemoTaskDataSource,
+        private val authRepository: AuthRepository,
     ) : TaskRepository {
         override fun observeTasks(): Flow<List<Task>> =
             demoModeStore.enabledFlow.flatMapLatest { enabled ->
-                if (enabled) demoDataSource.observeTasks() else taskDao.observeAll().map { entities -> entities.map { it.toDomain() } }
+                if (enabled) demoDataSource.observeTasks() else taskDao.observeAll().map { entities -> entities.map { it.toDomain() }.filter(::isVisible) }
             }
 
         override fun observeMissionTasks(): Flow<List<Task>> =
             demoModeStore.enabledFlow.flatMapLatest { enabled ->
-                if (enabled) demoDataSource.observeMissionTasks() else taskDao.observeMissionList().map { entities -> entities.map { it.toDomain() } }
+                if (enabled) demoDataSource.observeMissionTasks() else taskDao.observeMissionList().map { entities -> entities.map { it.toDomain() }.filter(::isVisible) }
             }
 
         override fun observeTask(taskId: Long): Flow<Task?> =
             demoModeStore.enabledFlow.flatMapLatest { enabled ->
-                if (enabled) demoDataSource.observeTask(taskId) else taskDao.observeById(taskId).map { it?.toDomain() }
+                if (enabled) demoDataSource.observeTask(taskId) else taskDao.observeById(taskId).map { it?.toDomain()?.takeIf(::isVisible) }
             }
 
         override fun observeTasksDueBetween(startMillis: Long, endMillis: Long): Flow<List<Task>> =
             demoModeStore.enabledFlow.flatMapLatest { enabled ->
-                if (enabled) demoDataSource.observeTasksDueBetween(startMillis, endMillis) else taskDao.observeDueBetween(startMillis, endMillis).map { entities -> entities.map { it.toDomain() } }
+                if (enabled) demoDataSource.observeTasksDueBetween(startMillis, endMillis) else taskDao.observeDueBetween(startMillis, endMillis).map { entities -> entities.map { it.toDomain() }.filter(::isVisible) }
             }
 
         override fun observeTasksForDay(dayStartMillis: Long): Flow<List<TaskForDay>> =
@@ -58,7 +60,7 @@ class TaskRepositoryImpl
                                 task = row.task.toDomain(),
                                 isChecked = row.isChecked,
                             )
-                        }
+                        }.filter { isVisible(it.task) }
                     }
                 }
             }
@@ -121,6 +123,11 @@ class TaskRepositoryImpl
                 taskDao.deleteRemoteCachedTasks()
             }
         }
+
+        private fun isVisible(task: Task): Boolean = planningCacheEntryVisible(
+            hasRemoteSession = !authRepository.getAccessToken().isNullOrBlank(),
+            isRemoteEntry = RemotePlanningIdCodec.decodeTaskId(task.id) != null,
+        )
 
         private fun weekdayToken(dayStartMillis: Long): String {
             val isoDay = DateTimeUtils.dayOfWeekIso(dayStartMillis)

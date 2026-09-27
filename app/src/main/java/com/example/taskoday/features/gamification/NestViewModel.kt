@@ -21,6 +21,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 
 data class NestUiState(
     val hasRemoteSession: Boolean = false,
@@ -54,9 +56,10 @@ class NestViewModel
     constructor(
         private val nestRepository: NestRepository,
     ) : ViewModel() {
-        private val _uiState = MutableStateFlow(NestUiState())
+        private val _uiState = MutableStateFlow(NestUiState(hasRemoteSession = nestRepository.hasRemoteSession()))
         val uiState: StateFlow<NestUiState> = _uiState.asStateFlow()
         private var nextHatchingEventId = 0L
+        private var refreshJob: Job? = null
 
         init {
             observeProgressChanges()
@@ -72,15 +75,17 @@ class NestViewModel
         }
 
         fun refresh() {
+            refreshJob?.cancel()
             if (!nestRepository.hasRemoteSession()) {
-                _uiState.update { it.copy(hasRemoteSession = false, isLoading = false) }
+                _uiState.value = NestUiState(isLoading = false)
                 return
             }
-            viewModelScope.launch {
-                _uiState.update { it.copy(hasRemoteSession = true, isLoading = true) }
+            _uiState.value = NestUiState(hasRemoteSession = true)
+            refreshJob = viewModelScope.launch {
                 nestRepository
                     .loadSnapshot()
                     .onSuccess { snapshot ->
+                        ensureActive()
                         _uiState.update {
                             it.withSnapshot(snapshot).copy(
                                 hasRemoteSession = true,
@@ -88,6 +93,7 @@ class NestViewModel
                             )
                         }
                     }.onFailure { error ->
+                        ensureActive()
                         _uiState.update {
                             it.copy(
                                 hasRemoteSession = true,

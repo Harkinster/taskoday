@@ -32,6 +32,7 @@ class MissionsRepositoryImpl
             if (authRepository.getAccessToken().isNullOrBlank()) {
                 return MissionsSyncResult(usedRemoteData = false)
             }
+            taskRepository.clearRemoteMissionCache()
             val childId = runCatching { authRepository.getActiveChildId(forceRefresh = true) }.getOrNull()
             if (childId == null) {
                 return MissionsSyncResult(usedRemoteData = false)
@@ -39,7 +40,6 @@ class MissionsRepositoryImpl
 
             return runCatching {
                 val missions = missionsApi.getMissions(childId).data
-                taskRepository.clearRemoteMissionCache()
                 val now = System.currentTimeMillis()
                 missions
                     .filter { it.isActive != false }

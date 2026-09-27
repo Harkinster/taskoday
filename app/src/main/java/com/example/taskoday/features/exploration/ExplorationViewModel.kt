@@ -25,6 +25,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
 
 @HiltViewModel
 class ExplorationViewModel
@@ -44,14 +46,17 @@ class ExplorationViewModel
         val uiState: StateFlow<ExplorationUiState> = _uiState.asStateFlow()
 
         private var childProfileIds: Map<Long, Long> = emptyMap()
+        private var loadJob: Job? = null
 
         init {
             refresh()
         }
 
         fun refresh() {
-            viewModelScope.launch {
-                _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            loadJob?.cancel()
+            val previousSelection = _uiState.value.selectedMemberId
+            _uiState.value = ExplorationUiState()
+            loadJob = viewModelScope.launch {
                 runCatching {
                     val me = authRepository.fetchMe()
                     val access = FamilyTaskAccessPolicy.forUser(me)
@@ -75,7 +80,7 @@ class ExplorationViewModel
                         val ownChildId = authRepository.getActiveChildId(forceRefresh = true)
                         childProfileIds = ownChildId?.let { mapOf(me.id to it) }.orEmpty()
                     }
-                    val selected = resolveSelection(me.id, members, _uiState.value.selectedMemberId)
+                    val selected = resolveSelection(me.id, members, previousSelection)
                     _uiState.update {
                         it.copy(
                             access = access,
@@ -86,6 +91,7 @@ class ExplorationViewModel
                     }
                     loadSelectedMember(selected.first, selected.second)
                 }.onFailure { error ->
+                    if (error is CancellationException) throw error
                     _uiState.update {
                         ExplorationUiState(isLoading = false, errorMessage = error.message ?: "Exploration indisponible.")
                     }
@@ -95,8 +101,18 @@ class ExplorationViewModel
 
         fun selectMember(memberId: Long) {
             val member = _uiState.value.members.firstOrNull { it.id == memberId } ?: return
-            _uiState.update { it.copy(selectedMemberId = member.id, selectedMemberName = member.displayName) }
-            viewModelScope.launch { loadSelectedMember(member.id, member.displayName) }
+            loadJob?.cancel()
+            val previous = _uiState.value
+            _uiState.value = ExplorationUiState(access = previous.access, members = previous.members, selectedMemberId = member.id, selectedMemberName = member.displayName)
+            loadJob = viewModelScope.launch {
+                try {
+                    loadSelectedMember(member.id, member.displayName)
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    _uiState.value = ExplorationUiState(isLoading = false, errorMessage = error.message ?: "Exploration indisponible.")
+                }
+            }
         }
 
         fun toggleFamilyTask(item: ExplorationTask) {

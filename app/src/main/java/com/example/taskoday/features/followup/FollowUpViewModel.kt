@@ -3,6 +3,7 @@ package com.example.taskoday.features.followup
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.taskoday.core.util.DateTimeUtils
+import com.example.taskoday.data.repository.RemotePlanningIdCodec
 import com.example.taskoday.domain.model.FamilyTaskTodayItem
 import com.example.taskoday.domain.model.TaskForDay
 import com.example.taskoday.domain.repository.AuthRepository
@@ -20,6 +21,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
 
 @HiltViewModel
 class FollowUpViewModel
@@ -35,32 +38,37 @@ class FollowUpViewModel
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(FollowUpUiState())
         val uiState: StateFlow<FollowUpUiState> = _uiState.asStateFlow()
+        private var loadJob: Job? = null
 
         init { refresh() }
 
         fun refresh() {
-            viewModelScope.launch {
-                _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            loadJob?.cancel()
+            val previousSelection = _uiState.value.selectedMemberId
+            _uiState.value = FollowUpUiState()
+            loadJob = viewModelScope.launch {
                 runCatching {
                     val me = authRepository.fetchMe()
+                    check(me.role.equals("PARENT", ignoreCase = true)) { "Suivi réservé aux parents." }
                     val members = familyTasksRepository.fetchMembers().getOrThrow()
                     val children = runCatching { childrenRepository.fetchChildren() }.getOrDefault(emptyList())
                     val today = familyTasksRepository.fetchToday().getOrThrow().tasks
                     val overdue = familyTasksRepository.fetchOverdueOccurrences().getOrNull()?.occurrences.orEmpty()
                     val summaries = members.map { member ->
                         val familyItems = personalItems(member.userId, today, overdue)
-                        val child = children.firstOrNull { it.id == member.userId || it.email.equals(member.email, ignoreCase = true) }
+                        val child = children.firstOrNull { !member.email.isNullOrBlank() && it.email.equals(member.email, ignoreCase = true) }
                         val legacyItems = if (child != null) loadLegacyItems(child.id) else emptyList()
                         summary(member.userId, member.displayName, familyItems + legacyItems)
                     }
                     val houseItems = householdItems(today, overdue)
                     val houseSummary = summary(0L, "Maison", houseItems)
-                    val selected = _uiState.value.selectedMemberId?.takeIf { id -> summaries.any { it.memberId == id } }
+                    val selected = previousSelection?.takeIf { id -> summaries.any { it.memberId == id } }
                         ?: summaries.firstOrNull { it.memberId == me.id }?.memberId
                         ?: summaries.firstOrNull()?.memberId
                     _uiState.update { it.copy(isLoading = false, members = summaries, selectedMemberId = selected, house = houseSummary) }
                 }.onFailure { error ->
-                    _uiState.update { it.copy(isLoading = false, errorMessage = error.message ?: "Suivi indisponible.") }
+                    if (error is CancellationException) throw error
+                    _uiState.value = FollowUpUiState(isLoading = false, errorMessage = error.message ?: "Suivi indisponible.")
                 }
             }
         }
@@ -69,10 +77,13 @@ class FollowUpViewModel
 
         private suspend fun loadLegacyItems(childId: Long): List<FollowUpItem> {
             authRepository.setActiveChildId(childId)
-            runCatching { routinesRepository.syncRoutinesForDay(DateTimeUtils.startOfDayMillis()) }
-            runCatching { missionsRepository.syncMissions() }
+            val routinesSynced = routinesRepository.syncRoutinesForDay(DateTimeUtils.startOfDayMillis()).usedRemoteData
+            val missionsSynced = missionsRepository.syncMissions().usedRemoteData
             val tasks = taskRepository.observeTasksForDay(DateTimeUtils.startOfDayMillis()).first()
-            return tasks.map { task ->
+            return tasks.filter { task ->
+                RemotePlanningIdCodec.decodeTaskId(task.task.id) != null &&
+                    (if (task.task.isRoutine || task.task.isDaily) routinesSynced else missionsSynced)
+            }.map { task ->
                 FollowUpItem("legacy-${task.task.id}", task.task.title, task.isCompleted, legacyTask = task)
             }
         }

@@ -10,6 +10,7 @@ import com.example.taskoday.data.mapper.toEntity
 import com.example.taskoday.domain.model.Quest
 import com.example.taskoday.domain.model.QuestForDay
 import com.example.taskoday.domain.repository.QuestRepository
+import com.example.taskoday.domain.repository.AuthRepository
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
@@ -24,10 +25,11 @@ class QuestRepositoryImpl
         private val questCompletionDao: QuestCompletionDao,
         private val demoModeStore: DemoModeStore,
         private val demoDataSource: DemoQuestDataSource,
+        private val authRepository: AuthRepository,
     ) : QuestRepository {
         override fun observeActiveQuests(): Flow<List<Quest>> =
             demoModeStore.enabledFlow.flatMapLatest { enabled ->
-                if (enabled) demoDataSource.observeActiveQuests() else questDao.observeActive().map { entities -> entities.map { it.toDomain() } }
+                if (enabled) demoDataSource.observeActiveQuests() else questDao.observeActive().map { entities -> entities.map { it.toDomain() }.filter(::isVisible) }
             }
 
         override fun observeQuestsForDay(dayStartMillis: Long): Flow<List<QuestForDay>> =
@@ -41,10 +43,15 @@ class QuestRepositoryImpl
                                 quest = row.quest.toDomain(),
                                 isCompletedForDay = row.isCompletedForDay,
                             )
-                        }
+                        }.filter { isVisible(it.quest) }
                     }
                 }
             }
+
+        private fun isVisible(quest: Quest): Boolean = planningCacheEntryVisible(
+            hasRemoteSession = !authRepository.getAccessToken().isNullOrBlank(),
+            isRemoteEntry = RemotePlanningIdCodec.decodeQuestId(quest.id) != null,
+        )
 
         override suspend fun upsertQuest(quest: Quest): Long =
             if (demoModeStore.isEnabled) quest.id else questDao.upsert(quest.toEntity())

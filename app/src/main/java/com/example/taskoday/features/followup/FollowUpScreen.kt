@@ -19,6 +19,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.Lifecycle
 import com.example.taskoday.core.ui.theme.DangerGlow
 import com.example.taskoday.core.ui.theme.InkMuted
 import com.example.taskoday.core.ui.theme.ParchmentLight
@@ -29,6 +31,7 @@ fun FollowUpScreen(
     onOpenFamilyTask: (Long) -> Unit,
     onOpenLegacyTask: (Long) -> Unit,
 ) {
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val selected = state.members.firstOrNull { it.memberId == state.selectedMemberId }
     LazyColumn(

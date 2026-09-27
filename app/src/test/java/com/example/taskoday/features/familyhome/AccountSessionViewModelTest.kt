@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import com.example.taskoday.domain.model.*
 import com.example.taskoday.domain.repository.*
 import com.example.taskoday.features.exploration.ExplorationViewModel
+import com.example.taskoday.features.followup.FollowUpViewModel
 import java.lang.reflect.Proxy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -17,6 +18,90 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AccountSessionViewModelTest {
+    @Test fun `suivi refresh failure clears previous family summaries`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        try {
+            var offline = false
+            val base = familyRepository()
+            val family = object : FamilyTasksRepository by base {
+                override suspend fun fetchToday() = if (offline) Result.failure(IllegalStateException("offline")) else base.fetchToday()
+            }
+            val children = object : ChildrenRepository by unused() {
+                override suspend fun fetchChildren() = emptyList<ParentChild>()
+            }
+            val vm = FollowUpViewModel(auth(identity(100L, "PARENT")), children, family, unused(), unused(), unused(), unused())
+            assertFalse(vm.uiState.value.members.isEmpty())
+            offline = true
+            vm.refresh()
+            assertEquals("offline", vm.uiState.value.errorMessage)
+            assertTrue(vm.uiState.value.members.isEmpty())
+            assertNull(vm.uiState.value.house)
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test fun `suivi does not confuse child profile id with another account user id`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        try {
+            val children = object : ChildrenRepository by unused() {
+                override suspend fun fetchChildren() = listOf(ParentChild(101L, "Other child", "other@example.test"))
+            }
+            val vm = FollowUpViewModel(auth(identity(100L, "PARENT")), children, familyRepository(), unused(), unused(), unused(), unused())
+            assertNull(vm.uiState.value.errorMessage)
+            assertTrue(vm.uiState.value.members.all { it.total == 0 })
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test fun `member selection network error clears exploration without crashing`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        try {
+            var offline = false
+            val base = familyRepository()
+            val family = object : FamilyTasksRepository by base {
+                override suspend fun fetchToday() = if (offline) Result.failure(IllegalStateException("offline")) else base.fetchToday()
+            }
+            val vm = exploration(identity(100L, "PARENT"), true, family = family)
+            offline = true
+            vm.selectMember(101L)
+            assertEquals("offline", vm.uiState.value.errorMessage)
+            assertFalse(vm.uiState.value.isLoading)
+            assertTrue(vm.uiState.value.houseTasks.isEmpty())
+            assertTrue(vm.uiState.value.routines.isEmpty())
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test fun `suivi rejects a child before loading family administration`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        try {
+            val vm = FollowUpViewModel(auth(identity(101L, "CHILD")), unused(), unused(), unused(), unused(), unused(), unused())
+            assertNotNull(vm.uiState.value.errorMessage)
+            assertTrue(vm.uiState.value.members.isEmpty())
+            assertFalse(vm.uiState.value.isLoading)
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test fun `suivi excludes seeds and failed member sync cache`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        try {
+            for ((cachedId, synced, expected) in listOf(Triple(1L, true, 0), Triple(-111L, false, 0), Triple(-111L, true, 1))) {
+                val children = object : ChildrenRepository by unused() {
+                    override suspend fun fetchChildren() = listOf(ParentChild(201L, "First", "user101@example.test"))
+                }
+                val tasks = object : TaskRepository by unused() {
+                    override fun observeTasksForDay(dayStartMillis: Long) = flowOf(listOf(TaskForDay(Task(id = cachedId, title = "Cached", createdAt = 0L, updatedAt = 0L, isRoutine = true), false)))
+                }
+                val routines = object : RoutinesRepository by unused() {
+                    override suspend fun syncRoutinesForDay(dayStartMillis: Long) = RoutinesSyncResult(synced)
+                }
+                val missions = object : MissionsRepository by unused() {
+                    override suspend fun syncMissions() = MissionsSyncResult(synced)
+                }
+                val vm = FollowUpViewModel(auth(identity(100L, "PARENT")), children, familyRepository(), tasks, routines, missions, unused())
+                assertNull(vm.uiState.value.errorMessage)
+                assertEquals(expected, vm.uiState.value.members.first { it.memberId == 101L }.total)
+            }
+        } finally { Dispatchers.resetMain() }
+    }
+
     @Test fun `list applies identity filtering before every user filter`() = runTest {
         Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
         try {
@@ -74,7 +159,7 @@ class AccountSessionViewModelTest {
         } finally { Dispatchers.resetMain() }
     }
 
-    private fun exploration(user: AuthenticatedUser, syncSucceeded: Boolean, cachedId: Long = 1L): ExplorationViewModel {
+    private fun exploration(user: AuthenticatedUser, syncSucceeded: Boolean, cachedId: Long = 1L, family: FamilyTasksRepository = familyRepository()): ExplorationViewModel {
         val tasks = object : TaskRepository by unused() {
             override fun observeTasksForDay(dayStartMillis: Long) = flowOf(listOf(
                 TaskForDay(Task(id = cachedId, title = "Cached example", createdAt = 0L, updatedAt = 0L, isRoutine = true), false)
@@ -97,7 +182,7 @@ class AccountSessionViewModelTest {
         val remoteQuests = object : QuestsRepository by unused() {
             override suspend fun syncQuests() = QuestsSyncResult(syncSucceeded)
         }
-        return ExplorationViewModel(auth(user), children, familyRepository(), tasks, routines, missions, quests, remoteQuests, unused())
+        return ExplorationViewModel(auth(user), children, family, tasks, routines, missions, quests, remoteQuests, unused())
     }
 
     private fun identity(id: Long, role: String) = AuthenticatedUser(id, "user$id@example.test", role, true, listOf(1L), "User $id")

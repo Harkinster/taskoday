@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.taskoday.data.demo.DemoModeStore
 import com.example.taskoday.domain.model.AuthenticatedUser
 import com.example.taskoday.domain.repository.AuthRepository
+import com.example.taskoday.domain.repository.TaskRepository
+import com.example.taskoday.domain.repository.QuestRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.IOException
 import java.net.ConnectException
@@ -25,6 +27,8 @@ class AuthViewModel
     constructor(
         private val authRepository: AuthRepository,
         private val demoModeStore: DemoModeStore,
+        private val taskRepository: TaskRepository? = null,
+        private val questRepository: QuestRepository? = null,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(AuthUiState())
         val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
@@ -197,8 +201,11 @@ class AuthViewModel
             _uiState.update { it.copy(errorMessage = null) }
         }
 
-        private fun setAuthenticated(me: AuthenticatedUser) {
+        private suspend fun setAuthenticated(me: AuthenticatedUser) {
             demoModeStore.setEnabled(false)
+            // Projections are not user/family-scoped in Room: never reuse them on session entry.
+            taskRepository?.clearRemoteCache()
+            questRepository?.clearRemoteCache()
             _uiState.update {
                 it.copy(
                     isCheckingSession = false,

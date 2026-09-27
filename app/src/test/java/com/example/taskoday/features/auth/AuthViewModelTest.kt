@@ -3,10 +3,16 @@ package com.example.taskoday.features.auth
 import com.example.taskoday.domain.model.AuthSession
 import com.example.taskoday.domain.model.AuthenticatedUser
 import com.example.taskoday.domain.repository.AuthRepository
+import com.example.taskoday.domain.repository.TaskRepository
+import com.example.taskoday.domain.repository.QuestRepository
+import com.example.taskoday.data.demo.DemoModeStore
+import java.lang.reflect.Proxy
 import java.io.IOException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -17,6 +23,46 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AuthViewModelTest {
+    @Test fun `hung session restore times out without clearing credentials or blocking indefinitely`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val stored = FakeAuthRepository(accessToken = "stored-access")
+            val repository = object : AuthRepository by stored {
+                override suspend fun fetchMe(): AuthenticatedUser {
+                    delay(60_000L)
+                    error("Restore should have timed out first")
+                }
+            }
+            val vm = AuthViewModel(repository)
+            testScheduler.advanceTimeBy(35_001L)
+            testScheduler.runCurrent()
+            assertFalse(vm.uiState.value.isCheckingSession)
+            assertFalse(vm.uiState.value.isAuthenticated)
+            assertTrue(vm.uiState.value.canRetrySession)
+            assertFalse(stored.sessionCleared)
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test fun `restoring session invalidates unscoped projections before exposing authenticated state`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        try {
+            val calls = mutableListOf<String>()
+            val tasks = Proxy.newProxyInstance(TaskRepository::class.java.classLoader, arrayOf(TaskRepository::class.java)) { _, method, _ ->
+                check(method.name == "clearRemoteCache")
+                calls += "tasks"
+                Unit
+            } as TaskRepository
+            val quests = Proxy.newProxyInstance(QuestRepository::class.java.classLoader, arrayOf(QuestRepository::class.java)) { _, method, _ ->
+                check(method.name == "clearRemoteCache")
+                calls += "quests"
+                Unit
+            } as QuestRepository
+            val vm = AuthViewModel(FakeAuthRepository(accessToken = "stored-access"), DemoModeStore(), tasks, quests)
+            assertTrue(vm.uiState.value.isAuthenticated)
+            assertTrue(calls == listOf("tasks", "quests"))
+        } finally { Dispatchers.resetMain() }
+    }
+
     @Test
     fun `logout clears repository session and local auth state`() {
         val repository = FakeAuthRepository()

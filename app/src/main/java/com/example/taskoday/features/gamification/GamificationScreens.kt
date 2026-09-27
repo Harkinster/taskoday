@@ -45,6 +45,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.Lifecycle
 import com.example.taskoday.core.ui.component.fantasy.EggProgressCard
 import com.example.taskoday.core.ui.component.fantasy.ChestCard
 import com.example.taskoday.core.ui.component.fantasy.FantasyAssetBubble
@@ -105,6 +107,7 @@ fun NestScreen(
     onOpenScrolls: () -> Unit,
     onOpenProfile: () -> Unit,
 ) {
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var activeCompanionKey by rememberSaveable { mutableStateOf("dragon_pyron") }
     var visibleRecentReward by remember { mutableStateOf<RecentNestReward?>(null) }

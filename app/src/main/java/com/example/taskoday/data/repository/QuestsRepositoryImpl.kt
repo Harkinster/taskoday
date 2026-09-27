@@ -29,6 +29,7 @@ class QuestsRepositoryImpl
             if (authRepository.getAccessToken().isNullOrBlank()) {
                 return QuestsSyncResult(usedRemoteData = false)
             }
+            questRepository.clearRemoteCache()
             val childId = runCatching { authRepository.getActiveChildId(forceRefresh = true) }.getOrNull()
             if (childId == null) {
                 return QuestsSyncResult(usedRemoteData = false)
@@ -36,7 +37,6 @@ class QuestsRepositoryImpl
 
             return runCatching {
                 val quests = questsApi.getQuests(childId).data
-                questRepository.clearRemoteCache()
                 val now = System.currentTimeMillis()
                 quests
                     .filter { it.isActive != false }

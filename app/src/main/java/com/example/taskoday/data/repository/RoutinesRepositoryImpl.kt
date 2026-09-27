@@ -36,6 +36,7 @@ class RoutinesRepositoryImpl
                 return RoutinesSyncResult(usedRemoteData = false)
             }
 
+            taskRepository.clearRemoteRoutineCache()
             val childId = runCatching { authRepository.getActiveChildId(forceRefresh = true) }.getOrNull()
             if (childId == null) {
                 return RoutinesSyncResult(usedRemoteData = false)
@@ -50,7 +51,6 @@ class RoutinesRepositoryImpl
                         )
                     }
 
-            taskRepository.clearRemoteRoutineCache()
             val now = System.currentTimeMillis()
 
             routines
