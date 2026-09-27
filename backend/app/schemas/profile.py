@@ -1,9 +1,10 @@
 from datetime import date
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 
 class ProfileUpdateRequest(BaseModel):
+    email: EmailStr | None = None
     display_name: str | None = Field(default=None, min_length=1, max_length=120)
     birth_date: date | None = None
 

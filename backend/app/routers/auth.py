@@ -11,6 +11,7 @@ from app.models.family import Family, FamilyMember, FamilyMemberRole
 from app.models.user import User, UserRole
 from app.schemas.auth import (
     AuthMeResponse,
+    ChangePasswordRequest,
     LoginRequest,
     RefreshTokenRequest,
     RegisterChildRequest,
@@ -64,7 +65,7 @@ def register_parent(payload: RegisterParentRequest, db: Session = Depends(get_db
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Nom de famille deja utilise.")
 
     user = User(
-        email=payload.email,
+        email=str(payload.email).strip().lower(),
         password_hash=get_password_hash(payload.password),
         role=UserRole.PARENT,
         display_name=payload.display_name,
@@ -93,7 +94,7 @@ def register_child(payload: RegisterChildRequest, db: Session = Depends(get_db))
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email deja utilise.")
 
     user = User(
-        email=payload.email,
+        email=str(payload.email).strip().lower(),
         password_hash=get_password_hash(payload.password),
         role=UserRole.CHILD,
         display_name=payload.display_name,
@@ -119,7 +120,8 @@ def register_child(payload: RegisterChildRequest, db: Session = Depends(get_db))
 
 @router.post("/login", response_model=TokenResponse)
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == payload.email).first()
+    normalized_email = str(payload.email).strip().lower()
+    user = db.query(User).filter(User.email == normalized_email).first()
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Identifiants invalides.")
 
@@ -129,6 +131,20 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     token_response = _issue_token_response(db, user=user)
     db.commit()
     return token_response
+
+
+@router.post("/change-password", status_code=status.HTTP_204_NO_CONTENT)
+def change_password(
+    payload: ChangePasswordRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Response:
+    if not verify_password(payload.current_password, current_user.password_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Mot de passe actuel invalide.")
+
+    current_user.password_hash = get_password_hash(payload.new_password)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/refresh", response_model=TokenResponse)

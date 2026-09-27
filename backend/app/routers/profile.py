@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -64,6 +65,14 @@ def update_profile_me(
     current_user: User = Depends(get_current_user),
 ):
     updates = payload.model_dump(exclude_unset=True)
+    if "email" in updates:
+        normalized_email = str(updates["email"]).strip().lower()
+        existing_user_id = db.scalar(
+            select(User.id).where(func.lower(User.email) == normalized_email, User.id != current_user.id)
+        )
+        if existing_user_id is not None:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email deja utilise.")
+        current_user.email = normalized_email
     if "display_name" in updates:
         current_user.display_name = updates["display_name"]
     if "birth_date" in updates:
@@ -76,7 +85,11 @@ def update_profile_me(
         if "birth_date" in updates:
             profile.birth_date = updates["birth_date"]
 
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email deja utilise.") from exc
     db.refresh(current_user)
     return success_response(
         {
