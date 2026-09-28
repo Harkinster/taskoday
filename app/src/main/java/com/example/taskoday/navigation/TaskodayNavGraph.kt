@@ -185,7 +185,7 @@ fun TaskodayApp() {
     }
 
     CompositionLocalProvider(
-        LocalTaskodayBrandClick provides { navigateToTopLevel(TaskodayDestination.Home) },
+        LocalTaskodayBrandClick provides { navigateToTopLevel(accountHomeDestination(quickAddUiState.hasRemoteSession, localChildMode)) },
     ) {
         Box(
             modifier =
@@ -698,13 +698,4 @@ private fun String?.toPlanningFormType(): PlanningFormType =
         "mission" -> PlanningFormType.MISSION
         "quest" -> PlanningFormType.QUEST
         else -> PlanningFormType.ROUTINE
-    }
-
-private fun AuthenticatedUser?.preferredAppRoute(isLocalMode: Boolean): String =
-    when {
-        isLocalMode -> TaskodayDestination.Home.route
-        this?.role?.equals("PARENT", ignoreCase = true) == true && familyIds.isEmpty() ->
-            TaskodayDestination.FamilyHousehold.route
-        this?.role?.equals("PARENT", ignoreCase = true) == true -> TaskodayDestination.FamilyHome.route
-        else -> TaskodayDestination.Home.route
     }

@@ -2,6 +2,9 @@ package com.example.taskoday.features.auth
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -66,7 +69,7 @@ fun LoginScreen(
     }
 
     TaskodayWorldBackground {
-        Column(
+        Box(
             modifier =
                 Modifier
                     .fillMaxSize()
@@ -74,110 +77,116 @@ fun LoginScreen(
                     .navigationBarsPadding()
                     .imePadding()
                     .padding(horizontal = spacing.medium, vertical = spacing.large),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = if (uiState.isCheckingSession) Arrangement.Center else Arrangement.Bottom,
         ) {
-            LoginPanel {
-                if (uiState.isCheckingSession) {
-                    if (!uiState.canRetrySession) {
-                        CircularProgressIndicator(color = MagicViolet, trackColor = ParchmentShadow.copy(alpha = 0.45f))
-                    }
-                    Text(
-                        text = uiState.errorMessage ?: "Vérification de session...",
-                        modifier = Modifier.padding(top = spacing.small),
-                        color = if (uiState.canRetrySession) DangerGlow else TextMuted,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    if (uiState.canRetrySession) {
-                        TextButton(onClick = viewModel::checkExistingSession) {
-                            Text("Réessayer")
+            Column(
+                modifier = Modifier
+                    .align(if (uiState.isCheckingSession) Alignment.Center else Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                LoginPanel {
+                    if (uiState.isCheckingSession) {
+                        if (!uiState.canRetrySession) {
+                            CircularProgressIndicator(color = MagicViolet, trackColor = ParchmentShadow.copy(alpha = 0.45f))
                         }
+                        Text(
+                            text = uiState.errorMessage ?: "Vérification de session...",
+                            modifier = Modifier.padding(top = spacing.small),
+                            color = if (uiState.canRetrySession) DangerGlow else TextMuted,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        if (uiState.canRetrySession) {
+                            TextButton(onClick = viewModel::checkExistingSession) {
+                                Text("Réessayer")
+                            }
+                        }
+                        return@LoginPanel
                     }
-                    return@LoginPanel
-                }
 
-                Text(
-                    text = "Bienvenue sur Taskoday",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = WoodBrownDark,
-                )
-                Text(
-                    text = "Connectez-vous pour organiser les routines de votre enfant.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextMuted,
-                )
-
-                val fieldColors =
-                    OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = InkBrown,
-                        unfocusedTextColor = InkBrown,
-                        focusedContainerColor = ParchmentLight.copy(alpha = 0.96f),
-                        unfocusedContainerColor = ParchmentLight.copy(alpha = 0.92f),
-                        focusedBorderColor = SoftGold,
-                        unfocusedBorderColor = ParchmentShadow,
-                        focusedLabelColor = MagicViolet,
-                        unfocusedLabelColor = TextMuted,
-                        cursorColor = MagicViolet,
-                    )
-
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = {
-                        email = it
-                        viewModel.clearError()
-                    },
-                    label = { Text("Email") },
-                    singleLine = true,
-                    shape = RoundedCornerShape(14.dp),
-                    colors = fieldColors,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = {
-                        password = it
-                        viewModel.clearError()
-                    },
-                    label = { Text("Mot de passe") },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = fieldColors,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-
-                if (!uiState.errorMessage.isNullOrBlank()) {
                     Text(
-                        text = uiState.errorMessage ?: "",
-                        color = DangerGlow,
-                        style = MaterialTheme.typography.bodySmall,
+                        text = "Bienvenue sur Taskoday",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = WoodBrownDark,
                     )
-                }
+                    Text(
+                        text = "Connectez-vous pour organiser les routines de votre enfant.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextMuted,
+                    )
 
-                NeonButton(
-                    text = if (uiState.isLoading) "Connexion…" else "Se connecter",
-                    onClick = { viewModel.login(email = email, password = password) },
-                    enabled = !uiState.isLoading,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                    val fieldColors =
+                        OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = InkBrown,
+                            unfocusedTextColor = InkBrown,
+                            focusedContainerColor = ParchmentLight.copy(alpha = 0.96f),
+                            unfocusedContainerColor = ParchmentLight.copy(alpha = 0.92f),
+                            focusedBorderColor = SoftGold,
+                            unfocusedBorderColor = ParchmentShadow,
+                            focusedLabelColor = MagicViolet,
+                            unfocusedLabelColor = TextMuted,
+                            cursorColor = MagicViolet,
+                        )
 
-                TextButton(
-                    onClick = onOpenRegisterParent,
-                    enabled = !uiState.isLoading,
-                    colors = ButtonDefaults.textButtonColors(contentColor = MagicViolet),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text("Créer mon compte parent")
-                }
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = {
+                            email = it
+                            viewModel.clearError()
+                        },
+                        label = { Text("Email") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(14.dp),
+                        colors = fieldColors,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
 
-                TextButton(
-                    onClick = viewModel::continueInLocalMode,
-                    enabled = !uiState.isLoading,
-                    colors = ButtonDefaults.textButtonColors(contentColor = MagicViolet),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text("Découvrir sans compte")
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = {
+                            password = it
+                            viewModel.clearError()
+                        },
+                        label = { Text("Mot de passe") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = fieldColors,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+
+                    if (!uiState.errorMessage.isNullOrBlank()) {
+                        Text(
+                            text = uiState.errorMessage ?: "",
+                            color = DangerGlow,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+
+                    NeonButton(
+                        text = if (uiState.isLoading) "Connexion…" else "Se connecter",
+                        onClick = { viewModel.login(email = email, password = password) },
+                        enabled = !uiState.isLoading,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+
+                    TextButton(
+                        onClick = onOpenRegisterParent,
+                        enabled = !uiState.isLoading,
+                        colors = ButtonDefaults.textButtonColors(contentColor = MagicViolet),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Créer mon compte parent")
+                    }
+
+                    TextButton(
+                        onClick = viewModel::continueInLocalMode,
+                        enabled = !uiState.isLoading,
+                        colors = ButtonDefaults.textButtonColors(contentColor = MagicViolet),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Découvrir sans compte")
+                    }
                 }
             }
         }

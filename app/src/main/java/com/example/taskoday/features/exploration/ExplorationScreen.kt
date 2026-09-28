@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.FilterChip
@@ -29,7 +31,7 @@ fun ExplorationScreen(viewModel: ExplorationViewModel) {
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        modifier = Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 18.dp, bottom = 28.dp),
     ) {
@@ -37,8 +39,8 @@ fun ExplorationScreen(viewModel: ExplorationViewModel) {
         item { Text("Aujourd'hui · ${state.dateLabel}", style = MaterialTheme.typography.bodyMedium, color = InkMuted) }
         if (state.members.size > 1) {
             item {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    state.members.forEach { member ->
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(state.members, key = { it.id }) { member ->
                         FilterChip(selected = member.id == state.selectedMemberId, onClick = { viewModel.selectMember(member.id) }, label = { Text(member.displayName, color = ParchmentLight) })
                     }
                 }
