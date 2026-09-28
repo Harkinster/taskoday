@@ -352,9 +352,13 @@ class FamilyHomeViewModel
         }
 
         private suspend fun resolveAccess() {
-            val access = runCatching { FamilyTaskAccessPolicy.forUser(authRepository.fetchMe()) }
-                .getOrDefault(FamilyTaskAccessPolicy())
-            _uiState.update { it.copy(access = access) }
+            val user = runCatching { authRepository.fetchMe() }.getOrNull()
+            _uiState.update {
+                it.copy(
+                    access = user?.let { account -> FamilyTaskAccessPolicy.forUser(account) } ?: FamilyTaskAccessPolicy(),
+                    avatarInitials = accountAvatarInitials(user),
+                )
+            }
         }
 
         private fun visibleHouseTasks(tasks: List<FamilyTaskTodayItem>): List<FamilyTaskTodayItem> =
@@ -363,6 +367,15 @@ class FamilyHomeViewModel
         private fun resolvedTodayDate(): LocalDate =
             parseFamilyTaskDateInput(_uiState.value.todayDate.orEmpty()) ?: LocalDate.now()
     }
+
+internal fun accountAvatarInitials(user: com.example.taskoday.domain.model.AuthenticatedUser?): String =
+    user?.let {
+        it.displayName.trim().ifBlank { it.email.substringBefore('@') }
+            .split(Regex("\\s+"))
+            .filter(String::isNotBlank)
+            .take(2)
+            .joinToString("") { name -> name.first().uppercase() }
+    }.orEmpty()
 
 private fun FamilyTaskQuickAction.successMessage(): String =
     when (this) {

@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.NotificationsNone
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -185,7 +186,9 @@ fun UserAvatarBadge(
         modifier = avatarModifier,
         contentAlignment = Alignment.Center,
     ) {
-        Text(
+        if (initials.isBlank()) {
+            Icon(Icons.Outlined.Person, contentDescription = "Profil", tint = ParchmentLight, modifier = Modifier.size(size * 0.5f))
+        } else Text(
             text = initials.take(2).uppercase(),
             style = MaterialTheme.typography.titleSmall,
             color = ParchmentLight,

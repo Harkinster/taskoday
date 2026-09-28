@@ -124,7 +124,7 @@ fun FamilyHomeScreen(
             ) {
                 item {
                     TaskodayTopBar(
-                        avatarInitials = "MM",
+                        avatarInitials = uiState.avatarInitials,
                         compact = true,
                         showNotification = false,
                         onAvatarClick = onOpenProfile,
@@ -595,13 +595,13 @@ private fun FamilyOverdueSectionCard(
                     text = "En retard · $totalCount",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = InkBrown,
+                    color = ParchmentLight,
                 )
                 if (rows.size < totalCount) {
                     Text(
                         text = "${rows.size} affichées",
                         style = MaterialTheme.typography.labelMedium,
-                        color = InkMuted,
+                        color = ParchmentCream.copy(alpha = 0.72f),
                     )
                 }
             }

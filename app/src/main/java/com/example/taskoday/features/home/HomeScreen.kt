@@ -203,7 +203,7 @@ fun HomeScreen(
             ) {
                 item {
                     TaskodayTopBar(
-                        avatarInitials = "AB",
+                        avatarInitials = "",
                         compact = true,
                         showNotification = false,
                         onAvatarClick = onOpenProfile,

@@ -13,7 +13,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,6 +25,8 @@ import androidx.lifecycle.Lifecycle
 import com.example.taskoday.core.ui.theme.DangerGlow
 import com.example.taskoday.core.ui.theme.InkMuted
 import com.example.taskoday.core.ui.theme.ParchmentLight
+import com.example.taskoday.core.ui.theme.ParchmentCream
+import com.example.taskoday.core.ui.component.DarkSurfaceFilterChip
 
 @Composable
 fun FollowUpScreen(
@@ -42,12 +43,12 @@ fun FollowUpScreen(
         contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 18.dp, bottom = 28.dp),
     ) {
         item { Text("Suivi", style = MaterialTheme.typography.headlineSmall, color = ParchmentLight) }
-        item { Text("Aujourd’hui · ${java.time.LocalDate.now()}", style = MaterialTheme.typography.bodyMedium, color = InkMuted) }
+        item { Text("Aujourd’hui · ${java.time.LocalDate.now()}", style = MaterialTheme.typography.bodyMedium, color = ParchmentCream.copy(alpha = 0.72f)) }
         if (state.members.size > 1) {
             item {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(state.members, key = { it.memberId }) { member ->
-                        FilterChip(selected = member.memberId == state.selectedMemberId, onClick = { viewModel.selectMember(member.memberId) }, label = { Text(member.displayName) })
+                        DarkSurfaceFilterChip(selected = member.memberId == state.selectedMemberId, onClick = { viewModel.selectMember(member.memberId) }, label = member.displayName)
                     }
                 }
             }
@@ -61,7 +62,7 @@ fun FollowUpScreen(
         }
         selected?.let { member ->
             item { Text("Détail · ${member.displayName}", style = MaterialTheme.typography.titleMedium, color = ParchmentLight) }
-            if (member.items.isEmpty()) item { Text("Aucune tâche prévue aujourd’hui.", color = InkMuted) }
+            if (member.items.isEmpty()) item { Text("Aucune tâche prévue aujourd’hui.", color = ParchmentCream.copy(alpha = 0.72f)) }
             val overdue = member.items.filter { it.overdue }
             val pending = member.items.filter { !it.completed && !it.overdue }
             val completed = member.items.filter { it.completed }
@@ -103,10 +104,10 @@ private fun FollowUpItemRow(item: FollowUpItem, onOpenFamilyTask: (Long) -> Unit
             Text(item.title, color = ParchmentLight)
             item.familyTask?.let { task ->
                 familyTaskCompletionActorLabels(task).forEach { actorLabel ->
-                    Text(actorLabel, color = InkMuted, style = MaterialTheme.typography.bodySmall)
+                    Text(actorLabel, color = ParchmentCream.copy(alpha = 0.72f), style = MaterialTheme.typography.bodySmall)
                 }
             }
-            Text(when { item.overdue -> "En retard"; item.completed -> "Terminée"; else -> "À faire" }, color = if (item.overdue) DangerGlow else InkMuted, style = MaterialTheme.typography.bodySmall)
+            Text(when { item.overdue -> "En retard"; item.completed -> "Terminée"; else -> "À faire" }, color = if (item.overdue) DangerGlow else ParchmentCream.copy(alpha = 0.72f), style = MaterialTheme.typography.bodySmall)
         }
     }
 }

@@ -1417,8 +1417,6 @@ private fun FamilyBestiaryCard(
                 text = "Œuf : ${dragon.eggStatesLabel}",
                 style = MaterialTheme.typography.bodySmall,
                 color = InkMuted,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
             )
         }
         if (dragon.dragonStagesLabel.isNotBlank()) {
@@ -1426,8 +1424,6 @@ private fun FamilyBestiaryCard(
                 text = "Dragon : ${dragon.dragonStagesLabel}",
                 style = MaterialTheme.typography.bodySmall,
                 color = InkMuted,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
             )
         }
         Row(

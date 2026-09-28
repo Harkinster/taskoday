@@ -18,6 +18,42 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AccountSessionViewModelTest {
+    @Test fun `exploration refresh uses readable network error instead of DNS exception`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        try {
+            val family = object : FamilyTasksRepository by familyRepository() {
+                override suspend fun fetchMembers() = Result.failure<List<FamilyTaskMember>>(
+                    java.net.UnknownHostException("Unable to resolve host internal.example"),
+                )
+            }
+            val state = exploration(identity(100L, "PARENT"), true, family = family).uiState.value
+            assertEquals("Serveur indisponible.", state.errorMessage)
+            assertFalse(state.isLoading)
+            assertTrue(state.houseTasks.isEmpty())
+            assertTrue(state.routines.isEmpty())
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test fun `exploration member timeout is readable and clears stale data`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        try {
+            var timedOut = false
+            val base = familyRepository()
+            val family = object : FamilyTasksRepository by base {
+                override suspend fun fetchToday() = if (timedOut) {
+                    Result.failure(java.net.SocketTimeoutException("technical timeout"))
+                } else base.fetchToday()
+            }
+            val vm = exploration(identity(100L, "PARENT"), true, family = family)
+            timedOut = true
+            vm.selectMember(101L)
+            assertEquals("Requête expirée.", vm.uiState.value.errorMessage)
+            assertFalse(vm.uiState.value.isLoading)
+            assertTrue(vm.uiState.value.houseTasks.isEmpty())
+            assertTrue(vm.uiState.value.routines.isEmpty())
+        } finally { Dispatchers.resetMain() }
+    }
+
     @Test fun `suivi refresh failure clears previous family summaries`() = runTest {
         Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
         try {

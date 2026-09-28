@@ -149,7 +149,7 @@ fun SettingsScreen(
                 item {
                     TaskodayHeader(
                         title = "Profil",
-                        subtitle = "Gérez votre famille et le mode enfant.",
+                        subtitle = if (uiState.isParentUser) "Gérez votre famille et le mode enfant." else "Votre profil et vos préférences.",
                         avatarInitials = uiState.profileInitials,
                     )
                 }

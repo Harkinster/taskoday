@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -22,8 +21,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.Lifecycle
 import com.example.taskoday.core.ui.theme.DangerGlow
-import com.example.taskoday.core.ui.theme.InkMuted
 import com.example.taskoday.core.ui.theme.ParchmentLight
+import com.example.taskoday.core.ui.theme.ParchmentCream
+import com.example.taskoday.core.ui.component.DarkSurfaceFilterChip
 import com.example.taskoday.features.familyhome.familyTaskDueLabel
 
 @Composable
@@ -36,12 +36,12 @@ fun ExplorationScreen(viewModel: ExplorationViewModel) {
         contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 18.dp, bottom = 28.dp),
     ) {
         item { Text("Exploration", style = MaterialTheme.typography.headlineSmall, color = ParchmentLight) }
-        item { Text("Aujourd'hui · ${state.dateLabel}", style = MaterialTheme.typography.bodyMedium, color = InkMuted) }
+        item { Text(state.dateLabel, style = MaterialTheme.typography.bodyMedium, color = ParchmentCream.copy(alpha = 0.72f)) }
         if (state.members.size > 1) {
             item {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(state.members, key = { it.id }) { member ->
-                        FilterChip(selected = member.id == state.selectedMemberId, onClick = { viewModel.selectMember(member.id) }, label = { Text(member.displayName, color = ParchmentLight) })
+                        DarkSurfaceFilterChip(selected = member.id == state.selectedMemberId, onClick = { viewModel.selectMember(member.id) }, label = member.displayName)
                     }
                 }
             }
@@ -75,13 +75,13 @@ fun ExplorationScreen(viewModel: ExplorationViewModel) {
 }
 
 @Composable private fun ExplorationSectionTitle(text: String) { Text(text, style = MaterialTheme.typography.titleMedium, color = ParchmentLight, modifier = Modifier.padding(top = 8.dp)) }
-@Composable private fun EmptyLine(text: String) { Text(text, style = MaterialTheme.typography.bodyMedium, color = InkMuted) }
+@Composable private fun EmptyLine(text: String) { Text(text, style = MaterialTheme.typography.bodyMedium, color = ParchmentCream.copy(alpha = 0.72f)) }
 
 @Composable private fun ExplorationFamilyTaskRow(item: ExplorationTask, acting: Boolean, canAct: Boolean, onToggle: (ExplorationTask) -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         Column(Modifier.weight(1f)) {
             Text(item.occurrence.title, color = ParchmentLight)
-            Text((if (item.overdue) "En retard · " else "") + (familyTaskDueLabel(item.occurrence.dueDate, item.occurrence.dueTime, item.occurrence.hasDueTime, item.occurrence.dueAt) ?: "Aujourd'hui"), style = MaterialTheme.typography.bodySmall, color = if (item.overdue) DangerGlow else InkMuted)
+            Text((if (item.overdue) "En retard · " else "") + (familyTaskDueLabel(item.occurrence.dueDate, item.occurrence.dueTime, item.occurrence.hasDueTime, item.occurrence.dueAt) ?: "Aujourd'hui"), style = MaterialTheme.typography.bodySmall, color = if (item.overdue) DangerGlow else ParchmentCream.copy(alpha = 0.72f))
         }
         if (canAct) TextButton(enabled = !acting, onClick = { onToggle(item) }) { Text(if (item.occurrence.status.countsAsDone) "Rouvrir" else "Terminer") }
     }
@@ -89,7 +89,7 @@ fun ExplorationScreen(viewModel: ExplorationViewModel) {
 
 @Composable private fun ExplorationRoutineRow(item: ExplorationRoutineItem, acting: Boolean, canAct: Boolean, onToggle: (ExplorationRoutineItem) -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Column(Modifier.weight(1f)) { Text(item.title, color = ParchmentLight); Text(item.subtitle, style = MaterialTheme.typography.bodySmall, color = InkMuted) }
+        Column(Modifier.weight(1f)) { Text(item.title, color = ParchmentLight); Text(item.subtitle, style = MaterialTheme.typography.bodySmall, color = ParchmentCream.copy(alpha = 0.72f)) }
         if (canAct) TextButton(enabled = !acting, onClick = { onToggle(item) }) { Text(if (item.completed) "Rouvrir" else "Terminer") }
     }
 }

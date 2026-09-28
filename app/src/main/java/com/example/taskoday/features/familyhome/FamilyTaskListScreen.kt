@@ -28,7 +28,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -48,6 +47,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.taskoday.core.ui.component.fantasy.FantasyScreenBackground
+import com.example.taskoday.core.ui.component.DarkSurfaceFilterChip
 import com.example.taskoday.core.ui.theme.DangerGlow
 import com.example.taskoday.core.ui.theme.InkBrown
 import com.example.taskoday.core.ui.theme.InkMuted
@@ -218,10 +218,10 @@ private fun FamilyTaskListFilters(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         filters.forEach { filter ->
-            FilterChip(
+            DarkSurfaceFilterChip(
                 selected = filter.key == selectedFilterKey,
                 onClick = { onSelectFilter(filter.key) },
-                label = { Text(filter.label) },
+                label = filter.label,
             )
         }
     }

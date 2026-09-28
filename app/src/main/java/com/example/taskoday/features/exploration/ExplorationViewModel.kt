@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.taskoday.core.util.DateTimeUtils
 import com.example.taskoday.data.repository.RemotePlanningIdCodec
+import com.example.taskoday.data.repository.toRemoteUserMessage
 import com.example.taskoday.features.familyhome.FamilyTaskAccessPolicy
 import com.example.taskoday.domain.model.TaskForDay
 import com.example.taskoday.domain.model.TaskStatus
@@ -93,7 +94,7 @@ class ExplorationViewModel
                 }.onFailure { error ->
                     if (error is CancellationException) throw error
                     _uiState.update {
-                        ExplorationUiState(isLoading = false, errorMessage = error.message ?: "Exploration indisponible.")
+                        ExplorationUiState(isLoading = false, errorMessage = error.toRemoteUserMessage("Exploration indisponible."))
                     }
                 }
             }
@@ -110,7 +111,7 @@ class ExplorationViewModel
                 } catch (error: CancellationException) {
                     throw error
                 } catch (error: Exception) {
-                    _uiState.value = ExplorationUiState(isLoading = false, errorMessage = error.message ?: "Exploration indisponible.")
+                    _uiState.value = ExplorationUiState(isLoading = false, errorMessage = error.toRemoteUserMessage("Exploration indisponible."))
                 }
             }
         }

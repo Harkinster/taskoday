@@ -314,7 +314,7 @@ fun FantasyHeader(
     title: String,
     subtitle: String,
     modifier: Modifier = Modifier,
-    avatarInitials: String = "AB",
+    avatarInitials: String = "",
     assetResId: Int = NestAssets.interfaceAsset("nid"),
     assetDescription: String? = "Le Nid",
     onAvatarClick: () -> Unit = {},
