@@ -17,6 +17,7 @@ import com.example.taskoday.data.remote.familytasks.FamilyTasksApi
 import com.example.taskoday.data.remote.gamification.NestApi
 import com.example.taskoday.data.remote.missions.MissionsApi
 import com.example.taskoday.data.remote.pairing.PairingApi
+import com.example.taskoday.data.remote.pairing.ChildOnboardingApi
 import com.example.taskoday.data.remote.planning.PlanningApi
 import com.example.taskoday.data.remote.profile.ProfileApi
 import com.example.taskoday.data.remote.quests.QuestsApi
@@ -177,6 +178,11 @@ object NetworkModule {
     @Provides
     @Singleton
     fun providePairingApi(apiClient: ApiClient): PairingApi = apiClient.create(PairingApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideChildOnboardingApi(@Named(SESSION_RETROFIT) retrofit: Retrofit): ChildOnboardingApi =
+        retrofit.create(ChildOnboardingApi::class.java)
 
     @Provides
     @Singleton

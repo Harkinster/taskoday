@@ -24,6 +24,7 @@ data class SettingsUiState(
     val successStat: String = "0%",
     val xpHistoryTokens: List<String> = emptyList(),
     val pairedChildren: List<ParentChild> = emptyList(),
+    val isChildrenListReady: Boolean = false,
     val activeChildId: Long? = null,
     val pairingCode: String? = null,
     val pairingCodeExpiresAt: String? = null,

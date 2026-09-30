@@ -3,6 +3,7 @@ package com.example.taskoday.features.settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -35,8 +37,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -646,7 +650,7 @@ private fun ParentPinTextField(
 private fun ActiveChildCard(
     uiState: SettingsUiState,
     onSelectChild: (Long) -> Unit,
-    onCreateChild: (String, String?, String?) -> Unit,
+    onCreateChild: (String, String, String, String) -> Unit,
     onRenameChild: (Long, String) -> Unit,
     onClearMessages: () -> Unit,
     onEnterLocalChildMode: () -> Unit,
@@ -660,8 +664,14 @@ private fun ActiveChildCard(
     var editingChildName by rememberSaveable { mutableStateOf("") }
     val editingChild = uiState.pairedChildren.firstOrNull { child -> child.id == editingChildId }
 
+    LaunchedEffect(uiState.childManagementSuccessMessage) {
+        if (!uiState.childManagementSuccessMessage.isNullOrBlank()) showCreateChildDialog = false
+    }
+
     NeonCard(tone = if (uiState.pairedChildren.isEmpty()) NeonTone.Warning else NeonTone.Cyan) {
-        if (uiState.pairedChildren.isEmpty()) {
+        if (!uiState.isChildrenListReady) {
+            Text("Chargement des enfants de cette famille…", style = MaterialTheme.typography.bodyMedium, color = TextMuted)
+        } else if (uiState.pairedChildren.isEmpty()) {
             Text(
                 text = "Aucun enfant pour le moment",
                 style = MaterialTheme.typography.titleMedium,
@@ -707,12 +717,12 @@ private fun ActiveChildCard(
             }
         }
 
-        Text(
+        if (uiState.isChildrenListReady) Text(
             text = TaskodayPlanPolicy.usageLabel(TaskodayPlanFeature.Child, uiState.pairedChildren.size),
             style = MaterialTheme.typography.bodySmall,
             color = if (childLimitReached) MaterialTheme.colorScheme.error else TextMuted,
         )
-        if (childLimitReached) {
+        if (uiState.isChildrenListReady && childLimitReached) {
             Text(
                 text = TaskodayPlanPolicy.limitReachedMessage(),
                 style = MaterialTheme.typography.bodySmall,
@@ -739,7 +749,7 @@ private fun ActiveChildCard(
                 onClearMessages()
                 showCreateChildDialog = true
             },
-            enabled = !uiState.isChildManagementBusy && !childLimitReached,
+            enabled = uiState.isChildrenListReady && !uiState.isChildManagementBusy && !childLimitReached,
             modifier = Modifier.fillMaxWidth(),
         )
 
@@ -777,14 +787,14 @@ private fun ActiveChildCard(
     if (showCreateChildDialog) {
         CreateChildDialog(
             isBusy = uiState.isChildManagementBusy,
+            errorMessage = uiState.childManagementErrorMessage,
             onDismiss = {
                 if (!uiState.isChildManagementBusy) {
                     showCreateChildDialog = false
                 }
             },
-            onConfirm = { displayName, email, birthDate ->
-                onCreateChild(displayName, email, birthDate)
-                showCreateChildDialog = false
+            onConfirm = { displayName, email, birthDate, password ->
+                onCreateChild(displayName, email, birthDate, password)
             },
             onClearMessages = onClearMessages,
         )
@@ -856,17 +866,20 @@ private fun ActiveChildCard(
 @Composable
 private fun CreateChildDialog(
     isBusy: Boolean,
+    errorMessage: String?,
     onDismiss: () -> Unit,
-    onConfirm: (String, String?, String?) -> Unit,
+    onConfirm: (String, String, String, String) -> Unit,
     onClearMessages: () -> Unit,
 ) {
     var displayName by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
     var birthDate by rememberSaveable { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var passwordConfirmation by remember { mutableStateOf("") }
 
     Dialog(onDismissRequest = onDismiss) {
         NeonCard(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().heightIn(max = 600.dp).verticalScroll(rememberScrollState()),
             tone = NeonTone.Cyan,
         ) {
             Text(
@@ -875,7 +888,7 @@ private fun CreateChildDialog(
                 color = StarWhite,
             )
             Text(
-                text = "Le compte sera lié directement à ce parent.",
+                text = "Ce compte permettra à l’enfant de se connecter à Taskoday sur son appareil.",
                 style = MaterialTheme.typography.bodySmall,
                 color = TextMuted,
             )
@@ -895,8 +908,9 @@ private fun CreateChildDialog(
                     email = it
                     onClearMessages()
                 },
-                label = { Text("Email optionnel") },
+                label = { Text("Email enfant") },
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
@@ -905,11 +919,35 @@ private fun CreateChildDialog(
                     birthDate = it
                     onClearMessages()
                 },
-                label = { Text("Date de naissance optionnelle") },
+                label = { Text("Date de naissance") },
                 placeholder = { Text("AAAA-MM-JJ") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it; onClearMessages() },
+                label = { Text("Mot de passe enfant") },
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = passwordConfirmation,
+                onValueChange = { passwordConfirmation = it; onClearMessages() },
+                label = { Text("Confirmer le mot de passe") },
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            if (passwordConfirmation.isNotBlank() && password != passwordConfirmation) {
+                Text("Les mots de passe ne correspondent pas.", color = MaterialTheme.colorScheme.error)
+            }
+            if (!errorMessage.isNullOrBlank()) {
+                Text(errorMessage, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -924,13 +962,10 @@ private fun CreateChildDialog(
                 NeonButton(
                     text = if (isBusy) "Création…" else "Créer",
                     onClick = {
-                        onConfirm(
-                            displayName,
-                            email.trim().takeIf { it.isNotBlank() },
-                            birthDate.trim().takeIf { it.isNotBlank() },
-                        )
+                        onConfirm(displayName, email.trim(), birthDate.trim(), password)
                     },
-                    enabled = !isBusy && displayName.trim().isNotBlank(),
+                    enabled = !isBusy && displayName.trim().isNotBlank() && email.isNotBlank() &&
+                        birthDate.isNotBlank() && password.length >= 8 && password == passwordConfirmation,
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -1040,7 +1075,7 @@ private fun ParentPairingCard(
 ) {
     NeonCard(tone = NeonTone.Blue) {
         Text(
-            text = "Ajouter un enfant",
+            text = "Associer un compte enfant existant",
             style = MaterialTheme.typography.titleMedium,
             color = StarWhite,
         )

@@ -9,6 +9,8 @@ import com.example.taskoday.domain.model.ChildProfile
 import com.example.taskoday.domain.model.ChildProfileDashboard
 import com.example.taskoday.domain.repository.AuthRepository
 import com.example.taskoday.domain.repository.ChildrenRepository
+import com.example.taskoday.domain.repository.ChildOnboardingRepository
+import com.example.taskoday.domain.repository.ChildTemporarySession
 import com.example.taskoday.domain.repository.PairingRepository
 import com.example.taskoday.domain.repository.ProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,6 +18,8 @@ import java.io.IOException
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
+import java.time.LocalDate
+import kotlinx.coroutines.CancellationException
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,8 +35,15 @@ class SettingsViewModel
         private val authRepository: AuthRepository,
         private val profileRepository: ProfileRepository,
         private val childrenRepository: ChildrenRepository,
+        private val childOnboardingRepository: ChildOnboardingRepository,
         private val pairingRepository: PairingRepository,
     ) : ViewModel() {
+        private var pendingChildSession: ChildTemporarySession? = null
+        private var pendingChildEmail: String? = null
+        private var ambiguousRegistrationEmail: String? = null
+        private var pendingPairingCode: String? = null
+        private var pendingFamilyId: Long? = null
+        private var profileRefreshVersion = 0
         private val _uiState = MutableStateFlow(SettingsUiState())
         val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
@@ -64,7 +75,18 @@ class SettingsViewModel
 
         fun selectFamily(familyId: Long) {
             authRepository.setActiveFamilyId(familyId)
-            _uiState.update { it.copy(selectedFamilyId = familyId, pairingErrorMessage = null, pairingSuccessMessage = null) }
+            _uiState.update {
+                it.copy(
+                    selectedFamilyId = familyId,
+                    pairedChildren = emptyList(),
+                    activeChildId = null,
+                    isChildrenListReady = false,
+                    childManagementErrorMessage = null,
+                    pairingErrorMessage = null,
+                    pairingSuccessMessage = null,
+                )
+            }
+            refreshProfile()
         }
 
         fun selectActiveChild(childId: Long) {
@@ -151,18 +173,25 @@ class SettingsViewModel
 
         fun createChild(
             displayName: String,
-            email: String?,
-            birthDate: String?,
+            email: String,
+            birthDate: String,
+            password: String,
         ) {
             val trimmedName = displayName.trim()
+            val trimmedEmail = email.trim().lowercase()
             if (!_uiState.value.isParentUser) return
-            if (trimmedName.isBlank()) {
+            val inputError = validateChildAccountInput(trimmedName, trimmedEmail, birthDate, password)
+            if (inputError != null) {
                 _uiState.update {
                     it.copy(
                         childManagementSuccessMessage = null,
-                        childManagementErrorMessage = "Saisis un nom d’enfant.",
+                        childManagementErrorMessage = inputError,
                     )
                 }
+                return
+            }
+            if (pendingChildEmail != null && pendingChildEmail != trimmedEmail) {
+                _uiState.update { it.copy(childManagementErrorMessage = "Termine d’abord l’association du compte enfant déjà créé.") }
                 return
             }
             if (!TaskodayPlanPolicy.canCreate(TaskodayPlanFeature.Child, _uiState.value.pairedChildren.size)) {
@@ -175,6 +204,25 @@ class SettingsViewModel
                 return
             }
             if (_uiState.value.isChildManagementBusy) return
+            if (!_uiState.value.isChildrenListReady) {
+                _uiState.update { it.copy(childManagementErrorMessage = "Attends le chargement des enfants de cette famille.") }
+                return
+            }
+
+            val familyId = _uiState.value.selectedFamilyId
+            if (familyId == null || familyId !in _uiState.value.familyIds) {
+                _uiState.update { it.copy(childManagementErrorMessage = "Sélectionne une famille active avant d’ajouter un enfant.") }
+                return
+            }
+            if (pendingFamilyId != null && pendingFamilyId != familyId) {
+                _uiState.update { it.copy(childManagementErrorMessage = "Resélectionne la famille initiale pour terminer l’association.") }
+                return
+            }
+            val parentAccessToken = authRepository.getAccessToken()
+            if (parentAccessToken.isNullOrBlank()) {
+                _uiState.update { it.copy(childManagementErrorMessage = "Session expirée, reconnecte-toi.") }
+                return
+            }
 
             viewModelScope.launch {
                 _uiState.update {
@@ -186,29 +234,44 @@ class SettingsViewModel
                 }
 
                 runCatching {
-                    val createdChild =
-                        childrenRepository.createChild(
-                            displayName = trimmedName,
-                            email = email,
-                            birthDate = birthDate,
-                        )
-                    val refreshedChildren = childrenRepository.fetchChildren()
-                    createdChild to refreshedChildren
-                }.onSuccess { (createdChild, refreshedChildren) ->
-                    val mergedChildren =
-                        if (refreshedChildren.any { child -> child.id == createdChild.id }) {
-                            refreshedChildren
-                        } else {
-                            refreshedChildren + createdChild
+                    val currentChildren = childrenRepository.fetchChildren()
+                    if (!TaskodayPlanPolicy.canCreate(TaskodayPlanFeature.Child, currentChildren.size)) {
+                        throw ChildLimitReachedException()
+                    }
+                    val childSession = pendingChildSession
+                        ?: registerOrRecoverChild(trimmedName, birthDate.trim(), trimmedEmail, password, familyId).also {
+                            pendingChildSession = it
+                            pendingChildEmail = trimmedEmail
+                            pendingFamilyId = familyId
                         }
-                    authRepository.setActiveChildId(createdChild.id)
-
+                    val code = pendingPairingCode
+                        ?: childOnboardingRepository.generateCode(childSession.accessToken).also { pendingPairingCode = it }
+                    check(authRepository.getAccessToken() == parentAccessToken && authRepository.getActiveFamilyId() == familyId) {
+                        "La session ou la famille active a changé. Recommence l’association depuis le profil Parent."
+                    }
+                    try {
+                        pairingRepository.attachChild(code, familyId).getOrThrow()
+                    } catch (error: HttpException) {
+                        if (error.code() == 404) pendingPairingCode = null
+                        throw error
+                    }
+                    pendingPairingCode = null
+                    val refreshedChildren = childrenRepository.fetchChildren()
+                    check(refreshedChildren.any { it.email.equals(trimmedEmail, ignoreCase = true) }) {
+                        "L’enfant associé n’apparaît pas encore dans la famille active."
+                    }
+                    runCatching { childOnboardingRepository.discard(childSession.refreshToken) }
+                    pendingChildSession = null
+                    pendingChildEmail = null
+                    ambiguousRegistrationEmail = null
+                    pendingFamilyId = null
+                    refreshedChildren
+                }.onSuccess { refreshedChildren ->
                     _uiState.update {
                         it.copy(
                             isChildManagementBusy = false,
-                            pairedChildren = mergedChildren,
-                            activeChildId = createdChild.id,
-                            childManagementSuccessMessage = "${createdChild.displayName} a été ajouté.",
+                            pairedChildren = refreshedChildren,
+                            childManagementSuccessMessage = "$trimmedName a été ajouté à la famille active.",
                             childManagementErrorMessage = null,
                         )
                     }
@@ -218,12 +281,60 @@ class SettingsViewModel
                         it.copy(
                             isChildManagementBusy = false,
                             childManagementSuccessMessage = null,
-                            childManagementErrorMessage = throwable.toChildManagementMessage(),
+                            childManagementErrorMessage =
+                                if (pendingChildSession != null) {
+                                    "Compte enfant créé, mais association incomplète. Réessaie ici sans changer l’email ; " +
+                                        "après fermeture de l’application, utilise le code depuis le compte enfant. " +
+                                        throwable.toChildManagementMessage()
+                                } else if (ambiguousRegistrationEmail == trimmedEmail) {
+                                    "Inscription incertaine. Réessaie avec les mêmes identifiants pour terminer l’association. " +
+                                        throwable.toChildManagementMessage()
+                                } else {
+                                    throwable.toChildManagementMessage()
+                                },
                         )
                     }
                 }
             }
         }
+
+        private suspend fun registerOrRecoverChild(
+            name: String,
+            birthDate: String,
+            email: String,
+            password: String,
+            familyId: Long,
+        ): ChildTemporarySession =
+            try {
+                childOnboardingRepository.register(name, birthDate, email, password).also {
+                    ambiguousRegistrationEmail = null
+                }
+            } catch (registrationError: Exception) {
+                if (registrationError is CancellationException) throw registrationError
+                val ambiguous = registrationError.isAmbiguousChildRegistration()
+                val conflictAfterAmbiguity =
+                    registrationError is HttpException && registrationError.code() == 409 &&
+                        ambiguousRegistrationEmail == email
+                if (!ambiguous && !conflictAfterAmbiguity) throw registrationError
+
+                if (ambiguous) {
+                    ambiguousRegistrationEmail = email
+                    pendingChildEmail = email
+                    pendingFamilyId = familyId
+                } else {
+                    // A conflict allows one recovery login, not an automatic retry loop.
+                    ambiguousRegistrationEmail = null
+                }
+
+                try {
+                    childOnboardingRepository.login(email, password).also {
+                        ambiguousRegistrationEmail = null
+                    }
+                } catch (loginError: Exception) {
+                    if (loginError is CancellationException) throw loginError
+                    throw registrationError
+                }
+            }
 
         fun clearChildManagementMessages() {
             _uiState.update {
@@ -402,6 +513,7 @@ class SettingsViewModel
         }
 
         private fun refreshProfile() {
+            val refreshVersion = ++profileRefreshVersion
             if (authRepository.getAccessToken().isNullOrBlank()) {
                 _uiState.update {
                     it.copy(
@@ -422,6 +534,7 @@ class SettingsViewModel
                         successStat = "0%",
                         xpHistoryTokens = emptyList(),
                         pairedChildren = emptyList(),
+                        isChildrenListReady = false,
                         activeChildId = null,
                         pairingCode = null,
                         pairingCodeExpiresAt = null,
@@ -456,12 +569,13 @@ class SettingsViewModel
                 val xp = dashboard?.stats?.totalXp ?: 0
                 val level = (xp / XP_PER_LEVEL) + 1
                 val levelXp = xp % XP_PER_LEVEL
-                val children =
+                val childrenResult =
                     if (isParent) {
-                        runCatching { childrenRepository.fetchChildren() }.getOrDefault(_uiState.value.pairedChildren)
+                        runCatching { childrenRepository.fetchChildren() }
                     } else {
-                        emptyList()
+                        Result.success(emptyList())
                     }
+                if (refreshVersion != profileRefreshVersion) return@launch
 
                 _uiState.update {
                     it.copy(
@@ -482,7 +596,11 @@ class SettingsViewModel
                         streakStat = "${dashboard?.stats?.streakDays ?: 0} j",
                         successStat = "${dashboard?.stats?.successRatePercent ?: 0}%",
                         xpHistoryTokens = xpHistoryTokensFrom(dashboard),
-                        pairedChildren = children,
+                        pairedChildren = childrenResult.getOrDefault(emptyList()),
+                        isChildrenListReady = childrenResult.isSuccess,
+                        childManagementErrorMessage =
+                            if (isParent && childrenResult.isFailure) "Impossible de charger les enfants de cette famille. Rouvre le profil pour réessayer."
+                            else it.childManagementErrorMessage,
                         activeChildId = activeChildId,
                         hasParentPin = authRepository.hasParentPin(),
                         profileErrorMessage =
@@ -499,6 +617,19 @@ class SettingsViewModel
 
 private const val XP_PER_LEVEL: Int = 1000
 private val PARENT_PIN_REGEX = Regex("\\d{4}")
+private class ChildLimitReachedException : IllegalStateException()
+
+private fun Throwable.isAmbiguousChildRegistration(): Boolean =
+    this is IOException || (this is HttpException && code() in 500..599)
+
+internal fun validateChildAccountInput(name: String, email: String, birthDate: String, password: String): String? {
+    if (name.isBlank() || name.length > 120) return "Saisis un nom d’enfant de 1 à 120 caractères."
+    if (!Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$").matches(email)) return "Saisis une adresse email valide."
+    val parsedDate = runCatching { LocalDate.parse(birthDate.trim()) }.getOrNull()
+    if (parsedDate == null || parsedDate.isAfter(LocalDate.now())) return "Saisis une date de naissance valide (AAAA-MM-JJ)."
+    if (password.length !in 8..128) return "Le mot de passe doit contenir entre 8 et 128 caractères."
+    return null
+}
 
 internal data class ProfileIdentity(
     val name: String,
@@ -595,19 +726,20 @@ private fun Throwable?.toPairingMessage(): String =
 
 private fun Throwable.toChildManagementMessage(): String =
     when (this) {
+        is ChildLimitReachedException -> TaskodayPlanPolicy.limitReachedMessage()
         is HttpException ->
             when (code()) {
-                400 -> "Nom enfant invalide."
+                400 -> "Informations enfant ou code d’association invalides."
                 401 -> "Session expirée, reconnecte-toi."
                 403 -> "Action non autorisée."
-                404 -> "Enfant introuvable."
-                409 -> "Impossible de créer l’enfant avec ces informations."
-                422 -> "Vérifie le nom, l’email ou la date de naissance."
+                404 -> "Code d’association invalide ou expiré, ou famille introuvable."
+                409 -> "Cette adresse email est déjà utilisée."
+                422 -> "Vérifie le nom, l’email, le mot de passe et la date de naissance."
                 else -> "Impossible de modifier le profil pour le moment."
             }
 
         is UnknownHostException, is ConnectException -> "Réseau indisponible, impossible de modifier l’enfant."
         is SocketTimeoutException -> "Le serveur ne répond pas à temps."
         is IOException -> "Erreur réseau, réessaie plus tard."
-        else -> message ?: "Erreur inconnue."
+        else -> "Une erreur inattendue est survenue. Réessaie."
     }

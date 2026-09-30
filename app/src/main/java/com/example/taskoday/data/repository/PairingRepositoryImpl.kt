@@ -15,9 +15,9 @@ class PairingRepositoryImpl
     constructor(
         private val pairingApi: PairingApi,
     ) : PairingRepository {
-        override suspend fun generateCode(): PairingCode = pairingApi.generateCode().toDomain()
+        override suspend fun generateCode(): PairingCode = pairingApi.generateCode().data.toDomain()
 
-        override suspend fun getMyCode(): PairingCode = pairingApi.getMyCode().toDomain()
+        override suspend fun getMyCode(): PairingCode = pairingApi.getMyCode().data.toDomain()
 
         override suspend fun attachChild(code: String, familyId: Long?): Result<Unit> =
             runCatching {
