@@ -24,6 +24,7 @@ import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
@@ -37,6 +38,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -70,6 +74,42 @@ fun FamilyHouseholdScreen(
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
     val groupedMembers = groupFamilyHouseholdMembers(uiState.members)
+    val canManageMembers = uiState.isParentAccount && canManageFamilyMembers(uiState.members, uiState.currentUserId)
+    val canLeave = uiState.isParentAccount && canLeaveFamily(uiState.members, uiState.currentUserId)
+    var pendingRemoval by remember { mutableStateOf<FamilyMember?>(null) }
+    var confirmLeave by remember { mutableStateOf(false) }
+
+    pendingRemoval?.let { member ->
+        AlertDialog(
+            onDismissRequest = { pendingRemoval = null },
+            title = { Text("Retirer ce membre ?") },
+            text = {
+                Text(
+                    "${member.displayName} ne fera plus partie de ce foyer. Son compte restera disponible. " +
+                        "Les autres familles ne seront pas modifiées.",
+                )
+            },
+            confirmButton = {
+                Button(onClick = { viewModel.removeMember(member.userId); pendingRemoval = null }, enabled = !uiState.isMembershipBusy) {
+                    Text("Retirer")
+                }
+            },
+            dismissButton = { OutlinedButton(onClick = { pendingRemoval = null }) { Text("Annuler") } },
+        )
+    }
+    if (confirmLeave) {
+        AlertDialog(
+            onDismissRequest = { confirmLeave = false },
+            title = { Text("Quitter ce foyer ?") },
+            text = { Text("Tu quitteras seulement cette famille. Ton compte et tes autres familles resteront disponibles.") },
+            confirmButton = {
+                Button(onClick = { viewModel.leaveFamily(); confirmLeave = false }, enabled = !uiState.isMembershipBusy) {
+                    Text("Quitter")
+                }
+            },
+            dismissButton = { OutlinedButton(onClick = { confirmLeave = false }) { Text("Annuler") } },
+        )
+    }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.refresh()
@@ -144,43 +184,78 @@ fun FamilyHouseholdScreen(
                     }
                 }
 
-                item {
-                    FamilyCreateCard(
-                        name = uiState.createFamilyName,
-                        isBusy = uiState.isCreateBusy,
-                        onNameChange = viewModel::updateCreateFamilyName,
-                        onCreate = viewModel::createFamily,
-                    )
-                }
-
-                item {
-                    FamilyMemberGroupCard(
-                        title = "Parents",
-                        members = groupedMembers.parents,
-                        emptyMessage = "Aucun parent actif pour le moment.",
-                    )
-                }
-
-                item {
-                    FamilyMemberGroupCard(
-                        title = "Enfants",
-                        members = groupedMembers.children,
-                        emptyMessage = "Aucun enfant actif dans ce foyer.",
-                    )
-                }
-
-                if (groupedMembers.others.isNotEmpty()) {
+                if (uiState.isParentAccount) {
                     item {
-                        FamilyMemberGroupCard(
-                            title = "Autres membres",
-                            members = groupedMembers.others,
-                            emptyMessage = "",
+                        FamilyCreateCard(
+                            name = uiState.createFamilyName,
+                            isBusy = uiState.isCreateBusy,
+                            onNameChange = viewModel::updateCreateFamilyName,
+                            onCreate = viewModel::createFamily,
                         )
                     }
                 }
 
-                item {
-                    FamilyInviteCard(
+                if (uiState.activeFamilyId != null) {
+                    item {
+                        FamilyMemberGroupCard(
+                            title = "Parents",
+                            members = groupedMembers.parents,
+                            allMembers = uiState.members,
+                            emptyMessage = "Aucun parent actif pour le moment.",
+                            currentUserId = uiState.currentUserId,
+                            canManage = canManageMembers,
+                            onRemove = { pendingRemoval = it },
+                        )
+                    }
+                    item {
+                        FamilyMemberGroupCard(
+                            title = "Enfants",
+                            members = groupedMembers.children,
+                            allMembers = uiState.members,
+                            emptyMessage = "Aucun enfant actif dans ce foyer.",
+                            currentUserId = uiState.currentUserId,
+                            canManage = canManageMembers,
+                            onRemove = { pendingRemoval = it },
+                        )
+                    }
+                    if (groupedMembers.others.isNotEmpty()) {
+                        item {
+                            FamilyMemberGroupCard(
+                                title = "Autres membres",
+                                members = groupedMembers.others,
+                                allMembers = uiState.members,
+                                emptyMessage = "",
+                                currentUserId = uiState.currentUserId,
+                                canManage = canManageMembers,
+                                onRemove = { pendingRemoval = it },
+                            )
+                        }
+                    }
+                    if (canManageMembers) {
+                        item {
+                            ElevatedCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.elevatedCardColors(containerColor = ParchmentLight.copy(alpha = 0.97f)),
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text("Quitter la famille", style = MaterialTheme.typography.titleMedium, color = InkBrown)
+                                    if (!canLeave) {
+                                        Text("Le dernier parent doit rester dans ce foyer.", color = InkMuted)
+                                    }
+                                    OutlinedButton(
+                                        onClick = { confirmLeave = true },
+                                        enabled = canLeave && !uiState.isMembershipBusy,
+                                        modifier = Modifier.fillMaxWidth(),
+                                    ) { Text("Quitter ce foyer") }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (canManageMembers) {
+                    item {
+                        FamilyInviteCard(
                         invite = uiState.invite,
                         isBusy = uiState.isInviteBusy,
                         onCreateInvite = viewModel::createInvite,
@@ -199,16 +274,19 @@ fun FamilyHouseholdScreen(
                                 }
                             context.startActivity(Intent.createChooser(intent, "Partager le code"))
                         },
-                    )
+                        )
+                    }
                 }
 
-                item {
-                    FamilyJoinCard(
-                        code = uiState.joinCode,
-                        isBusy = uiState.isJoinBusy,
-                        onCodeChange = viewModel::updateJoinCode,
-                        onJoin = viewModel::acceptInvite,
-                    )
+                if (uiState.isParentAccount) {
+                    item {
+                        FamilyJoinCard(
+                            code = uiState.joinCode,
+                            isBusy = uiState.isJoinBusy,
+                            onCodeChange = viewModel::updateJoinCode,
+                            onJoin = viewModel::acceptInvite,
+                        )
+                    }
                 }
             }
         }
@@ -283,7 +361,11 @@ private fun FamilyHouseholdHeader(onBack: () -> Unit) {
 private fun FamilyMemberGroupCard(
     title: String,
     members: List<FamilyMember>,
+    allMembers: List<FamilyMember>,
     emptyMessage: String,
+    currentUserId: Long?,
+    canManage: Boolean,
+    onRemove: (FamilyMember) -> Unit,
 ) {
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
@@ -312,7 +394,11 @@ private fun FamilyMemberGroupCard(
                 )
             } else {
                 members.forEach { member ->
-                    FamilyMemberRow(member = member)
+                    FamilyMemberRow(
+                        member = member,
+                        canRemove = canManage && canRemoveFamilyMember(allMembers, currentUserId, member.userId),
+                        onRemove = { onRemove(member) },
+                    )
                 }
             }
         }
@@ -320,7 +406,7 @@ private fun FamilyMemberGroupCard(
 }
 
 @Composable
-private fun FamilyMemberRow(member: FamilyMember) {
+private fun FamilyMemberRow(member: FamilyMember, canRemove: Boolean, onRemove: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -347,16 +433,21 @@ private fun FamilyMemberRow(member: FamilyMember) {
                 )
             }
         }
-        Text(
-            text =
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                text =
                 when (member.role) {
                     FamilyMemberRole.PARENT -> "Parent"
                     FamilyMemberRole.CHILD -> "Enfant"
                     FamilyMemberRole.OTHER -> "Membre"
                 },
-            style = MaterialTheme.typography.labelMedium,
-            color = InkMuted,
-        )
+                style = MaterialTheme.typography.labelMedium,
+                color = InkMuted,
+            )
+            if (canRemove) {
+                OutlinedButton(onClick = onRemove) { Text("Retirer") }
+            }
+        }
     }
 }
 

@@ -23,6 +23,10 @@ class FamilyRepositoryImpl
         private val familyApi: FamilyApi,
         private val gson: Gson,
     ) : FamilyRepository {
+        override suspend fun getCurrentUserId(): Long = authRepository.fetchMe().id
+
+        override suspend fun isParentAccount(): Boolean = authRepository.fetchMe().role.equals("PARENT", ignoreCase = true)
+
         override suspend fun getActiveFamilyId(): Long? = authRepository.getActiveFamilyId()
 
         override fun setActiveFamilyId(familyId: Long) = authRepository.setActiveFamilyId(familyId)
@@ -48,6 +52,24 @@ class FamilyRepositoryImpl
                     .map { member -> member.toDomain() }
                     .filter { member -> member.isActive }
                     .distinctBy { member -> member.userId }
+            }
+
+        override suspend fun leaveFamily(familyId: Long): Result<Long?> =
+            runCatching {
+                val activeBefore = authRepository.getActiveFamilyId()
+                familyApi.leaveFamily(familyId)
+                if (activeBefore == familyId) authRepository.clearActiveFamilyId()
+                val families = runCatching { familyApi.getMyFamilies().data.map { it.toDomain() } }.getOrDefault(emptyList())
+                val selected = activeBefore?.takeIf { id -> families.any { it.id == id } } ?: families.firstOrNull()?.id
+                if (selected != null) authRepository.setActiveFamilyId(selected)
+                selected
+            }
+
+        override suspend fun removeMember(familyId: Long, userId: Long): Result<Unit> =
+            runCatching {
+                familyApi.removeMember(familyId, userId)
+                runCatching { authRepository.getActiveChildId(forceRefresh = true) }
+                Unit
             }
 
         override suspend fun createParentInvite(): Result<FamilyInvite> =

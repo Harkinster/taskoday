@@ -28,6 +28,17 @@ fun groupFamilyHouseholdMembers(members: List<FamilyMember>): FamilyHouseholdGro
     )
 }
 
+fun canManageFamilyMembers(members: List<FamilyMember>, currentUserId: Long?): Boolean =
+    currentUserId != null && members.any { it.userId == currentUserId && it.isActive && it.role == FamilyMemberRole.PARENT }
+
+fun canLeaveFamily(members: List<FamilyMember>, currentUserId: Long?): Boolean =
+    canManageFamilyMembers(members, currentUserId) &&
+        members.count { it.isActive && it.role == FamilyMemberRole.PARENT } > 1
+
+fun canRemoveFamilyMember(members: List<FamilyMember>, currentUserId: Long?, targetUserId: Long): Boolean =
+    canManageFamilyMembers(members, currentUserId) &&
+        targetUserId != currentUserId && members.any { it.userId == targetUserId && it.isActive }
+
 fun normalizeFamilyInviteCodeInput(value: String): String =
     value.trim()
 

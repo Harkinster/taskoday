@@ -6,6 +6,10 @@ import com.example.taskoday.domain.model.FamilyMember
 import com.example.taskoday.domain.model.FamilySummary
 
 interface FamilyRepository {
+    suspend fun getCurrentUserId(): Long? = null
+
+    suspend fun isParentAccount(): Boolean = false
+
     suspend fun getActiveFamilyId(): Long? = null
 
     fun setActiveFamilyId(familyId: Long) = Unit
@@ -16,6 +20,12 @@ interface FamilyRepository {
         Result.failure(UnsupportedOperationException("Family creation is unavailable."))
 
     suspend fun fetchMembers(): Result<List<FamilyMember>>
+
+    suspend fun leaveFamily(familyId: Long): Result<Long?> =
+        Result.failure(UnsupportedOperationException("Leaving a family is unavailable."))
+
+    suspend fun removeMember(familyId: Long, userId: Long): Result<Unit> =
+        Result.failure(UnsupportedOperationException("Removing a member is unavailable."))
 
     suspend fun createParentInvite(): Result<FamilyInvite>
 

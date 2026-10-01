@@ -35,6 +35,8 @@ interface AuthRepository {
 
     fun setActiveFamilyId(familyId: Long) = Unit
 
+    fun clearActiveFamilyId() = Unit
+
     fun hasParentPin(): Boolean
 
     fun saveParentPin(pin: String)

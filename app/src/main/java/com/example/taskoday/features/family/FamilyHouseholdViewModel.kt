@@ -7,6 +7,7 @@ import com.example.taskoday.domain.model.FamilyMember
 import com.example.taskoday.domain.repository.FamilyRepository
 import com.google.gson.JsonParser
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.io.IOException
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,16 +32,18 @@ class FamilyHouseholdViewModel
         fun refresh() {
             viewModelScope.launch {
                 _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+                val currentUserId = runCatching { familyRepository.getCurrentUserId() }.getOrNull()
+                val isParentAccount = runCatching { familyRepository.isParentAccount() }.getOrDefault(false)
                 familyRepository.fetchFamilies().onSuccess { families ->
                     val activeFamilyId = familyRepository.getActiveFamilyId()
                     if (families.isEmpty()) {
-                        _uiState.update { it.copy(isLoading = false, families = emptyList(), activeFamilyId = null, members = emptyList()) }
+                        _uiState.update { it.copy(isLoading = false, families = emptyList(), activeFamilyId = null, members = emptyList(), currentUserId = currentUserId, isParentAccount = isParentAccount) }
                     } else if (activeFamilyId == null) {
-                        _uiState.update { it.copy(isLoading = false, families = families, activeFamilyId = null, members = emptyList()) }
+                        _uiState.update { it.copy(isLoading = false, families = families, activeFamilyId = null, members = emptyList(), currentUserId = currentUserId, isParentAccount = isParentAccount) }
                     } else {
                         familyRepository.fetchMembers()
                             .onSuccess { members ->
-                                _uiState.update { it.copy(families = families, activeFamilyId = activeFamilyId) }
+                                _uiState.update { it.copy(families = families, activeFamilyId = activeFamilyId, currentUserId = currentUserId, isParentAccount = isParentAccount) }
                                 publishMembers(members)
                             }
                             .onFailure { throwable -> publishLoadFailure(throwable) }
@@ -55,11 +58,44 @@ class FamilyHouseholdViewModel
             refresh()
         }
 
+        fun leaveFamily() {
+            val state = _uiState.value
+            val familyId = state.activeFamilyId ?: return
+            if (!state.isParentAccount || !canLeaveFamily(state.members, state.currentUserId) || state.isMembershipBusy) return
+            viewModelScope.launch {
+                _uiState.update { it.copy(isMembershipBusy = true, errorMessage = null, message = null) }
+                familyRepository.leaveFamily(familyId)
+                    .onSuccess {
+                        _uiState.update { it.copy(isMembershipBusy = false, invite = null, message = "Tu as quitté ce foyer.") }
+                        refresh()
+                    }.onFailure { error ->
+                        _uiState.update { it.copy(isMembershipBusy = false, errorMessage = error.toMembershipMessage()) }
+                    }
+            }
+        }
+
+        fun removeMember(userId: Long) {
+            val state = _uiState.value
+            val familyId = state.activeFamilyId ?: return
+            if (!state.isParentAccount || !canRemoveFamilyMember(state.members, state.currentUserId, userId) || state.isMembershipBusy) return
+            viewModelScope.launch {
+                _uiState.update { it.copy(isMembershipBusy = true, errorMessage = null, message = null) }
+                familyRepository.removeMember(familyId, userId)
+                    .onSuccess {
+                        _uiState.update { it.copy(isMembershipBusy = false, message = "Membre retiré de ce foyer.") }
+                        refresh()
+                    }.onFailure { error ->
+                        _uiState.update { it.copy(isMembershipBusy = false, errorMessage = error.toMembershipMessage()) }
+                    }
+            }
+        }
+
         fun updateCreateFamilyName(value: String) {
             _uiState.update { it.copy(createFamilyName = value, errorMessage = null, message = null) }
         }
 
         fun createFamily() {
+            if (!_uiState.value.isParentAccount) return
             val name = _uiState.value.createFamilyName.trim()
             if (name.isBlank()) {
                 _uiState.update { it.copy(errorMessage = "Nom de la famille requis.") }
@@ -94,6 +130,7 @@ class FamilyHouseholdViewModel
         }
 
         fun createInvite() {
+            if (!_uiState.value.isParentAccount || !canManageFamilyMembers(_uiState.value.members, _uiState.value.currentUserId)) return
             if (_uiState.value.isInviteBusy) return
             viewModelScope.launch {
                 _uiState.update { it.copy(isInviteBusy = true, errorMessage = null, message = null) }
@@ -125,6 +162,7 @@ class FamilyHouseholdViewModel
         }
 
         fun acceptInvite() {
+            if (!_uiState.value.isParentAccount) return
             val code = normalizeFamilyInviteCodeInput(_uiState.value.joinCode)
             if (code.isBlank()) {
                 _uiState.update { it.copy(errorMessage = "Code d'invitation requis.") }
@@ -189,6 +227,20 @@ private fun Throwable.toHouseholdMessage(fallback: String): String =
         )
     } else {
         toRemoteUserMessage(fallback)
+    }
+
+private fun Throwable.toMembershipMessage(): String =
+    when (this) {
+        is HttpException -> when (code()) {
+            401 -> "Session expirée, reconnecte-toi."
+            403 -> "Tu n'es pas autorisé à gérer ce foyer."
+            404 -> "Ce foyer ou ce membre n'est plus disponible."
+            409 -> "Le dernier parent doit rester dans le foyer."
+            in 500..599 -> "Le serveur ne répond pas correctement. Réessaie plus tard."
+            else -> "Impossible de modifier ce foyer pour le moment."
+        }
+        is IOException -> "Réseau indisponible, réessaie plus tard."
+        else -> "Impossible de modifier ce foyer pour le moment."
     }
 
 private fun String?.extractBackendMessage(): String? {

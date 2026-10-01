@@ -141,6 +141,11 @@ class AuthRepositoryImpl
             }
         }
 
+        override fun clearActiveFamilyId() {
+            tokenStorage.clearActiveFamilyId()
+            tokenStorage.clearActiveChildId()
+        }
+
         override fun hasParentPin(): Boolean = tokenStorage.hasParentPin()
 
         override fun saveParentPin(pin: String) {

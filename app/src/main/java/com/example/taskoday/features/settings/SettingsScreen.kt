@@ -260,13 +260,15 @@ fun SettingsScreen(
                 if (!isLocalChildMode) {
                     item {
                         NeonCard(tone = NeonTone.Blue) {
-                            if (uiState.isParentUser) {
+                            if (uiState.profileEmail.isNotBlank()) {
                                 ProfileActionRow(
                                     icon = Icons.Outlined.Home,
                                     title = "Mon foyer",
-                                    subtitle = "Parents, enfants et invitation d'un adulte.",
+                                    subtitle = if (uiState.isParentUser) "Parents, enfants et invitation d'un adulte." else "Membres et rôles de ton foyer.",
                                     onClick = onOpenHousehold,
                                 )
+                            }
+                            if (uiState.isParentUser) {
                                 ProfileActionRow(
                                     icon = Icons.Outlined.Notifications,
                                     title = "Notifications",

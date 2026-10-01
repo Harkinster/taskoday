@@ -21,6 +21,9 @@ internal fun canEnterParentDestination(
     localChildMode: Boolean,
 ): Boolean = verifiedParentSession && !isChild && !localChildMode
 
+internal fun canEnterHouseholdDestination(hasRemoteSession: Boolean, localChildMode: Boolean): Boolean =
+    hasRemoteSession && !localChildMode
+
 internal fun visibleAccountDestinations(isChild: Boolean, localChildMode: Boolean = false): List<TaskodayDestination> =
     TopLevelDestinations.filterNot {
         ((isChild || localChildMode) && it == TaskodayDestination.FollowUp) ||

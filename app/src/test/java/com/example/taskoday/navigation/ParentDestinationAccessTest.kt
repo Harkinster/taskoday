@@ -5,6 +5,11 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ParentDestinationAccessTest {
+    @Test fun `authenticated child can view household outside local child mode`() {
+        assertTrue(canEnterHouseholdDestination(true, false))
+        assertFalse(canEnterHouseholdDestination(false, false))
+        assertFalse(canEnterHouseholdDestination(true, true))
+    }
     @Test fun `verified parent can enter administration`() {
         assertTrue(canEnterParentDestination(true, false, false))
     }

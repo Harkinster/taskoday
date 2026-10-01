@@ -17,6 +17,34 @@ import org.junit.Test
 
 class FamilyRepositoryImplTest {
     @Test
+    fun `leaving selected family selects remaining family without replacing account`() = runBlocking {
+        val auth = FakeAuthRepository(familyIds = listOf(7L, 8L))
+        val api = FakeFamilyApi()
+        api.families = listOf(FamilySummaryDto(7L, "Famille 7"), FamilySummaryDto(8L, "Famille 8"))
+        api.onLeave = { auth.familyIds = listOf(7L); api.families = listOf(FamilySummaryDto(7L, "Famille 7")) }
+        val repository = FamilyRepositoryImpl(auth, api, Gson())
+
+        assertEquals(7L, repository.leaveFamily(8L).getOrThrow())
+        assertEquals(8L, api.lastLeftFamilyId)
+        assertEquals(7L, auth.activeFamilyId)
+        assertEquals("token", auth.getAccessToken())
+        assertEquals(listOf(7L), auth.fetchMe().familyIds)
+    }
+
+    @Test
+    fun `remove member sends explicit family and user identifiers`() = runBlocking {
+        val auth = FakeAuthRepository(familyIds = listOf(7L, 8L))
+        val api = FakeFamilyApi()
+        val repository = FamilyRepositoryImpl(auth, api, Gson())
+
+        repository.removeMember(8L, 29L).getOrThrow()
+
+        assertEquals(8L to 29L, api.lastRemoval)
+        assertEquals(8L, auth.activeFamilyId)
+        assertEquals("token", auth.getAccessToken())
+    }
+
+    @Test
     fun `fetch members uses active family and filters inactive members`() =
         runBlocking {
             val api = FakeFamilyApi()
@@ -57,9 +85,24 @@ class FamilyRepositoryImplTest {
 private class FakeFamilyApi : FamilyApi {
     var lastMembersFamilyId: Long? = null
     var acceptedCode: String? = null
+    var lastLeftFamilyId: Long? = null
+    var lastRemoval: Pair<Long, Long>? = null
+    var families = listOf(FamilySummaryDto(4L, "Famille Test"))
+    var onLeave: (() -> Unit)? = null
 
     override suspend fun getMyFamilies(): ApiEnvelopeDto<List<FamilySummaryDto>> =
-        ApiEnvelopeDto(success = true, data = listOf(FamilySummaryDto(4L, "Famille Test")))
+        ApiEnvelopeDto(success = true, data = families)
+
+    override suspend fun leaveFamily(familyId: Long): ApiEnvelopeDto<JsonElement> {
+        lastLeftFamilyId = familyId
+        onLeave?.invoke()
+        return envelope("{}")
+    }
+
+    override suspend fun removeMember(familyId: Long, userId: Long): ApiEnvelopeDto<JsonElement> {
+        lastRemoval = familyId to userId
+        return envelope("{}")
+    }
 
     override suspend fun createFamily(payload: CreateFamilyRequestDto): ApiEnvelopeDto<FamilySummaryDto> =
         ApiEnvelopeDto(success = true, data = FamilySummaryDto(5L, payload.name))
@@ -101,9 +144,17 @@ private class FakeFamilyApi : FamilyApi {
 }
 
 private class FakeAuthRepository(
-    private var familyIds: List<Long>,
+    var familyIds: List<Long>,
 ) : AuthRepository {
     var fetchMeCalls: Int = 0
+    var activeFamilyId: Long? = familyIds.lastOrNull()
+
+    override suspend fun getActiveFamilyId(forceRefresh: Boolean): Long? =
+        activeFamilyId?.takeIf { it in familyIds } ?: familyIds.singleOrNull()
+
+    override fun setActiveFamilyId(familyId: Long) { activeFamilyId = familyId }
+
+    override fun clearActiveFamilyId() { activeFamilyId = null }
 
     override suspend fun registerParent(
         displayName: String,

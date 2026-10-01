@@ -364,7 +364,7 @@ fun TaskodayApp() {
             }
 
             composable(TaskodayDestination.FamilyHousehold.route) {
-                if (!ParentDestinationAccess(quickAddUiState.isLoading, quickAddUiState.canOpenQuickAdd, activeChildRole, localChildMode) { navController.popBackStack() }) return@composable
+                if (!HouseholdDestinationAccess(quickAddUiState.isLoading, quickAddUiState.hasRemoteSession, localChildMode) { navController.popBackStack() }) return@composable
                 val viewModel: FamilyHouseholdViewModel = hiltViewModel()
                 FamilyHouseholdScreen(
                     viewModel = viewModel,
@@ -689,6 +689,22 @@ private fun ParentDestinationAccess(
         return false
     }
     val allowed = canEnterParentDestination(verifiedParentSession, isChild, localChildMode)
+    if (!allowed) LaunchedEffect(Unit) { onDenied() }
+    return allowed
+}
+
+@Composable
+private fun HouseholdDestinationAccess(
+    isLoading: Boolean,
+    hasRemoteSession: Boolean,
+    localChildMode: Boolean,
+    onDenied: () -> Unit,
+): Boolean {
+    if (isLoading) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+        return false
+    }
+    val allowed = canEnterHouseholdDestination(hasRemoteSession, localChildMode)
     if (!allowed) LaunchedEffect(Unit) { onDenied() }
     return allowed
 }

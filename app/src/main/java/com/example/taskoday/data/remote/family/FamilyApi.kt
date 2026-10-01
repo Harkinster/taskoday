@@ -6,6 +6,7 @@ import com.example.taskoday.data.remote.dto.FamilySummaryDto
 import com.google.gson.JsonElement
 import retrofit2.http.GET
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.POST
 import retrofit2.http.Path
 
@@ -21,6 +22,15 @@ interface FamilyApi {
     @GET("families/{familyId}/members")
     suspend fun getFamilyMembers(
         @Path("familyId") familyId: Long,
+    ): ApiEnvelopeDto<JsonElement>
+
+    @POST("families/{familyId}/leave")
+    suspend fun leaveFamily(@Path("familyId") familyId: Long): ApiEnvelopeDto<JsonElement>
+
+    @DELETE("families/{familyId}/members/{userId}")
+    suspend fun removeMember(
+        @Path("familyId") familyId: Long,
+        @Path("userId") userId: Long,
     ): ApiEnvelopeDto<JsonElement>
 
     @POST("families/{familyId}/parent-invites")
