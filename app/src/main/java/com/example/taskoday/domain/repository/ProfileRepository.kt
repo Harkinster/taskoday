@@ -7,6 +7,9 @@ interface ProfileRepository {
     suspend fun updateMyProfile(displayName: String, birthDate: String): Result<Unit> =
         Result.failure(UnsupportedOperationException("Profile update is unavailable."))
 
+    suspend fun updateMyEmail(email: String): Result<Unit> =
+        Result.failure(UnsupportedOperationException("Email update is unavailable."))
+
     suspend fun fetchActiveChildProfile(): ChildProfile
 
     suspend fun fetchActiveChildDashboard(): ChildProfileDashboard

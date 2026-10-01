@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -93,6 +94,8 @@ fun SettingsScreen(
     var pairingCodeInput by rememberSaveable { mutableStateOf("") }
     var showLogoutConfirmation by rememberSaveable { mutableStateOf(false) }
     var showReturnParentPinDialog by rememberSaveable { mutableStateOf(false) }
+    var showEmailDialog by remember { mutableStateOf(false) }
+    var showPasswordDialog by remember { mutableStateOf(false) }
     var returnParentPinError by rememberSaveable { mutableStateOf<String?>(null) }
 
     val xp = uiState.totalXp
@@ -175,10 +178,27 @@ fun SettingsScreen(
                         ProfileIdentityCard(
                             displayName = uiState.profileName,
                             birthDate = uiState.profileBirthDate,
-                            email = uiState.profileEmail,
                             isSaving = uiState.isProfileSaving,
                             successMessage = uiState.profileSuccessMessage,
                             onSave = viewModel::updateProfile,
+                        )
+                    }
+                }
+
+                if (!isLocalChildMode && uiState.profileEmail.isNotBlank()) {
+                    item {
+                        AccountSettingsCard(
+                            email = uiState.profileEmail,
+                            emailSuccessMessage = uiState.emailSuccessMessage,
+                            passwordSuccessMessage = uiState.passwordSuccessMessage,
+                            onEditEmail = {
+                                viewModel.clearAccountMessages()
+                                showEmailDialog = true
+                            },
+                            onEditPassword = {
+                                viewModel.clearAccountMessages()
+                                showPasswordDialog = true
+                            },
                         )
                     }
                 }
@@ -412,6 +432,27 @@ fun SettingsScreen(
         )
     }
 
+    if (showEmailDialog) {
+        ChangeEmailDialog(
+            currentEmail = uiState.profileEmail,
+            isSaving = uiState.isEmailSaving,
+            errorMessage = uiState.emailErrorMessage,
+            successMessage = uiState.emailSuccessMessage,
+            onDismiss = { showEmailDialog = false },
+            onConfirm = viewModel::updateEmail,
+        )
+    }
+
+    if (showPasswordDialog) {
+        ChangePasswordDialog(
+            isSaving = uiState.isPasswordChanging,
+            errorMessage = uiState.passwordErrorMessage,
+            successMessage = uiState.passwordSuccessMessage,
+            onDismiss = { showPasswordDialog = false },
+            onConfirm = viewModel::changePassword,
+        )
+    }
+
     if (showReturnParentPinDialog) {
         ParentPinDialog(
             title = "Retour parent",
@@ -438,7 +479,6 @@ fun SettingsScreen(
 private fun ProfileIdentityCard(
     displayName: String,
     birthDate: String,
-    email: String,
     isSaving: Boolean,
     successMessage: String?,
     onSave: (String, String) -> Unit,
@@ -461,7 +501,6 @@ private fun ProfileIdentityCard(
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
-        Text(email, style = MaterialTheme.typography.bodySmall, color = TextMuted)
         NeonButton(
             text = if (isSaving) "Enregistrement..." else "Enregistrer",
             onClick = { onSave(editedName, editedBirthDate) },
@@ -469,6 +508,139 @@ private fun ProfileIdentityCard(
             modifier = Modifier.fillMaxWidth(),
         )
         successMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = NeonCyan) }
+    }
+}
+
+@Composable
+private fun AccountSettingsCard(
+    email: String,
+    emailSuccessMessage: String?,
+    passwordSuccessMessage: String?,
+    onEditEmail: () -> Unit,
+    onEditPassword: () -> Unit,
+) {
+    NeonCard(tone = NeonTone.Blue) {
+        Text("Compte", style = MaterialTheme.typography.titleLarge, color = StarWhite)
+        Text("Adresse email", style = MaterialTheme.typography.titleSmall, color = StarWhite)
+        Text(email, style = MaterialTheme.typography.bodySmall, color = TextMuted)
+        NeonButton(
+            text = "Modifier l’adresse email",
+            onClick = onEditEmail,
+            modifier = Modifier.fillMaxWidth(),
+            style = NeonButtonStyle.Outline,
+        )
+        Text("Mot de passe", style = MaterialTheme.typography.titleSmall, color = StarWhite)
+        NeonButton(
+            text = "Modifier le mot de passe",
+            onClick = onEditPassword,
+            modifier = Modifier.fillMaxWidth(),
+            style = NeonButtonStyle.Outline,
+        )
+        emailSuccessMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = NeonCyan) }
+        passwordSuccessMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = NeonCyan) }
+    }
+}
+
+@Composable
+private fun ChangeEmailDialog(
+    currentEmail: String,
+    isSaving: Boolean,
+    errorMessage: String?,
+    successMessage: String?,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit,
+) {
+    var email by remember { mutableStateOf("") }
+    LaunchedEffect(successMessage) {
+        if (successMessage != null) onDismiss()
+    }
+    Dialog(onDismissRequest = { if (!isSaving) onDismiss() }) {
+        NeonCard(
+            modifier = Modifier.fillMaxWidth().heightIn(max = 480.dp).imePadding().verticalScroll(rememberScrollState()),
+            tone = NeonTone.Cyan,
+        ) {
+            Text("Modifier l’adresse email", style = MaterialTheme.typography.titleLarge, color = StarWhite)
+            Text("Adresse actuelle : $currentEmail", style = MaterialTheme.typography.bodySmall, color = TextMuted)
+            OutlinedTextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("Nouvelle adresse email") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            errorMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                NeonButton("Annuler", onClick = onDismiss, enabled = !isSaving, modifier = Modifier.weight(1f), style = NeonButtonStyle.Outline)
+                NeonButton("Modifier", onClick = { onConfirm(email) }, enabled = !isSaving, modifier = Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChangePasswordDialog(
+    isSaving: Boolean,
+    errorMessage: String?,
+    successMessage: String?,
+    onDismiss: () -> Unit,
+    onConfirm: (String, String, String) -> Unit,
+) {
+    var currentPassword by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
+    var confirmation by remember { mutableStateOf("") }
+    LaunchedEffect(successMessage) {
+        if (successMessage != null) {
+            currentPassword = ""
+            newPassword = ""
+            confirmation = ""
+            onDismiss()
+        }
+    }
+    Dialog(onDismissRequest = { if (!isSaving) onDismiss() }) {
+        NeonCard(
+            modifier = Modifier.fillMaxWidth().heightIn(max = 600.dp).imePadding().verticalScroll(rememberScrollState()),
+            tone = NeonTone.Cyan,
+        ) {
+            Text("Modifier le mot de passe", style = MaterialTheme.typography.titleLarge, color = StarWhite)
+            OutlinedTextField(
+                value = currentPassword,
+                onValueChange = { currentPassword = it },
+                label = { Text("Mot de passe actuel") },
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = newPassword,
+                onValueChange = { newPassword = it },
+                label = { Text("Nouveau mot de passe") },
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = confirmation,
+                onValueChange = { confirmation = it },
+                label = { Text("Confirmer le nouveau mot de passe") },
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            errorMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                NeonButton("Annuler", onClick = onDismiss, enabled = !isSaving, modifier = Modifier.weight(1f), style = NeonButtonStyle.Outline)
+                NeonButton(
+                    "Modifier",
+                    onClick = { onConfirm(currentPassword, newPassword, confirmation) },
+                    enabled = !isSaving,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
     }
 }
 

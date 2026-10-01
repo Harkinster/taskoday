@@ -5,6 +5,7 @@ import com.example.taskoday.data.remote.dto.ChildProfileResponseDto
 import com.example.taskoday.data.remote.dto.ChildStatsDto
 import com.example.taskoday.data.remote.dto.XpHistoryItemDto
 import com.example.taskoday.data.remote.dto.UpdateProfileRequestDto
+import com.example.taskoday.data.remote.dto.UpdateEmailRequestDto
 import com.google.gson.JsonElement
 import retrofit2.http.GET
 import retrofit2.http.Body
@@ -15,6 +16,11 @@ interface ProfileApi {
     @PATCH("profile/me")
     suspend fun updateMe(
         @Body payload: UpdateProfileRequestDto,
+    ): ApiEnvelopeDto<JsonElement>
+
+    @PATCH("profile/me")
+    suspend fun updateEmail(
+        @Body payload: UpdateEmailRequestDto,
     ): ApiEnvelopeDto<JsonElement>
 
     @GET("children/{childId}/profile")

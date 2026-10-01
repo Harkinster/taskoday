@@ -298,6 +298,87 @@ class SettingsViewModel
             }
         }
 
+        fun updateEmail(email: String) {
+            val normalized = email.trim().lowercase()
+            val validationError = validateAccountEmail(normalized)
+            if (validationError != null) {
+                _uiState.update { it.copy(emailErrorMessage = validationError, emailSuccessMessage = null) }
+                return
+            }
+            if (authRepository.getAccessToken().isNullOrBlank()) {
+                _uiState.update { it.copy(emailErrorMessage = "Session expirée, reconnecte-toi.") }
+                return
+            }
+            if (_uiState.value.isEmailSaving) return
+            if (normalized == _uiState.value.profileEmail.lowercase()) {
+                _uiState.update { it.copy(emailErrorMessage = "Saisis une adresse différente.") }
+                return
+            }
+            viewModelScope.launch {
+                _uiState.update { it.copy(isEmailSaving = true, emailErrorMessage = null, emailSuccessMessage = null) }
+                profileRepository.updateMyEmail(normalized)
+                    .onSuccess {
+                        _uiState.update { state ->
+                            state.copy(
+                                isEmailSaving = false,
+                                profileEmail = normalized,
+                                profileSubtitle = state.profileSubtitle.replace(state.profileEmail, normalized),
+                                emailSuccessMessage = "Adresse email modifiée.",
+                                emailErrorMessage = null,
+                            )
+                        }
+                        refreshProfile()
+                    }
+                    .onFailure { error ->
+                        _uiState.update {
+                            it.copy(isEmailSaving = false, emailErrorMessage = error.toEmailChangeMessage())
+                        }
+                    }
+            }
+        }
+
+        fun changePassword(currentPassword: String, newPassword: String, confirmation: String) {
+            val validationError = validateAccountPasswordChange(currentPassword, newPassword, confirmation)
+            if (validationError != null) {
+                _uiState.update { it.copy(passwordErrorMessage = validationError, passwordSuccessMessage = null) }
+                return
+            }
+            if (authRepository.getAccessToken().isNullOrBlank()) {
+                _uiState.update { it.copy(passwordErrorMessage = "Session expirée, reconnecte-toi.") }
+                return
+            }
+            if (_uiState.value.isPasswordChanging) return
+            viewModelScope.launch {
+                _uiState.update { it.copy(isPasswordChanging = true, passwordErrorMessage = null, passwordSuccessMessage = null) }
+                authRepository.changePassword(currentPassword, newPassword)
+                    .onSuccess {
+                        _uiState.update {
+                            it.copy(
+                                isPasswordChanging = false,
+                                passwordErrorMessage = null,
+                                passwordSuccessMessage = "Mot de passe modifié.",
+                            )
+                        }
+                    }
+                    .onFailure { error ->
+                        _uiState.update {
+                            it.copy(isPasswordChanging = false, passwordErrorMessage = error.toPasswordChangeMessage())
+                        }
+                    }
+            }
+        }
+
+        fun clearAccountMessages() {
+            _uiState.update {
+                it.copy(
+                    emailErrorMessage = null,
+                    emailSuccessMessage = null,
+                    passwordErrorMessage = null,
+                    passwordSuccessMessage = null,
+                )
+            }
+        }
+
         private suspend fun registerOrRecoverChild(
             name: String,
             birthDate: String,
@@ -618,6 +699,53 @@ class SettingsViewModel
 private const val XP_PER_LEVEL: Int = 1000
 private val PARENT_PIN_REGEX = Regex("\\d{4}")
 private class ChildLimitReachedException : IllegalStateException()
+
+internal fun validateAccountEmail(email: String): String? =
+    if (email.isBlank() || !Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$").matches(email)) {
+        "Saisis une adresse email valide."
+    } else {
+        null
+    }
+
+internal fun validateAccountPasswordChange(current: String, new: String, confirmation: String): String? =
+    when {
+        current.isBlank() -> "Saisis ton mot de passe actuel."
+        current.length !in 8..128 -> "Le mot de passe actuel doit contenir entre 8 et 128 caractères."
+        new.length !in 8..128 -> "Le nouveau mot de passe doit contenir entre 8 et 128 caractères."
+        new != confirmation -> "Les nouveaux mots de passe ne correspondent pas."
+        else -> null
+    }
+
+private fun Throwable.toEmailChangeMessage(): String =
+    when (this) {
+        is HttpException -> when (code()) {
+            400, 422 -> "Adresse email invalide."
+            409 -> "Cette adresse email est déjà utilisée."
+            401 -> "Session expirée, reconnecte-toi."
+            403 -> "Modification non autorisée."
+            in 500..599 -> "Le serveur ne répond pas correctement. Réessaie plus tard."
+            else -> "Impossible de modifier l’adresse email pour le moment."
+        }
+        is UnknownHostException, is ConnectException -> "Réseau indisponible, réessaie plus tard."
+        is SocketTimeoutException -> "Le serveur ne répond pas à temps."
+        is IOException -> "Erreur réseau, réessaie plus tard."
+        else -> "Impossible de modifier l’adresse email pour le moment."
+    }
+
+private fun Throwable.toPasswordChangeMessage(): String =
+    when (this) {
+        is HttpException -> when (code()) {
+            400, 403 -> "Mot de passe actuel incorrect."
+            422 -> "Vérifie le nouveau mot de passe."
+            401 -> "Session expirée, reconnecte-toi."
+            in 500..599 -> "Le serveur ne répond pas correctement. Réessaie plus tard."
+            else -> "Impossible de modifier le mot de passe pour le moment."
+        }
+        is UnknownHostException, is ConnectException -> "Réseau indisponible, réessaie plus tard."
+        is SocketTimeoutException -> "Le serveur ne répond pas à temps."
+        is IOException -> "Erreur réseau, réessaie plus tard."
+        else -> "Impossible de modifier le mot de passe pour le moment."
+    }
 
 private fun Throwable.isAmbiguousChildRegistration(): Boolean =
     this is IOException || (this is HttpException && code() in 500..599)

@@ -20,6 +20,9 @@ interface AuthRepository {
 
     suspend fun login(email: String, password: String): AuthSession
 
+    suspend fun changePassword(currentPassword: String, newPassword: String): Result<Unit> =
+        Result.failure(UnsupportedOperationException("Password change is unavailable."))
+
     suspend fun fetchMe(): AuthenticatedUser
 
     fun getAccessToken(): String?

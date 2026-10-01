@@ -1,6 +1,7 @@
 package com.example.taskoday.data.remote.auth
 
 import com.example.taskoday.data.remote.dto.LoginRequestDto
+import com.example.taskoday.data.remote.dto.ChangePasswordRequestDto
 import com.example.taskoday.data.remote.dto.MeResponseDto
 import com.example.taskoday.data.remote.dto.RegisterChildRequestDto
 import com.example.taskoday.data.remote.dto.RegisterParentRequestDto
@@ -24,6 +25,11 @@ interface AuthApi {
     suspend fun login(
         @Body payload: LoginRequestDto,
     ): TokenResponseDto
+
+    @POST("auth/change-password")
+    suspend fun changePassword(
+        @Body payload: ChangePasswordRequestDto,
+    )
 
     @GET("auth/me")
     suspend fun me(): MeResponseDto

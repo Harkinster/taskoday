@@ -12,6 +12,7 @@ import com.example.taskoday.data.remote.dto.ChildResponseDto
 import com.example.taskoday.data.remote.dto.ChildUpdateRequestDto
 import com.example.taskoday.data.remote.dto.ChildUpdateResponseDto
 import com.example.taskoday.data.remote.dto.LoginRequestDto
+import com.example.taskoday.data.remote.dto.ChangePasswordRequestDto
 import com.example.taskoday.data.remote.dto.MeResponseDto
 import com.example.taskoday.data.remote.dto.RegisterChildRequestDto
 import com.example.taskoday.data.remote.dto.RegisterParentRequestDto
@@ -23,6 +24,28 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class AuthRepositoryImplTest {
+    @Test
+    fun `password change sends only credentials and preserves stored session and selections`() = runBlocking {
+        val storage = MemoryTokenStorage(
+            accessToken = "parent-access",
+            refreshToken = "parent-refresh",
+            activeChildId = 29L,
+            activeFamilyId = 8L,
+        )
+        val api = FakeAuthApi(listOf(7L, 8L))
+        val repository = AuthRepositoryImpl(api, FakeChildrenApi(), storage, FakeAuthSessionClient())
+
+        assertEquals(Result.success(Unit), repository.changePassword("old-test-pass", "new-test-pass"))
+
+        assertEquals("old-test-pass", api.lastChangePasswordPayload?.currentPassword)
+        assertEquals("new-test-pass", api.lastChangePasswordPayload?.newPassword)
+        assertEquals("parent-access", storage.getSessionTokens()?.accessToken)
+        assertEquals("parent-refresh", storage.getSessionTokens()?.refreshToken)
+        assertEquals(8L, storage.getActiveFamilyId())
+        assertEquals(29L, storage.getActiveChildId())
+        assertEquals(0, storage.sessionWriteCount)
+    }
+
     @Test
     fun `register parent sends simple identity without family`() =
         runBlocking {
@@ -283,6 +306,7 @@ private class FakeAuthApi(
     private val familyIds: List<Long> = listOf(7L),
 ) : AuthApi {
     var lastRegisterParentPayload: RegisterParentRequestDto? = null
+    var lastChangePasswordPayload: ChangePasswordRequestDto? = null
 
     override suspend fun registerParent(payload: RegisterParentRequestDto): TokenResponseDto {
         lastRegisterParentPayload = payload
@@ -292,6 +316,10 @@ private class FakeAuthApi(
     override suspend fun registerChild(payload: RegisterChildRequestDto): TokenResponseDto = tokenResponse()
 
     override suspend fun login(payload: LoginRequestDto): TokenResponseDto = tokenResponse()
+
+    override suspend fun changePassword(payload: ChangePasswordRequestDto) {
+        lastChangePasswordPayload = payload
+    }
 
     override suspend fun me(): MeResponseDto =
         MeResponseDto(

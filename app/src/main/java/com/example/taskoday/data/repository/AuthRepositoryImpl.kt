@@ -5,6 +5,7 @@ import com.example.taskoday.data.remote.auth.AuthSessionClient
 import com.example.taskoday.data.remote.auth.TokenStorage
 import com.example.taskoday.data.remote.children.ChildrenApi
 import com.example.taskoday.data.remote.dto.LoginRequestDto
+import com.example.taskoday.data.remote.dto.ChangePasswordRequestDto
 import com.example.taskoday.data.remote.dto.RegisterChildRequestDto
 import com.example.taskoday.data.remote.dto.RegisterParentRequestDto
 import com.example.taskoday.data.remote.dto.TokenResponseDto
@@ -126,6 +127,12 @@ class AuthRepositoryImpl
             if (selected != null) tokenStorage.saveActiveFamilyId(selected)
             return selected
         }
+
+        override suspend fun changePassword(currentPassword: String, newPassword: String): Result<Unit> =
+            runCatching {
+                authApi.changePassword(ChangePasswordRequestDto(currentPassword, newPassword))
+                Unit
+            }
 
         override fun setActiveFamilyId(familyId: Long) {
             if (familyId > 0L) {

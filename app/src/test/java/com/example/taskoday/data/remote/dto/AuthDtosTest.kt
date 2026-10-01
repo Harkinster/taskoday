@@ -104,4 +104,17 @@ class AuthDtosTest {
             json,
         )
     }
+
+    @Test
+    fun `email update sends only own email field`() {
+        assertEquals("{\"email\":\"new@example.test\"}", gson.toJson(UpdateEmailRequestDto("new@example.test")))
+    }
+
+    @Test
+    fun `password change uses backend field names`() {
+        assertEquals(
+            "{\"current_password\":\"old-test-pass\",\"new_password\":\"new-test-pass\"}",
+            gson.toJson(ChangePasswordRequestDto("old-test-pass", "new-test-pass")),
+        )
+    }
 }

@@ -75,6 +75,15 @@ data class UpdateProfileRequestDto(
     @SerializedName("birth_date") val birthDate: String,
 )
 
+data class UpdateEmailRequestDto(
+    @SerializedName("email") val email: String,
+)
+
+data class ChangePasswordRequestDto(
+    @SerializedName("current_password") val currentPassword: String,
+    @SerializedName("new_password") val newPassword: String,
+)
+
 fun TokenResponseDto.toDomain(): AuthSession =
     AuthSession(
         accessToken = accessToken,
