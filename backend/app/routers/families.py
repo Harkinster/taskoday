@@ -8,6 +8,7 @@ from app.models.child import ChildProfile
 from app.models.family import Family, FamilyMember, FamilyMemberRole
 from app.models.user import User, UserRole
 from app.schemas.family import FamilyCreateRequest
+from app.services.family_membership_service import leave_family, remove_family_member
 from app.services.user_identity_service import display_name_for_user
 
 router = APIRouter(prefix="/families", tags=["families"])
@@ -138,3 +139,26 @@ def family_members(
         )
 
     return success_response(members)
+
+
+@router.post("/{family_id}/leave")
+def leave_one_family(
+    family_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    leave_family(db, family_id=family_id, user=current_user)
+    db.commit()
+    return success_response({"family_id": family_id}, message="Tu as quitte ce foyer.")
+
+
+@router.delete("/{family_id}/members/{user_id}")
+def remove_member(
+    family_id: int,
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    remove_family_member(db, family_id=family_id, target_user_id=user_id, actor=current_user)
+    db.commit()
+    return success_response({"family_id": family_id, "user_id": user_id}, message="Membre retire du foyer.")
