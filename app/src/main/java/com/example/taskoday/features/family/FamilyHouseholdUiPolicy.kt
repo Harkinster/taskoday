@@ -35,6 +35,10 @@ fun canLeaveFamily(members: List<FamilyMember>, currentUserId: Long?): Boolean =
     canManageFamilyMembers(members, currentUserId) &&
         members.count { it.isActive && it.role == FamilyMemberRole.PARENT } > 1
 
+fun canArchiveFamily(members: List<FamilyMember>, currentUserId: Long?): Boolean =
+    canManageFamilyMembers(members, currentUserId) &&
+        members.count { it.isActive } == 1
+
 fun canRemoveFamilyMember(members: List<FamilyMember>, currentUserId: Long?, targetUserId: Long): Boolean =
     canManageFamilyMembers(members, currentUserId) &&
         targetUserId != currentUserId && members.any { it.userId == targetUserId && it.isActive }

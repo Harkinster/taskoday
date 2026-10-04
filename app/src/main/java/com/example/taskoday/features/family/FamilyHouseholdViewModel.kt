@@ -74,6 +74,22 @@ class FamilyHouseholdViewModel
             }
         }
 
+        fun archiveFamily() {
+            val state = _uiState.value
+            val familyId = state.activeFamilyId ?: return
+            if (!state.isParentAccount || !canArchiveFamily(state.members, state.currentUserId) || state.isMembershipBusy) return
+            viewModelScope.launch {
+                _uiState.update { it.copy(isMembershipBusy = true, errorMessage = null, message = null) }
+                familyRepository.archiveFamily(familyId)
+                    .onSuccess {
+                        _uiState.update { it.copy(isMembershipBusy = false, invite = null, members = emptyList(), message = "Famille archivée. Son historique est conservé.") }
+                        refresh()
+                    }.onFailure { error ->
+                        _uiState.update { it.copy(isMembershipBusy = false, errorMessage = error.toArchiveMessage()) }
+                    }
+            }
+        }
+
         fun removeMember(userId: Long) {
             val state = _uiState.value
             val familyId = state.activeFamilyId ?: return
@@ -241,6 +257,20 @@ private fun Throwable.toMembershipMessage(): String =
         }
         is IOException -> "Réseau indisponible, réessaie plus tard."
         else -> "Impossible de modifier ce foyer pour le moment."
+    }
+
+private fun Throwable.toArchiveMessage(): String =
+    when (this) {
+        is HttpException -> when (code()) {
+            401 -> "Session expirée, reconnecte-toi."
+            403 -> "Tu n'es pas autorisé à archiver cette famille."
+            404 -> "Cette famille n'est plus disponible."
+            409 -> "Retirez ou faites quitter les autres membres avant d'archiver cette famille."
+            in 500..599 -> "Le serveur ne répond pas correctement. Réessaie plus tard."
+            else -> "Impossible d'archiver cette famille pour le moment."
+        }
+        is IOException -> "Réseau indisponible, réessaie plus tard."
+        else -> "Impossible d'archiver cette famille pour le moment."
     }
 
 private fun String?.extractBackendMessage(): String? {

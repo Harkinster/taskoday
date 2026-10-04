@@ -37,6 +37,18 @@ class FamilyHouseholdUiPolicyTest {
     }
 
     @Test
+    fun `only sole active parent can archive`() {
+        val parent = member(1L, "Parent", FamilyMemberRole.PARENT)
+        val child = member(2L, "Child", FamilyMemberRole.CHILD)
+        val otherParent = member(3L, "Other", FamilyMemberRole.PARENT)
+        assertTrue(canArchiveFamily(listOf(parent), 1L))
+        assertFalse(canArchiveFamily(listOf(parent, child), 1L))
+        assertFalse(canArchiveFamily(listOf(parent, otherParent), 1L))
+        assertFalse(canArchiveFamily(listOf(parent, child), 2L))
+        assertFalse(canArchiveFamily(listOf(parent), 4L))
+    }
+
+    @Test
     fun `members are separated by role and inactive members are hidden`() {
         val groups =
             groupFamilyHouseholdMembers(

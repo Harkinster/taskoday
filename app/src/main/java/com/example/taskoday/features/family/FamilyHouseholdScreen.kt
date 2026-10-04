@@ -76,8 +76,10 @@ fun FamilyHouseholdScreen(
     val groupedMembers = groupFamilyHouseholdMembers(uiState.members)
     val canManageMembers = uiState.isParentAccount && canManageFamilyMembers(uiState.members, uiState.currentUserId)
     val canLeave = uiState.isParentAccount && canLeaveFamily(uiState.members, uiState.currentUserId)
+    val canArchive = uiState.isParentAccount && canArchiveFamily(uiState.members, uiState.currentUserId)
     var pendingRemoval by remember { mutableStateOf<FamilyMember?>(null) }
     var confirmLeave by remember { mutableStateOf(false) }
+    var confirmArchive by remember { mutableStateOf(false) }
 
     pendingRemoval?.let { member ->
         AlertDialog(
@@ -108,6 +110,19 @@ fun FamilyHouseholdScreen(
                 }
             },
             dismissButton = { OutlinedButton(onClick = { confirmLeave = false }) { Text("Annuler") } },
+        )
+    }
+    if (confirmArchive) {
+        AlertDialog(
+            onDismissRequest = { confirmArchive = false },
+            title = { Text("Archiver cette famille ?") },
+            text = { Text("Archiver cette famille la retirera de vos familles actives. Son historique sera conservé.") },
+            confirmButton = {
+                Button(onClick = { viewModel.archiveFamily(); confirmArchive = false }, enabled = !uiState.isMembershipBusy) {
+                    Text("Archiver")
+                }
+            },
+            dismissButton = { OutlinedButton(onClick = { confirmArchive = false }) { Text("Annuler") } },
         )
     }
 
@@ -247,6 +262,26 @@ fun FamilyHouseholdScreen(
                                         enabled = canLeave && !uiState.isMembershipBusy,
                                         modifier = Modifier.fillMaxWidth(),
                                     ) { Text("Quitter ce foyer") }
+                                }
+                            }
+                        }
+                    }
+                    if (canManageMembers) {
+                        item {
+                            ElevatedCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.elevatedCardColors(containerColor = ParchmentLight.copy(alpha = 0.97f)),
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text("Gestion de la famille", style = MaterialTheme.typography.titleMedium, color = InkBrown)
+                                    if (!canArchive) {
+                                        Text("Retirez ou faites quitter les autres membres avant d'archiver cette famille.", color = InkMuted)
+                                    }
+                                    OutlinedButton(
+                                        onClick = { confirmArchive = true },
+                                        enabled = canArchive && !uiState.isMembershipBusy,
+                                        modifier = Modifier.fillMaxWidth(),
+                                    ) { Text("Archiver cette famille") }
                                 }
                             }
                         }

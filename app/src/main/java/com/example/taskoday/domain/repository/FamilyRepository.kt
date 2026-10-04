@@ -24,6 +24,9 @@ interface FamilyRepository {
     suspend fun leaveFamily(familyId: Long): Result<Long?> =
         Result.failure(UnsupportedOperationException("Leaving a family is unavailable."))
 
+    suspend fun archiveFamily(familyId: Long): Result<Long?> =
+        Result.failure(UnsupportedOperationException("Archiving a family is unavailable."))
+
     suspend fun removeMember(familyId: Long, userId: Long): Result<Unit> =
         Result.failure(UnsupportedOperationException("Removing a member is unavailable."))
 

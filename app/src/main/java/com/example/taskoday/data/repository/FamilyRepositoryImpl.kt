@@ -65,6 +65,17 @@ class FamilyRepositoryImpl
                 selected
             }
 
+        override suspend fun archiveFamily(familyId: Long): Result<Long?> =
+            runCatching {
+                val activeBefore = authRepository.getActiveFamilyId()
+                familyApi.archiveFamily(familyId)
+                if (activeBefore == familyId) authRepository.clearActiveFamilyId()
+                val families = runCatching { familyApi.getMyFamilies().data.map { it.toDomain() } }.getOrDefault(emptyList())
+                val selected = activeBefore?.takeIf { id -> families.any { it.id == id } } ?: families.firstOrNull()?.id
+                if (selected != null) authRepository.setActiveFamilyId(selected)
+                selected
+            }
+
         override suspend fun removeMember(familyId: Long, userId: Long): Result<Unit> =
             runCatching {
                 familyApi.removeMember(familyId, userId)

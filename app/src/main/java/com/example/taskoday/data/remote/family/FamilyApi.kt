@@ -27,6 +27,9 @@ interface FamilyApi {
     @POST("families/{familyId}/leave")
     suspend fun leaveFamily(@Path("familyId") familyId: Long): ApiEnvelopeDto<JsonElement>
 
+    @POST("families/{familyId}/archive")
+    suspend fun archiveFamily(@Path("familyId") familyId: Long): ApiEnvelopeDto<JsonElement>
+
     @DELETE("families/{familyId}/members/{userId}")
     suspend fun removeMember(
         @Path("familyId") familyId: Long,

@@ -32,6 +32,30 @@ class FamilyRepositoryImplTest {
     }
 
     @Test
+    fun `archiving selected family selects another accessible family`() = runBlocking {
+        val auth = FakeAuthRepository(familyIds = listOf(7L, 9L))
+        val api = FakeFamilyApi()
+        api.families = listOf(FamilySummaryDto(7L, "Famille 7"), FamilySummaryDto(9L, "Famille 9"))
+        api.onArchive = { auth.familyIds = listOf(7L); api.families = listOf(FamilySummaryDto(7L, "Famille 7")) }
+
+        assertEquals(7L, FamilyRepositoryImpl(auth, api, Gson()).archiveFamily(9L).getOrThrow())
+        assertEquals(9L, api.lastArchivedFamilyId)
+        assertEquals(7L, auth.activeFamilyId)
+        assertEquals("token", auth.getAccessToken())
+    }
+
+    @Test
+    fun `archiving only family clears active family and keeps account`() = runBlocking {
+        val auth = FakeAuthRepository(familyIds = listOf(9L))
+        val api = FakeFamilyApi()
+        api.onArchive = { auth.familyIds = emptyList(); api.families = emptyList() }
+
+        assertEquals(null, FamilyRepositoryImpl(auth, api, Gson()).archiveFamily(9L).getOrThrow())
+        assertEquals(null, auth.activeFamilyId)
+        assertEquals("token", auth.getAccessToken())
+    }
+
+    @Test
     fun `remove member sends explicit family and user identifiers`() = runBlocking {
         val auth = FakeAuthRepository(familyIds = listOf(7L, 8L))
         val api = FakeFamilyApi()
@@ -86,9 +110,11 @@ private class FakeFamilyApi : FamilyApi {
     var lastMembersFamilyId: Long? = null
     var acceptedCode: String? = null
     var lastLeftFamilyId: Long? = null
+    var lastArchivedFamilyId: Long? = null
     var lastRemoval: Pair<Long, Long>? = null
     var families = listOf(FamilySummaryDto(4L, "Famille Test"))
     var onLeave: (() -> Unit)? = null
+    var onArchive: (() -> Unit)? = null
 
     override suspend fun getMyFamilies(): ApiEnvelopeDto<List<FamilySummaryDto>> =
         ApiEnvelopeDto(success = true, data = families)
@@ -96,6 +122,12 @@ private class FakeFamilyApi : FamilyApi {
     override suspend fun leaveFamily(familyId: Long): ApiEnvelopeDto<JsonElement> {
         lastLeftFamilyId = familyId
         onLeave?.invoke()
+        return envelope("{}")
+    }
+
+    override suspend fun archiveFamily(familyId: Long): ApiEnvelopeDto<JsonElement> {
+        lastArchivedFamilyId = familyId
+        onArchive?.invoke()
         return envelope("{}")
     }
 
