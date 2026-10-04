@@ -67,8 +67,8 @@ def attach_child(
 
     family: Family | None = None
     if payload.family_id is not None:
-        family = db.get(Family, payload.family_id)
-        if not family:
+        family = db.scalar(select(Family).where(Family.id == payload.family_id).with_for_update())
+        if not family or family.archived_at is not None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Famille introuvable.")
 
         membership = db.execute(
@@ -84,7 +84,7 @@ def attach_child(
         family = db.execute(
             select(Family)
             .join(FamilyMember, FamilyMember.family_id == Family.id)
-            .where(FamilyMember.user_id == current_user.id, FamilyMember.role == FamilyMemberRole.PARENT)
+            .where(FamilyMember.user_id == current_user.id, FamilyMember.role == FamilyMemberRole.PARENT, Family.archived_at.is_(None))
             .order_by(Family.id.asc())
         ).scalars().first()
 
@@ -93,6 +93,10 @@ def attach_child(
             db.add(family)
             db.flush()
             db.add(FamilyMember(family_id=family.id, user_id=current_user.id, role=FamilyMemberRole.PARENT))
+
+    family = db.scalar(select(Family).where(Family.id == family.id).with_for_update())
+    if family.archived_at is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Famille introuvable.")
 
     child_membership = db.execute(
         select(FamilyMember).where(FamilyMember.family_id == family.id, FamilyMember.user_id == child.id)

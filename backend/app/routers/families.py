@@ -9,6 +9,7 @@ from app.models.family import Family, FamilyMember, FamilyMemberRole
 from app.models.user import User, UserRole
 from app.schemas.family import FamilyCreateRequest
 from app.services.family_membership_service import leave_family, remove_family_member
+from app.services.family_archive_service import archive_family
 from app.services.user_identity_service import display_name_for_user
 
 router = APIRouter(prefix="/families", tags=["families"])
@@ -51,7 +52,7 @@ def my_families(db: Session = Depends(get_db), current_user: User = Depends(get_
     stmt = (
         select(Family)
         .join(FamilyMember, FamilyMember.family_id == Family.id)
-        .where(FamilyMember.user_id == current_user.id)
+        .where(FamilyMember.user_id == current_user.id, Family.archived_at.is_(None))
         .order_by(Family.id.asc())
     )
     families = db.execute(stmt).scalars().all()
@@ -76,7 +77,7 @@ def family_children(
     current_user: User = Depends(get_current_user),
 ):
     is_member = db.execute(
-        select(FamilyMember.id).where(FamilyMember.family_id == family_id, FamilyMember.user_id == current_user.id)
+        select(FamilyMember.id).join(Family, Family.id == FamilyMember.family_id).where(FamilyMember.family_id == family_id, FamilyMember.user_id == current_user.id, Family.archived_at.is_(None))
     ).first()
     if not is_member:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Famille introuvable.")
@@ -113,7 +114,7 @@ def family_members(
     current_user: User = Depends(get_current_user),
 ):
     is_member = db.execute(
-        select(FamilyMember.id).where(FamilyMember.family_id == family_id, FamilyMember.user_id == current_user.id)
+        select(FamilyMember.id).join(Family, Family.id == FamilyMember.family_id).where(FamilyMember.family_id == family_id, FamilyMember.user_id == current_user.id, Family.archived_at.is_(None))
     ).first()
     if not is_member:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Famille introuvable.")
@@ -150,6 +151,17 @@ def leave_one_family(
     leave_family(db, family_id=family_id, user=current_user)
     db.commit()
     return success_response({"family_id": family_id}, message="Tu as quitte ce foyer.")
+
+
+@router.post("/{family_id}/archive")
+def archive_one_family(
+    family_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    archive_family(db, family_id=family_id, actor=current_user)
+    db.commit()
+    return success_response({"family_id": family_id}, message="Famille archivee. Son historique est conserve.")
 
 
 @router.delete("/{family_id}/members/{user_id}")

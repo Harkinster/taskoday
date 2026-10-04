@@ -8,7 +8,7 @@ from app.core.security import get_password_hash
 from app.db.session import get_db
 from app.dependencies import ensure_child_access, get_accessible_child_ids, get_current_user, success_response
 from app.models.child import ChildProfile
-from app.models.family import FamilyMember, FamilyMemberRole
+from app.models.family import Family, FamilyMember, FamilyMemberRole
 from app.models.task import Mission, Quest, Routine, TaskCompletion, TaskStatus, TaskType
 from app.models.user import User, UserRole
 from app.models.xp import XpHistory
@@ -39,9 +39,10 @@ def list_children(
     child_ids = get_accessible_child_ids(db, current_user)
     if family_id is not None:
         is_member = db.scalar(
-            select(FamilyMember.id).where(
+            select(FamilyMember.id).join(Family, Family.id == FamilyMember.family_id).where(
                 FamilyMember.family_id == family_id,
                 FamilyMember.user_id == current_user.id,
+                Family.archived_at.is_(None),
             )
         )
         if is_member is None:
@@ -83,9 +84,10 @@ def create_child(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Action non autorisee.")
 
     parent_family_ids = db.scalars(
-        select(FamilyMember.family_id).where(
+        select(FamilyMember.family_id).join(Family, Family.id == FamilyMember.family_id).where(
             FamilyMember.user_id == current_user.id,
             FamilyMember.role == FamilyMemberRole.PARENT,
+            Family.archived_at.is_(None),
         )
     ).all()
     if not parent_family_ids:
@@ -98,6 +100,10 @@ def create_child(
         family_id = parent_family_ids[0]
     else:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="family_id est requis avec plusieurs familles.")
+
+    family = db.scalar(select(Family).where(Family.id == family_id).with_for_update())
+    if family is None or family.archived_at is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Famille introuvable.")
 
     email = payload.email
     if email is None:

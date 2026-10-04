@@ -15,7 +15,7 @@ from app.models.user import User, UserRole
 def leave_family(db: Session, *, family_id: int, user: User) -> None:
     family = _locked_family(db, family_id)
     membership = _membership(db, family_id, user.id)
-    if family is None or membership is None:
+    if family is None or family.archived_at is not None or membership is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Famille introuvable.")
     if user.role != UserRole.PARENT or membership.role != FamilyMemberRole.PARENT:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Un enfant ne peut pas quitter ce foyer.")
@@ -25,7 +25,7 @@ def leave_family(db: Session, *, family_id: int, user: User) -> None:
 def remove_family_member(db: Session, *, family_id: int, target_user_id: int, actor: User) -> None:
     family = _locked_family(db, family_id)
     actor_membership = _membership(db, family_id, actor.id)
-    if family is None or actor_membership is None:
+    if family is None or family.archived_at is not None or actor_membership is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Famille introuvable.")
     if actor.role != UserRole.PARENT or actor_membership.role != FamilyMemberRole.PARENT:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Action non autorisee.")

@@ -19,6 +19,7 @@ class Family(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     created_by_user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     creator = relationship("User", back_populates="created_families")
     members = relationship("FamilyMember", back_populates="family", cascade="all, delete-orphan")

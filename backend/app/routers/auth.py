@@ -167,7 +167,8 @@ def me(current_user: User = Depends(get_current_user), db: Session = Depends(get
     family_ids = (
         db.execute(
             select(FamilyMember.family_id)
-            .where(FamilyMember.user_id == current_user.id)
+            .join(Family, Family.id == FamilyMember.family_id)
+            .where(FamilyMember.user_id == current_user.id, Family.archived_at.is_(None))
             .order_by(FamilyMember.family_id.asc())
         )
         .scalars()

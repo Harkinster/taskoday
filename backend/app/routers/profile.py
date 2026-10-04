@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.dependencies import ensure_child_access, get_current_user, success_response
 from app.models.child import ChildProfile
-from app.models.family import FamilyMember, FamilyMemberRole
+from app.models.family import Family, FamilyMember, FamilyMemberRole
 from app.models.user import User, UserRole
 from app.models.xp import XpHistory
 from app.schemas.profile import ProfileUpdateRequest
@@ -32,7 +32,7 @@ def profile_me(db: Session = Depends(get_db), current_user: User = Depends(get_c
             }
         )
 
-    family_ids = db.execute(select(FamilyMember.family_id).where(FamilyMember.user_id == current_user.id)).scalars().all()
+    family_ids = db.execute(select(FamilyMember.family_id).join(Family, Family.id == FamilyMember.family_id).where(FamilyMember.user_id == current_user.id, Family.archived_at.is_(None))).scalars().all()
     child_count = 0
     if family_ids:
         child_count = (

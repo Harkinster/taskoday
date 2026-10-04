@@ -18,6 +18,9 @@ TOKEN_BYTES = 24
 
 
 def create_parent_invite(db: Session, *, family_id: int, user: User) -> tuple[FamilyInvite, str]:
+    family = db.scalar(select(Family).where(Family.id == family_id).with_for_update())
+    if family is None or family.archived_at is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Famille introuvable.")
     _ensure_family_parent(db, family_id=family_id, user=user)
     now = _utcnow()
 
@@ -118,12 +121,13 @@ def _get_invite_by_code(db: Session, code: str) -> FamilyInvite:
 
 
 def _ensure_invite_can_be_used(db: Session, *, invite: FamilyInvite, now: datetime) -> None:
+    family = db.scalar(select(Family).where(Family.id == invite.family_id).with_for_update())
+    if family is None or family.archived_at is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invitation introuvable ou invalide.")
     if invite.accepted_at is not None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Invitation deja utilisee.")
     if _as_aware_utc(invite.expires_at) <= now:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Invitation expiree.")
-    if db.get(Family, invite.family_id) is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invitation introuvable ou invalide.")
 
 
 def _ensure_user_can_join_family(db: Session, *, user: User, family_id: int) -> None:

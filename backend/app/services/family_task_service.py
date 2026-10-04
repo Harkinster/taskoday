@@ -9,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.child import ChildProfile
-from app.models.family import FamilyMember, FamilyMemberRole
+from app.models.family import Family, FamilyMember, FamilyMemberRole
 from app.models.family_task import (
     FamilyTask,
     FamilyTaskAssignee,
@@ -54,6 +54,11 @@ WEEKDAY_ALIASES = {
 
 
 def ensure_family_member(db: Session, *, family_id: int, user: User) -> FamilyMember:
+    # Serialize task writes with archival. Reads share this guard so callers of
+    # get_task_for_member/get_occurrence_for_member cannot mutate after archive.
+    family = db.scalar(select(Family).where(Family.id == family_id).with_for_update())
+    if family is None or family.archived_at is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Famille introuvable.")
     membership = db.scalar(
         select(FamilyMember).where(FamilyMember.family_id == family_id, FamilyMember.user_id == user.id)
     )

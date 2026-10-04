@@ -1,13 +1,15 @@
 """Family membership mutations use isolated test databases, never production QA families."""
 
 from contextlib import contextmanager
+from datetime import date
 
 from sqlalchemy import select
 
 from app.db.session import get_db
 from app.models.child import ChildProfile
 from app.models.family import Family, FamilyMember, FamilyMemberRole
-from app.models.family_task import FamilyTask, FamilyTaskAssignee
+from app.models.family_task import FamilyTask, FamilyTaskAssignee, FamilyTaskOccurrence, FamilyTaskOccurrenceStatus
+from app.models.family_invite import FamilyInvite
 from app.models.user import User
 
 API = "/api/v1"
@@ -187,3 +189,82 @@ def test_last_parent_protected_with_and_without_child(client) -> None:
     _, child_id = child(client, family_id, token, "last-parent")
     assert client.post(f"{API}/families/{family_id}/leave", headers=headers(token)).status_code == 409
     assert member_ids(client, family_id, token) == {user_id, child_id}
+
+
+def test_archive_requires_sole_parent_and_rejects_child_outsider_and_idor(client) -> None:
+    owner_token, owner_id = parent(client, "archive-owner")
+    outsider_token, _ = parent(client, "archive-outsider")
+    family_id = family(client, owner_token, "archive-guarded")
+    child_token, child_id = child(client, family_id, owner_token, "archive-guarded")
+
+    assert client.post(f"{API}/families/{family_id}/archive", headers=headers(child_token)).status_code == 403
+    assert client.post(f"{API}/families/{family_id}/archive", headers=headers(outsider_token)).status_code == 404
+    refused = client.post(f"{API}/families/{family_id}/archive", headers=headers(owner_token))
+    assert refused.status_code == 409
+    assert "autres membres" in refused.json()["error"]["message"]
+    assert member_ids(client, family_id, owner_token) == {owner_id, child_id}
+
+    other_token, other_id = parent(client, "archive-other")
+    join_parent(client, family_id, owner_token, other_token)
+    assert client.post(f"{API}/families/{family_id}/archive", headers=headers(owner_token)).status_code == 409
+    assert member_ids(client, family_id, owner_token) == {owner_id, child_id, other_id}
+
+
+def test_archive_preserves_history_and_other_families_but_closes_all_active_paths(client) -> None:
+    owner_token, owner_id = parent(client, "archive-history-owner")
+    other_token, other_id = parent(client, "archive-history-other")
+    archived_id = family(client, owner_token, "archive-history")
+    active_id = family(client, owner_token, "archive-stays-active")
+    child_token, child_id = child(client, archived_id, owner_token, "archive-history")
+    with db_session(client) as db:
+        task = FamilyTask(family_id=archived_id, title="Historique", creator_user_id=owner_id)
+        db.add(task)
+        db.flush()
+        db.add(FamilyTaskOccurrence(task_id=task.id, scheduled_date=date(2026, 10, 3), status=FamilyTaskOccurrenceStatus.COMPLETED, completed_by_user_id=child_id))
+        task_id = task.id
+        db.commit()
+    pending = client.post(f"{API}/families/{archived_id}/parent-invites", headers=headers(owner_token))
+    assert pending.status_code == 201
+    pending_code = pending.json()["data"]["code"]
+    assert client.delete(f"{API}/families/{archived_id}/members/{child_id}", headers=headers(owner_token)).status_code == 200
+
+    archived = client.post(f"{API}/families/{archived_id}/archive", headers=headers(owner_token))
+    assert archived.status_code == 200
+    assert client.get(f"{API}/auth/me", headers=headers(owner_token)).json()["family_ids"] == [active_id]
+    assert [item["id"] for item in client.get(f"{API}/families/me", headers=headers(owner_token)).json()["data"]] == [active_id]
+    assert client.get(f"{API}/families/{archived_id}/members", headers=headers(owner_token)).status_code == 404
+    assert client.get(f"{API}/families/{archived_id}/children", headers=headers(owner_token)).status_code == 404
+    assert client.get(f"{API}/families/{archived_id}/tasks", headers=headers(owner_token)).status_code == 404
+    assert client.post(f"{API}/families/{archived_id}/tasks", headers=headers(owner_token), json={"title": "Non"}).status_code == 404
+    assert client.post(f"{API}/families/{archived_id}/parent-invites", headers=headers(owner_token)).status_code == 404
+    assert client.post(f"{API}/family-invites/{pending_code}/accept", headers=headers(other_token)).status_code in (404, 409)
+    assert client.post(f"{API}/families/{archived_id}/leave", headers=headers(owner_token)).status_code == 404
+    assert client.delete(f"{API}/families/{archived_id}/members/{owner_id}", headers=headers(other_token)).status_code == 404
+    with db_session(client) as db:
+        stored_family = db.get(Family, archived_id)
+        assert stored_family is not None and stored_family.archived_at is not None
+        assert db.get(User, owner_id) is not None
+        assert db.get(User, child_id) is not None
+        assert db.scalar(select(ChildProfile).where(ChildProfile.user_id == child_id)) is not None
+        assert db.get(FamilyTask, task_id) is not None
+        assert db.scalar(select(FamilyTaskOccurrence).where(FamilyTaskOccurrence.task_id == task_id)) is not None
+        assert db.scalar(select(FamilyInvite).where(FamilyInvite.family_id == archived_id)) is not None
+        assert db.scalar(select(FamilyMember).where(FamilyMember.family_id == archived_id, FamilyMember.user_id == owner_id)) is not None
+    assert member_ids(client, active_id, owner_token) == {owner_id}
+    assert client.get(f"{API}/auth/me", headers=headers(child_token)).json()["family_ids"] == []
+
+
+def test_archive_only_family_keeps_account_and_blocks_pairing_to_archive(client) -> None:
+    owner_token, owner_id = parent(client, "archive-only")
+    archived_id = family(client, owner_token, "archive-only")
+    child_token, child_id = child(client, archived_id, owner_token, "archive-pairing")
+    assert client.delete(f"{API}/families/{archived_id}/members/{child_id}", headers=headers(owner_token)).status_code == 200
+    assert client.post(f"{API}/families/{archived_id}/archive", headers=headers(owner_token)).status_code == 200
+    assert client.get(f"{API}/auth/me", headers=headers(owner_token)).json()["family_ids"] == []
+    assert client.get(f"{API}/families/me", headers=headers(owner_token)).json()["data"] == []
+    code = client.post(f"{API}/pairing/generate-code", headers=headers(child_token)).json()["data"]["code"]
+    attach = client.post(f"{API}/pairing/attach-child", headers=headers(owner_token), json={"family_id": archived_id, "code": code})
+    assert attach.status_code == 404
+    with db_session(client) as db:
+        assert db.get(User, owner_id) is not None
+        assert db.get(User, child_id) is not None
