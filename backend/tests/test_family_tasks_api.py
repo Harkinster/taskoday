@@ -2,12 +2,76 @@ from contextlib import contextmanager
 from datetime import date, timedelta
 from typing import Generator
 
+import pytest
+
 from app.db.session import get_db
-from app.models.family_task import FamilyTaskOccurrence, FamilyTaskOccurrenceStatus
+from app.models.family_task import FamilyTask, FamilyTaskOccurrence, FamilyTaskOccurrenceStatus
 from app.services.family_task_service import occurrence_payload
 
 
 API = "/api/v1"
+
+
+@pytest.mark.parametrize(
+    "category,recurrence",
+    [
+        ("TASKODAY_PERSONAL_ROUTINE", "DAILY"),
+        ("TASKODAY_PERSONAL_MISSION", "NONE"),
+        ("TASKODAY_HOUSE_QUEST", "NONE"),
+    ],
+)
+def test_occurrence_category_is_persisted_exposed_and_immutable_after_edits(client, category, recurrence) -> None:
+    token, parent_id, family_id = _register_parent(client, f"snapshot-{category.lower()}")
+    today = date.today()
+    task = _create_task(client, token, family_id, {
+        "title": "Original", "category": category, "due_date": today.isoformat(),
+        "recurrence": recurrence, "assignee_user_ids": [parent_id],
+    })
+    first = _item_by_title(_today(client, token, family_id, today), "Original")
+    occurrence_id = first["occurrence_id"]
+    assert first["category"] == category
+    with _db_session(client) as db:
+        assert db.get(FamilyTaskOccurrence, occurrence_id).category == category
+
+    same = client.patch(f"{API}/family-tasks/{task['id']}", headers=_headers(token), json={"category": category})
+    assert same.status_code == 200
+    for other in {"TASKODAY_PERSONAL_ROUTINE", "TASKODAY_PERSONAL_MISSION", "TASKODAY_HOUSE_QUEST"} - {category}:
+        changed = client.patch(f"{API}/family-tasks/{task['id']}", headers=_headers(token), json={"category": other})
+        assert changed.status_code == 409
+        assert "categorie" in changed.json()["error"]["message"]
+
+    edited = client.patch(f"{API}/family-tasks/{task['id']}", headers=_headers(token), json={
+        "title": "Updated", "assignee_user_ids": [], "recurrence": "WEEKLY" if recurrence == "NONE" else "NONE",
+    })
+    assert edited.status_code == 200
+    assert edited.json()["data"]["category"] == category
+    updated = _item_by_title(_today(client, token, family_id, today), "Updated")
+    assert updated["occurrence_id"] == occurrence_id
+    assert updated["category"] == category
+    assert _range(client, token, family_id, today, today)["items"][0]["category"] == category
+
+    completed = client.post(f"{API}/task-occurrences/{occurrence_id}/complete", headers=_headers(token))
+    assert completed.status_code == 200
+    assert completed.json()["data"]["category"] == category
+    assert completed.json()["data"]["status"] == "COMPLETED"
+    with _db_session(client) as db:
+        assert db.get(FamilyTaskOccurrence, occurrence_id).category == category
+        # Simulate a definition altered outside the API: serialization must
+        # still read the occurrence snapshot, never the current definition.
+        db.get(FamilyTask, task["id"]).category = (
+            "TASKODAY_HOUSE_QUEST" if category != "TASKODAY_HOUSE_QUEST" else "TASKODAY_PERSONAL_MISSION"
+        )
+        db.commit()
+    assert _range(client, token, family_id, today, today)["items"][0]["category"] == category
+
+
+def test_legacy_category_snapshots_house_quest_and_cannot_be_changed(client) -> None:
+    token, _, family_id = _register_parent(client, "snapshot-legacy")
+    task = _create_task(client, token, family_id, {"title": "Legacy", "category": "Maison", "due_date": date.today().isoformat()})
+    item = _item_by_title(_today(client, token, family_id, date.today()), "Legacy")
+    assert item["category"] == "TASKODAY_HOUSE_QUEST"
+    assert client.patch(f"{API}/family-tasks/{task['id']}", headers=_headers(token), json={"category": "Maison"}).status_code == 200
+    assert client.patch(f"{API}/family-tasks/{task['id']}", headers=_headers(token), json={"category": "TASKODAY_HOUSE_QUEST"}).status_code == 409
 
 
 def _headers(token: str) -> dict[str, str]:

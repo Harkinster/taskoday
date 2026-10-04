@@ -52,6 +52,23 @@ WEEKDAY_ALIASES = {
     "dimanche": 7,
 }
 
+HOUSE_QUEST_CATEGORY = "TASKODAY_HOUSE_QUEST"
+ACTION_CATEGORIES = {
+    HOUSE_QUEST_CATEGORY,
+    "TASKODAY_PERSONAL_ROUTINE",
+    "TASKODAY_PERSONAL_MISSION",
+}
+
+
+def occurrence_category(category: str | None) -> str:
+    """Resolve the documented legacy house category once, when an occurrence is born."""
+    normalized = category.strip().upper() if category is not None else ""
+    if normalized in {"", "MAISON"}:
+        return HOUSE_QUEST_CATEGORY
+    if normalized in ACTION_CATEGORIES:
+        return normalized
+    raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Categorie d'action inconnue.")
+
 
 def ensure_family_member(db: Session, *, family_id: int, user: User) -> FamilyMember:
     # Serialize task writes with archival. Reads share this guard so callers of
@@ -232,6 +249,7 @@ def get_or_create_occurrence(db: Session, *, task: FamilyTask, scheduled_date: d
             db.execute(
                 insert(FamilyTaskOccurrence).values(
                     task_id=task.id,
+                    category=occurrence_category(task.category),
                     scheduled_date=scheduled_date,
                     status=FamilyTaskOccurrenceStatus.TODO,
                 )
@@ -371,6 +389,7 @@ def occurrence_payload(db: Session, occurrence: FamilyTaskOccurrence) -> dict:
     return {
         "task_id": task.id,
         "occurrence_id": occurrence.id,
+        "category": occurrence.category,
         "title": task.title,
         "description": task.description,
         "assignees": assignees_payload(db, task),

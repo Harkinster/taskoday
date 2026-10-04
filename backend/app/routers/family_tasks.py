@@ -21,6 +21,7 @@ from app.services.family_task_service import (
     normalize_due_fields,
     normalize_due_update,
     occurrence_payload,
+    occurrence_category,
     parse_weekdays,
     reopen_occurrence,
     replace_task_assignees,
@@ -61,6 +62,7 @@ def create_family_task(
     current_user: User = Depends(get_current_user),
 ):
     ensure_family_parent(db, family_id=family_id, user=current_user)
+    occurrence_category(payload.category)
     recurrence = FamilyTaskRecurrence(payload.recurrence)
     selected_weekdays = _selected_weekdays_for_recurrence(recurrence, payload.selected_weekdays)
     due_at, due_date, due_time = normalize_due_fields(
@@ -211,6 +213,11 @@ def update_family_task(
     ensure_family_parent(db, family_id=task.family_id, user=current_user)
 
     data = payload.model_dump(exclude_unset=True)
+    if "category" in data and data["category"] != task.category:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="La categorie d'une action ne peut pas etre modifiee apres sa creation.",
+        )
     assignee_user_ids = data.pop("assignee_user_ids", None)
     recurrence_was_set = "recurrence" in data
     selected_weekdays_was_set = "selected_weekdays" in data
@@ -221,8 +228,6 @@ def update_family_task(
         task.title = data["title"]
     if "description" in data:
         task.description = data["description"]
-    if "category" in data:
-        task.category = data["category"]
     if "priority" in data:
         task.priority = FamilyTaskPriority(data["priority"])
     if due_was_set:

@@ -45,6 +45,7 @@ def test_get_or_create_occurrence_recovers_from_unique_collision_and_keeps_sessi
 
     existing = FamilyTaskOccurrence(
         task_id=task.id,
+        category=family_task_service.occurrence_category(task.category),
         scheduled_date=scheduled_date,
         status=FamilyTaskOccurrenceStatus.TODO,
     )

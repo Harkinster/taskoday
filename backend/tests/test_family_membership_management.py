@@ -220,7 +220,7 @@ def test_archive_preserves_history_and_other_families_but_closes_all_active_path
         task = FamilyTask(family_id=archived_id, title="Historique", creator_user_id=owner_id)
         db.add(task)
         db.flush()
-        db.add(FamilyTaskOccurrence(task_id=task.id, scheduled_date=date(2026, 10, 3), status=FamilyTaskOccurrenceStatus.COMPLETED, completed_by_user_id=child_id))
+        db.add(FamilyTaskOccurrence(task_id=task.id, category="TASKODAY_HOUSE_QUEST", scheduled_date=date(2026, 10, 3), status=FamilyTaskOccurrenceStatus.COMPLETED, completed_by_user_id=child_id))
         task_id = task.id
         db.commit()
     pending = client.post(f"{API}/families/{archived_id}/parent-invites", headers=headers(owner_token))

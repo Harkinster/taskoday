@@ -89,6 +89,7 @@ class FamilyTaskOccurrence(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     task_id: Mapped[int] = mapped_column(ForeignKey("family_tasks.id", ondelete="CASCADE"), nullable=False, index=True)
+    category: Mapped[str] = mapped_column(String(100), nullable=False)
     scheduled_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
     status: Mapped[FamilyTaskOccurrenceStatus] = mapped_column(
         Enum(FamilyTaskOccurrenceStatus),
