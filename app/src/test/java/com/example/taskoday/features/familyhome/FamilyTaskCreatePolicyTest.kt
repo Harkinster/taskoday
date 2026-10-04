@@ -2,6 +2,7 @@ package com.example.taskoday.features.familyhome
 
 import com.example.taskoday.domain.model.FamilyTaskPriority
 import com.example.taskoday.domain.model.FamilyTaskRecurrence
+import com.example.taskoday.domain.model.FamilyActionType
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -10,6 +11,29 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class FamilyTaskCreatePolicyTest {
+    @Test
+    fun `a routine is personal and must repeat`() {
+        assertEquals("Une routine doit se répéter.", familyActionRuleError(FamilyActionType.PERSONAL_ROUTINE, FamilyTaskRecurrence.NONE, setOf(25L)))
+        assertNull(familyActionRuleError(FamilyActionType.PERSONAL_ROUTINE, FamilyTaskRecurrence.DAILY, setOf(25L)))
+        assertEquals("Choisis une seule personne pour cette action personnelle.",
+            familyActionRuleError(FamilyActionType.PERSONAL_ROUTINE, FamilyTaskRecurrence.DAILY, setOf(25L, 26L)))
+    }
+
+    @Test
+    fun `a mission may be one off or recurring but remains personal`() {
+        assertNull(familyActionRuleError(FamilyActionType.PERSONAL_MISSION, FamilyTaskRecurrence.NONE, setOf(25L)))
+        assertNull(familyActionRuleError(FamilyActionType.PERSONAL_MISSION, FamilyTaskRecurrence.WEEKLY, setOf(25L)))
+        assertEquals("Choisis une seule personne pour cette action personnelle.",
+            familyActionRuleError(FamilyActionType.PERSONAL_MISSION, FamilyTaskRecurrence.NONE, emptySet()))
+    }
+
+    @Test
+    fun `a house quest may have no one one or several assignees regardless of recurrence`() {
+        assertNull(familyActionRuleError(FamilyActionType.HOUSE_QUEST, FamilyTaskRecurrence.NONE, emptySet()))
+        assertNull(familyActionRuleError(FamilyActionType.HOUSE_QUEST, FamilyTaskRecurrence.NONE, setOf(25L)))
+        assertNull(familyActionRuleError(FamilyActionType.HOUSE_QUEST, FamilyTaskRecurrence.DAILY, setOf(25L, 26L)))
+    }
+
     @Test
     fun `title is required`() {
         val validation = validateFamilyTaskCreateForm(validForm(title = "   "))

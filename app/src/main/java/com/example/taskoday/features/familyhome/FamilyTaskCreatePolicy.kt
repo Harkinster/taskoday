@@ -3,6 +3,7 @@ package com.example.taskoday.features.familyhome
 import com.example.taskoday.domain.model.FamilyTaskCreateInput
 import com.example.taskoday.domain.model.FamilyTaskPriority
 import com.example.taskoday.domain.model.FamilyTaskRecurrence
+import com.example.taskoday.domain.model.FamilyActionType
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.OffsetDateTime
@@ -12,6 +13,19 @@ import java.time.format.DateTimeParseException
 import java.util.Locale
 
 enum class QuickTaskWhen { TODAY, TOMORROW, EVENING }
+
+/** Product type is chosen explicitly; recurrence and assignees never infer it. */
+fun familyActionRuleError(
+    actionType: FamilyActionType,
+    recurrence: FamilyTaskRecurrence,
+    assigneeUserIds: Set<Long>,
+): String? = when {
+    actionType == FamilyActionType.PERSONAL_ROUTINE && recurrence == FamilyTaskRecurrence.NONE ->
+        "Une routine doit se répéter."
+    actionType != FamilyActionType.HOUSE_QUEST && assigneeUserIds.size != 1 ->
+        "Choisis une seule personne pour cette action personnelle."
+    else -> null
+}
 
 /** Evening is an explicit 19:00 shortcut; the label shows the hour before selection. */
 fun quickTaskWhenSelection(choice: QuickTaskWhen, today: LocalDate): Pair<String, String?> =

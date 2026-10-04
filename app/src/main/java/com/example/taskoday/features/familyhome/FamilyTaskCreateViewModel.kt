@@ -227,12 +227,9 @@ class FamilyTaskCreateViewModel
                 _uiState.update { it.copy(errorMessage = validation.errorMessage) }
                 return
             }
-            if (current.actionType == FamilyActionType.PERSONAL_ROUTINE && current.recurrence == FamilyTaskRecurrence.NONE) {
-                _uiState.update { it.copy(errorMessage = "Une routine doit se répéter.") }
-                return
-            }
-            if (current.actionType != FamilyActionType.HOUSE_QUEST && current.selectedAssigneeUserIds.size != 1) {
-                _uiState.update { it.copy(errorMessage = "Choisis une seule personne pour cette action personnelle.") }
+            val ruleError = familyActionRuleError(current.actionType, current.recurrence, current.selectedAssigneeUserIds)
+            if (ruleError != null) {
+                _uiState.update { it.copy(errorMessage = ruleError) }
                 return
             }
 

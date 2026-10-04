@@ -30,6 +30,11 @@ class ExplorationPolicyTest {
         assertEquals("Tous les jours", familyTaskOccurrenceRecurrenceLabel(task.recurrenceLabel))
     }
 
+    @Test fun `a recurring mission does not turn into a routine`() {
+        val task = task(recurrence = "DAILY", category = FamilyActionType.PERSONAL_MISSION.category)
+        assertEquals(ExplorationCategory.PERSONAL_TASK, task.explorationCategory())
+    }
+
     @Test fun `weekday labels stay compact`() {
         assertEquals("Lun Mer", familyTaskRecurrenceLabel(com.example.taskoday.domain.model.FamilyTaskRecurrence.SELECTED_WEEKDAYS, listOf(1, 3)))
     }

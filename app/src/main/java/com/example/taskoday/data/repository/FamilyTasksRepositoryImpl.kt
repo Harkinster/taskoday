@@ -9,9 +9,11 @@ import com.example.taskoday.data.remote.dto.toRequestDto
 import com.example.taskoday.data.remote.dto.toUpdateRequestDto
 import com.example.taskoday.data.remote.familytasks.FamilyTasksApi
 import com.example.taskoday.domain.model.FamilyTaskCreateInput
+import com.example.taskoday.domain.model.FamilyActionType
 import com.example.taskoday.domain.model.FamilyTaskDefinition
 import com.example.taskoday.domain.model.FamilyTaskMember
 import com.example.taskoday.domain.model.FamilyTaskOccurrencesRange
+import com.example.taskoday.domain.model.FamilyTaskTodayItem
 import com.example.taskoday.domain.model.FamilyTasksToday
 import com.example.taskoday.domain.repository.AuthRepository
 import com.example.taskoday.domain.repository.FamilyTasksRepository
@@ -32,11 +34,11 @@ class FamilyTasksRepositoryImpl
                 val familyId = resolveFamilyId()
                 val response = familyTasksApi.getTodayTasks(familyId)
                 val today = response.data.toFamilyTasksTodayResponseDto(gson)
-                val categories = categoryByTaskId(familyId)
+                val definitions = loadDefinitions(familyId)
                 FamilyTasksToday(
                     familyId = familyId,
                     date = today.date,
-                    tasks = today.tasks.map { task -> task.toDomain().withCategory(categories) },
+                    tasks = attachFamilyActionCategories(today.tasks.map { it.toDomain() }, definitions, familyId),
                 )
             }
 
@@ -58,8 +60,8 @@ class FamilyTasksRepositoryImpl
                         fallbackStartDate = startDate,
                         fallbackEndDate = endDate,
                     )
-                val categories = categoryByTaskId(familyId)
-                range.copy(occurrences = range.occurrences.map { it.withCategory(categories) })
+                val definitions = loadDefinitions(familyId)
+                range.copy(occurrences = attachFamilyActionCategories(range.occurrences, definitions, familyId))
             }
 
         override suspend fun fetchOverdueOccurrences(): Result<FamilyTaskOccurrencesRange> =
@@ -74,18 +76,14 @@ class FamilyTasksRepositoryImpl
                         fallbackStartDate = "",
                         fallbackEndDate = "",
                     )
-                val categories = categoryByTaskId(familyId)
-                range.copy(occurrences = range.occurrences.map { it.withCategory(categories) })
+                val definitions = loadDefinitions(familyId)
+                range.copy(occurrences = attachFamilyActionCategories(range.occurrences, definitions, familyId))
             }
 
         override suspend fun fetchTasks(): Result<List<FamilyTaskDefinition>> =
             runCatching {
                 val familyId = resolveFamilyId()
-                familyTasksApi
-                    .getTasks(familyId)
-                    .data
-                    .toFamilyTaskDefinitionDtos(gson)
-                    .map { task -> task.toDomain() }
+                loadDefinitions(familyId)
             }
 
         override suspend fun fetchTask(taskId: Long): Result<FamilyTaskDefinition> =
@@ -120,6 +118,9 @@ class FamilyTasksRepositoryImpl
             input: FamilyTaskCreateInput,
         ): Result<Unit> =
             runCatching {
+                val current = loadDefinitions(resolveFamilyId()).firstOrNull { it.id == taskId }
+                    ?: error("Action introuvable dans la famille active.")
+                requireUnchangedFamilyActionCategory(current.category, input.category)
                 familyTasksApi.updateTask(taskId, input.toUpdateRequestDto())
                 Unit
             }
@@ -151,10 +152,37 @@ class FamilyTasksRepositoryImpl
         private suspend fun resolveFamilyId(): Long =
             authRepository.getActiveFamilyId() ?: error("Aucune famille active pour ce compte.")
 
-        private suspend fun categoryByTaskId(familyId: Long): Map<Long, String?> =
+        private suspend fun loadDefinitions(familyId: Long): List<FamilyTaskDefinition> =
             familyTasksApi.getTasks(familyId).data.toFamilyTaskDefinitionDtos(gson)
-                .associate { (it.id ?: 0L) to it.category }
+                .map { it.toDomain() }
+                .also { definitions ->
+                    check(definitions.all { it.id > 0L && it.familyId == familyId }) {
+                        "Définition d'action incohérente avec la famille active."
+                    }
+                    check(definitions.map { it.id }.distinct().size == definitions.size) {
+                        "Définitions d'action dupliquées."
+                    }
+                    definitions.forEach { FamilyActionType.fromCategory(it.category) }
+                }
 
-        private fun com.example.taskoday.domain.model.FamilyTaskTodayItem.withCategory(categories: Map<Long, String?>) =
-            copy(category = categories[taskId])
     }
+
+internal fun requireUnchangedFamilyActionCategory(existing: String?, requested: String?) {
+    check(existing == requested) { "Le type d'une action existante ne peut pas être modifié." }
+}
+
+/** A missing definition is an incomplete response, never evidence of a house quest. */
+internal fun attachFamilyActionCategories(
+    occurrences: List<FamilyTaskTodayItem>,
+    definitions: List<FamilyTaskDefinition>,
+    familyId: Long,
+): List<FamilyTaskTodayItem> {
+    val byId = definitions.associateBy { it.id }
+    return occurrences.map { occurrence ->
+        val definition = byId[occurrence.taskId]
+            ?: error("Définition de l'action ${occurrence.taskId} indisponible.")
+        check(definition.familyId == familyId) { "Action liée à une autre famille." }
+        FamilyActionType.fromCategory(definition.category)
+        occurrence.copy(category = definition.category)
+    }
+}

@@ -108,10 +108,12 @@ fun TaskodayApp() {
     val currentDestination = navBackStackEntry?.destination
     LaunchedEffect(navController) {
         val session = quickAddViewModel.uiState.first { !it.isLoading }
-        val restoredRoute = snapshotFlow { navController.currentBackStackEntry?.destination?.route }.first { it != null }
-        if (!localChildMode && session.hasRemoteSession && (session.isParent || activeChildRole) &&
-            restoredRoute != TaskodayDestination.Splash.route && restoredRoute != TaskodayDestination.Login.route
-        ) {
+        // NavHost may briefly expose Splash before restoring a saved destination.
+        // Wait for the first authenticated destination before applying the role landing.
+        snapshotFlow { navController.currentBackStackEntry?.destination?.route }.first {
+            it != null && it != TaskodayDestination.Splash.route && it != TaskodayDestination.Login.route
+        }
+        if (!localChildMode && session.hasRemoteSession && (session.isParent || activeChildRole)) {
             val landing = if (session.isParent) TaskodayDestination.FamilyHome else TaskodayDestination.Exploration
             navController.navigate(landing.route) {
                 popUpTo(navController.graph.id) { inclusive = true }

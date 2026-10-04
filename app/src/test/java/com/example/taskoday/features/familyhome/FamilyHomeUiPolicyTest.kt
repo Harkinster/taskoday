@@ -42,7 +42,7 @@ class FamilyHomeUiPolicyTest {
     }
 
     @Test
-    fun `parent daily view includes house personal and multi assigned once`() {
+    fun `parent daily view includes unassigned single and multi assigned house quests once`() {
         val ada = FamilyTaskAssignee(id = 11L, displayName = "Ada")
         val nino = FamilyTaskAssignee(id = 12L, displayName = "Nino")
         val tasks = listOf(

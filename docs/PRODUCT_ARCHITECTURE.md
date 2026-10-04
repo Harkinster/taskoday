@@ -44,6 +44,15 @@ Pour les nouvelles actions, Android écrit les catégories `TASKODAY_HOUSE_QUEST
 
 Les noms de tables, classes et routes backend ne sont pas renommés pour le vocabulaire produit. Aucun ancien enregistrement n'est modifié par ce mapping. Les actions créées depuis Ma maison sont des Quêtes Maison ; depuis Exploration ou Suivi, le Parent choisit Routine ou Mission et le même formulaire rapide est préconfiguré pour une personne.
 
+## Invariants du type d'action
+
+- `actionType` est une donnée métier explicite, indépendante des assignataires et de la récurrence. Une Quête Maison reste collective avec zéro, un ou plusieurs participants. Une Routine ou une Mission reste personnelle et possède exactement un participant dans le parcours Android.
+- Une Routine doit avoir une récurrence ; la création propose « quotidien » et refuse « jamais ». Une Mission peut être ponctuelle ou récurrente. La récurrence ne reclasse jamais une Mission en Routine.
+- Android ne propose pas de conversion du type lors d'une modification et son repository refuse une catégorie différente de celle de la définition chargée. Titre, horaire, récurrence et participants restent modifiables selon les droits existants.
+- Les catégories historiques `null`, vide ou `Maison` sont interprétées comme Quête Maison. Une valeur inconnue ou une occurrence sans définition correspondante est une erreur de données : Android ne la classe pas silencieusement dans Ma maison.
+- Les occurrences du backend référencent une définition `FamilyTask` mais ne possèdent pas leur propre colonne `category`. Leur réponse API ne transporte pas la catégorie : Android lit les définitions de la même famille et joint par `task_id` à chaque chargement. La famille et les identifiants sont vérifiés ; aucun cache transversal n'est utilisé, afin qu'une modification distante soit visible au prochain chargement. Cela coûte un GET supplémentaire pour chaque lecture aujourd'hui, période ou retard.
+- Les anciennes occurrences utilisent actuellement les champs *courants* de leur définition, y compris le titre, les assignataires et la catégorie. Une modification de catégorie par un autre client API réinterpréterait donc l'historique ; Android l'interdit dans son propre parcours, mais le backend ne l'interdit pas encore. Avant d'émettre un vrai `ActionValidated`, le backend devra figer le type au moment de la validation ou garantir son immutabilité, et fournir l'identité du participant, `task_id`, `occurrence_id`, `family_id` et l'horodatage dans ce contrat événementiel.
+
 ## Droits et validation
 
 Le Parent est membre avec des droits de création, édition, suppression, gestion de famille, validation et accès Suivi. L'Enfant est membre avec droits limités : pas de création/édition/suppression/gestion Parent, mais accomplissement d'une action accessible. `PENDING_VALIDATION` s'affiche « En attente de validation » ; `COMPLETED` et `VALIDATED` s'affichent « Terminée » selon le statut réel. Le backend garde l'autorité sur les transitions.

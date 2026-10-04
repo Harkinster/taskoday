@@ -9,5 +9,7 @@ class FamilyTaskQuickRouteTest {
         assertEquals("family_home/create?quick=true&kind=HOUSE_QUEST", TaskodayDestination.FamilyTaskCreate.createQuickRoute())
         assertEquals("family_home/create?date=2026-10-04&quick=true&kind=HOUSE_QUEST", TaskodayDestination.FamilyTaskCreate.createQuickRoute("2026-10-04"))
         assertEquals("family_home/create?quick=true&kind=PERSONAL_ROUTINE&memberId=27", TaskodayDestination.FamilyTaskCreate.createQuickRoute(kind = com.example.taskoday.domain.model.FamilyActionType.PERSONAL_ROUTINE, memberId = 27L))
+        assertEquals("family_home/create?quick=true&kind=PERSONAL_MISSION", TaskodayDestination.FamilyTaskCreate.createQuickRoute(kind = com.example.taskoday.domain.model.FamilyActionType.PERSONAL_MISSION))
+        assertEquals("family_home/create?quick=true&kind=PERSONAL_MISSION&memberId=26", TaskodayDestination.FamilyTaskCreate.createQuickRoute(kind = com.example.taskoday.domain.model.FamilyActionType.PERSONAL_MISSION, memberId = 26L))
     }
 }
