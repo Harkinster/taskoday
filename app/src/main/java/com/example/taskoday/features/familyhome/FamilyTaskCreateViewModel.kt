@@ -7,6 +7,7 @@ import com.example.taskoday.data.repository.toRemoteUserMessage
 import com.example.taskoday.domain.model.FamilyTaskDefinition
 import com.example.taskoday.domain.model.FamilyTaskPriority
 import com.example.taskoday.domain.model.FamilyTaskRecurrence
+import com.example.taskoday.domain.model.FamilyActionType
 import com.example.taskoday.domain.repository.FamilyTasksRepository
 import com.example.taskoday.domain.repository.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -28,12 +29,19 @@ class FamilyTaskCreateViewModel
         private val taskId: Long? = savedStateHandle.get<Long>("taskId")?.takeIf { it > 0L }
         private val prefilledDate: String? = savedStateHandle.get<String>("date")
         private val quickMode: Boolean = savedStateHandle.get<Boolean>("quick") == true
+        private val requestedType: FamilyActionType =
+            runCatching { FamilyActionType.valueOf(savedStateHandle.get<String>("kind") ?: "HOUSE_QUEST") }
+                .getOrDefault(FamilyActionType.HOUSE_QUEST)
+        private val targetMemberId: Long? = savedStateHandle.get<Long>("memberId")?.takeIf { it > 0L }
         private val _uiState =
             MutableStateFlow(
                 FamilyTaskCreateUiState(
                     taskId = taskId,
+                    actionType = requestedType,
+                    category = requestedType.category,
                     isLoadingTask = taskId != null,
                     date = resolveFamilyTaskInitialDate(prefilledDate),
+                    recurrence = if (requestedType == FamilyActionType.PERSONAL_ROUTINE) FamilyTaskRecurrence.DAILY else FamilyTaskRecurrence.NONE,
                 ),
             )
         val uiState: StateFlow<FamilyTaskCreateUiState> = _uiState.asStateFlow()
@@ -54,13 +62,14 @@ class FamilyTaskCreateViewModel
                 familyTasksRepository
                     .fetchMembers()
                     .onSuccess { members ->
+                        val ownUserId = runCatching { authRepository.fetchMe().id }.getOrNull()
                         _uiState.update {
                             it.copy(
                                 isLoadingMembers = false,
                                 members = members,
                                 selectedAssigneeUserIds =
-                                    if (quickMode && it.selectedAssigneeUserIds.isEmpty() && members.size == 1) {
-                                        setOf(members.first().userId)
+                                    if (it.actionType != FamilyActionType.HOUSE_QUEST && !it.isEditing) {
+                                        setOfNotNull(targetMemberId ?: ownUserId).filter { id -> members.any { member -> member.userId == id } }.toSet()
                                     } else it.selectedAssigneeUserIds,
                                 errorMessage = null,
                             )
@@ -163,11 +172,12 @@ class FamilyTaskCreateViewModel
         }
 
         fun selectHouseTask() {
-            _uiState.update { it.copy(selectedAssigneeUserIds = emptySet(), errorMessage = null) }
+            _uiState.update { if (it.actionType == FamilyActionType.HOUSE_QUEST) it.copy(selectedAssigneeUserIds = emptySet(), errorMessage = null) else it }
         }
 
         fun toggleAssignee(userId: Long) {
             _uiState.update {
+                if (it.actionType != FamilyActionType.HOUSE_QUEST) return@update it
                 val next =
                     if (userId in it.selectedAssigneeUserIds) {
                         it.selectedAssigneeUserIds - userId
@@ -217,6 +227,14 @@ class FamilyTaskCreateViewModel
                 _uiState.update { it.copy(errorMessage = validation.errorMessage) }
                 return
             }
+            if (current.actionType == FamilyActionType.PERSONAL_ROUTINE && current.recurrence == FamilyTaskRecurrence.NONE) {
+                _uiState.update { it.copy(errorMessage = "Une routine doit se répéter.") }
+                return
+            }
+            if (current.actionType != FamilyActionType.HOUSE_QUEST && current.selectedAssigneeUserIds.size != 1) {
+                _uiState.update { it.copy(errorMessage = "Choisis une seule personne pour cette action personnelle.") }
+                return
+            }
 
             viewModelScope.launch {
                 _uiState.update { it.copy(isSubmitting = true, errorMessage = null) }
@@ -228,9 +246,9 @@ class FamilyTaskCreateViewModel
                 }
                 val result =
                     if (current.isEditing && current.taskId != null) {
-                        familyTasksRepository.updateTask(current.taskId, input)
+                        familyTasksRepository.updateTask(current.taskId, input.copy(category = current.category))
                     } else {
-                        familyTasksRepository.createTask(input)
+                        familyTasksRepository.createTask(input.copy(category = current.category))
                     }
                 result
                     .onSuccess {
@@ -258,6 +276,8 @@ class FamilyTaskCreateViewModel
 private fun FamilyTaskCreateUiState.withTask(task: FamilyTaskDefinition): FamilyTaskCreateUiState =
     copy(
         isLoadingTask = false,
+        actionType = FamilyActionType.fromCategory(task.category),
+        category = task.category,
         title = task.title,
         description = task.description.orEmpty(),
         date = familyTaskDateFromFields(dueDate = task.dueDate, dueAt = task.dueAt) ?: date,

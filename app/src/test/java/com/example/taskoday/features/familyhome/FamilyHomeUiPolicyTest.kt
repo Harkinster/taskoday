@@ -4,6 +4,7 @@ import com.example.taskoday.domain.model.FamilyTaskAssignee
 import com.example.taskoday.domain.model.FamilyTaskPriority
 import com.example.taskoday.domain.model.FamilyTaskStatus
 import com.example.taskoday.domain.model.FamilyTaskTodayItem
+import com.example.taskoday.domain.model.FamilyActionType
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -28,28 +29,61 @@ class FamilyHomeUiPolicyTest {
     }
 
     @Test
-    fun `daily partitions separate work from completed actions`() {
-        val tasks = listOf(
-            task(title = "A faire", status = FamilyTaskStatus.TODO),
-            task(title = "A valider", status = FamilyTaskStatus.PENDING_VALIDATION),
-            task(title = "Terminee", status = FamilyTaskStatus.COMPLETED),
-        )
-        assertEquals(listOf("A faire", "A valider"), pendingDailyTasks(tasks).map { it.title })
-        assertEquals(listOf("Terminee"), completedDailyTasks(tasks).map { it.title })
-        assertEquals("En attente de validation", familyTaskStatusLabel(FamilyTaskStatus.PENDING_VALIDATION))
-    }
-
-    @Test
-    fun `maison filter excludes personal and multi assigned tasks`() {
+    fun `maison keeps assigned quests and excludes personal actions`() {
         val member = FamilyTaskAssignee(id = 1L, displayName = "Ada")
         val tasks =
             listOf(
                 task(title = "Maison", assignees = emptyList()),
-                task(title = "Personnel", assignees = listOf(member)),
+                task(title = "Personnel", assignees = listOf(member), category = FamilyActionType.PERSONAL_MISSION.category),
                 task(title = "Partagee", assignees = listOf(member, FamilyTaskAssignee(id = 2L, displayName = "Nino"))),
             )
 
-        assertEquals(listOf("Maison"), familyHouseTasks(tasks).map { it.title })
+        assertEquals(listOf("Maison", "Partagee"), familyHouseTasks(tasks).map { it.title })
+    }
+
+    @Test
+    fun `parent daily view includes house personal and multi assigned once`() {
+        val ada = FamilyTaskAssignee(id = 11L, displayName = "Ada")
+        val nino = FamilyTaskAssignee(id = 12L, displayName = "Nino")
+        val tasks = listOf(
+            task(title = "Maison", assignees = emptyList()),
+            task(title = "Ada", assignees = listOf(ada)),
+            task(title = "Nino", assignees = listOf(nino)),
+            task(title = "Ensemble", assignees = listOf(ada, nino)),
+        )
+
+        assertEquals(listOf("Maison", "Ada", "Nino", "Ensemble"), visibleDailyTasks(tasks, FamilyTaskAccessPolicy(25L, "PARENT")).map { it.title })
+    }
+
+    @Test
+    fun `child daily view includes quests assigned to another child but excludes personal actions`() {
+        val ada = FamilyTaskAssignee(id = 11L, displayName = "Ada")
+        val nino = FamilyTaskAssignee(id = 12L, displayName = "Nino")
+        val tasks = listOf(
+            task(title = "Maison", assignees = emptyList()),
+            task(title = "Ada", assignees = listOf(ada)),
+            task(title = "Nino", assignees = listOf(nino)),
+            task(title = "Mission Nino", assignees = listOf(nino), category = FamilyActionType.PERSONAL_MISSION.category),
+            task(title = "Routine Ada", assignees = listOf(ada), category = FamilyActionType.PERSONAL_ROUTINE.category),
+            task(title = "Ensemble", assignees = listOf(ada, nino)),
+        )
+
+        assertEquals(listOf("Maison", "Ada", "Nino", "Ensemble"), visibleDailyTasks(tasks, FamilyTaskAccessPolicy(11L, "CHILD")).map { it.title })
+    }
+
+    @Test
+    fun `today and completed partitions keep validation pending with work`() {
+        val tasks = listOf(
+            task(title = "A faire", status = FamilyTaskStatus.TODO),
+            task(title = "A valider", status = FamilyTaskStatus.PENDING_VALIDATION),
+            task(title = "Terminee", status = FamilyTaskStatus.COMPLETED),
+            task(title = "Validee", status = FamilyTaskStatus.VALIDATED),
+        )
+
+        assertEquals(listOf("A faire", "A valider"), pendingDailyTasks(tasks).map { it.title })
+        assertEquals(listOf("Terminee", "Validee"), completedDailyTasks(tasks).map { it.title })
+        assertEquals("En attente de validation", familyTaskStatusLabel(FamilyTaskStatus.PENDING_VALIDATION))
+        assertEquals("Terminée", familyTaskStatusLabel(FamilyTaskStatus.COMPLETED))
     }
 
     @Test
@@ -409,6 +443,7 @@ class FamilyHomeUiPolicyTest {
         dueDate: String? = scheduledDate,
         dueTime: String? = null,
         hasDueTime: Boolean = false,
+        category: String? = null,
     ): FamilyTaskTodayItem =
         FamilyTaskTodayItem(
             taskId = title.hashCode().toLong(),
@@ -424,5 +459,6 @@ class FamilyHomeUiPolicyTest {
             validationRequired = false,
             gamificationEnabled = false,
             priority = FamilyTaskPriority.NORMAL,
+            category = category,
         )
 }

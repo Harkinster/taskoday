@@ -102,6 +102,8 @@ data class FamilyTaskDefinitionDto(
     val title: String? = null,
     @SerializedName("description")
     val description: String? = null,
+    @SerializedName("category")
+    val category: String? = null,
     @SerializedName("assignees")
     val assignees: List<FamilyTaskAssigneeDto> = emptyList(),
     @SerializedName(value = "due_at", alternate = ["dueAt"])
@@ -145,6 +147,8 @@ data class FamilyTaskMemberDto(
 data class FamilyTaskCreateRequestDto(
     @SerializedName("title")
     val title: String,
+    @SerializedName("category")
+    val category: String? = null,
     @SerializedName("description")
     val description: String? = null,
     @SerializedName("priority")
@@ -171,6 +175,8 @@ data class FamilyTaskCreateRequestDto(
 data class FamilyTaskUpdateRequestDto(
     @SerializedName("title")
     val title: String,
+    @SerializedName("category")
+    val category: String? = null,
     @SerializedName("description")
     val description: String? = null,
     @SerializedName("priority")
@@ -204,6 +210,7 @@ class FamilyTaskCreateRequestDtoJsonAdapter : TypeAdapter<FamilyTaskCreateReques
         }
         out.beginObject()
         out.name("title").value(value.title)
+        value.category?.let { out.name("category").value(it) }
         value.description?.let { description -> out.name("description").value(description) }
         out.name("priority").value(value.priority)
         out.name("due_date").value(value.dueDate)
@@ -232,6 +239,7 @@ class FamilyTaskUpdateRequestDtoJsonAdapter : TypeAdapter<FamilyTaskUpdateReques
         }
         out.beginObject()
         out.name("title").value(value.title)
+        value.category?.let { out.name("category").value(it) }
         out.name("description").value(value.description)
         out.name("priority").value(value.priority)
         out.name("due_date").value(value.dueDate)
@@ -371,6 +379,7 @@ fun FamilyTaskDefinitionDto.toDomain(): FamilyTaskDefinition {
         gamificationEnabled = gamificationEnabled ?: false,
         priority = FamilyTaskPriority.fromBackend(priority),
         active = active ?: true,
+        category = category,
     )
 }
 
@@ -391,6 +400,7 @@ fun FamilyTaskMemberDto.toDomain(): FamilyTaskMember =
 fun FamilyTaskCreateInput.toRequestDto(): FamilyTaskCreateRequestDto =
     FamilyTaskCreateRequestDto(
         title = title,
+        category = category,
         description = description,
         priority = priority.backendValue(),
         dueDate = dueDate,
@@ -406,6 +416,7 @@ fun FamilyTaskCreateInput.toRequestDto(): FamilyTaskCreateRequestDto =
 fun FamilyTaskCreateInput.toUpdateRequestDto(): FamilyTaskUpdateRequestDto =
     FamilyTaskUpdateRequestDto(
         title = title,
+        category = category,
         description = description.orEmpty(),
         priority = priority.backendValue(),
         dueDate = dueDate,

@@ -51,7 +51,7 @@ class FamilyTaskDetailViewModel
                 familyTasksRepository
                     .fetchTask(taskId)
                     .onSuccess { task ->
-                        if (!access.canView(task.assignees)) {
+                        if (!access.canView(task)) {
                             _uiState.update { it.copy(isLoading = false, task = null, todayOccurrence = null,
                                 errorMessage = "Cette tâche n'est pas accessible à ce compte.") }
                             return@onSuccess

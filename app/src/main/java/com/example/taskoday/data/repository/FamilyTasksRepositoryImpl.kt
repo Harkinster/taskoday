@@ -32,10 +32,11 @@ class FamilyTasksRepositoryImpl
                 val familyId = resolveFamilyId()
                 val response = familyTasksApi.getTodayTasks(familyId)
                 val today = response.data.toFamilyTasksTodayResponseDto(gson)
+                val categories = categoryByTaskId(familyId)
                 FamilyTasksToday(
                     familyId = familyId,
                     date = today.date,
-                    tasks = today.tasks.map { task -> task.toDomain() },
+                    tasks = today.tasks.map { task -> task.toDomain().withCategory(categories) },
                 )
             }
 
@@ -45,7 +46,7 @@ class FamilyTasksRepositoryImpl
         ): Result<FamilyTaskOccurrencesRange> =
             runCatching {
                 val familyId = resolveFamilyId()
-                familyTasksApi
+                val range = familyTasksApi
                     .getTaskOccurrences(
                         familyId = familyId,
                         startDate = startDate,
@@ -57,12 +58,14 @@ class FamilyTasksRepositoryImpl
                         fallbackStartDate = startDate,
                         fallbackEndDate = endDate,
                     )
+                val categories = categoryByTaskId(familyId)
+                range.copy(occurrences = range.occurrences.map { it.withCategory(categories) })
             }
 
         override suspend fun fetchOverdueOccurrences(): Result<FamilyTaskOccurrencesRange> =
             runCatching {
                 val familyId = resolveFamilyId()
-                familyTasksApi
+                val range = familyTasksApi
                     .getOverdueOccurrences(familyId)
                     .data
                     .toFamilyTaskOccurrencesRangeResponseDto(gson)
@@ -71,6 +74,8 @@ class FamilyTasksRepositoryImpl
                         fallbackStartDate = "",
                         fallbackEndDate = "",
                     )
+                val categories = categoryByTaskId(familyId)
+                range.copy(occurrences = range.occurrences.map { it.withCategory(categories) })
             }
 
         override suspend fun fetchTasks(): Result<List<FamilyTaskDefinition>> =
@@ -145,4 +150,11 @@ class FamilyTasksRepositoryImpl
 
         private suspend fun resolveFamilyId(): Long =
             authRepository.getActiveFamilyId() ?: error("Aucune famille active pour ce compte.")
+
+        private suspend fun categoryByTaskId(familyId: Long): Map<Long, String?> =
+            familyTasksApi.getTasks(familyId).data.toFamilyTaskDefinitionDtos(gson)
+                .associate { (it.id ?: 0L) to it.category }
+
+        private fun com.example.taskoday.domain.model.FamilyTaskTodayItem.withCategory(categories: Map<Long, String?>) =
+            copy(category = categories[taskId])
     }

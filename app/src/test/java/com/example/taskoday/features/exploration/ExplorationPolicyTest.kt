@@ -4,6 +4,7 @@ import com.example.taskoday.domain.model.FamilyTaskAssignee
 import com.example.taskoday.domain.model.FamilyTaskStatus
 import com.example.taskoday.domain.model.FamilyTaskPriority
 import com.example.taskoday.domain.model.FamilyTaskTodayItem
+import com.example.taskoday.domain.model.FamilyActionType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -17,14 +18,14 @@ class ExplorationPolicyTest {
     }
 
     @Test fun `personal one shot is a personal task`() {
-        val task = task(recurrence = "NONE")
+        val task = task(recurrence = "NONE", category = FamilyActionType.PERSONAL_MISSION.category)
         assertTrue(task.isPersonalTask())
         assertFalse(task.isRecurringTask())
         assertEquals(ExplorationCategory.PERSONAL_TASK, task.explorationCategory())
     }
 
     @Test fun `personal recurring is a routine`() {
-        val task = task(recurrence = "DAILY")
+        val task = task(recurrence = "DAILY", category = FamilyActionType.PERSONAL_ROUTINE.category)
         assertEquals(ExplorationCategory.PERSONAL_ROUTINE, task.explorationCategory())
         assertEquals("Tous les jours", familyTaskOccurrenceRecurrenceLabel(task.recurrenceLabel))
     }
@@ -33,6 +34,10 @@ class ExplorationPolicyTest {
         assertEquals("Lun Mer", familyTaskRecurrenceLabel(com.example.taskoday.domain.model.FamilyTaskRecurrence.SELECTED_WEEKDAYS, listOf(1, 3)))
     }
 
-    private fun task(assignees: List<FamilyTaskAssignee> = listOf(FamilyTaskAssignee(1L, "Naomy")), recurrence: String): FamilyTaskTodayItem =
-        FamilyTaskTodayItem(1L, 2L, "Test", assignees, "2026-09-19", "2026-09-19", null, false, null, FamilyTaskStatus.TODO, false, false, FamilyTaskPriority.NORMAL, recurrence)
+    @Test fun `assigned recurring legacy family task stays collective`() {
+        assertEquals(ExplorationCategory.HOUSEHOLD, task(recurrence = "DAILY").explorationCategory())
+    }
+
+    private fun task(assignees: List<FamilyTaskAssignee> = listOf(FamilyTaskAssignee(1L, "Naomy")), recurrence: String, category: String? = null): FamilyTaskTodayItem =
+        FamilyTaskTodayItem(1L, 2L, "Test", assignees, "2026-09-19", "2026-09-19", null, false, null, FamilyTaskStatus.TODO, false, false, FamilyTaskPriority.NORMAL, recurrence, category = category)
 }

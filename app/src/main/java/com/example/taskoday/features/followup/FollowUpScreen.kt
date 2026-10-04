@@ -15,6 +15,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -27,12 +28,15 @@ import com.example.taskoday.core.ui.theme.InkMuted
 import com.example.taskoday.core.ui.theme.ParchmentLight
 import com.example.taskoday.core.ui.theme.ParchmentCream
 import com.example.taskoday.core.ui.component.DarkSurfaceFilterChip
+import com.example.taskoday.domain.model.FamilyActionType
+import com.example.taskoday.features.familyhome.familyTaskStatusLabel
 
 @Composable
 fun FollowUpScreen(
     viewModel: FollowUpViewModel,
     onOpenFamilyTask: (Long) -> Unit,
     onOpenLegacyTask: (Long) -> Unit,
+    onCreatePersonal: (FamilyActionType, Long) -> Unit = { _, _ -> },
 ) {
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -57,11 +61,20 @@ fun FollowUpScreen(
         item { Text("Membres du foyer", style = MaterialTheme.typography.titleMedium, color = ParchmentLight) }
         items(state.members, key = { "member-${it.memberId}" }) { member -> MemberSummaryCard(member, member.memberId == state.selectedMemberId) { viewModel.selectMember(member.memberId) } }
         state.house?.let { house ->
-            item { Text("Maison", style = MaterialTheme.typography.titleMedium, color = ParchmentLight) }
+            item { Text("Quêtes Maison", style = MaterialTheme.typography.titleMedium, color = ParchmentLight) }
             item { MemberSummaryCard(house, false) {} }
+            items(house.items, key = { "house-${it.key}" }) { item -> FollowUpItemRow(item, onOpenFamilyTask, onOpenLegacyTask) }
         }
         selected?.let { member ->
-            item { Text("Détail · ${member.displayName}", style = MaterialTheme.typography.titleMedium, color = ParchmentLight) }
+            item {
+                Column {
+                    Text("Détail · ${member.displayName}", style = MaterialTheme.typography.titleMedium, color = ParchmentLight)
+                    Row {
+                        TextButton(onClick = { onCreatePersonal(FamilyActionType.PERSONAL_ROUTINE, member.memberId) }) { Text("Ajouter une routine") }
+                        TextButton(onClick = { onCreatePersonal(FamilyActionType.PERSONAL_MISSION, member.memberId) }) { Text("Ajouter une mission") }
+                    }
+                }
+            }
             if (member.items.isEmpty()) item { Text("Aucune tâche prévue aujourd’hui.", color = ParchmentCream.copy(alpha = 0.72f)) }
             val overdue = member.items.filter { it.overdue }
             val pending = member.items.filter { !it.completed && !it.overdue }
@@ -103,11 +116,17 @@ private fun FollowUpItemRow(item: FollowUpItem, onOpenFamilyTask: (Long) -> Unit
         Column(Modifier.weight(1f)) {
             Text(item.title, color = ParchmentLight)
             item.familyTask?.let { task ->
+                val category = FamilyActionType.fromCategory(task.category)
+                Text(when (category) {
+                    FamilyActionType.HOUSE_QUEST -> if (task.assignees.isEmpty()) "Maison" else task.assignees.joinToString { it.displayName }
+                    FamilyActionType.PERSONAL_ROUTINE -> "Routine"
+                    FamilyActionType.PERSONAL_MISSION -> "Mission"
+                }, color = ParchmentCream, style = MaterialTheme.typography.bodySmall)
                 familyTaskCompletionActorLabels(task).forEach { actorLabel ->
                     Text(actorLabel, color = ParchmentCream.copy(alpha = 0.72f), style = MaterialTheme.typography.bodySmall)
                 }
             }
-            Text(when { item.overdue -> "En retard"; item.completed -> "Terminée"; else -> "À faire" }, color = if (item.overdue) DangerGlow else ParchmentCream.copy(alpha = 0.72f), style = MaterialTheme.typography.bodySmall)
+            Text(when { item.overdue -> "En retard"; item.familyTask != null -> familyTaskStatusLabel(item.familyTask.status); item.completed -> "Terminée"; else -> "À faire" }, color = if (item.overdue) DangerGlow else ParchmentCream.copy(alpha = 0.72f), style = MaterialTheme.typography.bodySmall)
         }
     }
 }

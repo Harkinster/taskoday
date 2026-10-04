@@ -13,6 +13,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -36,6 +37,7 @@ import com.example.taskoday.core.ui.component.fantasy.TaskodayBottomBar
 import com.example.taskoday.core.ui.theme.BackgroundBottom
 import com.example.taskoday.core.ui.theme.BackgroundTop
 import com.example.taskoday.domain.model.AuthenticatedUser
+import com.example.taskoday.domain.model.FamilyActionType
 import com.example.taskoday.domain.model.PlanningFormType
 import com.example.taskoday.features.add.QuickAddFab
 import com.example.taskoday.features.add.QuickAddViewModel
@@ -86,12 +88,14 @@ import com.example.taskoday.features.tasks.detail.TaskDetailScreen
 import com.example.taskoday.features.tasks.detail.TaskDetailViewModel
 import com.example.taskoday.features.tasks.edit.TaskEditScreen
 import com.example.taskoday.features.tasks.edit.TaskEditViewModel
+import kotlinx.coroutines.flow.first
 
 @Composable
 fun TaskodayApp() {
     val navController = rememberNavController()
     var localChildMode by rememberSaveable { mutableStateOf(false) }
     var activeChildRole by rememberSaveable { mutableStateOf(false) }
+    var personalCreationRequested by rememberSaveable { mutableStateOf(false) }
     val sessionEventsViewModel: SessionEventsViewModel = hiltViewModel()
     val quickAddViewModel: QuickAddViewModel = hiltViewModel()
     val quickAddUiState by quickAddViewModel.uiState.collectAsStateWithLifecycle()
@@ -102,6 +106,19 @@ fun TaskodayApp() {
     var recentNestRewardCrystals by rememberSaveable { mutableStateOf(0) }
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
+    LaunchedEffect(navController) {
+        val session = quickAddViewModel.uiState.first { !it.isLoading }
+        val restoredRoute = snapshotFlow { navController.currentBackStackEntry?.destination?.route }.first { it != null }
+        if (!localChildMode && session.hasRemoteSession && (session.isParent || activeChildRole) &&
+            restoredRoute != TaskodayDestination.Splash.route && restoredRoute != TaskodayDestination.Login.route
+        ) {
+            val landing = if (session.isParent) TaskodayDestination.FamilyHome else TaskodayDestination.Exploration
+            navController.navigate(landing.route) {
+                popUpTo(navController.graph.id) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
+    }
     val visibleTopLevelDestinations = visibleAccountDestinations(activeChildRole, localChildMode)
     val currentTopLevelIndex =
         visibleTopLevelDestinations.indexOfFirst { destination ->
@@ -180,12 +197,16 @@ fun TaskodayApp() {
         }
     val openCreateTask: () -> Unit = {
         if (!localChildMode && quickAddUiState.canOpenQuickAdd) {
-            navController.navigate(TaskodayDestination.FamilyTaskCreate.createRoute(quick = true))
+            if (currentDestination?.route == TaskodayDestination.Exploration.route) {
+                personalCreationRequested = true
+            } else {
+                navController.navigate(TaskodayDestination.FamilyTaskCreate.createQuickRoute())
+            }
         }
     }
 
     CompositionLocalProvider(
-        LocalTaskodayBrandClick provides { navigateToTopLevel(accountHomeDestination(quickAddUiState.hasRemoteSession, localChildMode)) },
+        LocalTaskodayBrandClick provides { navigateToTopLevel(accountHomeDestination(quickAddUiState.hasRemoteSession, localChildMode, activeChildRole)) },
     ) {
         Box(
             modifier =
@@ -341,7 +362,7 @@ fun TaskodayApp() {
                     onOpenProfile = navigateToProfile,
                     onAddTask = { date ->
                         if (!localChildMode && viewModel.uiState.value.access.canManage) {
-                            navController.navigate(TaskodayDestination.FamilyTaskCreate.createRoute(date, quick = true))
+                            navController.navigate(TaskodayDestination.FamilyTaskCreate.createQuickRoute(date))
                         }
                     },
                     onOpenAllTasks = { navController.navigate(TaskodayDestination.FamilyTasksList.route) },
@@ -356,7 +377,7 @@ fun TaskodayApp() {
                     onBack = { navController.popBackStack() },
                     onAddTask = {
                         if (!localChildMode && viewModel.uiState.value.access.canManage) {
-                            navController.navigate(TaskodayDestination.FamilyTaskCreate.createRoute(quick = true))
+                            navController.navigate(TaskodayDestination.FamilyTaskCreate.createQuickRoute())
                         }
                     },
                     onOpenTask = { taskId -> navController.navigate(TaskodayDestination.FamilyTaskDetail.createRoute(taskId)) },
@@ -394,6 +415,14 @@ fun TaskodayApp() {
                             type = NavType.BoolType
                             defaultValue = false
                         },
+                        navArgument(TaskodayDestination.FamilyTaskCreate.ARG_KIND) {
+                            type = NavType.StringType
+                            defaultValue = FamilyActionType.HOUSE_QUEST.name
+                        },
+                        navArgument(TaskodayDestination.FamilyTaskCreate.ARG_MEMBER_ID) {
+                            type = NavType.LongType
+                            defaultValue = -1L
+                        },
                     ),
             ) { entry ->
                 if (!ParentDestinationAccess(quickAddUiState.isLoading, quickAddUiState.canOpenQuickAdd, activeChildRole, localChildMode) { navController.popBackStack() }) return@composable
@@ -401,7 +430,19 @@ fun TaskodayApp() {
                 FamilyTaskCreateScreen(
                     viewModel = viewModel,
                     onBack = { navController.popBackStack() },
-                    onCreated = { navController.popBackStack() },
+                    onCreated = {
+                        val kind = entry.arguments?.getString(TaskodayDestination.FamilyTaskCreate.ARG_KIND)
+                        val destination = if (kind == FamilyActionType.HOUSE_QUEST.name) TaskodayDestination.FamilyHome else
+                            if ((entry.arguments?.getLong(TaskodayDestination.FamilyTaskCreate.ARG_MEMBER_ID, -1L) ?: -1L) > 0L) TaskodayDestination.FollowUp else TaskodayDestination.Exploration
+                        if (navController.previousBackStackEntry?.destination?.route == destination.route) {
+                            navController.popBackStack()
+                        } else {
+                            navController.navigate(destination.route) {
+                                popUpTo(navController.graph.findStartDestination().id) { saveState = false }
+                                launchSingleTop = true
+                            }
+                        }
+                    },
                     quickMode = entry.arguments?.getBoolean(TaskodayDestination.FamilyTaskCreate.ARG_QUICK) == true,
                 )
             }
@@ -480,7 +521,13 @@ fun TaskodayApp() {
 
             composable(TaskodayDestination.Exploration.route) {
                 val viewModel: ExplorationViewModel = hiltViewModel()
-                ExplorationScreen(viewModel = viewModel)
+                ExplorationScreen(
+                    viewModel = viewModel,
+                    onOpenFamilyTask = { taskId -> navController.navigate(TaskodayDestination.FamilyTaskDetail.createRoute(taskId)) },
+                    onCreatePersonal = { kind -> navController.navigate(TaskodayDestination.FamilyTaskCreate.createQuickRoute(kind = kind)) },
+                    openCreateChoices = personalCreationRequested,
+                    onCreateChoicesOpened = { personalCreationRequested = false },
+                )
             }
 
             composable(TaskodayDestination.FollowUp.route) {
@@ -493,6 +540,7 @@ fun TaskodayApp() {
                         viewModel = viewModel,
                         onOpenFamilyTask = { taskId -> navController.navigate(TaskodayDestination.FamilyTaskDetail.createRoute(taskId)) },
                         onOpenLegacyTask = { taskId -> navController.navigate(TaskodayDestination.TaskDetail.createRoute(taskId)) },
+                        onCreatePersonal = { kind, memberId -> navController.navigate(TaskodayDestination.FamilyTaskCreate.createQuickRoute(kind = kind, memberId = memberId)) },
                     )
                 }
             }

@@ -77,7 +77,7 @@ class FamilyTaskListViewModel
             isLoading: Boolean = false,
         ) {
             val access = _uiState.value.access
-            val allowedTasks = tasks.filter { access.canView(it.assignees) }
+            val allowedTasks = tasks.filter { access.canView(it) && com.example.taskoday.domain.model.FamilyActionType.fromCategory(it.category) == com.example.taskoday.domain.model.FamilyActionType.HOUSE_QUEST }
             val allowedMembers = members.filter { access.canManage || it.userId == access.userId }
             val filters = buildFamilyTaskListFilters(allowedMembers)
             val safeFilterKey = filters.firstOrNull { filter -> filter.key == selectedFilterKey }?.key ?: FAMILY_TASK_FILTER_ALL

@@ -1,5 +1,7 @@
 package com.example.taskoday.navigation
 
+import com.example.taskoday.domain.model.FamilyActionType
+
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Explore
@@ -32,17 +34,24 @@ sealed class TaskodayDestination(
 
     data object FamilyNotifications : TaskodayDestination(route = "family_notifications", label = "Notifications")
 
-    data object FamilyTaskCreate : TaskodayDestination(route = "family_home/create?date={date}&quick={quick}", label = "Nouvelle tâche") {
+    data object FamilyTaskCreate : TaskodayDestination(route = "family_home/create?date={date}&quick={quick}&kind={kind}&memberId={memberId}", label = "Nouvelle tâche") {
         const val ARG_DATE: String = "date"
         const val ARG_QUICK: String = "quick"
+        const val ARG_KIND: String = "kind"
+        const val ARG_MEMBER_ID: String = "memberId"
 
-        fun createRoute(date: String? = null, quick: Boolean = false): String {
+        fun createRoute(date: String? = null, quick: Boolean = false, kind: FamilyActionType = FamilyActionType.HOUSE_QUEST, memberId: Long? = null): String {
             val params = buildList {
                 date?.takeIf { it.isNotBlank() }?.let { add("date=$it") }
                 if (quick) add("quick=true")
+                add("kind=${kind.name}")
+                memberId?.takeIf { it > 0L }?.let { add("memberId=$it") }
             }
             return if (params.isEmpty()) "family_home/create" else "family_home/create?${params.joinToString("&")}"
         }
+
+        fun createQuickRoute(date: String? = null, kind: FamilyActionType = FamilyActionType.HOUSE_QUEST, memberId: Long? = null): String =
+            createRoute(date, quick = true, kind = kind, memberId = memberId)
     }
 
     data object FamilyTaskDetail : TaskodayDestination(route = "family_home/task/{taskId}", label = "Tâche familiale") {

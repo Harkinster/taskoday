@@ -5,8 +5,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class AccountLandingNavigationTest {
-    @Test fun `child login and session restoration open family home with child navigation`() {
-        assertEquals(TaskodayDestination.FamilyHome.route, user("CHILD").preferredAppRoute(false))
+    @Test fun `child login and session restoration open exploration`() {
+        assertEquals(TaskodayDestination.Exploration.route, user("CHILD").preferredAppRoute(false))
     }
     @Test fun `parent with family keeps family home`() {
         assertEquals(TaskodayDestination.FamilyHome.route, user("PARENT").preferredAppRoute(false))
@@ -22,6 +22,7 @@ class AccountLandingNavigationTest {
     }
     @Test fun `brand navigation returns real parent or child to family home`() {
         assertEquals(TaskodayDestination.FamilyHome, accountHomeDestination(true, false))
+        assertEquals(TaskodayDestination.Exploration, accountHomeDestination(true, false, true))
     }
     @Test fun `brand navigation preserves explicit local child mode`() {
         assertEquals(TaskodayDestination.Home, accountHomeDestination(true, true))

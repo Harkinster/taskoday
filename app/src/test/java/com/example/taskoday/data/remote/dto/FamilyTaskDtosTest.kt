@@ -5,6 +5,7 @@ import com.example.taskoday.domain.model.FamilyTaskCreateInput
 import com.example.taskoday.domain.model.FamilyTaskMemberRole
 import com.example.taskoday.domain.model.FamilyTaskRecurrence
 import com.example.taskoday.domain.model.FamilyTaskStatus
+import com.example.taskoday.domain.model.FamilyActionType
 import com.google.gson.Gson
 import com.google.gson.JsonParser
 import org.junit.Assert.assertEquals
@@ -15,6 +16,17 @@ import org.junit.Test
 
 class FamilyTaskDtosTest {
     private val gson = Gson()
+
+    @Test
+    fun `category is preserved in definitions and sent by quick creation`() {
+        val definition = FamilyTaskDefinitionDto(id = 9L, title = "Routine", category = FamilyActionType.PERSONAL_ROUTINE.category).toDomain()
+        assertEquals(FamilyActionType.PERSONAL_ROUTINE.category, definition.category)
+        val input = FamilyTaskCreateInput("Routine", null, "2026-10-04", null, FamilyTaskRecurrence.DAILY,
+            emptyList(), listOf(25L), false, false, FamilyTaskPriority.NORMAL, category = definition.category)
+        val json = JsonParser.parseString(gson.toJson(input.toRequestDto())).asJsonObject
+        assertEquals(FamilyActionType.PERSONAL_ROUTINE.category, json.get("category").asString)
+        assertEquals(25L, json.getAsJsonArray("assignee_user_ids").single().asLong)
+    }
 
     @Test
     fun `snake case today task fields map to dto`() {

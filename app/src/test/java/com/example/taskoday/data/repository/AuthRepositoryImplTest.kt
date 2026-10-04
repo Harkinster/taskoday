@@ -101,14 +101,16 @@ class AuthRepositoryImplTest {
         }
 
     @Test
-    fun `active family is persisted validated and not chosen arbitrarily`() =
+    fun `active family keeps explicit choice and falls back to first accessible family`() =
         runBlocking {
             val stored = MemoryTokenStorage(accessToken = "token", activeFamilyId = 9L)
             val multiple = AuthRepositoryImpl(FakeAuthApi(listOf(4L, 9L)), FakeChildrenApi(), stored, FakeAuthSessionClient())
             assertEquals(9L, multiple.getActiveFamilyId())
 
-            val withoutChoice = AuthRepositoryImpl(FakeAuthApi(listOf(4L, 9L)), FakeChildrenApi(), MemoryTokenStorage(), FakeAuthSessionClient())
-            assertNull(withoutChoice.getActiveFamilyId())
+            val fallbackStorage = MemoryTokenStorage()
+            val withoutChoice = AuthRepositoryImpl(FakeAuthApi(listOf(4L, 9L)), FakeChildrenApi(), fallbackStorage, FakeAuthSessionClient())
+            assertEquals(4L, withoutChoice.getActiveFamilyId())
+            assertEquals(4L, fallbackStorage.getActiveFamilyId())
 
             val singleStorage = MemoryTokenStorage()
             val single = AuthRepositoryImpl(FakeAuthApi(listOf(4L)), FakeChildrenApi(), singleStorage, FakeAuthSessionClient())
@@ -117,13 +119,13 @@ class AuthRepositoryImplTest {
         }
 
     @Test
-    fun `stale active family is cleared when it no longer exists`() =
+    fun `stale active family switches to accessible family`() =
         runBlocking {
             val storage = MemoryTokenStorage(accessToken = "token", activeFamilyId = 99L)
             val repository = AuthRepositoryImpl(FakeAuthApi(listOf(4L, 9L)), FakeChildrenApi(), storage, FakeAuthSessionClient())
 
-            assertNull(repository.getActiveFamilyId())
-            assertNull(storage.getActiveFamilyId())
+            assertEquals(4L, repository.getActiveFamilyId())
+            assertEquals(4L, storage.getActiveFamilyId())
         }
 
     @Test

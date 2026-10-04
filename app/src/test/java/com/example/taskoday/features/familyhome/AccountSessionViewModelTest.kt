@@ -46,7 +46,7 @@ class AccountSessionViewModelTest {
             }
             val vm = exploration(identity(100L, "PARENT"), true, family = family)
             timedOut = true
-            vm.selectMember(101L)
+            vm.refresh()
             assertEquals("Requête expirée.", vm.uiState.value.errorMessage)
             assertFalse(vm.uiState.value.isLoading)
             assertTrue(vm.uiState.value.houseTasks.isEmpty())
@@ -87,6 +87,28 @@ class AccountSessionViewModelTest {
         } finally { Dispatchers.resetMain() }
     }
 
+    @Test fun `suivi separates personal actions from assigned house quests`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        try {
+            val base = familyRepository()
+            val family = object : FamilyTasksRepository by base {
+                override suspend fun fetchToday() = Result.success(FamilyTasksToday(1L, "2026-10-04", listOf(
+                    occurrence(1L, "Quest", 102L, null),
+                    occurrence(2L, "Mission", 100L, FamilyActionType.PERSONAL_MISSION.category),
+                    occurrence(3L, "Routine", 101L, FamilyActionType.PERSONAL_ROUTINE.category),
+                )))
+            }
+            val children = object : ChildrenRepository by unused() {
+                override suspend fun fetchChildren() = emptyList<ParentChild>()
+            }
+            val state = FollowUpViewModel(auth(identity(100L, "PARENT")), children, family, unused(), unused(), unused(), unused()).uiState.value
+            assertEquals(listOf("Quest"), state.house?.items?.map { it.title })
+            assertEquals(listOf("Mission"), state.members.first { it.memberId == 100L }.items.map { it.title })
+            assertEquals(listOf("Routine"), state.members.first { it.memberId == 101L }.items.map { it.title })
+            assertTrue(state.members.first { it.memberId == 102L }.items.isEmpty())
+        } finally { Dispatchers.resetMain() }
+    }
+
     @Test fun `member selection network error clears exploration without crashing`() = runTest {
         Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
         try {
@@ -97,7 +119,7 @@ class AccountSessionViewModelTest {
             }
             val vm = exploration(identity(100L, "PARENT"), true, family = family)
             offline = true
-            vm.selectMember(101L)
+            vm.refresh()
             assertEquals("offline", vm.uiState.value.errorMessage)
             assertFalse(vm.uiState.value.isLoading)
             assertTrue(vm.uiState.value.houseTasks.isEmpty())
@@ -143,8 +165,8 @@ class AccountSessionViewModelTest {
         try {
             for ((user, expected) in listOf(
                 identity(100L, "PARENT") to listOf("First", "Second", "House"),
-                identity(101L, "CHILD") to listOf("First", "House"),
-                identity(102L, "CHILD") to listOf("Second", "House"),
+                identity(101L, "CHILD") to listOf("First", "Second", "House"),
+                identity(102L, "CHILD") to listOf("First", "Second", "House"),
             )) {
                 val vm = FamilyTaskListViewModel(familyRepository(), auth(user))
                 assertEquals(expected.sorted(), vm.uiState.value.visibleTasks.map { it.title })
@@ -155,11 +177,11 @@ class AccountSessionViewModelTest {
         } finally { Dispatchers.resetMain() }
     }
 
-    @Test fun `child detail cannot expose sibling or initiate delete`() = runTest {
+    @Test fun `child can read collective quest assigned to sibling but cannot delete`() = runTest {
         Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
         try {
             val vm = FamilyTaskDetailViewModel(SavedStateHandle(mapOf("taskId" to 2L)), familyRepository(), auth(identity(101L, "CHILD")))
-            assertNull(vm.uiState.value.task)
+            assertNotNull(vm.uiState.value.task)
             vm.requestDelete()
             vm.deleteTask() // Any repository mutation would fail the test via the unused delegate.
             assertFalse(vm.uiState.value.showDeleteConfirmation)
@@ -176,12 +198,32 @@ class AccountSessionViewModelTest {
                 assertTrue(vm.uiState.value.routines.isEmpty())
                 assertTrue(vm.uiState.value.missions.isEmpty())
                 assertTrue(vm.uiState.value.objectives.isEmpty())
-                if (user.role == "CHILD") {
-                    assertEquals(listOf(user.id), vm.uiState.value.members.map { it.id })
-                    vm.selectMember(100L)
-                    assertEquals(user.id, vm.uiState.value.selectedMemberId)
-                }
+                assertEquals(listOf(user.id), vm.uiState.value.members.map { it.id })
+                assertEquals(user.id, vm.uiState.value.selectedMemberId)
             }
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test fun `exploration contains only own personal actions and never house quests`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        try {
+            val base = familyRepository()
+            val family = object : FamilyTasksRepository by base {
+                override suspend fun fetchToday() = Result.success(FamilyTasksToday(1L, "2026-10-04", listOf(
+                    occurrence(1L, "Quest", 101L, null),
+                    occurrence(2L, "Papa mission", 100L, FamilyActionType.PERSONAL_MISSION.category),
+                    occurrence(3L, "Sibling mission", 102L, FamilyActionType.PERSONAL_MISSION.category),
+                    occurrence(4L, "Child routine", 101L, FamilyActionType.PERSONAL_ROUTINE.category),
+                )))
+            }
+            val parent = exploration(identity(100L, "PARENT"), true, family = family).uiState.value
+            assertEquals(listOf("Papa mission"), parent.personalTasks.map { it.occurrence.title })
+            assertTrue(parent.routines.isEmpty())
+            assertTrue(parent.houseTasks.isEmpty())
+            val child = exploration(identity(101L, "CHILD"), true, family = family).uiState.value
+            assertTrue(child.personalTasks.isEmpty())
+            assertEquals(listOf("Child routine"), child.routines.map { it.title })
+            assertTrue(child.houseTasks.isEmpty())
         } finally { Dispatchers.resetMain() }
     }
 
@@ -244,6 +286,11 @@ class AccountSessionViewModelTest {
     private fun definition(id: Long, title: String, assignee: Long?) = FamilyTaskDefinition(
         id, 1L, title, null, assignee?.let { listOf(FamilyTaskAssignee(it, title)) }.orEmpty(),
         null, null, false, null, FamilyTaskRecurrence.NONE, emptyList(), false, false, FamilyTaskPriority.NORMAL, true,
+    )
+
+    private fun occurrence(id: Long, title: String, assignee: Long, category: String?) = FamilyTaskTodayItem(
+        id, id, title, listOf(FamilyTaskAssignee(assignee, title)), "2026-10-04", "2026-10-04", null, false, null,
+        FamilyTaskStatus.TODO, false, false, FamilyTaskPriority.NORMAL, category = category,
     )
 
     private inline fun <reified T> unused(): T = Proxy.newProxyInstance(T::class.java.classLoader, arrayOf(T::class.java)) { _, method, _ ->

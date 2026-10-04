@@ -4,6 +4,7 @@ import com.example.taskoday.domain.model.FamilyTaskAssignee
 import com.example.taskoday.domain.model.FamilyTaskPriority
 import com.example.taskoday.domain.model.FamilyTaskStatus
 import com.example.taskoday.domain.model.FamilyTaskTodayItem
+import com.example.taskoday.domain.model.FamilyActionType
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -58,13 +59,14 @@ fun buildFamilyTaskSections(tasks: List<FamilyTaskTodayItem>): List<FamilyTaskMe
         .sortedWith(compareBy<FamilyTaskMemberSection> { if (it.name == HOUSE_LABEL) 0 else 1 }.thenBy { it.name.lowercase(Locale.FRANCE) })
 }
 
-/** Tasks displayed by Ma Maison: only household tasks without an assignee. */
+/** Historical FamilyTask rows and explicit house quests are collective, even when assigned. */
 fun familyHouseTasks(tasks: List<FamilyTaskTodayItem>): List<FamilyTaskTodayItem> =
-    tasks.filter { task -> task.assignees.isEmpty() }
+    tasks.filter { task -> FamilyActionType.fromCategory(task.category) == FamilyActionType.HOUSE_QUEST }
 
-/** Daily view before the product-space classification: own actions and common tasks. */
+/** Every family member sees the collective day; completion rights still follow the assignees. */
 fun visibleDailyTasks(tasks: List<FamilyTaskTodayItem>, access: FamilyTaskAccessPolicy): List<FamilyTaskTodayItem> =
-    tasks.filter { access.canView(it.assignees) }.distinctBy { it.occurrenceId }
+    if (access.userId == null || (!access.canManage && !access.role.equals("CHILD", ignoreCase = true))) emptyList()
+    else familyHouseTasks(tasks).distinctBy { it.occurrenceId }
 
 fun pendingDailyTasks(tasks: List<FamilyTaskTodayItem>): List<FamilyTaskTodayItem> =
     tasks.filterNot { it.status.countsAsDone }

@@ -70,6 +70,7 @@ import com.example.taskoday.domain.model.FamilyTaskMember
 import com.example.taskoday.domain.model.FamilyTaskMemberRole
 import com.example.taskoday.domain.model.FamilyTaskPriority
 import com.example.taskoday.domain.model.FamilyTaskRecurrence
+import com.example.taskoday.domain.model.FamilyActionType
 import java.time.LocalDate
 import java.time.LocalTime
 import java.util.Locale
@@ -127,7 +128,7 @@ fun FamilyTaskCreateScreen(
                 verticalArrangement = Arrangement.spacedBy(spacing.medium),
             ) {
                 item {
-                    FamilyTaskCreateHeader(isEditing = uiState.isEditing, quickMode = quickMode, onBack = onBack)
+                    FamilyTaskCreateHeader(isEditing = uiState.isEditing, actionType = uiState.actionType, onBack = onBack)
                 }
 
                 if (uiState.isLoadingTask) {
@@ -217,11 +218,15 @@ private fun QuickTaskForm(
             modifier = Modifier.fillMaxWidth().focusRequester(requester),
         )
         Text("Pour qui ?", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = InkBrown)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            FilterChip(selected = uiState.isHouseTask, onClick = onSelectHouse, label = { Text("Maison") })
-            uiState.members.sortedWith(compareBy<FamilyTaskMember> { it.role != FamilyTaskMemberRole.CHILD }.thenBy { it.displayName }).forEach { member ->
-                FilterChip(selected = member.userId in uiState.selectedAssigneeUserIds, onClick = { onToggleAssignee(member.userId) }, label = { Text(member.displayName) })
+        if (uiState.actionType == FamilyActionType.HOUSE_QUEST) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                FilterChip(selected = uiState.isHouseTask, onClick = onSelectHouse, label = { Text("Maison") })
+                uiState.members.sortedWith(compareBy<FamilyTaskMember> { it.role != FamilyTaskMemberRole.CHILD }.thenBy { it.displayName }).forEach { member ->
+                    FilterChip(selected = member.userId in uiState.selectedAssigneeUserIds, onClick = { onToggleAssignee(member.userId) }, label = { Text(member.displayName) })
+                }
             }
+        } else {
+            Text(uiState.members.firstOrNull { it.userId in uiState.selectedAssigneeUserIds }?.displayName ?: "Personne indisponible", color = InkMuted)
         }
         Text("Quand ?", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = InkBrown)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -253,7 +258,7 @@ private fun QuickTaskForm(
 @Composable
 private fun FamilyTaskCreateHeader(
     isEditing: Boolean,
-    quickMode: Boolean = false,
+    actionType: FamilyActionType,
     onBack: () -> Unit,
 ) {
     ElevatedCard(
@@ -278,7 +283,11 @@ private fun FamilyTaskCreateHeader(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(
-                    text = if (isEditing) "Modifier la tâche familiale" else "Nouvelle tâche familiale",
+                    text = if (isEditing) "Modifier l'action" else when (actionType) {
+                        FamilyActionType.HOUSE_QUEST -> "Nouvelle quête Maison"
+                        FamilyActionType.PERSONAL_ROUTINE -> "Nouvelle routine"
+                        FamilyActionType.PERSONAL_MISSION -> "Nouvelle mission"
+                    },
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = InkBrown,

@@ -2,6 +2,7 @@ package com.example.taskoday.features.exploration
 
 import com.example.taskoday.domain.model.FamilyTaskRecurrence
 import com.example.taskoday.domain.model.FamilyTaskTodayItem
+import com.example.taskoday.domain.model.FamilyActionType
 import com.example.taskoday.data.repository.RemotePlanningIdCodec
 import com.example.taskoday.domain.model.TaskForDay
 import com.example.taskoday.domain.model.QuestForDay
@@ -21,9 +22,9 @@ enum class ExplorationCategory {
     HOUSEHOLD,
 }
 
-fun FamilyTaskTodayItem.isHouseholdTask(): Boolean = assignees.isEmpty()
+fun FamilyTaskTodayItem.isHouseholdTask(): Boolean = FamilyActionType.fromCategory(category) == FamilyActionType.HOUSE_QUEST
 
-fun FamilyTaskTodayItem.isPersonalTask(): Boolean = assignees.isNotEmpty()
+fun FamilyTaskTodayItem.isPersonalTask(): Boolean = !isHouseholdTask()
 
 fun FamilyTaskTodayItem.isRecurringTask(): Boolean = recurrenceLabel
     ?.trim()
@@ -33,7 +34,7 @@ fun FamilyTaskTodayItem.isRecurringTask(): Boolean = recurrenceLabel
 
 fun FamilyTaskTodayItem.explorationCategory(): ExplorationCategory = when {
     isHouseholdTask() -> ExplorationCategory.HOUSEHOLD
-    isRecurringTask() -> ExplorationCategory.PERSONAL_ROUTINE
+    FamilyActionType.fromCategory(category) == FamilyActionType.PERSONAL_ROUTINE -> ExplorationCategory.PERSONAL_ROUTINE
     else -> ExplorationCategory.PERSONAL_TASK
 }
 

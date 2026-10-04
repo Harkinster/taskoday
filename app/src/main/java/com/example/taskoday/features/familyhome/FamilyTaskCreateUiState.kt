@@ -3,10 +3,13 @@ package com.example.taskoday.features.familyhome
 import com.example.taskoday.domain.model.FamilyTaskMember
 import com.example.taskoday.domain.model.FamilyTaskPriority
 import com.example.taskoday.domain.model.FamilyTaskRecurrence
+import com.example.taskoday.domain.model.FamilyActionType
 import java.time.LocalDate
 
 data class FamilyTaskCreateUiState(
     val taskId: Long? = null,
+    val actionType: FamilyActionType = FamilyActionType.HOUSE_QUEST,
+    val category: String? = FamilyActionType.HOUSE_QUEST.category,
     val isLoadingTask: Boolean = false,
     val isLoadingMembers: Boolean = true,
     val members: List<FamilyTaskMember> = emptyList(),

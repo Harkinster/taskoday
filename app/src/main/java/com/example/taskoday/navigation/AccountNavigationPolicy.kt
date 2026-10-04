@@ -7,13 +7,15 @@ internal fun AuthenticatedUser?.preferredAppRoute(isLocalMode: Boolean): String 
         isLocalMode -> TaskodayDestination.Home.route
         this?.role?.equals("PARENT", ignoreCase = true) == true && familyIds.isEmpty() ->
             TaskodayDestination.FamilyHousehold.route
-        this?.role?.equals("PARENT", ignoreCase = true) == true ||
-            this?.role?.equals("CHILD", ignoreCase = true) == true -> TaskodayDestination.FamilyHome.route
+        this?.role?.equals("PARENT", ignoreCase = true) == true -> TaskodayDestination.FamilyHome.route
+        this?.role?.equals("CHILD", ignoreCase = true) == true -> TaskodayDestination.Exploration.route
         else -> TaskodayDestination.Home.route
     }
 
-internal fun accountHomeDestination(hasRemoteSession: Boolean, localChildMode: Boolean): TaskodayDestination =
-    if (hasRemoteSession && !localChildMode) TaskodayDestination.FamilyHome else TaskodayDestination.Home
+internal fun accountHomeDestination(hasRemoteSession: Boolean, localChildMode: Boolean, isChild: Boolean = false): TaskodayDestination =
+    if (hasRemoteSession && !localChildMode) {
+        if (isChild) TaskodayDestination.Exploration else TaskodayDestination.FamilyHome
+    } else TaskodayDestination.Home
 
 internal fun canEnterParentDestination(
     verifiedParentSession: Boolean,

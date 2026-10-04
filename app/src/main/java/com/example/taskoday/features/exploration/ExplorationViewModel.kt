@@ -55,7 +55,6 @@ class ExplorationViewModel
 
         fun refresh() {
             loadJob?.cancel()
-            val previousSelection = _uiState.value.selectedMemberId
             _uiState.value = ExplorationUiState()
             loadJob = viewModelScope.launch {
                 runCatching {
@@ -64,7 +63,7 @@ class ExplorationViewModel
                     val familyMembers = familyTasksRepository.fetchMembers().getOrThrow()
                     val children = runCatching { childrenRepository.fetchChildren() }.getOrDefault(emptyList())
                     val members =
-                        familyMembers.filter { access.canManage || it.userId == me.id }.map { member ->
+                        familyMembers.filter { it.userId == me.id }.map { member ->
                             val childLabel =
                                 children.firstOrNull { child ->
                                     !member.email.isNullOrBlank() && child.email.equals(member.email, ignoreCase = true)
@@ -81,7 +80,7 @@ class ExplorationViewModel
                         val ownChildId = authRepository.getActiveChildId(forceRefresh = true)
                         childProfileIds = ownChildId?.let { mapOf(me.id to it) }.orEmpty()
                     }
-                    val selected = resolveSelection(me.id, members, previousSelection)
+                    val selected = me.id to (members.firstOrNull()?.displayName ?: "Moi")
                     _uiState.update {
                         it.copy(
                             access = access,
@@ -96,22 +95,6 @@ class ExplorationViewModel
                     _uiState.update {
                         ExplorationUiState(isLoading = false, errorMessage = error.toRemoteUserMessage("Exploration indisponible."))
                     }
-                }
-            }
-        }
-
-        fun selectMember(memberId: Long) {
-            val member = _uiState.value.members.firstOrNull { it.id == memberId } ?: return
-            loadJob?.cancel()
-            val previous = _uiState.value
-            _uiState.value = ExplorationUiState(access = previous.access, members = previous.members, selectedMemberId = member.id, selectedMemberName = member.displayName)
-            loadJob = viewModelScope.launch {
-                try {
-                    loadSelectedMember(member.id, member.displayName)
-                } catch (error: CancellationException) {
-                    throw error
-                } catch (error: Exception) {
-                    _uiState.value = ExplorationUiState(isLoading = false, errorMessage = error.toRemoteUserMessage("Exploration indisponible."))
                 }
             }
         }
@@ -175,25 +158,18 @@ class ExplorationViewModel
             val overduePersonal = overdue.filter { task -> memberId != null && task.assignees.any { it.id == memberId } && task.explorationCategory() == ExplorationCategory.PERSONAL_TASK }
             val recurringPersonal = allToday.filter { task -> memberId != null && task.assignees.any { it.id == memberId } && task.explorationCategory() == ExplorationCategory.PERSONAL_ROUTINE }
             val overdueRecurringPersonal = overdue.filter { task -> memberId != null && task.assignees.any { it.id == memberId } && task.explorationCategory() == ExplorationCategory.PERSONAL_ROUTINE }
-            val house = allToday.filter { it.assignees.isEmpty() }
-            val overdueHouse = overdue.filter { it.assignees.isEmpty() }
             val childId = memberId?.let { childProfileIds[it] }
             var routinesSynced = false
             var missionsSynced = false
-            var questsSynced = false
             if (childId != null) {
                 authRepository.setActiveChildId(childId)
                 routinesSynced = routinesRepository.syncRoutinesForDay(DateTimeUtils.startOfDayMillis()).usedRemoteData
                 missionsSynced = missionsRepository.syncMissions().usedRemoteData
-                questsSynced = questsRepository.syncQuests().usedRemoteData
             }
             // Never fall back to seeds or a previous member's cache when sync is unavailable.
             val tasks = if (childId != null) remoteExplorationTasks(
                 taskRepository.observeTasksForDay(DateTimeUtils.startOfDayMillis()).first()
             ).filter { if (it.isRoutineItem()) routinesSynced else missionsSynced } else emptyList()
-            val quests = if (questsSynced) remoteExplorationQuests(
-                questRepository.observeQuestsForDay(DateTimeUtils.startOfDayMillis()).first()
-            ) else emptyList()
             _uiState.update {
                 it.copy(
                     isLoading = false,
@@ -223,20 +199,13 @@ class ExplorationViewModel
                         )
                     },
                     missions = tasks.filterNot(TaskForDay::isRoutineItem),
-                    houseTasks = house.map { task -> ExplorationTask(task, overdue.any { old -> old.occurrenceId == task.occurrenceId }) } +
-                        overdueHouse.filter { old -> house.none { task -> task.occurrenceId == old.occurrenceId } }.map { task -> ExplorationTask(task, true) },
-                    objectives = quests,
+                    houseTasks = emptyList(),
+                    objectives = emptyList(),
                     errorMessage = null,
                 )
             }
         }
 
-        private fun resolveSelection(userId: Long, members: List<ExplorationMember>, previous: Long?): Pair<Long?, String> {
-            val selected = previous?.takeIf { id -> members.any { it.id == id } }
-                ?: members.firstOrNull { it.id == userId }?.id
-                ?: members.firstOrNull()?.id
-            return selected to (members.firstOrNull { it.id == selected }?.displayName ?: "Moi")
-        }
     }
 
 private fun TaskForDay.isRoutineItem(): Boolean = task.isRoutine || task.isDaily
