@@ -130,6 +130,14 @@ class FamilyTaskCreatePolicyTest {
     }
 
     @Test
+    fun `quick date choices default to today tomorrow and an explicit evening hour`() {
+        val today = LocalDate.of(2026, 10, 4)
+        assertEquals("2026-10-04" to null, quickTaskWhenSelection(QuickTaskWhen.TODAY, today))
+        assertEquals("2026-10-05" to null, quickTaskWhenSelection(QuickTaskWhen.TOMORROW, today))
+        assertEquals("2026-10-04" to "19:00", quickTaskWhenSelection(QuickTaskWhen.EVENING, today))
+    }
+
+    @Test
     fun `custom recurrence validates interval minimum and selected weekdays`() {
         val noDay = validateFamilyTaskCreateForm(validForm(recurrence = FamilyTaskRecurrence.SELECTED_WEEKDAYS, selectedWeekdays = emptySet(), recurrenceInterval = 0))
         assertFalse(noDay.isValid)

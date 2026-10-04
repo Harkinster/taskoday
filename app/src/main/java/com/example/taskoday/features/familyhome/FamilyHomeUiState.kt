@@ -9,6 +9,8 @@ data class FamilyHomeUiState(
     val todayDate: String? = null,
     val dateLabel: String = "",
     val sections: List<FamilyTaskMemberSection> = emptyList(),
+    val todayTasks: List<FamilyTaskRow> = emptyList(),
+    val completedTodayTasks: List<FamilyTaskRow> = emptyList(),
     val totalTasks: Int = 0,
     val completedTasks: Int = 0,
     val pendingValidationTasks: Int = 0,

@@ -11,6 +11,16 @@ import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 import java.util.Locale
 
+enum class QuickTaskWhen { TODAY, TOMORROW, EVENING }
+
+/** Evening is an explicit 19:00 shortcut; the label shows the hour before selection. */
+fun quickTaskWhenSelection(choice: QuickTaskWhen, today: LocalDate): Pair<String, String?> =
+    when (choice) {
+        QuickTaskWhen.TODAY -> today.toString() to null
+        QuickTaskWhen.TOMORROW -> today.plusDays(1).toString() to null
+        QuickTaskWhen.EVENING -> today.toString() to "19:00"
+    }
+
 data class FamilyTaskCreateForm(
     val title: String,
     val description: String,

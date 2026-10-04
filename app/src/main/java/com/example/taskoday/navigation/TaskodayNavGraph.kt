@@ -341,7 +341,7 @@ fun TaskodayApp() {
                     onOpenProfile = navigateToProfile,
                     onAddTask = { date ->
                         if (!localChildMode && viewModel.uiState.value.access.canManage) {
-                            navController.navigate(TaskodayDestination.FamilyTaskCreate.createRoute(date))
+                            navController.navigate(TaskodayDestination.FamilyTaskCreate.createRoute(date, quick = true))
                         }
                     },
                     onOpenAllTasks = { navController.navigate(TaskodayDestination.FamilyTasksList.route) },
@@ -356,7 +356,7 @@ fun TaskodayApp() {
                     onBack = { navController.popBackStack() },
                     onAddTask = {
                         if (!localChildMode && viewModel.uiState.value.access.canManage) {
-                            navController.navigate(TaskodayDestination.FamilyTaskCreate.createRoute())
+                            navController.navigate(TaskodayDestination.FamilyTaskCreate.createRoute(quick = true))
                         }
                     },
                     onOpenTask = { taskId -> navController.navigate(TaskodayDestination.FamilyTaskDetail.createRoute(taskId)) },
@@ -426,15 +426,24 @@ fun TaskodayApp() {
             composable(
                 route = TaskodayDestination.FamilyTaskEdit.route,
                 arguments = listOf(navArgument(TaskodayDestination.FamilyTaskEdit.ARG_TASK_ID) { type = NavType.LongType }),
-            ) {
+            ) { entry ->
                 if (!ParentDestinationAccess(quickAddUiState.isLoading, quickAddUiState.canOpenQuickAdd, activeChildRole, localChildMode) { navController.popBackStack() }) return@composable
                 val viewModel: FamilyTaskCreateViewModel = hiltViewModel()
                 FamilyTaskCreateScreen(
                     viewModel = viewModel,
                     onBack = { navController.popBackStack() },
                     onCreated = {
-                        navController.popBackStack(TaskodayDestination.FamilyHome.route, inclusive = false)
+                        val taskId = entry.arguments?.getLong(TaskodayDestination.FamilyTaskEdit.ARG_TASK_ID) ?: -1L
+                        if (taskId > 0L) {
+                            navController.navigate(TaskodayDestination.FamilyTaskDetail.createRoute(taskId)) {
+                                popUpTo(TaskodayDestination.FamilyTaskEdit.route) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        } else {
+                            navController.popBackStack()
+                        }
                     },
+                    quickMode = true,
                 )
             }
 

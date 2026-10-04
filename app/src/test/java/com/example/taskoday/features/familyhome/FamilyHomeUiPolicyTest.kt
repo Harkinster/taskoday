@@ -28,6 +28,18 @@ class FamilyHomeUiPolicyTest {
     }
 
     @Test
+    fun `daily partitions separate work from completed actions`() {
+        val tasks = listOf(
+            task(title = "A faire", status = FamilyTaskStatus.TODO),
+            task(title = "A valider", status = FamilyTaskStatus.PENDING_VALIDATION),
+            task(title = "Terminee", status = FamilyTaskStatus.COMPLETED),
+        )
+        assertEquals(listOf("A faire", "A valider"), pendingDailyTasks(tasks).map { it.title })
+        assertEquals(listOf("Terminee"), completedDailyTasks(tasks).map { it.title })
+        assertEquals("En attente de validation", familyTaskStatusLabel(FamilyTaskStatus.PENDING_VALIDATION))
+    }
+
+    @Test
     fun `maison filter excludes personal and multi assigned tasks`() {
         val member = FamilyTaskAssignee(id = 1L, displayName = "Ada")
         val tasks =

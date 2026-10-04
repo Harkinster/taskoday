@@ -214,38 +214,32 @@ fun FamilyHomeScreen(
                         }
                     }
 
-                    if (uiState.sections.isEmpty() && uiState.overdueTotalTasks == 0) {
+                    if (uiState.todayTasks.isEmpty() && uiState.completedTodayTasks.isEmpty() && uiState.overdueTotalTasks == 0) {
                         item { EmptyFamilyHomeCard() }
                     } else {
-                        item {
-                            FamilyHomeSectionTitle(
-                                title = "Aujourd'hui",
-                                detail = "${uiState.completedTasks} / ${uiState.totalTasks} terminées",
-                            )
+                        if (uiState.todayTasks.isNotEmpty()) {
+                            item { FamilyHomeSectionTitle(title = "Aujourd'hui", detail = "${uiState.todayTasks.size} à faire") }
+                            items(uiState.todayTasks, key = { "today-${it.task.occurrenceId}" }) { row ->
+                                FamilyTaskRowCard(
+                                    access = uiState.access,
+                                    task = row.task,
+                                    isActing = uiState.actingOccurrenceId == row.task.occurrenceId,
+                                    onQuickAction = viewModel::runQuickAction,
+                                    onOpenTask = onOpenTask,
+                                )
+                            }
                         }
-                        items(
-                            items = uiState.sections,
-                            key = { section -> section.key },
-                        ) { section ->
-                            FamilyMemberSectionCard(
-                                access = uiState.access,
-                                section = section,
-                                actingOccurrenceId = uiState.actingOccurrenceId,
-                                onQuickAction = viewModel::runQuickAction,
-                                onOpenTask = onOpenTask,
-                            )
-                        }
-                    }
-
-                    if (uiState.upcomingSections.isNotEmpty()) {
-                        item {
-                            FamilyUpcomingSectionCard(
-                                sections = uiState.upcomingSections,
-                                totalCount = uiState.upcomingTotalTasks,
-                                hasMore = uiState.hasMoreUpcomingTasks,
-                                onShowWeek = viewModel::showWeek,
-                                onOpenTask = onOpenTask,
-                            )
+                        if (uiState.completedTodayTasks.isNotEmpty()) {
+                            item { FamilyHomeSectionTitle(title = "Terminées", detail = "${uiState.completedTodayTasks.size}") }
+                            items(uiState.completedTodayTasks, key = { "done-${it.task.occurrenceId}" }) { row ->
+                                FamilyTaskRowCard(
+                                    access = uiState.access,
+                                    task = row.task,
+                                    isActing = uiState.actingOccurrenceId == row.task.occurrenceId,
+                                    onQuickAction = viewModel::runQuickAction,
+                                    onOpenTask = onOpenTask,
+                                )
+                            }
                         }
                     }
                 } else {
@@ -1038,6 +1032,7 @@ private enum class MessageTone {
 
 private fun FamilyTaskTodayItem.details(): List<String> =
     buildList {
+        add(familyTaskAssignmentLabel(this@details))
         familyTaskDueLabel(
             dueDate = dueDate,
             dueTime = dueTime,

@@ -62,6 +62,16 @@ fun buildFamilyTaskSections(tasks: List<FamilyTaskTodayItem>): List<FamilyTaskMe
 fun familyHouseTasks(tasks: List<FamilyTaskTodayItem>): List<FamilyTaskTodayItem> =
     tasks.filter { task -> task.assignees.isEmpty() }
 
+/** Daily view before the product-space classification: own actions and common tasks. */
+fun visibleDailyTasks(tasks: List<FamilyTaskTodayItem>, access: FamilyTaskAccessPolicy): List<FamilyTaskTodayItem> =
+    tasks.filter { access.canView(it.assignees) }.distinctBy { it.occurrenceId }
+
+fun pendingDailyTasks(tasks: List<FamilyTaskTodayItem>): List<FamilyTaskTodayItem> =
+    tasks.filterNot { it.status.countsAsDone }
+
+fun completedDailyTasks(tasks: List<FamilyTaskTodayItem>): List<FamilyTaskTodayItem> =
+    tasks.filter { it.status.countsAsDone }
+
 fun buildFamilyTaskOverduePreview(
     tasks: List<FamilyTaskTodayItem>,
     previewLimit: Int = FAMILY_TASK_OVERDUE_PREVIEW_LIMIT,

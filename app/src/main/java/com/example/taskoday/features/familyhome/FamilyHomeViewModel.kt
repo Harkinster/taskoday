@@ -194,10 +194,10 @@ class FamilyHomeViewModel
                             .getOrNull()
                             ?.occurrences
                             .orEmpty()
-                    val houseTasks = visibleHouseTasks(today.tasks)
-                    val houseOverdueTasks = visibleHouseTasks(overdueTasks)
-                    val houseUpcomingTasks = visibleHouseTasks(upcomingTasks)
-                    val sections = buildFamilyTaskSections(houseTasks)
+                    val dailyTasks = visibleDailyTasks(today.tasks, _uiState.value.access)
+                    val visibleOverdueTasks = visibleDailyTasks(overdueTasks, _uiState.value.access)
+                    val visibleUpcomingTasks = visibleDailyTasks(upcomingTasks, _uiState.value.access)
+                    val sections = buildFamilyTaskSections(dailyTasks)
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -206,22 +206,24 @@ class FamilyHomeViewModel
                             todayDate = todayDate,
                             dateLabel = formatFamilyHomeDateLabel(todayDate, fallback = todayReference),
                             sections = sections,
-                            totalTasks = houseTasks.size,
-                            completedTasks = houseTasks.count { task -> task.status.countsAsDone },
-                            pendingValidationTasks = familyTaskPendingValidationCount(houseTasks),
-                            overdueTasks = buildFamilyTaskOverduePreview(houseOverdueTasks),
-                            overdueTotalTasks = houseOverdueTasks.size,
+                            todayTasks = pendingDailyTasks(dailyTasks).map(::FamilyTaskRow),
+                            completedTodayTasks = completedDailyTasks(dailyTasks).map(::FamilyTaskRow),
+                            totalTasks = dailyTasks.size,
+                            completedTasks = dailyTasks.count { task -> task.status.countsAsDone },
+                            pendingValidationTasks = familyTaskPendingValidationCount(dailyTasks),
+                            overdueTasks = buildFamilyTaskOverduePreview(visibleOverdueTasks),
+                            overdueTotalTasks = visibleOverdueTasks.size,
                             upcomingSections =
                                 buildFamilyTaskUpcomingSections(
-                                    tasks = houseUpcomingTasks,
+                                    tasks = visibleUpcomingTasks,
                                     today = todayReference,
                                 ),
-                            upcomingTotalTasks = houseUpcomingTasks.size,
+                            upcomingTotalTasks = visibleUpcomingTasks.size,
                             upcomingStartDate = upcomingWindow.startDate.toString(),
                             upcomingEndDate = upcomingWindow.endDate.toString(),
                             hasMoreUpcomingTasks =
                                 hasMoreFamilyTaskUpcomingPreview(
-                                    tasks = houseUpcomingTasks,
+                                    tasks = visibleUpcomingTasks,
                                     today = todayReference,
                                 ),
                             isWeekEmpty = false,
@@ -238,6 +240,8 @@ class FamilyHomeViewModel
                             todayDate = null,
                             dateLabel = formatFamilyHomeDateLabel(null),
                             sections = emptyList(),
+                            todayTasks = emptyList(),
+                            completedTodayTasks = emptyList(),
                             totalTasks = 0,
                             completedTasks = 0,
                             pendingValidationTasks = 0,
@@ -281,7 +285,7 @@ class FamilyHomeViewModel
                             weekStartDate = activeWeekWindow.startDate,
                             today = resolvedTodayDate(),
                         )
-                    weekOccurrences = visibleHouseTasks(range.occurrences)
+                    weekOccurrences = visibleDailyTasks(range.occurrences, _uiState.value.access)
                     applyWeekSelection(
                         familyId = range.familyId,
                         isLoading = false,
@@ -319,6 +323,8 @@ class FamilyHomeViewModel
                     familyId = familyId,
                     dateLabel = formatFamilyHomeDateLabel(today.toString()),
                     sections = sections,
+                    todayTasks = pendingDailyTasks(selectedTasks).map(::FamilyTaskRow),
+                    completedTodayTasks = completedDailyTasks(selectedTasks).map(::FamilyTaskRow),
                     totalTasks = selectedTasks.size,
                     completedTasks = selectedTasks.count { task -> task.status.countsAsDone },
                     pendingValidationTasks = familyTaskPendingValidationCount(selectedTasks),
@@ -360,9 +366,6 @@ class FamilyHomeViewModel
                 )
             }
         }
-
-        private fun visibleHouseTasks(tasks: List<FamilyTaskTodayItem>): List<FamilyTaskTodayItem> =
-            familyHouseTasks(tasks).filter { _uiState.value.access.canView(it.assignees) }
 
         private fun resolvedTodayDate(): LocalDate =
             parseFamilyTaskDateInput(_uiState.value.todayDate.orEmpty()) ?: LocalDate.now()

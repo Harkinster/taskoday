@@ -84,8 +84,10 @@ fun FamilyTaskCreateScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val spacing = MaterialTheme.spacing
 
+    var creationHandled by remember { mutableStateOf(false) }
     LaunchedEffect(uiState.created) {
-        if (uiState.created) {
+        if (uiState.created && !creationHandled) {
+            creationHandled = true
             onCreated()
         }
     }
@@ -196,11 +198,16 @@ private fun QuickTaskForm(
     val requester = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
     val context = LocalContext.current
+    val today = LocalDate.now()
+    fun selectWhen(choice: QuickTaskWhen) {
+        val (date, time) = quickTaskWhenSelection(choice, today)
+        onDateChanged(date)
+        if (time == null) onClearTime() else onTimeChanged(time)
+    }
     LaunchedEffect(Unit) {
         requester.requestFocus()
         keyboard?.show()
     }
-    val today = LocalDate.now()
     FamilyTaskCreateCard(title = "Que faut-il faire ?") {
         OutlinedTextField(
             value = uiState.title,
@@ -210,26 +217,30 @@ private fun QuickTaskForm(
             modifier = Modifier.fillMaxWidth().focusRequester(requester),
         )
         Text("Pour qui ?", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = InkBrown)
-        Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             FilterChip(selected = uiState.isHouseTask, onClick = onSelectHouse, label = { Text("Maison") })
-            uiState.members.forEach { member ->
+            uiState.members.sortedWith(compareBy<FamilyTaskMember> { it.role != FamilyTaskMemberRole.CHILD }.thenBy { it.displayName }).forEach { member ->
                 FilterChip(selected = member.userId in uiState.selectedAssigneeUserIds, onClick = { onToggleAssignee(member.userId) }, label = { Text(member.displayName) })
             }
         }
         Text("Quand ?", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = InkBrown)
-        Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(selected = uiState.date == today.toString(), onClick = { onDateChanged(today.toString()) }, label = { Text("Aujourd'hui") })
-            FilterChip(selected = uiState.date == today.plusDays(1).toString(), onClick = { onDateChanged(today.plusDays(1).toString()) }, label = { Text("Demain") })
-            FilterChip(selected = false, onClick = { onDateChanged(today.toString()) }, label = { Text("Cette semaine") })
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            FilterChip(selected = uiState.date == today.toString() && uiState.time.isBlank(), onClick = { selectWhen(QuickTaskWhen.TODAY) }, label = { Text("Aujourd'hui") })
+            FilterChip(selected = uiState.date == today.plusDays(1).toString() && uiState.time.isBlank(), onClick = { selectWhen(QuickTaskWhen.TOMORROW) }, label = { Text("Demain") })
+            FilterChip(selected = uiState.date == today.toString() && uiState.time == "19:00", onClick = { selectWhen(QuickTaskWhen.EVENING) }, label = { Text("Ce soir · 19 h") })
             FilterChip(selected = false, onClick = {
                 val selected = parseFamilyTaskDateInput(uiState.date) ?: today
                 DatePickerDialog(context, { _, year, month, day -> onDateChanged(LocalDate.of(year, month + 1, day).toString()) }, selected.year, selected.monthValue - 1, selected.dayOfMonth).show()
-            }, label = { Text("Choisir") })
+            }, label = { Text("Choisir une date") })
+        }
+        if (uiState.date != today.toString() && uiState.date != today.plusDays(1).toString()) {
+            Text("Prévue le ${formatFamilyTaskDateLabel(uiState.date)}", style = MaterialTheme.typography.bodySmall, color = InkMuted)
         }
         TextButton(onClick = {
             val selected = parseFamilyTaskTimeInput(uiState.time) ?: LocalTime.now()
             TimePickerDialog(context, { _, hour, minute -> onTimeChanged(String.format(Locale.US, "%02d:%02d", hour, minute)) }, selected.hour, selected.minute, true).show()
         }) { Text(if (uiState.time.isBlank()) "+ Ajouter une heure" else "Heure : ${uiState.time}") }
+        if (uiState.time.isNotBlank()) TextButton(onClick = onClearTime) { Text("Retirer l'heure") }
         TextButton(onClick = { showMore = !showMore }) { Text(if (showMore) "Moins d'options" else "Plus d'options") }
         if (showMore) {
             OutlinedTextField(value = uiState.description, onValueChange = onDescriptionChanged, label = { Text("Note (facultatif)") }, minLines = 2, maxLines = 3, modifier = Modifier.fillMaxWidth())
@@ -277,7 +288,7 @@ private fun FamilyTaskCreateHeader(
                         if (isEditing) {
                             "Ajuste l'organisation sans toucher aux occurrences à la main."
                         } else {
-                            "Organise la journée sans mélanger la partie Chronodria."
+                            "Organise la journée en quelques choix."
                         },
                     style = MaterialTheme.typography.bodyMedium,
                     color = InkMuted,
