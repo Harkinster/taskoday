@@ -8,7 +8,14 @@ from app.db.session import get_db
 from app.dependencies import get_current_user, success_response
 from app.models.family_task import FamilyTask, FamilyTaskOccurrenceStatus, FamilyTaskPriority, FamilyTaskRecurrence
 from app.models.user import User
-from app.schemas.family_task import FamilyTaskCreateRequest, FamilyTaskUpdateRequest
+from app.schemas.common import SuccessResponse
+from app.schemas.family_task import (
+    FamilyTaskCreateRequest,
+    FamilyTaskOccurrenceResponse,
+    FamilyTaskOccurrencesRangeResponse,
+    FamilyTaskUpdateRequest,
+    FamilyTasksTodayResponse,
+)
 from app.services.family_task_service import (
     complete_occurrence,
     ensure_family_member,
@@ -102,7 +109,7 @@ def create_family_task(
     return success_response(task_payload(db, task), message="Tache familiale creee.")
 
 
-@router.get("/families/{family_id}/tasks/today")
+@router.get("/families/{family_id}/tasks/today", response_model=SuccessResponse[FamilyTasksTodayResponse])
 def family_tasks_today(
     family_id: int,
     target_date: date | None = Query(default=None, alias="date"),
@@ -130,7 +137,7 @@ def family_tasks_today(
     )
 
 
-@router.get("/families/{family_id}/task-occurrences")
+@router.get("/families/{family_id}/task-occurrences", response_model=SuccessResponse[FamilyTaskOccurrencesRangeResponse])
 def family_task_occurrences_range(
     family_id: int,
     start_date: date,
@@ -163,7 +170,7 @@ def family_task_occurrences_range(
     )
 
 
-@router.get("/families/{family_id}/task-occurrences/overdue")
+@router.get("/families/{family_id}/task-occurrences/overdue", response_model=SuccessResponse[FamilyTaskOccurrencesRangeResponse])
 def family_task_occurrences_overdue(
     family_id: int,
     db: Session = Depends(get_db),
@@ -292,7 +299,7 @@ def deactivate_family_task(
     return success_response(task_payload(db, task), message="Tache familiale desactivee.")
 
 
-@router.post("/task-occurrences/{occurrence_id}/complete")
+@router.post("/task-occurrences/{occurrence_id}/complete", response_model=SuccessResponse[FamilyTaskOccurrenceResponse])
 def complete_family_task_occurrence(
     occurrence_id: int,
     db: Session = Depends(get_db),
@@ -309,7 +316,7 @@ def complete_family_task_occurrence(
     return success_response(occurrence_payload(db, occurrence), message="Occurrence completee.")
 
 
-@router.post("/task-occurrences/{occurrence_id}/validate")
+@router.post("/task-occurrences/{occurrence_id}/validate", response_model=SuccessResponse[FamilyTaskOccurrenceResponse])
 def validate_family_task_occurrence(
     occurrence_id: int,
     db: Session = Depends(get_db),
@@ -323,7 +330,7 @@ def validate_family_task_occurrence(
     return success_response(occurrence_payload(db, occurrence), message="Occurrence validee.")
 
 
-@router.post("/task-occurrences/{occurrence_id}/reopen")
+@router.post("/task-occurrences/{occurrence_id}/reopen", response_model=SuccessResponse[FamilyTaskOccurrenceResponse])
 def reopen_family_task_occurrence(
     occurrence_id: int,
     db: Session = Depends(get_db),

@@ -12,6 +12,35 @@ from app.services.family_task_service import occurrence_payload
 API = "/api/v1"
 
 
+def test_openapi_occurrence_contract_exposes_snapshot_category_without_losing_existing_fields(client) -> None:
+    schema = client.get("/openapi.json").json()
+    components = schema["components"]["schemas"]
+    occurrence = components["FamilyTaskOccurrenceResponse"]
+    assert "category" in occurrence["required"]
+    assert set(occurrence["properties"]["category"]["enum"]) == {
+        "TASKODAY_HOUSE_QUEST", "TASKODAY_PERSONAL_ROUTINE", "TASKODAY_PERSONAL_MISSION",
+    }
+    assert {"task_id", "occurrence_id", "title", "assignees", "scheduled_date", "status", "completed_at", "validated_at"} <= set(occurrence["properties"])
+
+    routes = (
+        ("get", "/api/v1/families/{family_id}/tasks/today"),
+        ("get", "/api/v1/families/{family_id}/task-occurrences"),
+        ("get", "/api/v1/families/{family_id}/task-occurrences/overdue"),
+        ("post", "/api/v1/task-occurrences/{occurrence_id}/complete"),
+        ("post", "/api/v1/task-occurrences/{occurrence_id}/validate"),
+        ("post", "/api/v1/task-occurrences/{occurrence_id}/reopen"),
+    )
+    for method, path in routes:
+        response = schema["paths"][path][method]["responses"]["200"]["content"]["application/json"]["schema"]
+        envelope = components[response["$ref"].split("/")[-1]]
+        data_schema = components[envelope["properties"]["data"]["$ref"].split("/")[-1]]
+        if "items" in data_schema["properties"]:
+            item_ref = data_schema["properties"]["items"]["items"]["$ref"]
+            assert item_ref.endswith("/FamilyTaskOccurrenceResponse")
+        else:
+            assert data_schema is occurrence
+
+
 @pytest.mark.parametrize(
     "category,recurrence",
     [

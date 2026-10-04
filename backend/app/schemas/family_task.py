@@ -1,4 +1,5 @@
 from datetime import date, datetime, time
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -82,3 +83,67 @@ class FamilyTaskUpdateRequest(BaseModel):
         if self.due_at is not None and (self.due_date is not None or self.due_time is not None):
             raise ValueError("due_at ne peut pas etre combine avec due_date/due_time.")
         return self
+
+
+FamilyActionCategory = Literal[
+    "TASKODAY_HOUSE_QUEST",
+    "TASKODAY_PERSONAL_ROUTINE",
+    "TASKODAY_PERSONAL_MISSION",
+]
+
+
+class FamilyTaskAssigneeResponse(BaseModel):
+    user_id: int
+    role: str
+    email: str
+    display_name: str
+
+
+class FamilyTaskActorResponse(BaseModel):
+    user_id: int
+    display_name: str
+
+
+class FamilyTaskOccurrenceResponse(BaseModel):
+    task_id: int
+    occurrence_id: int
+    category: FamilyActionCategory
+    title: str
+    description: str | None
+    assignees: list[FamilyTaskAssigneeResponse]
+    scheduled_date: date
+    due_at: datetime | None
+    due_date: date | None
+    has_due_time: bool
+    due_time: time | None
+    recurrence: str
+    recurrence_interval: int
+    status: str
+    validation_required: bool
+    gamification_enabled: bool
+    priority: str
+    completed_at: datetime | None
+    completed_by: int | None
+    completed_by_user: FamilyTaskActorResponse | None
+    validated_at: datetime | None
+    validated_by: int | None
+    validated_by_user: FamilyTaskActorResponse | None
+
+
+class FamilyTaskOccurrenceMemberGroupResponse(BaseModel):
+    assignee: FamilyTaskAssigneeResponse | None
+    items: list[FamilyTaskOccurrenceResponse]
+
+
+class FamilyTasksTodayResponse(BaseModel):
+    family_id: int
+    date: date
+    items: list[FamilyTaskOccurrenceResponse]
+    by_member: list[FamilyTaskOccurrenceMemberGroupResponse]
+
+
+class FamilyTaskOccurrencesRangeResponse(BaseModel):
+    family_id: int
+    start_date: date
+    end_date: date
+    items: list[FamilyTaskOccurrenceResponse]
