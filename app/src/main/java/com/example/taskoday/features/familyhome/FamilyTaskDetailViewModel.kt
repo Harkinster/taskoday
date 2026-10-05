@@ -30,7 +30,7 @@ class FamilyTaskDetailViewModel
             refresh()
         }
 
-        fun refresh() {
+        fun refresh(successMessage: String? = null) {
             if (taskId <= 0L) {
                 _uiState.update {
                     it.copy(
@@ -44,7 +44,7 @@ class FamilyTaskDetailViewModel
             }
 
             viewModelScope.launch {
-                _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+                _uiState.update { it.copy(isLoading = true, errorMessage = null, successMessage = successMessage) }
                 val access = runCatching { FamilyTaskAccessPolicy.forUser(authRepository.fetchMe()) }
                     .getOrDefault(FamilyTaskAccessPolicy())
                 _uiState.update { it.copy(access = access) }
@@ -79,6 +79,25 @@ class FamilyTaskDetailViewModel
                                 todayOccurrence = null,
                                 errorMessage = throwable.toRemoteUserMessage("Impossible de charger la tache."),
                             )
+                        }
+                    }
+            }
+        }
+
+        fun validateTodayOccurrence() {
+            val state = _uiState.value
+            val occurrenceId = state.todayOccurrence?.occurrenceId ?: return
+            if (!state.canValidateToday || state.isValidating || state.isDeleting) return
+            _uiState.update { it.copy(isValidating = true, errorMessage = null, successMessage = null) }
+            viewModelScope.launch {
+                familyTasksRepository.validateOccurrence(occurrenceId)
+                    .onSuccess {
+                        _uiState.update { it.copy(isValidating = false) }
+                        refresh(successMessage = "Tâche validée.")
+                    }
+                    .onFailure { throwable ->
+                        _uiState.update {
+                            it.copy(isValidating = false, errorMessage = throwable.toRemoteUserMessage("Impossible de valider la tâche."))
                         }
                     }
             }

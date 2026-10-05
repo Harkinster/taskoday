@@ -120,6 +120,18 @@ fun FamilyTaskDetailScreen(
                                 FamilyTaskDefinitionCard(task = task, todayOccurrence = uiState.todayOccurrence)
                             }
 
+                            if (uiState.canValidateToday) item {
+                                Button(
+                                    onClick = viewModel::validateTodayOccurrence,
+                                    enabled = !uiState.isValidating,
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = WoodBrown, contentColor = ParchmentLight),
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Text(if (uiState.isValidating) "Validation..." else "Valider")
+                                }
+                            }
+
                             if (uiState.access.canManage) item {
                                 FamilyTaskDetailActions(
                                     task = task,
@@ -135,6 +147,9 @@ fun FamilyTaskDetailScreen(
                             item {
                                 ErrorCard(error)
                             }
+                        }
+                        uiState.successMessage?.takeIf { it.isNotBlank() }?.let { message ->
+                            item { Text(message, color = ParchmentLight) }
                         }
                     }
                 }

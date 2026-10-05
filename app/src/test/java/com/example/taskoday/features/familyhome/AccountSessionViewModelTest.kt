@@ -189,6 +189,58 @@ class AccountSessionViewModelTest {
         } finally { Dispatchers.resetMain() }
     }
 
+    @Test fun `detail validation action follows status and existing access policy`() {
+        val occurrence = occurrence(2L, "Mission", 102L, FamilyActionType.PERSONAL_MISSION.category)
+        val parent = FamilyTaskAccessPolicy(100L, "PARENT")
+        val child = FamilyTaskAccessPolicy(102L, "CHILD")
+        assertFalse(FamilyTaskDetailUiState(access = parent, todayOccurrence = occurrence).canValidateToday)
+        val pending = occurrence.copy(status = FamilyTaskStatus.PENDING_VALIDATION)
+        assertTrue(FamilyTaskDetailUiState(access = parent, todayOccurrence = pending).canValidateToday)
+        assertFalse(FamilyTaskDetailUiState(access = child, todayOccurrence = pending).canValidateToday)
+        assertFalse(FamilyTaskDetailUiState(access = parent, todayOccurrence = pending.copy(occurrenceId = 0L)).canValidateToday)
+        assertFalse(FamilyTaskDetailUiState(access = parent, todayOccurrence = pending.copy(status = FamilyTaskStatus.COMPLETED)).canValidateToday)
+        assertFalse(FamilyTaskDetailUiState(access = parent, todayOccurrence = pending.copy(status = FamilyTaskStatus.VALIDATED)).canValidateToday)
+        assertEquals("En attente de validation", familyTaskStatusLabel(pending.status))
+        assertEquals("Terminée", familyTaskStatusLabel(FamilyTaskStatus.COMPLETED))
+        assertEquals("Validée", familyTaskStatusLabel(FamilyTaskStatus.VALIDATED))
+    }
+
+    @Test fun `detail validates through existing repository and preserves suivi selection`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        try {
+            val pending = occurrence(2L, "Mission", 102L, FamilyActionType.PERSONAL_MISSION.category)
+                .copy(status = FamilyTaskStatus.PENDING_VALIDATION)
+            var current = pending
+            var validationCalls = 0
+            val base = familyRepository()
+            val family = object : FamilyTasksRepository by base {
+                override suspend fun fetchToday() = Result.success(FamilyTasksToday(1L, "2026-10-05", listOf(current)))
+                override suspend fun validateOccurrence(occurrenceId: Long): Result<Unit> {
+                    assertEquals(pending.occurrenceId, occurrenceId)
+                    validationCalls++
+                    current = current.copy(status = FamilyTaskStatus.VALIDATED)
+                    return Result.success(Unit)
+                }
+            }
+            val parent = auth(identity(100L, "PARENT"))
+            val children = object : ChildrenRepository by unused() {
+                override suspend fun fetchChildren() = emptyList<ParentChild>()
+            }
+            val followUp = FollowUpViewModel(parent, children, family, unused(), unused(), unused(), unused())
+            followUp.selectMember(102L)
+            val detail = FamilyTaskDetailViewModel(SavedStateHandle(mapOf("taskId" to 2L)), family, parent)
+            assertTrue(detail.uiState.value.canValidateToday)
+            detail.validateTodayOccurrence()
+            assertEquals(1, validationCalls)
+            assertEquals(FamilyTaskStatus.VALIDATED, detail.uiState.value.todayOccurrence?.status)
+            assertEquals("Tâche validée.", detail.uiState.value.successMessage)
+            assertFalse(detail.uiState.value.canValidateToday)
+            followUp.refresh()
+            assertEquals(102L, followUp.uiState.value.selectedMemberId)
+            assertEquals(FamilyTaskStatus.VALIDATED, followUp.uiState.value.members.first { it.memberId == 102L }.items.single().familyTask?.status)
+        } finally { Dispatchers.resetMain() }
+    }
+
     @Test fun `authenticated exploration excludes seeds and restricts child member selection`() = runTest {
         Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
         try {
