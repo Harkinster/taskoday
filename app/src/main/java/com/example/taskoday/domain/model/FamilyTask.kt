@@ -61,6 +61,7 @@ data class FamilyTaskDefinition(
     val active: Boolean,
     val recurrenceInterval: Int = 1,
     val category: String? = null,
+    val createdAt: String? = null,
 )
 
 data class FamilyTaskTodayItem(

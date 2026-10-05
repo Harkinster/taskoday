@@ -20,11 +20,14 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -37,6 +40,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -64,6 +70,7 @@ fun FamilyTaskDetailScreen(
     viewModel: FamilyTaskDetailViewModel,
     onBack: () -> Unit,
     onEdit: (Long) -> Unit,
+    onDuplicate: (FamilyTaskDefinition) -> Unit,
     onDeleted: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -118,6 +125,7 @@ fun FamilyTaskDetailScreen(
                                     task = task,
                                     isDeleting = uiState.isDeleting,
                                     onEdit = onEdit,
+                                    onDuplicate = onDuplicate,
                                     onDelete = viewModel::requestDelete,
                                 )
                             }
@@ -235,8 +243,10 @@ private fun FamilyTaskDetailActions(
     task: FamilyTaskDefinition,
     isDeleting: Boolean,
     onEdit: (Long) -> Unit,
+    onDuplicate: (FamilyTaskDefinition) -> Unit,
     onDelete: () -> Unit,
 ) {
+    var menuExpanded by remember { mutableStateOf(false) }
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
@@ -250,6 +260,17 @@ private fun FamilyTaskDetailActions(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            Box(modifier = Modifier.align(Alignment.End)) {
+                IconButton(onClick = { menuExpanded = true }, enabled = !isDeleting) {
+                    Icon(Icons.Outlined.MoreVert, contentDescription = "Actions de la tâche")
+                }
+                DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                    DropdownMenuItem(text = { Text("Dupliquer") }, onClick = {
+                        menuExpanded = false
+                        onDuplicate(task)
+                    })
+                }
+            }
             Button(
                 onClick = { onEdit(task.id) },
                 enabled = !isDeleting,

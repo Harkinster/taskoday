@@ -34,11 +34,12 @@ sealed class TaskodayDestination(
 
     data object FamilyNotifications : TaskodayDestination(route = "family_notifications", label = "Notifications")
 
-    data object FamilyTaskCreate : TaskodayDestination(route = "family_home/create?date={date}&quick={quick}&kind={kind}&memberId={memberId}", label = "Nouvelle tâche") {
+    data object FamilyTaskCreate : TaskodayDestination(route = "family_home/create?date={date}&quick={quick}&kind={kind}&memberId={memberId}&copyFromTaskId={copyFromTaskId}", label = "Nouvelle tâche") {
         const val ARG_DATE: String = "date"
         const val ARG_QUICK: String = "quick"
         const val ARG_KIND: String = "kind"
         const val ARG_MEMBER_ID: String = "memberId"
+        const val ARG_COPY_FROM_TASK_ID: String = "copyFromTaskId"
 
         fun createRoute(date: String? = null, quick: Boolean = false, kind: FamilyActionType = FamilyActionType.HOUSE_QUEST, memberId: Long? = null): String {
             val params = buildList {
@@ -52,6 +53,9 @@ sealed class TaskodayDestination(
 
         fun createQuickRoute(date: String? = null, kind: FamilyActionType = FamilyActionType.HOUSE_QUEST, memberId: Long? = null): String =
             createRoute(date, quick = true, kind = kind, memberId = memberId)
+
+        fun createDuplicateRoute(taskId: Long, kind: FamilyActionType, memberId: Long? = null): String =
+            createQuickRoute(kind = kind, memberId = memberId) + "&copyFromTaskId=$taskId"
     }
 
     data object FamilyTaskDetail : TaskodayDestination(route = "family_home/task/{taskId}", label = "Tâche familiale") {

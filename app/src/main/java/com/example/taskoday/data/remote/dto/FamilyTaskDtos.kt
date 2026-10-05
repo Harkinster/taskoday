@@ -104,6 +104,8 @@ data class FamilyTaskDefinitionDto(
     val description: String? = null,
     @SerializedName("category")
     val category: String? = null,
+    @SerializedName("created_at")
+    val createdAt: String? = null,
     @SerializedName("assignees")
     val assignees: List<FamilyTaskAssigneeDto> = emptyList(),
     @SerializedName(value = "due_at", alternate = ["dueAt"])
@@ -380,6 +382,7 @@ fun FamilyTaskDefinitionDto.toDomain(): FamilyTaskDefinition {
         priority = FamilyTaskPriority.fromBackend(priority),
         active = active ?: true,
         category = category,
+        createdAt = createdAt,
     )
 }
 

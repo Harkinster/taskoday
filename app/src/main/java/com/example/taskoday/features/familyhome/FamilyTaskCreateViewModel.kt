@@ -10,6 +10,7 @@ import com.example.taskoday.domain.model.FamilyTaskRecurrence
 import com.example.taskoday.domain.model.FamilyActionType
 import com.example.taskoday.domain.repository.FamilyTasksRepository
 import com.example.taskoday.domain.repository.AuthRepository
+import com.example.taskoday.domain.repository.FamilyRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,8 +26,11 @@ class FamilyTaskCreateViewModel
         savedStateHandle: SavedStateHandle,
         private val familyTasksRepository: FamilyTasksRepository,
         private val authRepository: AuthRepository,
+        private val familyRepository: FamilyRepository,
     ) : ViewModel() {
         private val taskId: Long? = savedStateHandle.get<Long>("taskId")?.takeIf { it > 0L }
+        private val reuseTaskId: Long? = savedStateHandle.get<Long>("copyFromTaskId")?.takeIf { it > 0L }
+        private var loadedFamilyId: Long? = null
         private val prefilledDate: String? = savedStateHandle.get<String>("date")
         private val quickMode: Boolean = savedStateHandle.get<Boolean>("quick") == true
         private val requestedType: FamilyActionType =
@@ -39,7 +43,7 @@ class FamilyTaskCreateViewModel
                     taskId = taskId,
                     actionType = requestedType,
                     category = requestedType.category,
-                    isLoadingTask = taskId != null,
+                    isLoadingTask = taskId != null || reuseTaskId != null,
                     date = resolveFamilyTaskInitialDate(prefilledDate),
                     recurrence = if (requestedType == FamilyActionType.PERSONAL_ROUTINE) FamilyTaskRecurrence.DAILY else FamilyTaskRecurrence.NONE,
                 ),
@@ -55,10 +59,11 @@ class FamilyTaskCreateViewModel
                 _uiState.update {
                     it.copy(
                         isLoadingMembers = true,
-                        isLoadingTask = taskId != null,
+                        isLoadingTask = taskId != null || reuseTaskId != null,
                         errorMessage = null,
                     )
                 }
+                loadedFamilyId = familyRepository.getActiveFamilyId()
                 familyTasksRepository
                     .fetchMembers()
                     .onSuccess { members ->
@@ -100,6 +105,41 @@ class FamilyTaskCreateViewModel
                             }
                         }
                 }
+                reuseTaskId?.let { id ->
+                    familyTasksRepository.fetchTask(id)
+                        .onSuccess { task ->
+                            _uiState.update { state ->
+                                runCatching { reuseTaskPrefill(state, task, loadedFamilyId ?: -1L, state.members) }
+                                    .getOrElse { state.copy(errorMessage = it.message, isLoadingTask = false) }
+                                    .copy(isLoadingTask = false)
+                            }
+                        }
+                        .onFailure { throwable ->
+                            _uiState.update { it.copy(isLoadingTask = false, errorMessage = throwable.toRemoteUserMessage("Impossible de charger l'action.")) }
+                        }
+                }
+                if (taskId == null) {
+                    familyTasksRepository.fetchTasks().onSuccess { tasks ->
+                        _uiState.update { state ->
+                            state.copy(recentTasks = recentTasksForContext(tasks, loadedFamilyId ?: -1L, requestedType, targetMemberId ?: state.selectedAssigneeUserIds.singleOrNull()))
+                        }
+                    }
+                }
+            }
+        }
+
+        fun selectRecentTask(id: Long) {
+            val source = _uiState.value.recentTasks.firstOrNull { it.id == id } ?: return
+            _uiState.update { state ->
+                runCatching { reuseTaskPrefill(state, source, loadedFamilyId ?: -1L, state.members) }
+                    .getOrElse { state.copy(errorMessage = it.message) }
+            }
+        }
+
+        fun selectPersonalAssignee(userId: Long) {
+            _uiState.update { state ->
+                if (state.actionType == FamilyActionType.HOUSE_QUEST || state.members.none { it.userId == userId && it.isActive }) state
+                else state.copy(selectedAssigneeUserIds = setOf(userId), prefillWarning = null, requiresAssigneeReview = false, errorMessage = null)
             }
         }
 
@@ -172,7 +212,7 @@ class FamilyTaskCreateViewModel
         }
 
         fun selectHouseTask() {
-            _uiState.update { if (it.actionType == FamilyActionType.HOUSE_QUEST) it.copy(selectedAssigneeUserIds = emptySet(), errorMessage = null) else it }
+            _uiState.update { if (it.actionType == FamilyActionType.HOUSE_QUEST) it.copy(selectedAssigneeUserIds = emptySet(), prefillWarning = null, requiresAssigneeReview = false, errorMessage = null) else it }
         }
 
         fun toggleAssignee(userId: Long) {
@@ -184,7 +224,7 @@ class FamilyTaskCreateViewModel
                     } else {
                         it.selectedAssigneeUserIds + userId
                     }
-                it.copy(selectedAssigneeUserIds = next, errorMessage = null)
+                it.copy(selectedAssigneeUserIds = next, prefillWarning = null, requiresAssigneeReview = false, errorMessage = null)
             }
         }
 
@@ -203,6 +243,10 @@ class FamilyTaskCreateViewModel
         fun submit() {
             val current = _uiState.value
             if (current.isSubmitting) return
+            if (current.requiresAssigneeReview) {
+                _uiState.update { it.copy(errorMessage = "Vérifiez et choisissez l'attribution avant de créer.") }
+                return
+            }
 
             val validation =
                 validateFamilyTaskCreateForm(
@@ -239,6 +283,15 @@ class FamilyTaskCreateViewModel
                     .getOrDefault(false)
                 if (!canManage) {
                     _uiState.update { it.copy(isSubmitting = false, errorMessage = "Action réservée aux parents.") }
+                    return@launch
+                }
+                if (familyRepository.getActiveFamilyId() != loadedFamilyId || loadedFamilyId == null) {
+                    _uiState.update { it.copy(isSubmitting = false, recentTasks = emptyList(), errorMessage = "La famille active a changé. Fermez ce formulaire et recommencez.") }
+                    return@launch
+                }
+                val currentMembers = familyTasksRepository.fetchMembers().getOrNull()
+                if (currentMembers == null || !current.selectedAssigneeUserIds.all { id -> currentMembers.any { it.userId == id && it.isActive } }) {
+                    _uiState.update { it.copy(isSubmitting = false, errorMessage = "Un participant n'est plus membre de cette famille. Vérifiez l'attribution.") }
                     return@launch
                 }
                 val result =

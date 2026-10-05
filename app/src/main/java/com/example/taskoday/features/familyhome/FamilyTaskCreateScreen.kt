@@ -141,6 +141,8 @@ fun FamilyTaskCreateScreen(
                             QuickTaskForm(
                                 uiState = uiState,
                                 onTitleChanged = viewModel::onTitleChanged,
+                                onSelectRecent = viewModel::selectRecentTask,
+                                onSelectPersonalAssignee = viewModel::selectPersonalAssignee,
                                 onDateChanged = viewModel::onDateChanged,
                                 onTimeChanged = viewModel::onTimeChanged,
                                 onClearTime = viewModel::clearTime,
@@ -180,6 +182,8 @@ fun FamilyTaskCreateScreen(
 private fun QuickTaskForm(
     uiState: FamilyTaskCreateUiState,
     onTitleChanged: (String) -> Unit,
+    onSelectRecent: (Long) -> Unit,
+    onSelectPersonalAssignee: (Long) -> Unit,
     onDateChanged: (String) -> Unit,
     onTimeChanged: (String) -> Unit,
     onClearTime: () -> Unit,
@@ -217,6 +221,34 @@ private fun QuickTaskForm(
             singleLine = true,
             modifier = Modifier.fillMaxWidth().focusRequester(requester),
         )
+        if (uiState.recentTasks.isNotEmpty() && !uiState.isEditing) {
+            Text("Récemment créées", style = MaterialTheme.typography.titleSmall, color = InkBrown)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                uiState.recentTasks.forEach { recent ->
+                    FilterChip(
+                        selected = uiState.reusedSourceId == recent.id,
+                        onClick = { onSelectRecent(recent.id) },
+                        label = {
+                            Column {
+                                Text(recent.title, maxLines = 1)
+                                Text(
+                                    if (recent.assignees.isEmpty()) "Maison" else recent.assignees.joinToString(limit = 2) { it.displayName },
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = InkMuted,
+                                    maxLines = 1,
+                                )
+                            }
+                        },
+                    )
+                }
+            }
+        }
+        uiState.prefillWarning?.let { warning ->
+            Text(warning, style = MaterialTheme.typography.bodySmall, color = DangerGlow)
+        }
+        if (uiState.reusedSourceId != null && uiState.recurrence != FamilyTaskRecurrence.NONE) {
+            Text("Cette copie répétera aussi l'action selon la cadence affichée dans Plus d'options.", style = MaterialTheme.typography.bodySmall, color = InkMuted)
+        }
         Text("Pour qui ?", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = InkBrown)
         if (uiState.actionType == FamilyActionType.HOUSE_QUEST) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -226,7 +258,19 @@ private fun QuickTaskForm(
                 }
             }
         } else {
-            Text(uiState.members.firstOrNull { it.userId in uiState.selectedAssigneeUserIds }?.displayName ?: "Personne indisponible", color = InkMuted)
+            if (uiState.requiresAssigneeReview) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    uiState.members.filter { it.isActive }.forEach { member ->
+                        FilterChip(
+                            selected = member.userId in uiState.selectedAssigneeUserIds,
+                            onClick = { onSelectPersonalAssignee(member.userId) },
+                            label = { Text(member.displayName) },
+                        )
+                    }
+                }
+            } else {
+                Text(uiState.members.firstOrNull { it.userId in uiState.selectedAssigneeUserIds }?.displayName ?: "Personne indisponible", color = InkMuted)
+            }
         }
         Text("Quand ?", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = InkBrown)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {

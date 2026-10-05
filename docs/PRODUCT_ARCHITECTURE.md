@@ -58,13 +58,15 @@ Les noms de tables, classes et routes backend ne sont pas renommés pour le voca
 
 Le Parent est membre avec des droits de création, édition, suppression, gestion de famille, validation et accès Suivi. L'Enfant est membre avec droits limités : pas de création/édition/suppression/gestion Parent, mais accomplissement d'une action accessible. `PENDING_VALIDATION` s'affiche « En attente de validation » ; `COMPLETED` et `VALIDATED` s'affichent « Terminée » selon le statut réel. Le backend garde l'autorité sur les transitions.
 
+La duplication crée une nouvelle définition préremplie dans le formulaire rapide. Elle ne copie ni occurrence ni historique. Les actions récemment créées sont des raccourcis contextuels issus des définitions actives, pas des modèles persistants.
+
 ## Pas encore implémenté
 
 - Reward Engine complet et calcul automatique des récompenses ;
 - bonus réel des Quêtes Maison, si absent du moteur actuel ;
 - inventaire Chronodria final, progression des créatures, grimoire enrichi ;
 - défis familiaux ;
-- duplication, modèles et tâches fréquentes ;
+- modèles persistants et tâches fréquentes ;
 - normalisation backend des catégories et examen des anciennes données multi assignées ;
 - parcours de création personnelle pour un Parent sans famille active (actuellement la création familiale requiert une famille).
 - identité de joueur Chronodria autonome pour chaque Parent : Le Nid Android reste actuellement alimenté par un `ChildProfile` actif ; l'interface n'affiche pas de mode administrateur, mais la séparation des données joueur Parent/Enfant nécessite un contrat backend dédié.

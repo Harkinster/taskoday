@@ -425,6 +425,10 @@ fun TaskodayApp() {
                             type = NavType.LongType
                             defaultValue = -1L
                         },
+                        navArgument(TaskodayDestination.FamilyTaskCreate.ARG_COPY_FROM_TASK_ID) {
+                            type = NavType.LongType
+                            defaultValue = -1L
+                        },
                     ),
             ) { entry ->
                 if (!ParentDestinationAccess(quickAddUiState.isLoading, quickAddUiState.canOpenQuickAdd, activeChildRole, localChildMode) { navController.popBackStack() }) return@composable
@@ -434,7 +438,9 @@ fun TaskodayApp() {
                     onBack = { navController.popBackStack() },
                     onCreated = {
                         val kind = entry.arguments?.getString(TaskodayDestination.FamilyTaskCreate.ARG_KIND)
+                        val isDuplicate = (entry.arguments?.getLong(TaskodayDestination.FamilyTaskCreate.ARG_COPY_FROM_TASK_ID, -1L) ?: -1L) > 0L
                         val destination = if (kind == FamilyActionType.HOUSE_QUEST.name) TaskodayDestination.FamilyHome else
+                            if (isDuplicate) TaskodayDestination.Exploration else
                             if ((entry.arguments?.getLong(TaskodayDestination.FamilyTaskCreate.ARG_MEMBER_ID, -1L) ?: -1L) > 0L) TaskodayDestination.FollowUp else TaskodayDestination.Exploration
                         if (navController.previousBackStackEntry?.destination?.route == destination.route) {
                             navController.popBackStack()
@@ -460,6 +466,12 @@ fun TaskodayApp() {
                     onEdit = { taskId ->
                         if (!localChildMode && viewModel.uiState.value.access.canManage) {
                             navController.navigate(TaskodayDestination.FamilyTaskEdit.createRoute(taskId))
+                        }
+                    },
+                    onDuplicate = { task ->
+                        if (!localChildMode && viewModel.uiState.value.access.canManage) {
+                            val type = FamilyActionType.fromCategory(task.category)
+                            navController.navigate(TaskodayDestination.FamilyTaskCreate.createDuplicateRoute(task.id, type, task.assignees.singleOrNull()?.id))
                         }
                     },
                     onDeleted = { navController.popBackStack() },

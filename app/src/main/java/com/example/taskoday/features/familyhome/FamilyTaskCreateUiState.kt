@@ -1,6 +1,7 @@
 package com.example.taskoday.features.familyhome
 
 import com.example.taskoday.domain.model.FamilyTaskMember
+import com.example.taskoday.domain.model.FamilyTaskDefinition
 import com.example.taskoday.domain.model.FamilyTaskPriority
 import com.example.taskoday.domain.model.FamilyTaskRecurrence
 import com.example.taskoday.domain.model.FamilyActionType
@@ -13,6 +14,10 @@ data class FamilyTaskCreateUiState(
     val isLoadingTask: Boolean = false,
     val isLoadingMembers: Boolean = true,
     val members: List<FamilyTaskMember> = emptyList(),
+    val recentTasks: List<FamilyTaskDefinition> = emptyList(),
+    val reusedSourceId: Long? = null,
+    val prefillWarning: String? = null,
+    val requiresAssigneeReview: Boolean = false,
     val title: String = "",
     val description: String = "",
     val date: String = LocalDate.now().toString(),
