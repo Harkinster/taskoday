@@ -537,6 +537,7 @@ fun TaskodayApp() {
                 val viewModel: ExplorationViewModel = hiltViewModel()
                 ExplorationScreen(
                     viewModel = viewModel,
+                    onOpenJournal = { navController.navigate(TaskodayDestination.ActivityJournal.route) },
                     onOpenFamilyTask = { taskId -> navController.navigate(TaskodayDestination.FamilyTaskDetail.createRoute(taskId)) },
                     onCreatePersonal = { kind -> navController.navigate(TaskodayDestination.FamilyTaskCreate.createQuickRoute(kind = kind)) },
                     openCreateChoices = personalCreationRequested,
@@ -552,6 +553,7 @@ fun TaskodayApp() {
                     val viewModel: FollowUpViewModel = hiltViewModel()
                     FollowUpScreen(
                         viewModel = viewModel,
+                        onOpenJournal = { navController.navigate(TaskodayDestination.ActivityJournal.route) },
                         onOpenFamilyTask = { taskId -> navController.navigate(TaskodayDestination.FamilyTaskDetail.createRoute(taskId)) },
                         onOpenLegacyTask = { taskId -> navController.navigate(TaskodayDestination.TaskDetail.createRoute(taskId)) },
                         onCreatePersonal = { kind, memberId -> navController.navigate(TaskodayDestination.FamilyTaskCreate.createQuickRoute(kind = kind, memberId = memberId)) },

@@ -34,6 +34,7 @@ import com.example.taskoday.features.familyhome.familyTaskStatusLabel
 @Composable
 fun FollowUpScreen(
     viewModel: FollowUpViewModel,
+    onOpenJournal: () -> Unit,
     onOpenFamilyTask: (Long) -> Unit,
     onOpenLegacyTask: (Long) -> Unit,
     onCreatePersonal: (FamilyActionType, Long) -> Unit = { _, _ -> },
@@ -46,7 +47,12 @@ fun FollowUpScreen(
         verticalArrangement = Arrangement.spacedBy(10.dp),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 18.dp, bottom = 28.dp),
     ) {
-        item { Text("Suivi", style = MaterialTheme.typography.headlineSmall, color = ParchmentLight) }
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Suivi", style = MaterialTheme.typography.headlineSmall, color = ParchmentLight)
+                TextButton(onClick = onOpenJournal) { Text("Journal") }
+            }
+        }
         item { Text("Aujourd’hui · ${java.time.LocalDate.now()}", style = MaterialTheme.typography.bodyMedium, color = ParchmentCream.copy(alpha = 0.72f)) }
         if (state.members.size > 1) {
             item {

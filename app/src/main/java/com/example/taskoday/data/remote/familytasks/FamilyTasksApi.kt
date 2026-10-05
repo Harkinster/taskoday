@@ -13,6 +13,14 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface FamilyTasksApi {
+    @GET("families/{familyId}/task-events")
+    suspend fun getTaskEvents(
+        @Path("familyId") familyId: Long,
+        @Query("start_at") startAt: String,
+        @Query("limit") limit: Int,
+        @Query("offset") offset: Int,
+    ): ApiEnvelopeDto<JsonElement>
+
     @GET("families/{familyId}/tasks")
     suspend fun getTasks(
         @Path("familyId") familyId: Long,

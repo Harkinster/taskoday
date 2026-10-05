@@ -1,7 +1,6 @@
 package com.example.taskoday.features.activity
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -11,37 +10,30 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.taskoday.core.ui.component.fantasy.FantasyAssetBubble
-import com.example.taskoday.core.ui.component.fantasy.FantasyButton
-import com.example.taskoday.core.ui.component.fantasy.FantasyButtonStyle
-import com.example.taskoday.core.ui.component.fantasy.FantasyCard
+import com.example.taskoday.core.ui.component.DarkSurfaceFilterChip
 import com.example.taskoday.core.ui.component.fantasy.FantasyScreenBackground
-import com.example.taskoday.core.ui.component.fantasy.FantasyStateCard
-import com.example.taskoday.core.ui.component.fantasy.FantasyTone
-import com.example.taskoday.core.ui.component.fantasy.NestAssets
-import com.example.taskoday.core.ui.component.fantasy.RewardToast
-import com.example.taskoday.core.ui.component.fantasy.TaskodayTopBar
-import com.example.taskoday.core.ui.theme.EmberOrange
+import com.example.taskoday.core.ui.theme.InkBrown
 import com.example.taskoday.core.ui.theme.InkMuted
-import com.example.taskoday.core.ui.theme.MossGreen
-import com.example.taskoday.core.ui.theme.SoftGold
-import com.example.taskoday.core.ui.theme.WoodBrownDark
-import com.example.taskoday.core.ui.theme.spacing
+import com.example.taskoday.core.ui.theme.ParchmentCream
+import com.example.taskoday.core.ui.theme.ParchmentLight
+import com.example.taskoday.domain.model.FamilyActionType
+import com.example.taskoday.domain.model.FamilyTaskEvent
 
 @Composable
 fun ActivityJournalScreen(
@@ -50,86 +42,54 @@ fun ActivityJournalScreen(
     onBack: () -> Unit,
     onOpenProfile: () -> Unit,
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val spacing = MaterialTheme.spacing
-
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-        viewModel.refresh()
-    }
-
-    Scaffold(
-        containerColor = Color.Transparent,
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-    ) { innerPadding ->
-        FantasyScreenBackground(
-            modifier =
-                Modifier
-                    .statusBarsPadding()
-                    .padding(innerPadding),
-        ) {
-            if (uiState.isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    FantasyStateCard(
-                        title = "Journal",
-                        message = "Les dernieres traces se rassemblent.",
-                        loading = true,
-                        tone = FantasyTone.Gold,
-                    )
-                }
-                return@FantasyScreenBackground
-            }
-
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val sections = journalSections(state.visibleEvents)
+    Scaffold(containerColor = androidx.compose.ui.graphics.Color.Transparent, contentWindowInsets = WindowInsets(0, 0, 0, 0)) { padding ->
+        FantasyScreenBackground(modifier = Modifier.statusBarsPadding().padding(padding)) {
             LazyColumn(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = spacing.medium),
-                contentPadding = PaddingValues(top = spacing.large, bottom = 92.dp),
-                verticalArrangement = Arrangement.spacedBy(spacing.medium),
+                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                contentPadding = PaddingValues(top = 12.dp, bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 item {
-                    TaskodayTopBar(
-                        avatarInitials = "AB",
-                        compact = true,
-                        showNotification = false,
-                        onAvatarClick = onOpenProfile,
-                    )
-                }
-
-                item {
-                    FantasyButton(
-                        text = "Retour",
-                        onClick = onBack,
-                        style = FantasyButtonStyle.Quiet,
-                    )
-                }
-
-                item {
-                    ActivityJournalHeader(uiState, isLocalChildMode = isLocalChildMode)
-                }
-
-                uiState.errorMessage?.let { message ->
-                    item {
-                        RewardToast(message = message, tone = FantasyTone.Ember)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        TextButton(onClick = onBack) { Text("Retour") }
+                        TextButton(onClick = viewModel::refresh) { Text("Actualiser") }
                     }
+                    Text(if (state.isParent && !isLocalChildMode) "Journal familial" else "Mon journal", style = MaterialTheme.typography.headlineSmall, color = ParchmentLight)
+                    Text("Ce qui s'est passé dans les 7 derniers jours", color = ParchmentCream)
                 }
-
-                if (uiState.events.isEmpty()) {
-                    item {
-                        FantasyStateCard(
-                            title = "Aucune aventure pour le moment",
-                            message = "Les actions terminées et les souhaits apparaîtront ici.",
-                            assetResId = NestAssets.interfaceAsset("nid"),
-                            assetDescription = null,
-                            tone = FantasyTone.Moss,
-                        )
-                    }
+                if (isLocalChildMode && state.isParent) {
+                    item { Text("Ouvre ton compte enfant pour consulter ton journal.", color = ParchmentCream) }
+                } else if (state.isLoading) {
+                    item { CircularProgressIndicator() }
                 } else {
-                    items(uiState.events, key = { item -> item.id }) { item ->
-                        ActivityJournalRow(item)
+                    state.errorMessage?.let { message -> item { Text(message, color = MaterialTheme.colorScheme.error) } }
+                    if (state.isParent && state.members.isNotEmpty()) {
+                        item {
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                item { DarkSurfaceFilterChip(selected = state.selectedMemberId == null, onClick = { viewModel.selectMember(null) }, label = "Tous") }
+                                items(state.members, key = { it.userId }) { member ->
+                                    DarkSurfaceFilterChip(selected = state.selectedMemberId == member.userId, onClick = { viewModel.selectMember(member.userId) }, label = member.displayName)
+                                }
+                            }
+                        }
+                    }
+                    item {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            item { DarkSurfaceFilterChip(selected = state.selectedType == null, onClick = { viewModel.selectType(null) }, label = "Tous les types") }
+                            items(FamilyActionType.entries) { type ->
+                                DarkSurfaceFilterChip(selected = state.selectedType == type, onClick = { viewModel.selectType(type) }, label = type.journalLabel())
+                            }
+                        }
+                    }
+                    if (sections.isEmpty() && state.errorMessage == null) {
+                        item { Text(if (state.isParent) "Aucune activité récente." else "Tu n'as encore rien terminé récemment.", color = ParchmentCream) }
+                    }
+                    sections.forEach { section ->
+                        item { Text(section.period.label, style = MaterialTheme.typography.titleMedium, color = ParchmentLight) }
+                        items(section.events, key = { it.id }) { event -> JournalEventCard(event) }
                     }
                 }
             }
@@ -138,118 +98,16 @@ fun ActivityJournalScreen(
 }
 
 @Composable
-private fun ActivityJournalHeader(
-    uiState: ActivityJournalUiState,
-    isLocalChildMode: Boolean,
-) {
-    FantasyCard(tone = FantasyTone.Violet) {
-        Text(
-            text = if (uiState.isParent && !isLocalChildMode) "Journal parent" else "Mes dernières réussites",
-            style = MaterialTheme.typography.titleLarge,
-            color = WoodBrownDark,
-            maxLines = 1,
-        )
-        Text(
-            text = uiState.childLabel ?: "Enfant sélectionné",
-            style = MaterialTheme.typography.bodyMedium,
-            color = InkMuted,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Text(
-            text = "Actions, souhaits et parchemins récents.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = InkMuted,
-            maxLines = 2,
-        )
-    }
-}
-
-@Composable
-private fun ActivityJournalRow(item: ActivityJournalItem) {
-    FantasyCard(
-        tone = item.kind.toTone(),
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            FantasyAssetBubble(
-                assetResId = item.kind.toAssetRes(),
-                contentDescription = item.typeLabel,
-                size = 42.dp,
-            )
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(3.dp),
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = item.typeLabel,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = item.kind.toAccentColor(),
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f),
-                    )
-                    item.dateLabel?.let { date ->
-                        Text(
-                            text = date,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = InkMuted,
-                            maxLines = 1,
-                        )
-                    }
-                }
-                Text(
-                    text = item.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = WoodBrownDark,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = item.detail,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = InkMuted,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
+private fun JournalEventCard(event: FamilyTaskEvent) {
+    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = ParchmentLight)) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(event.category.journalLabel(), style = MaterialTheme.typography.labelMedium, color = InkMuted)
+                Text(event.occurredAt.journalTimeLabel(), style = MaterialTheme.typography.labelMedium, color = InkMuted)
             }
+            Text(event.title, style = MaterialTheme.typography.titleMedium, color = InkBrown)
+            Text(event.journalEventLabel(), color = InkBrown)
+            Text(event.journalActorLabel(), style = MaterialTheme.typography.bodySmall, color = InkMuted)
         }
     }
 }
-
-private fun ActivityJournalKind.toTone(): FantasyTone =
-    when (this) {
-        ActivityJournalKind.ACTION -> FantasyTone.Moss
-        ActivityJournalKind.WISH_PENDING -> FantasyTone.Gold
-        ActivityJournalKind.WISH_APPROVED -> FantasyTone.Violet
-        ActivityJournalKind.WISH_REFUSED -> FantasyTone.Ember
-        ActivityJournalKind.WISH_USED -> FantasyTone.Wood
-    }
-
-private fun ActivityJournalKind.toAccentColor(): Color =
-    when (this) {
-        ActivityJournalKind.ACTION -> MossGreen
-        ActivityJournalKind.WISH_PENDING -> EmberOrange
-        ActivityJournalKind.WISH_APPROVED -> SoftGold
-        ActivityJournalKind.WISH_REFUSED -> EmberOrange
-        ActivityJournalKind.WISH_USED -> WoodBrownDark
-    }
-
-private fun ActivityJournalKind.toAssetRes(): Int =
-    when (this) {
-        ActivityJournalKind.ACTION -> NestAssets.interfaceAsset("nid")
-        ActivityJournalKind.WISH_PENDING -> NestAssets.scrollAsset("pending")
-        ActivityJournalKind.WISH_APPROVED -> NestAssets.scrollAsset("approved")
-        ActivityJournalKind.WISH_REFUSED -> NestAssets.scrollAsset("refused")
-        ActivityJournalKind.WISH_USED -> NestAssets.scrollAsset("used")
-    }

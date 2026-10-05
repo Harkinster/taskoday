@@ -978,13 +978,13 @@ private fun ParentShortcutsCard(
 private fun ChildJournalCard(onOpenJournal: () -> Unit) {
     FantasyCard(tone = FantasyTone.Violet) {
         Text(
-            text = "Mes dernières réussites",
+            text = "Mon journal",
             style = MaterialTheme.typography.titleMedium,
             color = WoodBrownDark,
             maxLines = 1,
         )
         Text(
-            text = "Retrouve les actions terminées et tes souhaits.",
+            text = "Retrouve tes actions terminées et validées.",
             style = MaterialTheme.typography.bodyMedium,
             color = InkMuted,
             maxLines = 2,

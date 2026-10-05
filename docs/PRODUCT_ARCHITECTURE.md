@@ -34,6 +34,8 @@ L'assignation d'une Quête Maison ne la transforme pas en Mission personnelle. T
 
 Un Parent arrive sur Ma maison. Un Enfant connecté arrive sur Exploration. Les quatre noms restent inchangés. Le Nid n'a pas de rôle d'administration Chronodria. Le rôle Taskoday ne définit aucune hiérarchie entre joueurs.
 
+Le Journal est un écran secondaire : Suivi montre l'état actuel de la famille, tandis que le Journal raconte les transitions réelles des actions Taskoday (completion, validation, réouverture) depuis leur historique serveur. Le Parent accède au Journal familial depuis Suivi ; l'Enfant accède à Mon journal depuis Exploration. L'historique XP et les souhaits ne servent pas de substitut à cet historique d'actions.
+
 ## Mapping du modèle actuel
 
 Le backend possède `Routine`, `Mission` et `Quest` dans son ancien moteur de planification pour ChildProfile. Ces tables et API demeurent intactes. Les Routines/Missions distantes synchronisées sont personnelles et restent dans Exploration et Suivi. Les anciennes `Quest` de ce moteur sont liées à un enfant ; elles ne sont pas automatiquement des Quêtes Maison au sens du nouveau produit.

@@ -1,27 +1,24 @@
 package com.example.taskoday.features.activity
 
-enum class ActivityJournalKind {
-    ACTION,
-    WISH_PENDING,
-    WISH_APPROVED,
-    WISH_REFUSED,
-    WISH_USED,
-}
-
-data class ActivityJournalItem(
-    val id: String,
-    val sortKey: String,
-    val dateLabel: String?,
-    val typeLabel: String,
-    val title: String,
-    val detail: String,
-    val kind: ActivityJournalKind,
-)
+import com.example.taskoday.domain.model.FamilyActionType
+import com.example.taskoday.domain.model.FamilyTaskEvent
+import com.example.taskoday.domain.model.FamilyTaskMember
 
 data class ActivityJournalUiState(
     val isLoading: Boolean = true,
     val isParent: Boolean = false,
-    val childLabel: String? = null,
-    val events: List<ActivityJournalItem> = emptyList(),
+    val familyId: Long? = null,
+    val events: List<FamilyTaskEvent> = emptyList(),
+    val members: List<FamilyTaskMember> = emptyList(),
+    val selectedMemberId: Long? = null,
+    val selectedType: FamilyActionType? = null,
     val errorMessage: String? = null,
-)
+) {
+    val visibleEvents: List<FamilyTaskEvent>
+        get() = events.filter { event ->
+            (selectedType == null || event.category == selectedType) &&
+                (!isParent || selectedMemberId == null ||
+                    event.actorUserId == selectedMemberId || event.completedByUserId == selectedMemberId ||
+                    selectedMemberId in event.participantUserIds)
+        }
+}

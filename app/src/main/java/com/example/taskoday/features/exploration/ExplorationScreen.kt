@@ -34,6 +34,7 @@ import com.example.taskoday.features.familyhome.familyTaskActionLabel
 @Composable
 fun ExplorationScreen(
     viewModel: ExplorationViewModel,
+    onOpenJournal: () -> Unit = {},
     onOpenFamilyTask: (Long) -> Unit = {},
     onCreatePersonal: (FamilyActionType) -> Unit = {},
     openCreateChoices: Boolean = false,
@@ -60,7 +61,10 @@ fun ExplorationScreen(
                     Text("Exploration", style = MaterialTheme.typography.headlineSmall, color = ParchmentLight)
                     Text("Mon parcours · ${state.dateLabel}", color = ParchmentCream)
                 }
-                if (state.access.canManage) TextButton(onClick = { showCreateChoices = !showCreateChoices }) { Text("Ajouter") }
+                Row {
+                    TextButton(onClick = onOpenJournal) { Text("Journal") }
+                    if (state.access.canManage) TextButton(onClick = { showCreateChoices = !showCreateChoices }) { Text("Ajouter") }
+                }
             }
         }
         if (showCreateChoices && state.access.canManage) {
