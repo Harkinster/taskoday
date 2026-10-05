@@ -120,3 +120,37 @@ class FamilyTaskOccurrence(Base):
     task = relationship("FamilyTask", back_populates="occurrences")
     completed_by = relationship("User", foreign_keys=[completed_by_user_id])
     validated_by = relationship("User", foreign_keys=[validated_by_user_id])
+
+
+class FamilyTaskOccurrenceEvent(Base):
+    """Immutable record of an effective occurrence transition."""
+
+    __tablename__ = "family_task_occurrence_events"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    family_id: Mapped[int] = mapped_column(ForeignKey("families.id", ondelete="RESTRICT"), nullable=False, index=True)
+    task_id: Mapped[int] = mapped_column(ForeignKey("family_tasks.id", ondelete="RESTRICT"), nullable=False, index=True)
+    occurrence_id: Mapped[int] = mapped_column(ForeignKey("family_task_occurrences.id", ondelete="RESTRICT"), nullable=False, index=True)
+    category: Mapped[str] = mapped_column(String(100), nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    scheduled_date: Mapped[date] = mapped_column(Date, nullable=False)
+    event_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    status_from: Mapped[FamilyTaskOccurrenceStatus] = mapped_column(Enum(FamilyTaskOccurrenceStatus), nullable=False)
+    status_to: Mapped[FamilyTaskOccurrenceStatus] = mapped_column(Enum(FamilyTaskOccurrenceStatus), nullable=False)
+    actor_user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
+    completed_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), nullable=True)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    legacy_inferred: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    participants = relationship("FamilyTaskOccurrenceEventParticipant", back_populates="event", cascade="all, delete-orphan")
+
+
+class FamilyTaskOccurrenceEventParticipant(Base):
+    __tablename__ = "family_task_occurrence_event_participants"
+    __table_args__ = (UniqueConstraint("event_id", "user_id", name="uq_family_task_event_participant"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    event_id: Mapped[int] = mapped_column(ForeignKey("family_task_occurrence_events.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), nullable=False, index=True)
+
+    event = relationship("FamilyTaskOccurrenceEvent", back_populates="participants")

@@ -14,6 +14,8 @@ from app.models.family_task import (
     FamilyTask,
     FamilyTaskAssignee,
     FamilyTaskOccurrence,
+    FamilyTaskOccurrenceEvent,
+    FamilyTaskOccurrenceEventParticipant,
     FamilyTaskOccurrenceStatus,
     FamilyTaskRecurrence,
 )
@@ -194,6 +196,7 @@ def get_task_for_member(db: Session, *, task_id: int, user: User) -> tuple[Famil
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tache familiale introuvable.")
     membership = ensure_family_member(db, family_id=task.family_id, user=user)
+    ensure_task_visible(task=task, membership=membership, user=user)
     return task, membership
 
 
@@ -208,7 +211,23 @@ def get_occurrence_for_member(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Occurrence introuvable.")
     task = occurrence.task
     membership = ensure_family_member(db, family_id=task.family_id, user=user)
+    ensure_task_visible(task=task, membership=membership, user=user)
     return occurrence, task, membership
+
+
+def task_visible_to_member(*, task: FamilyTask, membership: FamilyMember, user: User) -> bool:
+    if user.role == UserRole.PARENT and membership.role == FamilyMemberRole.PARENT:
+        return True
+    if user.role != UserRole.CHILD or membership.role != FamilyMemberRole.CHILD:
+        return False
+    if occurrence_category(task.category) == HOUSE_QUEST_CATEGORY:
+        return True
+    return any(assignee.user_id == user.id for assignee in task.assignees)
+
+
+def ensure_task_visible(*, task: FamilyTask, membership: FamilyMember, user: User) -> None:
+    if not task_visible_to_member(task=task, membership=membership, user=user):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tache familiale introuvable.")
 
 
 def is_task_scheduled_for_date(task: FamilyTask, target_date: date) -> bool:
@@ -305,6 +324,7 @@ def complete_occurrence(
     }:
         return occurrence
 
+    old_status = occurrence.status
     now = datetime.now(timezone.utc)
     occurrence.completed_at = now
     occurrence.completed_by_user_id = user.id
@@ -316,6 +336,10 @@ def complete_occurrence(
         else FamilyTaskOccurrenceStatus.COMPLETED
     )
     db.add(occurrence)
+    record_occurrence_transition(
+        db, occurrence=occurrence, task=task, event_type="COMPLETE", old_status=old_status,
+        actor_user_id=user.id, completed_by_user_id=user.id, occurred_at=now,
+    )
     return occurrence
 
 
@@ -335,10 +359,16 @@ def validate_occurrence(
             detail="Occurrence non en attente de validation.",
         )
 
+    old_status = occurrence.status
     occurrence.status = FamilyTaskOccurrenceStatus.VALIDATED
     occurrence.validated_at = datetime.now(timezone.utc)
     occurrence.validated_by_user_id = user.id
     db.add(occurrence)
+    record_occurrence_transition(
+        db, occurrence=occurrence, task=task, event_type="VALIDATE", old_status=old_status,
+        actor_user_id=user.id, completed_by_user_id=occurrence.completed_by_user_id,
+        occurred_at=occurrence.validated_at,
+    )
     return occurrence
 
 
@@ -350,13 +380,41 @@ def reopen_occurrence(
     user: User,
 ) -> FamilyTaskOccurrence:
     ensure_family_parent(db, family_id=task.family_id, user=user)
+    if occurrence.status == FamilyTaskOccurrenceStatus.TODO:
+        return occurrence
+    old_status = occurrence.status
+    completed_by_user_id = occurrence.completed_by_user_id
+    now = datetime.now(timezone.utc)
     occurrence.status = FamilyTaskOccurrenceStatus.TODO
     occurrence.completed_at = None
     occurrence.completed_by_user_id = None
     occurrence.validated_at = None
     occurrence.validated_by_user_id = None
     db.add(occurrence)
+    record_occurrence_transition(
+        db, occurrence=occurrence, task=task, event_type="REOPEN", old_status=old_status,
+        actor_user_id=user.id, completed_by_user_id=completed_by_user_id, occurred_at=now,
+    )
     return occurrence
+
+
+def record_occurrence_transition(
+    db: Session, *, occurrence: FamilyTaskOccurrence, task: FamilyTask, event_type: str,
+    old_status: FamilyTaskOccurrenceStatus, actor_user_id: int,
+    completed_by_user_id: int | None, occurred_at: datetime,
+) -> None:
+    event = FamilyTaskOccurrenceEvent(
+        family_id=task.family_id, task_id=task.id, occurrence_id=occurrence.id,
+        category=occurrence.category, title=task.title, scheduled_date=occurrence.scheduled_date,
+        event_type=event_type, status_from=old_status, status_to=occurrence.status,
+        actor_user_id=actor_user_id, completed_by_user_id=completed_by_user_id,
+        occurred_at=occurred_at, legacy_inferred=False,
+    )
+    event.participants = [
+        FamilyTaskOccurrenceEventParticipant(user_id=assignee.user_id)
+        for assignee in task.assignees
+    ]
+    db.add(event)
 
 
 def task_payload(db: Session, task: FamilyTask) -> dict:
@@ -410,6 +468,27 @@ def occurrence_payload(db: Session, occurrence: FamilyTaskOccurrence) -> dict:
         "validated_at": occurrence.validated_at,
         "validated_by": occurrence.validated_by_user_id,
         "validated_by_user": user_reference_payload(db, occurrence.validated_by_user_id),
+    }
+
+
+def occurrence_event_payload(db: Session, event: FamilyTaskOccurrenceEvent) -> dict:
+    return {
+        "id": event.id,
+        "family_id": event.family_id,
+        "task_id": event.task_id,
+        "occurrence_id": event.occurrence_id,
+        "category": event.category,
+        "title": event.title,
+        "scheduled_date": event.scheduled_date,
+        "event_type": event.event_type,
+        "status_from": _enum_value(event.status_from),
+        "status_to": _enum_value(event.status_to),
+        "actor_user_id": event.actor_user_id,
+        "actor_user": user_reference_payload(db, event.actor_user_id),
+        "completed_by_user_id": event.completed_by_user_id,
+        "participant_user_ids": [participant.user_id for participant in event.participants],
+        "occurred_at": event.occurred_at,
+        "legacy_inferred": event.legacy_inferred,
     }
 
 

@@ -6,6 +6,7 @@ import com.example.taskoday.core.util.DateTimeUtils
 import com.example.taskoday.data.repository.RemotePlanningIdCodec
 import com.example.taskoday.data.repository.toRemoteUserMessage
 import com.example.taskoday.features.familyhome.FamilyTaskAccessPolicy
+import com.example.taskoday.features.familyhome.FamilyTaskQuickAction
 import com.example.taskoday.domain.model.TaskForDay
 import com.example.taskoday.domain.model.TaskStatus
 import com.example.taskoday.domain.repository.AuthRepository
@@ -101,18 +102,17 @@ class ExplorationViewModel
 
         fun toggleFamilyTask(item: ExplorationTask) {
             val occurrence = item.occurrence
-            if (_uiState.value.access.quickAction(occurrence) == null) return
+            val action = _uiState.value.access.quickAction(occurrence) ?: return
             if (occurrence.occurrenceId <= 0L) return
             val key = "family-${occurrence.occurrenceId}"
             if (_uiState.value.actingKey != null) return
             _uiState.update { it.copy(actingKey = key, errorMessage = null) }
             viewModelScope.launch {
-                val result =
-                    if (occurrence.status.countsAsDone) {
-                        familyTasksRepository.reopenOccurrence(occurrence.occurrenceId)
-                    } else {
-                        familyTasksRepository.completeOccurrence(occurrence.occurrenceId)
-                    }
+                val result = when (action) {
+                    FamilyTaskQuickAction.COMPLETE -> familyTasksRepository.completeOccurrence(occurrence.occurrenceId)
+                    FamilyTaskQuickAction.VALIDATE -> familyTasksRepository.validateOccurrence(occurrence.occurrenceId)
+                    FamilyTaskQuickAction.REOPEN -> familyTasksRepository.reopenOccurrence(occurrence.occurrenceId)
+                }
                 result.onFailure { error -> _uiState.update { it.copy(errorMessage = error.message ?: "Action impossible.") } }
                 _uiState.update { it.copy(actingKey = null) }
                 if (result.isSuccess) refresh()

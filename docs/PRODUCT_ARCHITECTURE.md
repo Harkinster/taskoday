@@ -60,6 +60,12 @@ Le Parent est membre avec des droits de création, édition, suppression, gestio
 
 La duplication crée une nouvelle définition préremplie dans le formulaire rapide. Elle ne copie ni occurrence ni historique. Les actions récemment créées sont des raccourcis contextuels issus des définitions actives, pas des modèles persistants.
 
+## Cycle historique des accomplissements
+
+Depuis la migration `20261005_0012`, chaque transition effective `complete`, `validate` ou `reopen` d'une occurrence FamilyTask est conservée dans un registre append-only. L'occurrence reste l'état courant ; rouvrir efface ses champs courants de complétion mais ne supprime plus les transitions passées. Le registre distingue l'acteur réel des participants prévus, conserve la catégorie snapshot de l'occurrence et permet de raconter plusieurs cycles sur la même occurrence. Les appels répétés sans changement d'état n'ajoutent pas de transition.
+
+Le backfill de `0012` marque comme hérité le seul cycle courant reconstructible à partir des acteurs et horodatages existants. Les cycles rouverts avant cette migration sont irrécupérables ; la garantie historique complète commence après `0012`. Une Quête Maison multi-attribuée conserve **une** occurrence et **un** état partagé. Le registre garde l'acteur de chaque transition sans choisir le bénéficiaire d'une future récompense : cette règle reste à définir dans le Reward Engine.
+
 ## Pas encore implémenté
 
 - Reward Engine complet et calcul automatique des récompenses ;

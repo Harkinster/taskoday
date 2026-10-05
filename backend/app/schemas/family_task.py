@@ -130,6 +130,32 @@ class FamilyTaskOccurrenceResponse(BaseModel):
     validated_by_user: FamilyTaskActorResponse | None
 
 
+class FamilyTaskOccurrenceEventResponse(BaseModel):
+    id: int
+    family_id: int
+    task_id: int
+    occurrence_id: int
+    category: FamilyActionCategory
+    title: str
+    scheduled_date: date
+    event_type: str
+    status_from: str
+    status_to: str
+    actor_user_id: int
+    actor_user: FamilyTaskActorResponse | None
+    completed_by_user_id: int | None
+    participant_user_ids: list[int]
+    occurred_at: datetime
+    legacy_inferred: bool
+
+
+class FamilyTaskOccurrenceEventsResponse(BaseModel):
+    family_id: int
+    items: list[FamilyTaskOccurrenceEventResponse]
+    limit: int
+    offset: int
+
+
 class FamilyTaskOccurrenceMemberGroupResponse(BaseModel):
     assignee: FamilyTaskAssigneeResponse | None
     items: list[FamilyTaskOccurrenceResponse]

@@ -5,6 +5,10 @@ import com.example.taskoday.domain.model.FamilyTaskStatus
 import com.example.taskoday.domain.model.FamilyTaskPriority
 import com.example.taskoday.domain.model.FamilyTaskTodayItem
 import com.example.taskoday.domain.model.FamilyActionType
+import com.example.taskoday.features.familyhome.FamilyTaskAccessPolicy
+import com.example.taskoday.features.familyhome.FamilyTaskQuickAction
+import com.example.taskoday.features.familyhome.familyTaskActionLabel
+import com.example.taskoday.features.familyhome.familyTaskStatusLabel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -41,6 +45,26 @@ class ExplorationPolicyTest {
 
     @Test fun `assigned recurring legacy family task stays collective`() {
         assertEquals(ExplorationCategory.HOUSEHOLD, task(recurrence = "DAILY").explorationCategory())
+    }
+
+    @Test fun `pending personal action offers validation only to parent`() {
+        val pending = task(recurrence = "NONE", category = FamilyActionType.PERSONAL_MISSION.category)
+            .copy(status = FamilyTaskStatus.PENDING_VALIDATION)
+        val parentAction = FamilyTaskAccessPolicy(1L, "PARENT").quickAction(pending)
+        assertEquals(FamilyTaskQuickAction.VALIDATE, parentAction)
+        assertEquals("Valider", parentAction?.let(::familyTaskActionLabel))
+        assertEquals("En attente de validation", familyTaskStatusLabel(pending.status))
+        assertEquals(null, FamilyTaskAccessPolicy(1L, "CHILD").quickAction(pending))
+    }
+
+    @Test fun `exploration action labels follow current status`() {
+        val parent = FamilyTaskAccessPolicy(1L, "PARENT")
+        val original = task(recurrence = "NONE", category = FamilyActionType.PERSONAL_MISSION.category)
+        assertEquals("Terminer", parent.quickAction(original)?.let(::familyTaskActionLabel))
+        assertEquals("Rouvrir", parent.quickAction(original.copy(status = FamilyTaskStatus.COMPLETED))?.let(::familyTaskActionLabel))
+        assertEquals("Rouvrir", parent.quickAction(original.copy(status = FamilyTaskStatus.VALIDATED))?.let(::familyTaskActionLabel))
+        assertEquals("Terminée", familyTaskStatusLabel(FamilyTaskStatus.COMPLETED))
+        assertEquals("Validée", familyTaskStatusLabel(FamilyTaskStatus.VALIDATED))
     }
 
     private fun task(assignees: List<FamilyTaskAssignee> = listOf(FamilyTaskAssignee(1L, "Naomy")), recurrence: String, category: String? = null): FamilyTaskTodayItem =

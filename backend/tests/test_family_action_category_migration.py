@@ -68,7 +68,7 @@ def test_sqlite_upgrade_backfills_existing_occurrences_and_downgrades(tmp_path, 
 def test_sqlite_upgrade_on_empty_database(tmp_path, monkeypatch) -> None:
     config, engine = _config(tmp_path, monkeypatch)
     try:
-        command.upgrade(config, "head")
+        command.upgrade(config, "20261004_0011")
         assert _revision(engine) == "20261004_0011"
         assert inspect(engine).get_columns("family_task_occurrences")
         with engine.connect() as connection:

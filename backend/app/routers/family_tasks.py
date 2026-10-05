@@ -1,17 +1,22 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy import and_, or_, select
+from sqlalchemy.orm import Session, selectinload
 
 from app.db.session import get_db
 from app.dependencies import get_current_user, success_response
-from app.models.family_task import FamilyTask, FamilyTaskOccurrenceStatus, FamilyTaskPriority, FamilyTaskRecurrence
-from app.models.user import User
+from app.models.family import FamilyMemberRole
+from app.models.family_task import (
+    FamilyTask, FamilyTaskOccurrenceEvent, FamilyTaskOccurrenceEventParticipant,
+    FamilyTaskOccurrenceStatus, FamilyTaskPriority, FamilyTaskRecurrence,
+)
+from app.models.user import User, UserRole
 from app.schemas.common import SuccessResponse
 from app.schemas.family_task import (
     FamilyTaskCreateRequest,
     FamilyTaskOccurrenceResponse,
+    FamilyTaskOccurrenceEventsResponse,
     FamilyTaskOccurrencesRangeResponse,
     FamilyTaskUpdateRequest,
     FamilyTasksTodayResponse,
@@ -28,6 +33,7 @@ from app.services.family_task_service import (
     normalize_due_fields,
     normalize_due_update,
     occurrence_payload,
+    occurrence_event_payload,
     occurrence_category,
     parse_weekdays,
     reopen_occurrence,
@@ -35,6 +41,7 @@ from app.services.family_task_service import (
     task_payload,
     validate_assignee_user_ids,
     validate_occurrence,
+    task_visible_to_member,
     weekdays_to_storage,
 )
 
@@ -51,14 +58,17 @@ def list_family_tasks(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    ensure_family_member(db, family_id=family_id, user=current_user)
+    membership = ensure_family_member(db, family_id=family_id, user=current_user)
 
-    stmt = select(FamilyTask).where(FamilyTask.family_id == family_id).order_by(FamilyTask.id.asc())
+    stmt = select(FamilyTask).options(selectinload(FamilyTask.assignees)).where(FamilyTask.family_id == family_id).order_by(FamilyTask.id.asc())
     if not include_inactive:
         stmt = stmt.where(FamilyTask.active.is_(True))
     tasks = db.scalars(stmt).all()
 
-    return success_response([task_payload(db, task) for task in tasks])
+    return success_response([
+        task_payload(db, task) for task in tasks
+        if task_visible_to_member(task=task, membership=membership, user=current_user)
+    ])
 
 
 @router.post("/families/{family_id}/tasks", status_code=status.HTTP_201_CREATED)
@@ -116,12 +126,12 @@ def family_tasks_today(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    ensure_family_member(db, family_id=family_id, user=current_user)
+    membership = ensure_family_member(db, family_id=family_id, user=current_user)
     scheduled_date = target_date or date.today()
 
     occurrences = get_or_create_occurrences_for_date(
         db,
-        tasks=_active_family_tasks(db, family_id),
+        tasks=_active_family_tasks(db, family_id, current_user, membership),
         scheduled_date=scheduled_date,
     )
     db.commit()
@@ -145,9 +155,9 @@ def family_task_occurrences_range(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    ensure_family_member(db, family_id=family_id, user=current_user)
+    membership = ensure_family_member(db, family_id=family_id, user=current_user)
     dates = _validated_date_range(start_date, end_date)
-    tasks = _active_family_tasks(db, family_id)
+    tasks = _active_family_tasks(db, family_id, current_user, membership)
 
     occurrences = []
     for scheduled_date in dates:
@@ -176,11 +186,11 @@ def family_task_occurrences_overdue(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    ensure_family_member(db, family_id=family_id, user=current_user)
+    membership = ensure_family_member(db, family_id=family_id, user=current_user)
     today = date.today()
     start_date = today - timedelta(days=OVERDUE_LOOKBACK_DAYS)
     end_date = today - timedelta(days=1)
-    tasks = _active_family_tasks(db, family_id)
+    tasks = _active_family_tasks(db, family_id, current_user, membership)
 
     occurrences = []
     for scheduled_date in _date_range(start_date, end_date):
@@ -207,6 +217,55 @@ def family_task_occurrences_overdue(
             "items": [occurrence_payload(db, occurrence) for occurrence in overdue],
         }
     )
+
+
+@router.get("/families/{family_id}/task-events", response_model=SuccessResponse[FamilyTaskOccurrenceEventsResponse])
+def list_family_task_events(
+    family_id: int,
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    actor_user_id: int | None = None,
+    start_at: datetime | None = None,
+    end_at: datetime | None = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    membership = ensure_family_member(db, family_id=family_id, user=current_user)
+    if start_at is not None and end_at is not None and start_at > end_at:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="start_at doit preceder end_at.")
+    stmt = select(FamilyTaskOccurrenceEvent).options(selectinload(FamilyTaskOccurrenceEvent.participants)).where(
+        FamilyTaskOccurrenceEvent.family_id == family_id
+    )
+    is_parent = current_user.role == UserRole.PARENT and membership.role == FamilyMemberRole.PARENT
+    if not is_parent:
+        own_personal = and_(
+            FamilyTaskOccurrenceEvent.category != "TASKODAY_HOUSE_QUEST",
+            select(FamilyTaskOccurrenceEventParticipant.id).where(
+                FamilyTaskOccurrenceEventParticipant.event_id == FamilyTaskOccurrenceEvent.id,
+                FamilyTaskOccurrenceEventParticipant.user_id == current_user.id,
+            ).exists(),
+        )
+        own_house = and_(
+            FamilyTaskOccurrenceEvent.category == "TASKODAY_HOUSE_QUEST",
+            or_(
+                FamilyTaskOccurrenceEvent.actor_user_id == current_user.id,
+                FamilyTaskOccurrenceEvent.completed_by_user_id == current_user.id,
+            ),
+        )
+        stmt = stmt.where(or_(own_personal, own_house))
+    if actor_user_id is not None:
+        stmt = stmt.where(FamilyTaskOccurrenceEvent.actor_user_id == actor_user_id)
+    if start_at is not None:
+        stmt = stmt.where(FamilyTaskOccurrenceEvent.occurred_at >= start_at)
+    if end_at is not None:
+        stmt = stmt.where(FamilyTaskOccurrenceEvent.occurred_at <= end_at)
+    events = db.scalars(stmt.order_by(FamilyTaskOccurrenceEvent.occurred_at.desc(), FamilyTaskOccurrenceEvent.id.desc()).limit(limit).offset(offset)).all()
+    return success_response({
+        "family_id": family_id,
+        "items": [occurrence_event_payload(db, event) for event in events],
+        "limit": limit,
+        "offset": offset,
+    })
 
 
 @router.patch("/family-tasks/{task_id}")
@@ -360,12 +419,14 @@ def _selected_weekdays_for_recurrence(
     return weekdays_to_storage(days)
 
 
-def _active_family_tasks(db: Session, family_id: int) -> list[FamilyTask]:
-    return db.scalars(
+def _active_family_tasks(db: Session, family_id: int, user: User, membership) -> list[FamilyTask]:
+    tasks = db.scalars(
         select(FamilyTask)
+        .options(selectinload(FamilyTask.assignees))
         .where(FamilyTask.family_id == family_id, FamilyTask.active.is_(True))
         .order_by(FamilyTask.id.asc())
     ).all()
+    return [task for task in tasks if task_visible_to_member(task=task, membership=membership, user=user)]
 
 
 def _validated_date_range(start_date: date, end_date: date) -> list[date]:

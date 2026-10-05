@@ -29,6 +29,7 @@ import com.example.taskoday.core.ui.theme.ParchmentCream
 import com.example.taskoday.core.ui.theme.ParchmentLight
 import com.example.taskoday.domain.model.FamilyActionType
 import com.example.taskoday.features.familyhome.familyTaskStatusLabel
+import com.example.taskoday.features.familyhome.familyTaskActionLabel
 
 @Composable
 fun ExplorationScreen(
@@ -100,7 +101,7 @@ private data class ExplorationDayAction(
     val completed: Boolean,
     val overdue: Boolean,
     val taskId: Long? = null,
-    val canAct: Boolean,
+    val actionLabel: String?,
     val onToggle: () -> Unit,
 )
 
@@ -109,19 +110,20 @@ private fun explorationDayActions(state: ExplorationUiState, viewModel: Explorat
         state.personalTasks.forEach { item ->
             val task = item.occurrence
             add(ExplorationDayAction("mission-${task.occurrenceId}", task.title, "Mission", familyTaskStatusLabel(task.status), task.status.countsAsDone, item.overdue,
-                task.taskId, state.access.quickAction(task) != null, { viewModel.toggleFamilyTask(item) }))
+                task.taskId, state.access.quickAction(task)?.let(::familyTaskActionLabel), { viewModel.toggleFamilyTask(item) }))
         }
         state.routines.forEach { item ->
             val task = item.familyTask?.occurrence
             add(ExplorationDayAction("routine-${task?.occurrenceId ?: item.legacyTask?.task?.id}", item.title, "Routine",
                 task?.let { familyTaskStatusLabel(it.status) } ?: if (item.completed) "Terminée" else "À faire",
                 item.completed, item.familyTask?.overdue == true, task?.taskId,
-                task?.let { state.access.quickAction(it) != null } ?: (state.access.canManage || !item.completed),
+                task?.let { state.access.quickAction(it)?.let(::familyTaskActionLabel) }
+                    ?: if (task == null && (state.access.canManage || !item.completed)) (if (item.completed) "Rouvrir" else "Terminer") else null,
                 { viewModel.toggleRoutineItem(item) }))
         }
         state.missions.forEach { task ->
             add(ExplorationDayAction("legacy-mission-${task.task.id}", task.task.title, "Mission", if (task.isCompleted) "Terminée" else "À faire",
-                task.isCompleted, false, null, state.access.canManage || !task.isCompleted,
+                task.isCompleted, false, null, if (state.access.canManage || !task.isCompleted) (if (task.isCompleted) "Rouvrir" else "Terminer") else null,
                 { viewModel.toggleRoutineItem(ExplorationRoutineItem(task.task.title, "", task.isCompleted, legacyTask = task)) }))
         }
     }
@@ -138,6 +140,6 @@ private fun ActionRow(action: ExplorationDayAction, onOpenFamilyTask: (Long) -> 
             Text(action.title, color = ParchmentLight)
             Text("${action.kind} · ${action.status}", color = if (action.overdue) DangerGlow else ParchmentCream, style = MaterialTheme.typography.bodySmall)
         }
-        if (action.canAct) TextButton(onClick = action.onToggle) { Text(if (action.completed) "Rouvrir" else "Terminer") }
+        action.actionLabel?.let { label -> TextButton(onClick = action.onToggle) { Text(label) } }
     }
 }
