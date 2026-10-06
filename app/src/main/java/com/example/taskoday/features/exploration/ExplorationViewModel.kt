@@ -112,6 +112,11 @@ class ExplorationViewModel
                     FamilyTaskQuickAction.COMPLETE -> familyTasksRepository.completeOccurrence(occurrence.occurrenceId)
                     FamilyTaskQuickAction.VALIDATE -> familyTasksRepository.validateOccurrence(occurrence.occurrenceId)
                     FamilyTaskQuickAction.REOPEN -> familyTasksRepository.reopenOccurrence(occurrence.occurrenceId)
+                    FamilyTaskQuickAction.START,
+                    FamilyTaskQuickAction.JOIN,
+                    FamilyTaskQuickAction.RESCHEDULE,
+                    FamilyTaskQuickAction.FAIL,
+                    -> Result.failure(IllegalStateException("Cette action n'est pas disponible dans Exploration."))
                 }
                 result.onFailure { error -> _uiState.update { it.copy(errorMessage = error.message ?: "Action impossible.") } }
                 _uiState.update { it.copy(actingKey = null) }

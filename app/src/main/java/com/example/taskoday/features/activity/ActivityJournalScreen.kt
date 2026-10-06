@@ -108,6 +108,14 @@ private fun JournalEventCard(event: FamilyTaskEvent) {
             Text(event.title, style = MaterialTheme.typography.titleMedium, color = InkBrown)
             Text(event.journalEventLabel(), color = InkBrown)
             Text(event.journalActorLabel(), style = MaterialTheme.typography.bodySmall, color = InkMuted)
+            if (event.contributors.isNotEmpty()) {
+                Text("Participants : ${event.contributors.joinToString(", ") { it.displayName }}", style = MaterialTheme.typography.bodySmall, color = InkMuted)
+            }
+            if (event.eventType == com.example.taskoday.domain.model.FamilyTaskEventType.RESCHEDULE) {
+                val oldDate = event.metadata["old_due_date"]
+                val newDate = event.metadata["new_due_date"]
+                if (oldDate != null && newDate != null) Text("$oldDate → $newDate", style = MaterialTheme.typography.bodySmall, color = InkMuted)
+            }
         }
     }
 }

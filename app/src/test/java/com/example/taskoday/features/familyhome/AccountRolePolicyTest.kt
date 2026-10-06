@@ -43,11 +43,19 @@ class AccountRolePolicyTest {
 
     @Test fun `child can complete accessible tasks but cannot validate or reopen`() {
         val access = FamilyTaskAccessPolicy(101L, "CHILD")
-        assertEquals(FamilyTaskQuickAction.COMPLETE, access.quickAction(occurrence(FamilyTaskStatus.TODO)))
-        assertNull(access.quickAction(occurrence(FamilyTaskStatus.PENDING_VALIDATION)))
-        assertNull(access.quickAction(occurrence(FamilyTaskStatus.COMPLETED)))
-        assertNull(access.quickAction(occurrence(FamilyTaskStatus.TODO).copy(assignees = second)))
-        assertEquals(FamilyTaskQuickAction.VALIDATE, FamilyTaskAccessPolicy(100L, "PARENT").quickAction(occurrence(FamilyTaskStatus.PENDING_VALIDATION)))
+        val personalTodo = occurrence(FamilyTaskStatus.TODO).copy(
+            category = FamilyActionType.PERSONAL_MISSION.category,
+            scope = FamilyActionScope.PERSONAL,
+            kind = FamilyActionKind.MISSION,
+        )
+        val personalPending = personalTodo.copy(status = FamilyTaskStatus.PENDING_VALIDATION)
+        val personalCompleted = personalTodo.copy(status = FamilyTaskStatus.COMPLETED)
+        assertEquals(FamilyTaskQuickAction.COMPLETE, access.quickAction(personalTodo))
+        assertNull(access.quickAction(personalPending))
+        assertNull(access.quickAction(personalCompleted))
+        assertNull(access.quickAction(personalTodo.copy(assignees = second)))
+        assertEquals(FamilyTaskQuickAction.START, access.quickAction(occurrence(FamilyTaskStatus.TODO)))
+        assertEquals(FamilyTaskQuickAction.VALIDATE, FamilyTaskAccessPolicy(100L, "PARENT").quickAction(personalPending))
     }
 
     @Test fun `child navigation retains home exploration and nest but excludes follow up`() {

@@ -23,9 +23,11 @@ class FamilyTaskRecurrence(str, enum.Enum):
 
 class FamilyTaskOccurrenceStatus(str, enum.Enum):
     TODO = "TODO"
+    IN_PROGRESS = "IN_PROGRESS"
     COMPLETED = "COMPLETED"
     PENDING_VALIDATION = "PENDING_VALIDATION"
     VALIDATED = "VALIDATED"
+    FAILED = "FAILED"
     SKIPPED = "SKIPPED"
 
 
@@ -105,6 +107,7 @@ class FamilyTaskOccurrence(Base):
         nullable=False,
         index=True,
     )
+    cycle_number: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default=text("0"))
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_by_user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"),
@@ -128,6 +131,26 @@ class FamilyTaskOccurrence(Base):
     task = relationship("FamilyTask", back_populates="occurrences")
     completed_by = relationship("User", foreign_keys=[completed_by_user_id])
     validated_by = relationship("User", foreign_keys=[validated_by_user_id])
+    contributors = relationship("FamilyTaskOccurrenceContributor", back_populates="occurrence", cascade="all, delete-orphan")
+
+
+class FamilyTaskOccurrenceContributor(Base):
+    """A member who actually joined one execution cycle of a HOUSE occurrence."""
+
+    __tablename__ = "family_task_occurrence_contributors"
+    __table_args__ = (
+        UniqueConstraint("occurrence_id", "cycle_number", "user_id", name="uq_task_occurrence_cycle_contributor"),
+        Index("ix_task_occurrence_contributor_occurrence_cycle", "occurrence_id", "cycle_number"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    occurrence_id: Mapped[int] = mapped_column(ForeignKey("family_task_occurrences.id", ondelete="CASCADE"), nullable=False)
+    cycle_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
+    joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    occurrence = relationship("FamilyTaskOccurrence", back_populates="contributors")
+    user = relationship("User")
 
 
 class FamilyTaskOccurrenceEvent(Base):
@@ -145,6 +168,8 @@ class FamilyTaskOccurrenceEvent(Base):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     scheduled_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     event_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    cycle_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     status_from: Mapped[FamilyTaskOccurrenceStatus] = mapped_column(Enum(FamilyTaskOccurrenceStatus), nullable=False)
     status_to: Mapped[FamilyTaskOccurrenceStatus] = mapped_column(Enum(FamilyTaskOccurrenceStatus), nullable=False)
     actor_user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)

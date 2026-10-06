@@ -117,9 +117,13 @@ class FamilyHomeViewModel
                 }
                 val result =
                     when (action) {
+                        FamilyTaskQuickAction.START -> familyTasksRepository.startOccurrence(task.occurrenceId)
+                        FamilyTaskQuickAction.JOIN -> familyTasksRepository.joinOccurrence(task.occurrenceId)
                         FamilyTaskQuickAction.COMPLETE -> familyTasksRepository.completeOccurrence(task.occurrenceId)
                         FamilyTaskQuickAction.VALIDATE -> familyTasksRepository.validateOccurrence(task.occurrenceId)
                         FamilyTaskQuickAction.REOPEN -> familyTasksRepository.reopenOccurrence(task.occurrenceId)
+                        FamilyTaskQuickAction.RESCHEDULE -> Result.failure(IllegalStateException("Choisissez une nouvelle échéance."))
+                        FamilyTaskQuickAction.FAIL -> familyTasksRepository.failOccurrence(task.occurrenceId)
                     }
                 result
                     .onSuccess {
@@ -373,6 +377,30 @@ class FamilyHomeViewModel
             }
         }
 
+        fun rescheduleMission(occurrenceId: Long, dueDate: String) {
+            if (!_uiState.value.access.canManage || occurrenceId <= 0L) return
+            runMissionOutcome(occurrenceId) { familyTasksRepository.rescheduleOccurrence(occurrenceId, dueDate) }
+        }
+
+        fun failMission(occurrenceId: Long) {
+            if (!_uiState.value.access.canManage || occurrenceId <= 0L) return
+            runMissionOutcome(occurrenceId) { familyTasksRepository.failOccurrence(occurrenceId) }
+        }
+
+        private fun runMissionOutcome(occurrenceId: Long, request: suspend () -> Result<Unit>) {
+            viewModelScope.launch {
+                _uiState.update { it.copy(actingOccurrenceId = occurrenceId, errorMessage = null, userMessage = null) }
+                request().onSuccess {
+                    _uiState.update { it.copy(actingOccurrenceId = null, userMessage = "Mission mise à jour.") }
+                    loadToday(showLoading = false)
+                }.onFailure { throwable ->
+                    _uiState.update {
+                        it.copy(actingOccurrenceId = null, errorMessage = throwable.toRemoteUserMessage("Mission impossible à mettre à jour."))
+                    }
+                }
+            }
+        }
+
         private fun resolvedTodayDate(): LocalDate =
             parseFamilyTaskDateInput(_uiState.value.todayDate.orEmpty()) ?: LocalDate.now()
     }
@@ -389,6 +417,10 @@ internal fun accountAvatarInitials(user: com.example.taskoday.domain.model.Authe
 private fun FamilyTaskQuickAction.successMessage(): String =
     when (this) {
         FamilyTaskQuickAction.COMPLETE -> "Tâche terminée."
+        FamilyTaskQuickAction.START -> "Tâche commencée."
+        FamilyTaskQuickAction.JOIN -> "Vous participez à cette tâche."
         FamilyTaskQuickAction.VALIDATE -> "Tâche validée."
         FamilyTaskQuickAction.REOPEN -> "Tâche rouverte."
+        FamilyTaskQuickAction.RESCHEDULE -> "Mission reportée."
+        FamilyTaskQuickAction.FAIL -> "Mission marquée comme ratée."
     }

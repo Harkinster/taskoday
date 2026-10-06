@@ -25,6 +25,12 @@ class FamilyTaskDtosTest {
         val occurrence = gson.fromJson("""{"task_id":9,"occurrence_id":11,"title":"Maison","category":"TASKODAY_HOUSE_ROUTINE","scope":"HOUSE","kind":"ROUTINE","status":"TODO"}""", FamilyTaskOccurrenceDto::class.java).toDomain()
         assertEquals(definition.scope, occurrence.scope)
         assertEquals(definition.kind, occurrence.kind)
+        assertTrue(occurrence.contributors.isEmpty())
+        assertEquals(0, occurrence.cycleNumber)
+        assertEquals(
+            FamilyTaskStatus.IN_PROGRESS,
+            gson.fromJson("""{"task_id":9,"occurrence_id":11,"title":"Maison","category":"TASKODAY_HOUSE_ROUTINE","scope":"HOUSE","kind":"ROUTINE","status":"IN_PROGRESS"}""", FamilyTaskOccurrenceDto::class.java).toDomain().status,
+        )
         val openMission = FamilyTaskCreateInput("Ouverte", null, null, null, FamilyTaskRecurrence.NONE, emptyList(), listOf(25L), false, false, FamilyTaskPriority.NORMAL, category = FamilyActionType.PERSONAL_MISSION.category)
         val json = JsonParser.parseString(gson.toJson(openMission.toRequestDto())).asJsonObject
         assertEquals("PERSONAL", json.get("scope").asString)

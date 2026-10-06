@@ -70,6 +70,21 @@ interface FamilyTasksApi {
         @Path("occurrenceId") occurrenceId: Long,
     ): ApiEnvelopeDto<JsonElement>
 
+    @POST("task-occurrences/{occurrenceId}/start")
+    suspend fun startOccurrence(@Path("occurrenceId") occurrenceId: Long): ApiEnvelopeDto<JsonElement>
+
+    @POST("task-occurrences/{occurrenceId}/join")
+    suspend fun joinOccurrence(@Path("occurrenceId") occurrenceId: Long): ApiEnvelopeDto<JsonElement>
+
+    @POST("task-occurrences/{occurrenceId}/reschedule")
+    suspend fun rescheduleOccurrence(
+        @Path("occurrenceId") occurrenceId: Long,
+        @Body payload: Map<String, String>,
+    ): ApiEnvelopeDto<JsonElement>
+
+    @POST("task-occurrences/{occurrenceId}/fail")
+    suspend fun failOccurrence(@Path("occurrenceId") occurrenceId: Long): ApiEnvelopeDto<JsonElement>
+
     @POST("task-occurrences/{occurrenceId}/validate")
     suspend fun validateOccurrence(
         @Path("occurrenceId") occurrenceId: Long,

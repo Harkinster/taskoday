@@ -24,6 +24,9 @@ def test_supported_identity_and_snapshots(client, scope, kind, category, recurre
     assert (task["scope"], task["kind"], task["category"]) == (scope, kind, category)
     occurrence = next(item for item in _today(client, token, family_id, date.today())["items"] if item["task_id"] == task["id"])
     assert (occurrence["scope"], occurrence["kind"], occurrence["category"]) == (scope, kind, category)
+    if scope == "HOUSE":
+        started = client.post(f"{API}/task-occurrences/{occurrence['occurrence_id']}/start", headers=_headers(token))
+        assert started.status_code == 200
     completed = client.post(f"{API}/task-occurrences/{occurrence['occurrence_id']}/complete", headers=_headers(token))
     assert completed.status_code == 200
     events = client.get(f"{API}/families/{family_id}/task-events", headers=_headers(token)).json()["data"]["items"]

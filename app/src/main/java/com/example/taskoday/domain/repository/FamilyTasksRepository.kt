@@ -33,6 +33,14 @@ interface FamilyTasksRepository {
 
     suspend fun completeOccurrence(occurrenceId: Long): Result<Unit>
 
+    suspend fun startOccurrence(occurrenceId: Long): Result<Unit> = Result.failure(UnsupportedOperationException())
+
+    suspend fun joinOccurrence(occurrenceId: Long): Result<Unit> = Result.failure(UnsupportedOperationException())
+
+    suspend fun rescheduleOccurrence(occurrenceId: Long, dueDate: String): Result<Unit> = Result.failure(UnsupportedOperationException())
+
+    suspend fun failOccurrence(occurrenceId: Long): Result<Unit> = Result.failure(UnsupportedOperationException())
+
     suspend fun validateOccurrence(occurrenceId: Long): Result<Unit>
 
     suspend fun reopenOccurrence(occurrenceId: Long): Result<Unit>

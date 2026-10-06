@@ -1,5 +1,6 @@
 package com.example.taskoday.features.familyhome
 
+import android.app.DatePickerDialog
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -27,6 +28,7 @@ import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
@@ -42,6 +44,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -67,6 +70,7 @@ import com.example.taskoday.core.ui.theme.spacing
 import com.example.taskoday.domain.model.FamilyTaskPriority
 import com.example.taskoday.domain.model.FamilyTaskStatus
 import com.example.taskoday.domain.model.FamilyTaskTodayItem
+import java.time.LocalDate
 
 @Composable
 fun FamilyHomeScreen(
@@ -85,6 +89,8 @@ fun FamilyHomeScreen(
             todayDate = uiState.todayDate,
         )
     var hasObservedInitialResume by rememberSaveable { mutableStateOf(false) }
+    var failConfirmationOccurrenceId by rememberSaveable { mutableStateOf<Long?>(null) }
+    val context = LocalContext.current
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         if (hasObservedInitialResume) {
@@ -210,6 +216,24 @@ fun FamilyHomeScreen(
                                 actingOccurrenceId = uiState.actingOccurrenceId,
                                 onQuickAction = viewModel::runQuickAction,
                                 onOpenTask = onOpenTask,
+                                onReschedule = { task ->
+                                    val initialDate = LocalDate.now().plusDays(1)
+                                    DatePickerDialog(
+                                        context,
+                                        { _, year, month, day ->
+                                            viewModel.rescheduleMission(
+                                                task.occurrenceId,
+                                                LocalDate.of(year, month + 1, day).toString(),
+                                            )
+                                        },
+                                        initialDate.year,
+                                        initialDate.monthValue - 1,
+                                        initialDate.dayOfMonth,
+                                    ).apply {
+                                        datePicker.minDate = System.currentTimeMillis()
+                                    }.show()
+                                },
+                                onFail = { task -> failConfirmationOccurrenceId = task.occurrenceId },
                             )
                         }
                     }
@@ -285,6 +309,22 @@ fun FamilyHomeScreen(
                     }
                 }
             }
+        }
+        failConfirmationOccurrenceId?.let { occurrenceId ->
+            AlertDialog(
+                onDismissRequest = { failConfirmationOccurrenceId = null },
+                title = { Text("Marquer cette Mission comme ratée ?") },
+                text = { Text("Cette Mission sera clôturée comme ratée.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        failConfirmationOccurrenceId = null
+                        viewModel.failMission(occurrenceId)
+                    }) { Text("Marquer ratée") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { failConfirmationOccurrenceId = null }) { Text("Annuler") }
+                },
+            )
         }
     }
 }
@@ -365,6 +405,7 @@ private fun FamilyHomeHeader(
             onOpenAllTasks = onOpenAllTasks,
         )
     }
+
 }
 
 @Composable
@@ -586,6 +627,8 @@ private fun FamilyOverdueSectionCard(
     actingOccurrenceId: Long?,
     onQuickAction: (FamilyTaskTodayItem) -> Unit,
     onOpenTask: (Long) -> Unit,
+    onReschedule: (FamilyTaskTodayItem) -> Unit,
+    onFail: (FamilyTaskTodayItem) -> Unit,
 ) {
     val today = parseFamilyTaskDateInput(todayDate.orEmpty()) ?: java.time.LocalDate.now()
     Column(
@@ -619,6 +662,8 @@ private fun FamilyOverdueSectionCard(
                     isActing = actingOccurrenceId == row.task.occurrenceId,
                     onQuickAction = onQuickAction,
                     onOpenTask = onOpenTask,
+                    onReschedule = onReschedule,
+                    onFail = onFail,
                 )
             }
         }
@@ -632,6 +677,8 @@ private fun FamilyOverdueRow(
     isActing: Boolean,
     onQuickAction: (FamilyTaskTodayItem) -> Unit,
     onOpenTask: (Long) -> Unit,
+    onReschedule: (FamilyTaskTodayItem) -> Unit,
+    onFail: (FamilyTaskTodayItem) -> Unit,
 ) {
     val action = access.quickAction(task)
     Surface(
@@ -672,7 +719,7 @@ private fun FamilyOverdueRow(
                     PriorityChip(priority = task.priority, label = priorityLabel)
                 }
             }
-            if (action == FamilyTaskQuickAction.COMPLETE) {
+            if (action != null) {
                 OutlinedButton(
                     onClick = { onQuickAction(task) },
                     enabled = !isActing && canRunQuickAction(task),
@@ -685,7 +732,13 @@ private fun FamilyOverdueRow(
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(if (isActing) "Mise à jour..." else "Terminer")
+                    Text(if (isActing) "Mise à jour..." else familyTaskActionLabel(action))
+                }
+            }
+            if (access.canManage && task.kind == com.example.taskoday.domain.model.FamilyActionKind.MISSION) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(enabled = !isActing, onClick = { onReschedule(task) }) { Text("Reporter") }
+                    TextButton(enabled = !isActing, onClick = { onFail(task) }) { Text("Ratée") }
                 }
             }
         }
@@ -881,6 +934,13 @@ private fun FamilyTaskRowCard(
                     color = InkMuted,
                 )
             }
+            if (task.status == FamilyTaskStatus.IN_PROGRESS && task.contributors.isNotEmpty()) {
+                Text(
+                    text = "En cours · ${task.contributors.joinToString(", ") { it.displayName }}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = InkMuted,
+                )
+            }
 
             if (action != null) {
                 OutlinedButton(
@@ -1062,9 +1122,13 @@ private fun FamilyTaskTodayItem.details(): List<String> =
 
 private fun FamilyTaskQuickAction.icon() =
     when (this) {
+        FamilyTaskQuickAction.START -> Icons.Outlined.Check
+        FamilyTaskQuickAction.JOIN -> Icons.Outlined.Add
         FamilyTaskQuickAction.COMPLETE -> Icons.Outlined.Check
         FamilyTaskQuickAction.VALIDATE -> Icons.Outlined.Check
         FamilyTaskQuickAction.REOPEN -> Icons.AutoMirrored.Outlined.Undo
+        FamilyTaskQuickAction.RESCHEDULE -> Icons.AutoMirrored.Outlined.Undo
+        FamilyTaskQuickAction.FAIL -> Icons.Outlined.Home
     }
 
 private fun FamilyTaskWeekDaySummary.progressLabel(): String =
@@ -1075,9 +1139,11 @@ private fun FamilyTaskWeekDaySummary.progressLabel(): String =
 private fun FamilyTaskStatus.containerColor(): Color =
     when (this) {
         FamilyTaskStatus.TODO -> ParchmentLight
+        FamilyTaskStatus.IN_PROGRESS -> SoftGold.copy(alpha = 0.22f)
         FamilyTaskStatus.COMPLETED -> MossGreen.copy(alpha = 0.18f)
         FamilyTaskStatus.PENDING_VALIDATION -> WarningGlow.copy(alpha = 0.22f)
         FamilyTaskStatus.VALIDATED -> MossGreen.copy(alpha = 0.24f)
+        FamilyTaskStatus.FAILED -> WarningGlow.copy(alpha = 0.22f)
         FamilyTaskStatus.SKIPPED -> InkMuted.copy(alpha = 0.12f)
         FamilyTaskStatus.UNKNOWN -> ParchmentCream
     }
@@ -1088,6 +1154,8 @@ private fun FamilyTaskStatus.contentColor(): Color =
         FamilyTaskStatus.COMPLETED,
         FamilyTaskStatus.VALIDATED,
         -> MossGreen
+        FamilyTaskStatus.IN_PROGRESS -> WoodBrown
+        FamilyTaskStatus.FAILED -> WarningGlow
         FamilyTaskStatus.PENDING_VALIDATION -> WoodBrown
         FamilyTaskStatus.SKIPPED,
         FamilyTaskStatus.UNKNOWN,

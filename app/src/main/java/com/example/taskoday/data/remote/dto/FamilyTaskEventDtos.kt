@@ -40,6 +40,10 @@ data class FamilyTaskEventDto(
     @SerializedName("participant_user_ids") val participantUserIds: List<Long> = emptyList(),
     @SerializedName("occurred_at") val occurredAt: String,
     @SerializedName("legacy_inferred") val legacyInferred: Boolean = false,
+    @SerializedName("cycle_number") val cycleNumber: Int? = null,
+    @SerializedName("metadata") val metadata: Map<String, String> = emptyMap(),
+    @SerializedName("contributor_user_ids") val contributorUserIds: List<Long> = emptyList(),
+    @SerializedName("contributors") val contributors: List<FamilyTaskEventActorDto> = emptyList(),
 )
 
 fun JsonElement.toFamilyTaskEventsResponseDto(gson: Gson): FamilyTaskEventsResponseDto =
@@ -61,6 +65,12 @@ fun FamilyTaskEventDto.toDomain(): FamilyTaskEvent = FamilyTaskEvent(
     participantUserIds = participantUserIds,
     occurredAt = parseFamilyEventInstant(occurredAt),
     legacyInferred = legacyInferred,
+    cycleNumber = cycleNumber,
+    metadata = metadata.orEmpty(),
+    contributorUserIds = contributorUserIds.orEmpty(),
+    contributors = contributors.orEmpty().mapNotNull { actor ->
+        actor.displayName?.takeIf { it.isNotBlank() }?.let { com.example.taskoday.domain.model.FamilyTaskActor(actor.userId, it) }
+    },
 )
 
 private fun parseFamilyEventInstant(raw: String): Instant =

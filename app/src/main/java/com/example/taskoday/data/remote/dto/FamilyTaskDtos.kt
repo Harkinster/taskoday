@@ -82,6 +82,8 @@ data class FamilyTaskOccurrenceDto(
     val completedByUser: FamilyTaskActorDto? = null,
     @SerializedName(value = "validated_by_user", alternate = ["validatedByUser"])
     val validatedByUser: FamilyTaskActorDto? = null,
+    @SerializedName("cycle_number") val cycleNumber: Int? = null,
+    @SerializedName("contributors") val contributors: List<FamilyTaskActorDto> = emptyList(),
 )
 
 data class FamilyTaskActorDto(
@@ -371,6 +373,8 @@ fun FamilyTaskOccurrenceDto.toDomain(): FamilyTaskTodayItem {
         scope = identity.scope,
         kind = identity.kind,
         endDate = endDate,
+        cycleNumber = cycleNumber ?: 0,
+        contributors = contributors.orEmpty().mapNotNull { it.toDomain() },
     )
 }
 

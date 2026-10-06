@@ -81,6 +81,8 @@ def test_occurrence_category_is_persisted_exposed_and_immutable_after_edits(clie
     assert updated["category"] == category
     assert _range(client, token, family_id, today, today)["items"][0]["category"] == category
 
+    if category == "TASKODAY_HOUSE_QUEST":
+        _start_occurrence(client, token, occurrence_id)
     completed = client.post(f"{API}/task-occurrences/{occurrence_id}/complete", headers=_headers(token))
     assert completed.status_code == 200
     assert completed.json()["data"]["category"] == category
@@ -191,6 +193,11 @@ def _create_task(client, token: str, family_id: int, payload: dict) -> dict:
     response = client.post(f"{API}/families/{family_id}/tasks", headers=_headers(token), json=payload)
     assert response.status_code == 201
     return response.json()["data"]
+
+
+def _start_occurrence(client, token: str, occurrence_id: int) -> None:
+    response = client.post(f"{API}/task-occurrences/{occurrence_id}/start", headers=_headers(token))
+    assert response.status_code == 200, response.text
 
 
 def _today(client, token: str, family_id: int, target: date) -> dict:
@@ -428,6 +435,7 @@ def test_completion_validation_reopen_and_next_recurrent_occurrence(client) -> N
     no_validation_occurrence_id = _item_by_title(_today(client, parent_token, family_id, today), "Sans validation")[
         "occurrence_id"
     ]
+    _start_occurrence(client, child_token, no_validation_occurrence_id)
     completed = client.post(
         f"{API}/task-occurrences/{no_validation_occurrence_id}/complete",
         headers=_headers(child_token),
@@ -450,6 +458,7 @@ def test_completion_validation_reopen_and_next_recurrent_occurrence(client) -> N
     validation_occurrence_id = _item_by_title(_today(client, parent_token, family_id, today), "Avec validation")[
         "occurrence_id"
     ]
+    _start_occurrence(client, child_token, validation_occurrence_id)
     pending = client.post(
         f"{API}/task-occurrences/{validation_occurrence_id}/complete",
         headers=_headers(child_token),
@@ -503,6 +512,7 @@ def test_completion_validation_reopen_and_next_recurrent_occurrence(client) -> N
         },
     )
     today_daily = _item_by_title(_today(client, parent_token, family_id, today), "Occurrence quotidienne")
+    _start_occurrence(client, child_token, today_daily["occurrence_id"])
     daily_completed = client.post(
         f"{API}/task-occurrences/{today_daily['occurrence_id']}/complete",
         headers=_headers(child_token),
@@ -536,6 +546,7 @@ def test_occurrence_payload_exposes_completion_and_validation_actors(client) -> 
     assert child_item["completed_by_user"] is None
     assert child_item["validated_by"] is None
     assert child_item["validated_by_user"] is None
+    _start_occurrence(client, child_token, child_item["occurrence_id"])
 
     completed = client.post(
         f"{API}/task-occurrences/{child_item['occurrence_id']}/complete",
@@ -557,6 +568,7 @@ def test_occurrence_payload_exposes_completion_and_validation_actors(client) -> 
         },
     )
     house_item = _item_by_title(_today(client, parent_token, family_id, today), "Tache maison acteur parent")
+    _start_occurrence(client, parent_token, house_item["occurrence_id"])
     parent_completed = client.post(
         f"{API}/task-occurrences/{house_item['occurrence_id']}/complete",
         headers=_headers(parent_token),
@@ -760,6 +772,7 @@ def test_family_task_occurrences_range_generates_recurrences_and_keeps_existing_
     assert daily_first["due_time"] is None
     assert daily_first["has_due_time"] is False
 
+    _start_occurrence(client, parent_token, daily_first["occurrence_id"])
     completed = client.post(
         f"{API}/task-occurrences/{daily_first['occurrence_id']}/complete",
         headers=_headers(parent_token),
@@ -890,6 +903,7 @@ def test_family_task_overdue_occurrences_filter_statuses_assignments_and_recurre
         },
     )
     completed_occurrence = _item_by_title(_today(client, parent_token, family_id, yesterday), "Completed yesterday")
+    _start_occurrence(client, child_token, completed_occurrence["occurrence_id"])
     completed = client.post(
         f"{API}/task-occurrences/{completed_occurrence['occurrence_id']}/complete",
         headers=_headers(child_token),
@@ -909,6 +923,7 @@ def test_family_task_overdue_occurrences_filter_statuses_assignments_and_recurre
         },
     )
     pending_occurrence = _item_by_title(_today(client, parent_token, family_id, yesterday), "Pending yesterday")
+    _start_occurrence(client, child_token, pending_occurrence["occurrence_id"])
     pending = client.post(
         f"{API}/task-occurrences/{pending_occurrence['occurrence_id']}/complete",
         headers=_headers(child_token),
@@ -928,6 +943,7 @@ def test_family_task_overdue_occurrences_filter_statuses_assignments_and_recurre
         },
     )
     validated_occurrence = _item_by_title(_today(client, parent_token, family_id, yesterday), "Validated yesterday")
+    _start_occurrence(client, child_token, validated_occurrence["occurrence_id"])
     validation_pending = client.post(
         f"{API}/task-occurrences/{validated_occurrence['occurrence_id']}/complete",
         headers=_headers(child_token),

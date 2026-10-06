@@ -1,5 +1,6 @@
 package com.example.taskoday.features.familyhome
 
+import android.app.DatePickerDialog
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,7 +43,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -64,6 +67,7 @@ import com.example.taskoday.core.ui.theme.spacing
 import com.example.taskoday.domain.model.FamilyTaskAssignee
 import com.example.taskoday.domain.model.FamilyTaskDefinition
 import com.example.taskoday.domain.model.FamilyTaskTodayItem
+import java.time.LocalDate
 
 @Composable
 fun FamilyTaskDetailScreen(
@@ -75,6 +79,8 @@ fun FamilyTaskDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val spacing = MaterialTheme.spacing
+    val context = LocalContext.current
+    var showFailMissionConfirmation by rememberSaveable { mutableStateOf(false) }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.refresh()
@@ -132,6 +138,31 @@ fun FamilyTaskDetailScreen(
                                 }
                             }
 
+                            if (uiState.canManageOverdueMission) item {
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                                    OutlinedButton(
+                                        onClick = {
+                                            val nextDay = LocalDate.now().plusDays(1)
+                                            DatePickerDialog(
+                                                context,
+                                                { _, year, month, day -> viewModel.rescheduleMission(LocalDate.of(year, month + 1, day).toString()) },
+                                                nextDay.year,
+                                                nextDay.monthValue - 1,
+                                                nextDay.dayOfMonth,
+                                            ).apply { datePicker.minDate = System.currentTimeMillis() }.show()
+                                        },
+                                        enabled = !uiState.isValidating,
+                                        modifier = Modifier.weight(1f),
+                                    ) { Text("Reporter") }
+                                    Button(
+                                        onClick = { showFailMissionConfirmation = true },
+                                        enabled = !uiState.isValidating,
+                                        colors = ButtonDefaults.buttonColors(containerColor = SoftRed, contentColor = ParchmentLight),
+                                        modifier = Modifier.weight(1f),
+                                    ) { Text("Ratée") }
+                                }
+                            }
+
                             if (uiState.access.canManage) item {
                                 FamilyTaskDetailActions(
                                     task = task,
@@ -155,6 +186,21 @@ fun FamilyTaskDetailScreen(
                 }
             }
         }
+    }
+
+    if (showFailMissionConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showFailMissionConfirmation = false },
+            title = { Text("Marquer cette Mission comme ratée ?") },
+            text = { Text("Cette Mission sera clôturée comme ratée.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showFailMissionConfirmation = false
+                    viewModel.failMission()
+                }) { Text("Marquer ratée") }
+            },
+            dismissButton = { TextButton(onClick = { showFailMissionConfirmation = false }) { Text("Annuler") } },
+        )
     }
 
     if (uiState.access.canManage && uiState.showDeleteConfirmation) {
@@ -246,8 +292,8 @@ private fun FamilyTaskDefinitionCard(
             DetailLine(label = "Validation parent", value = task.validationRequired.yesNoLabel())
             DetailLine(label = "Gamification", value = task.gamificationEnabled.yesNoLabel())
             DetailLine(
-                label = "Occurrence du jour",
-                value = todayOccurrence?.let { familyTaskStatusLabel(it.status) } ?: "Pas d'occurrence aujourd'hui",
+                label = "État de l'occurrence",
+                value = todayOccurrence?.let { familyTaskStatusLabel(it.status) } ?: "Aucune occurrence active",
             )
         }
     }

@@ -62,6 +62,10 @@ Depuis `20261004_0011`, une occurrence snapshotte sa catégorie à sa naissance.
 
 Depuis `20261005_0012`, chaque transition effective `COMPLETE`, `VALIDATE` ou `REOPEN` reste dans un registre append-only. L'occurrence exprime l'état courant ; une réouverture remet cet état à `TODO` sans effacer les transitions précédentes. Le registre distingue l'acteur réel du participant prévu et permet plusieurs cycles. Les cycles rouverts avant 0012 sont irrécupérables. Une action Maison multi attribuée conserve une occurrence et un état partagés ; le futur bénéficiaire d'une récompense n'est pas encore défini.
 
+Depuis `20261006_0014`, les actions `HOUSE` distinguent les assignataires prévus des contributeurs réels. `START` ajoute le premier contributeur, `JOIN` ajoute un membre de la famille, et seul un contributeur du cycle peut terminer l'occurrence partagée. `REOPEN` conserve les contributeurs du cycle précédent et ouvre un nouveau cycle sans participants. La validation Parent n'ajoute pas le Parent aux contributeurs. L'historique legacy ne déduit que l'acteur `COMPLETE` comme contribution certaine ; la collaboration complète est garantie à partir de 0014.
+
+Une `MISSION` ponctuelle échue reste ouverte et en retard jusqu'à décision du Parent. Le Parent peut la reporter (`RESCHEDULE`, ancienne et nouvelle échéances journalisées) ou la marquer ratée (`FAIL`, état final `FAILED`). Une Mission sans échéance reste ouverte ; les Routines manquées et les Quêtes échues ne sont pas automatiquement marquées ratées.
+
 Pour un futur `ActionValidated`, famille, action, occurrence, `scope`, `kind`, acteur de completion, acteur de validation et horodatages proviennent de l'occurrence et du registre. Le Reward Engine et sa politique multi assignée restent à concevoir.
 
 ## Droits et validation
@@ -73,8 +77,8 @@ Le Parent est un membre doté de droits supplémentaires de création, édition,
 - Reward Engine complet, calcul automatique et bonus réel des Quêtes ;
 - règles de bénéficiaire pour une action multi attribuée ;
 - inventaire Chronodria final, créatures, grimoire enrichi et défis familiaux ;
-- `IN_PROGRESS`, rejoindre une action en cours, contributeurs réels multiples ;
-- report ou échec d'une Mission ;
+- règles de récompense des contributeurs et bonus réel des Quêtes ;
+- séries/streaks de Routines ;
 - modèles persistants et tâches fréquentes ;
 - création personnelle sans famille active ;
 - identité de joueur Chronodria autonome pour chaque Parent.

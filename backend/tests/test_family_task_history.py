@@ -64,28 +64,38 @@ def test_validation_actors_shared_quest_and_inactive_definition_history(client) 
         "validation_required": True,
     })
     occurrence_id = _item_by_title(_today(client, parent, family_id, date.today()), task["title"])["occurrence_id"]
+    assert _post(client, child_a, occurrence_id, "start").json()["data"]["contributors"] == [{"user_id": child_a_id, "display_name": f"Child history-shared-a"}]
+    assert _post(client, child_b, occurrence_id, "join").status_code == 200
     assert _post(client, child_a, occurrence_id, "complete").json()["data"]["status"] == "PENDING_VALIDATION"
-    assert _post(client, child_b, occurrence_id, "complete").status_code == 200
-    assert len(_events(client, parent, family_id)) == 1  # One common occurrence, first actor only.
+    assert _post(client, child_b, occurrence_id, "join").status_code == 409
+    assert len(_events(client, parent, family_id)) == 3  # One shared occurrence; both joined, one completed it.
     assert _post(client, parent, occurrence_id, "validate").json()["data"]["status"] == "VALIDATED"
     assert _post(client, parent, occurrence_id, "validate").status_code == 200
     assert _post(client, parent, occurrence_id, "reopen").status_code == 200
-    assert _post(client, child_b, occurrence_id, "complete").status_code == 200
+    assert _post(client, parent, occurrence_id, "start").status_code == 200
+    assert _post(client, parent, occurrence_id, "complete").status_code == 200
 
     events = list(reversed(_events(client, parent, family_id)))
     assert [(event["event_type"], event["actor_user_id"], event["completed_by_user_id"]) for event in events] == [
+        ("START", child_a_id, None),
+        ("JOIN", child_b_id, None),
         ("COMPLETE", child_a_id, child_a_id),
         ("VALIDATE", parent_id, child_a_id),
         ("REOPEN", parent_id, child_a_id),
-        ("COMPLETE", child_b_id, child_b_id),
+        ("START", parent_id, None),
+        ("COMPLETE", parent_id, parent_id),
     ]
     assert all(event["participant_user_ids"] == [child_a_id, child_b_id] for event in events)
     assert all(event["category"] == "TASKODAY_HOUSE_QUEST" for event in events)
     assert len({event["occurrence_id"] for event in events}) == 1
-    assert [event["event_type"] for event in reversed(_events(client, child_a, family_id))] == ["COMPLETE", "VALIDATE", "REOPEN"]
-    assert [event["event_type"] for event in reversed(_events(client, child_b, family_id))] == ["COMPLETE"]
+    assert [event["event_type"] for event in reversed(_events(client, child_a, family_id))] == ["START", "JOIN", "COMPLETE", "VALIDATE", "REOPEN"]
+    assert [event["event_type"] for event in reversed(_events(client, child_b, family_id))] == ["START", "JOIN", "COMPLETE", "VALIDATE", "REOPEN"]
+    assert [event["contributor_user_ids"] for event in events] == [
+        [child_a_id, child_b_id], [child_a_id, child_b_id], [child_a_id, child_b_id],
+        [child_a_id, child_b_id], [child_a_id, child_b_id], [parent_id], [parent_id],
+    ]
     assert client.delete(f"{API}/family-tasks/{task['id']}", headers=_headers(parent)).status_code == 200
-    assert len(_events(client, parent, family_id)) == 4
+    assert len(_events(client, parent, family_id)) == 7
 
 
 def test_child_visibility_is_server_enforced_across_lists_direct_ids_and_history(client) -> None:
@@ -138,19 +148,19 @@ def test_child_visibility_is_server_enforced_across_lists_direct_ids_and_history
         assert _post(client, token, forbidden_occurrence, "validate").status_code == 404
         assert _post(client, token, forbidden_occurrence, "reopen").status_code == 404
 
-    assert _post(client, child_a, house_occurrence, "complete").status_code == 403
+    assert _post(client, child_a, house_occurrence, "start").status_code == 200
+    assert _post(client, child_a, house_occurrence, "complete").status_code == 200
     assert _post(client, child_b, other_occurrence, "complete").status_code == 200
     assert _post(client, parent, own_occurrence, "complete").status_code == 200
-    assert _post(client, parent, house_occurrence, "complete").status_code == 200
     assert {event["title"] for event in _events(client, parent, family_id)} == {"Private A", "Private B", "Shared house"}
     house_event = next(event for event in _events(client, parent, family_id) if event["title"] == "Shared house")
     assert house_event["actor_user_id"] not in house_event["participant_user_ids"]
-    assert {event["title"] for event in _events(client, child_a, family_id)} == {"Private A"}
+    assert {event["title"] for event in _events(client, child_a, family_id)} == {"Private A", "Shared house"}
     assert {event["title"] for event in _events(client, child_b, family_id)} == {"Private B"}
     assert _events(client, child_a, family_id, actor_user_id=child_b_id) == []
 
     with _db_session(client) as db:
-        assert db.query(FamilyTaskOccurrenceEvent).count() == 3
+        assert db.query(FamilyTaskOccurrenceEvent).count() == 4
 
 
 def test_event_category_comes_from_occurrence_snapshot_not_definition(client) -> None:

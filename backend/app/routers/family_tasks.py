@@ -8,7 +8,7 @@ from app.db.session import get_db
 from app.dependencies import get_current_user, success_response
 from app.models.family import FamilyMemberRole
 from app.models.family_task import (
-    FamilyTask, FamilyTaskOccurrenceEvent, FamilyTaskOccurrenceEventParticipant,
+    FamilyTask, FamilyTaskOccurrenceContributor, FamilyTaskOccurrenceEvent, FamilyTaskOccurrenceEventParticipant,
     FamilyTaskOccurrenceStatus, FamilyTaskPriority, FamilyTaskRecurrence,
 )
 from app.models.user import User, UserRole
@@ -19,6 +19,7 @@ from app.schemas.family_task import (
     FamilyTaskOccurrenceResponse,
     FamilyTaskOccurrenceEventsResponse,
     FamilyTaskOccurrencesRangeResponse,
+    FamilyTaskMissionRescheduleRequest,
     FamilyTaskUpdateRequest,
     FamilyTasksTodayResponse,
 )
@@ -36,6 +37,10 @@ from app.services.family_task_service import (
     occurrence_payload,
     occurrence_event_payload,
     occurrence_category,
+    start_occurrence,
+    join_occurrence,
+    reschedule_mission,
+    fail_mission,
     parse_weekdays,
     reopen_occurrence,
     replace_task_assignees,
@@ -264,6 +269,11 @@ def list_family_task_events(
             or_(
                 FamilyTaskOccurrenceEvent.actor_user_id == current_user.id,
                 FamilyTaskOccurrenceEvent.completed_by_user_id == current_user.id,
+                select(FamilyTaskOccurrenceContributor.id).where(
+                    FamilyTaskOccurrenceContributor.occurrence_id == FamilyTaskOccurrenceEvent.occurrence_id,
+                    FamilyTaskOccurrenceContributor.cycle_number == FamilyTaskOccurrenceEvent.cycle_number,
+                    FamilyTaskOccurrenceContributor.user_id == current_user.id,
+                ).exists(),
             ),
         )
         stmt = stmt.where(or_(own_personal, own_house))
@@ -399,6 +409,63 @@ def complete_family_task_occurrence(
     db.refresh(occurrence)
 
     return success_response(occurrence_payload(db, occurrence), message="Occurrence completee.")
+
+
+@router.post("/task-occurrences/{occurrence_id}/start", response_model=SuccessResponse[FamilyTaskOccurrenceResponse])
+def start_family_task_occurrence(
+    occurrence_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    occurrence, task, membership = get_occurrence_for_member(db, occurrence_id=occurrence_id, user=current_user)
+    if not task.active:
+        raise HTTPException(status_code=404, detail="Tache familiale introuvable.")
+    start_occurrence(db, occurrence=occurrence, task=task, membership=membership, user=current_user)
+    db.commit()
+    db.refresh(occurrence)
+    return success_response(occurrence_payload(db, occurrence), message="Tache commencee.")
+
+
+@router.post("/task-occurrences/{occurrence_id}/join", response_model=SuccessResponse[FamilyTaskOccurrenceResponse])
+def join_family_task_occurrence(
+    occurrence_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    occurrence, task, membership = get_occurrence_for_member(db, occurrence_id=occurrence_id, user=current_user)
+    if not task.active:
+        raise HTTPException(status_code=404, detail="Tache familiale introuvable.")
+    join_occurrence(db, occurrence=occurrence, task=task, membership=membership, user=current_user)
+    db.commit()
+    db.refresh(occurrence)
+    return success_response(occurrence_payload(db, occurrence), message="Vous participez a cette tache.")
+
+
+@router.post("/task-occurrences/{occurrence_id}/reschedule", response_model=SuccessResponse[FamilyTaskOccurrenceResponse])
+def reschedule_family_task_occurrence(
+    occurrence_id: int,
+    payload: FamilyTaskMissionRescheduleRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    occurrence, task, _ = get_occurrence_for_member(db, occurrence_id=occurrence_id, user=current_user)
+    reschedule_mission(db, occurrence=occurrence, task=task, user=current_user, due_date=payload.due_date)
+    db.commit()
+    db.refresh(occurrence)
+    return success_response(occurrence_payload(db, occurrence), message="Mission reportee.")
+
+
+@router.post("/task-occurrences/{occurrence_id}/fail", response_model=SuccessResponse[FamilyTaskOccurrenceResponse])
+def fail_family_task_occurrence(
+    occurrence_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    occurrence, task, _ = get_occurrence_for_member(db, occurrence_id=occurrence_id, user=current_user)
+    fail_mission(db, occurrence=occurrence, task=task, user=current_user)
+    db.commit()
+    db.refresh(occurrence)
+    return success_response(occurrence_payload(db, occurrence), message="Mission marquee comme ratee.")
 
 
 @router.post("/task-occurrences/{occurrence_id}/validate", response_model=SuccessResponse[FamilyTaskOccurrenceResponse])

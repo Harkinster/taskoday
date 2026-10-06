@@ -1,6 +1,7 @@
 package com.example.taskoday.features.familyhome
 
 import com.example.taskoday.domain.model.FamilyTaskAssignee
+import com.example.taskoday.domain.model.FamilyTaskActor
 import com.example.taskoday.domain.model.FamilyTaskPriority
 import com.example.taskoday.domain.model.FamilyTaskStatus
 import com.example.taskoday.domain.model.FamilyTaskTodayItem
@@ -334,16 +335,25 @@ class FamilyHomeUiPolicyTest {
     @Test
     fun `status labels cover expected family task states`() {
         assertEquals("À faire", familyTaskStatusLabel(FamilyTaskStatus.TODO))
+        assertEquals("En cours", familyTaskStatusLabel(FamilyTaskStatus.IN_PROGRESS))
         assertEquals("En attente de validation", familyTaskStatusLabel(FamilyTaskStatus.PENDING_VALIDATION))
         assertEquals("Validée", familyTaskStatusLabel(FamilyTaskStatus.VALIDATED))
+        assertEquals("Ratée", familyTaskStatusLabel(FamilyTaskStatus.FAILED))
         assertEquals("Ignorée", familyTaskStatusLabel(FamilyTaskStatus.SKIPPED))
     }
 
     @Test
     fun `quick actions follow status`() {
-        assertEquals(FamilyTaskQuickAction.COMPLETE, quickActionFor(task(status = FamilyTaskStatus.TODO)))
+        assertEquals(FamilyTaskQuickAction.START, quickActionFor(task(status = FamilyTaskStatus.TODO)))
+        val inProgress = task(status = FamilyTaskStatus.IN_PROGRESS, category = FamilyActionType.HOUSE_MISSION.category)
+        assertEquals(FamilyTaskQuickAction.JOIN, quickActionFor(inProgress, userId = 101L))
+        assertEquals(
+            FamilyTaskQuickAction.COMPLETE,
+            quickActionFor(inProgress.copy(contributors = listOf(FamilyTaskActor(101L, "Ada"))), userId = 101L),
+        )
         assertEquals(FamilyTaskQuickAction.VALIDATE, quickActionFor(task(status = FamilyTaskStatus.PENDING_VALIDATION)))
         assertEquals(FamilyTaskQuickAction.REOPEN, quickActionFor(task(status = FamilyTaskStatus.VALIDATED)))
+        assertNull(quickActionFor(task(status = FamilyTaskStatus.FAILED)))
         assertNull(quickActionFor(task(status = FamilyTaskStatus.SKIPPED)))
     }
 

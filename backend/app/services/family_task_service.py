@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from datetime import date, datetime, time, timedelta, timezone
+import json
 import unicodedata
 
 from fastapi import HTTPException, status
-from sqlalchemy import and_, delete, insert, select
+from sqlalchemy import and_, case, delete, insert, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -14,6 +15,7 @@ from app.models.family_task import (
     FamilyTask,
     FamilyTaskAssignee,
     FamilyTaskOccurrence,
+    FamilyTaskOccurrenceContributor,
     FamilyTaskOccurrenceEvent,
     FamilyTaskOccurrenceEventParticipant,
     FamilyTaskOccurrenceStatus,
@@ -356,6 +358,16 @@ def complete_occurrence(
 ) -> FamilyTaskOccurrence:
     _ensure_can_complete(db, task=task, membership=membership, user=user)
 
+    if task.scope == "HOUSE":
+        if occurrence.status != FamilyTaskOccurrenceStatus.IN_PROGRESS:
+            raise HTTPException(status_code=409, detail="Commencez ou rejoignez cette action avant de la terminer.")
+        if db.scalar(select(FamilyTaskOccurrenceContributor.id).where(
+            FamilyTaskOccurrenceContributor.occurrence_id == occurrence.id,
+            FamilyTaskOccurrenceContributor.cycle_number == occurrence.cycle_number,
+            FamilyTaskOccurrenceContributor.user_id == user.id,
+        )) is None:
+            raise HTTPException(status_code=403, detail="Participez a cette action avant de la terminer.")
+
     if occurrence.status in {
         FamilyTaskOccurrenceStatus.COMPLETED,
         FamilyTaskOccurrenceStatus.PENDING_VALIDATION,
@@ -363,21 +375,132 @@ def complete_occurrence(
     }:
         return occurrence
 
-    old_status = occurrence.status
     now = datetime.now(timezone.utc)
-    occurrence.completed_at = now
-    occurrence.completed_by_user_id = user.id
-    occurrence.validated_at = None
-    occurrence.validated_by_user_id = None
-    occurrence.status = (
+    old_status = occurrence.status
+    new_status = (
         FamilyTaskOccurrenceStatus.PENDING_VALIDATION
         if task.validation_required
         else FamilyTaskOccurrenceStatus.COMPLETED
     )
-    db.add(occurrence)
+    # A status-and-cycle compare-and-set guarantees that concurrent taps can
+    # create only one completion transition for the shared occurrence.
+    result = db.execute(update(FamilyTaskOccurrence).where(
+        FamilyTaskOccurrence.id == occurrence.id,
+        FamilyTaskOccurrence.status == old_status,
+        FamilyTaskOccurrence.cycle_number == occurrence.cycle_number,
+    ).values(
+        status=new_status,
+        completed_at=now,
+        completed_by_user_id=user.id,
+        validated_at=None,
+        validated_by_user_id=None,
+    ))
+    if result.rowcount != 1:
+        db.refresh(occurrence)
+        if occurrence.status in {
+            FamilyTaskOccurrenceStatus.COMPLETED,
+            FamilyTaskOccurrenceStatus.PENDING_VALIDATION,
+            FamilyTaskOccurrenceStatus.VALIDATED,
+        }:
+            return occurrence
+        raise HTTPException(status_code=409, detail="Cette action a deja ete modifiee.")
+    db.refresh(occurrence)
     record_occurrence_transition(
         db, occurrence=occurrence, task=task, event_type="COMPLETE", old_status=old_status,
         actor_user_id=user.id, completed_by_user_id=user.id, occurred_at=now,
+    )
+    return occurrence
+
+
+def start_occurrence(
+    db: Session, *, occurrence: FamilyTaskOccurrence, task: FamilyTask,
+    membership: FamilyMember, user: User,
+) -> FamilyTaskOccurrence:
+    if task.scope != "HOUSE":
+        raise HTTPException(status_code=409, detail="La participation concerne uniquement les actions Maison.")
+    if occurrence.status == FamilyTaskOccurrenceStatus.IN_PROGRESS:
+        existing = db.scalar(select(FamilyTaskOccurrenceContributor.id).where(
+            FamilyTaskOccurrenceContributor.occurrence_id == occurrence.id,
+            FamilyTaskOccurrenceContributor.cycle_number == occurrence.cycle_number,
+            FamilyTaskOccurrenceContributor.user_id == user.id,
+        ))
+        if existing is not None:
+            return occurrence
+        raise HTTPException(status_code=409, detail="Cette action est deja en cours. Rejoignez-la pour participer.")
+    if occurrence.status != FamilyTaskOccurrenceStatus.TODO:
+        raise HTTPException(status_code=409, detail="Cette action n'est pas ouverte a la participation.")
+
+    result = db.execute(update(FamilyTaskOccurrence).where(
+        FamilyTaskOccurrence.id == occurrence.id,
+        FamilyTaskOccurrence.status == FamilyTaskOccurrenceStatus.TODO,
+    ).values(
+        status=FamilyTaskOccurrenceStatus.IN_PROGRESS,
+        cycle_number=case((FamilyTaskOccurrence.cycle_number == 0, 1), else_=FamilyTaskOccurrence.cycle_number),
+    ))
+    if result.rowcount != 1:
+        db.refresh(occurrence)
+        if occurrence.status == FamilyTaskOccurrenceStatus.IN_PROGRESS and db.scalar(select(FamilyTaskOccurrenceContributor.id).where(
+            FamilyTaskOccurrenceContributor.occurrence_id == occurrence.id,
+            FamilyTaskOccurrenceContributor.cycle_number == occurrence.cycle_number,
+            FamilyTaskOccurrenceContributor.user_id == user.id,
+        )) is not None:
+            return occurrence
+        raise HTTPException(status_code=409, detail="Cette action a deja ete modifiee.")
+
+    db.refresh(occurrence)
+    now = datetime.now(timezone.utc)
+    db.add(FamilyTaskOccurrenceContributor(
+        occurrence_id=occurrence.id, cycle_number=occurrence.cycle_number,
+        user_id=user.id, joined_at=now,
+    ))
+    db.flush()
+    record_occurrence_transition(
+        db, occurrence=occurrence, task=task, event_type="START",
+        old_status=FamilyTaskOccurrenceStatus.TODO, actor_user_id=user.id,
+        completed_by_user_id=None, occurred_at=now,
+    )
+    return occurrence
+
+
+def join_occurrence(
+    db: Session, *, occurrence: FamilyTaskOccurrence, task: FamilyTask,
+    membership: FamilyMember, user: User,
+) -> FamilyTaskOccurrence:
+    if task.scope != "HOUSE":
+        raise HTTPException(status_code=409, detail="La participation concerne uniquement les actions Maison.")
+    if occurrence.status != FamilyTaskOccurrenceStatus.IN_PROGRESS:
+        raise HTTPException(status_code=409, detail="Cette action n'est plus ouverte a la participation.")
+    exists = db.scalar(select(FamilyTaskOccurrenceContributor.id).where(
+        FamilyTaskOccurrenceContributor.occurrence_id == occurrence.id,
+        FamilyTaskOccurrenceContributor.cycle_number == occurrence.cycle_number,
+        FamilyTaskOccurrenceContributor.user_id == user.id,
+    ))
+    if exists is not None:
+        return occurrence
+    # Serialize the final participation check against completion. The no-op
+    # update acquires the occurrence write lock and fails if it was closed.
+    guarded = db.execute(update(FamilyTaskOccurrence).where(
+        FamilyTaskOccurrence.id == occurrence.id,
+        FamilyTaskOccurrence.status == FamilyTaskOccurrenceStatus.IN_PROGRESS,
+        FamilyTaskOccurrence.cycle_number == occurrence.cycle_number,
+    ).values(cycle_number=occurrence.cycle_number))
+    if guarded.rowcount != 1:
+        raise HTTPException(status_code=409, detail="Cette action n'est plus ouverte a la participation.")
+    now = datetime.now(timezone.utc)
+    try:
+        with db.begin_nested():
+            db.add(FamilyTaskOccurrenceContributor(
+                occurrence_id=occurrence.id, cycle_number=occurrence.cycle_number,
+                user_id=user.id, joined_at=now,
+            ))
+            db.flush()
+    except IntegrityError:
+        # A simultaneous duplicate join is an idempotent success.
+        return occurrence
+    record_occurrence_transition(
+        db, occurrence=occurrence, task=task, event_type="JOIN",
+        old_status=FamilyTaskOccurrenceStatus.IN_PROGRESS, actor_user_id=user.id,
+        completed_by_user_id=None, occurred_at=now,
     )
     return occurrence
 
@@ -399,14 +522,26 @@ def validate_occurrence(
         )
 
     old_status = occurrence.status
-    occurrence.status = FamilyTaskOccurrenceStatus.VALIDATED
-    occurrence.validated_at = datetime.now(timezone.utc)
-    occurrence.validated_by_user_id = user.id
-    db.add(occurrence)
+    validated_at = datetime.now(timezone.utc)
+    result = db.execute(update(FamilyTaskOccurrence).where(
+        FamilyTaskOccurrence.id == occurrence.id,
+        FamilyTaskOccurrence.status == FamilyTaskOccurrenceStatus.PENDING_VALIDATION,
+        FamilyTaskOccurrence.cycle_number == occurrence.cycle_number,
+    ).values(
+        status=FamilyTaskOccurrenceStatus.VALIDATED,
+        validated_at=validated_at,
+        validated_by_user_id=user.id,
+    ))
+    if result.rowcount != 1:
+        db.refresh(occurrence)
+        if occurrence.status == FamilyTaskOccurrenceStatus.VALIDATED:
+            return occurrence
+        raise HTTPException(status_code=409, detail="Cette occurrence a deja ete modifiee.")
+    db.refresh(occurrence)
     record_occurrence_transition(
         db, occurrence=occurrence, task=task, event_type="VALIDATE", old_status=old_status,
         actor_user_id=user.id, completed_by_user_id=occurrence.completed_by_user_id,
-        occurred_at=occurrence.validated_at,
+        occurred_at=validated_at,
     )
     return occurrence
 
@@ -421,18 +556,95 @@ def reopen_occurrence(
     ensure_family_parent(db, family_id=task.family_id, user=user)
     if occurrence.status == FamilyTaskOccurrenceStatus.TODO:
         return occurrence
+    if occurrence.status == FamilyTaskOccurrenceStatus.FAILED:
+        raise HTTPException(status_code=409, detail="Une Mission marquee comme ratee ne peut pas etre rouverte.")
     old_status = occurrence.status
     completed_by_user_id = occurrence.completed_by_user_id
+    old_cycle_number = occurrence.cycle_number
     now = datetime.now(timezone.utc)
-    occurrence.status = FamilyTaskOccurrenceStatus.TODO
-    occurrence.completed_at = None
-    occurrence.completed_by_user_id = None
-    occurrence.validated_at = None
-    occurrence.validated_by_user_id = None
-    db.add(occurrence)
+    result = db.execute(update(FamilyTaskOccurrence).where(
+        FamilyTaskOccurrence.id == occurrence.id,
+        FamilyTaskOccurrence.status == old_status,
+        FamilyTaskOccurrence.cycle_number == old_cycle_number,
+    ).values(
+        status=FamilyTaskOccurrenceStatus.TODO,
+        completed_at=None,
+        completed_by_user_id=None,
+        validated_at=None,
+        validated_by_user_id=None,
+        cycle_number=old_cycle_number + 1 if old_cycle_number > 0 else 1,
+    ))
+    if result.rowcount != 1:
+        db.refresh(occurrence)
+        if occurrence.status == FamilyTaskOccurrenceStatus.TODO:
+            return occurrence
+        raise HTTPException(status_code=409, detail="Cette occurrence a deja ete modifiee.")
+    db.refresh(occurrence)
     record_occurrence_transition(
         db, occurrence=occurrence, task=task, event_type="REOPEN", old_status=old_status,
         actor_user_id=user.id, completed_by_user_id=completed_by_user_id, occurred_at=now,
+        cycle_number=old_cycle_number,
+    )
+    return occurrence
+
+
+def reschedule_mission(
+    db: Session, *, occurrence: FamilyTaskOccurrence, task: FamilyTask,
+    user: User, due_date: date,
+) -> FamilyTaskOccurrence:
+    ensure_family_parent(db, family_id=task.family_id, user=user)
+    if task.kind != "MISSION" or task.recurrence != FamilyTaskRecurrence.NONE:
+        raise HTTPException(status_code=409, detail="Seules les Missions peuvent etre reportees.")
+    if occurrence.status != FamilyTaskOccurrenceStatus.TODO or task.due_date is None or task.due_date >= date.today():
+        raise HTTPException(status_code=409, detail="Seule une Mission en retard peut etre reportee.")
+    if due_date < date.today():
+        raise HTTPException(status_code=422, detail="La nouvelle echeance doit etre aujourd'hui ou plus tard.")
+    old_due_date = task.due_date
+    old_status = occurrence.status
+    guarded = db.execute(update(FamilyTaskOccurrence).where(
+        FamilyTaskOccurrence.id == occurrence.id,
+        FamilyTaskOccurrence.status == FamilyTaskOccurrenceStatus.TODO,
+        select(FamilyTask.id).where(FamilyTask.id == task.id, FamilyTask.due_date == old_due_date).exists(),
+    ).values(cycle_number=occurrence.cycle_number))
+    if guarded.rowcount != 1:
+        raise HTTPException(status_code=409, detail="Cette Mission a deja ete modifiee.")
+    due_at, normalized_date, due_time = normalize_due_fields(due_at=None, due_date=due_date, due_time=task.due_time)
+    task.due_date, task.due_at, task.due_time = normalized_date, due_at, due_time
+    occurrence.scheduled_date = due_date
+    now = datetime.now(timezone.utc)
+    record_occurrence_transition(
+        db, occurrence=occurrence, task=task, event_type="RESCHEDULE", old_status=old_status,
+        actor_user_id=user.id, completed_by_user_id=None, occurred_at=now,
+        metadata={"old_due_date": old_due_date.isoformat(), "new_due_date": due_date.isoformat()},
+    )
+    return occurrence
+
+
+def fail_mission(
+    db: Session, *, occurrence: FamilyTaskOccurrence, task: FamilyTask, user: User,
+) -> FamilyTaskOccurrence:
+    ensure_family_parent(db, family_id=task.family_id, user=user)
+    if task.kind != "MISSION" or task.recurrence != FamilyTaskRecurrence.NONE:
+        raise HTTPException(status_code=409, detail="Seules les Missions ponctuelles peuvent etre marquees comme ratees.")
+    if occurrence.status != FamilyTaskOccurrenceStatus.TODO or task.due_date is None or task.due_date >= date.today():
+        raise HTTPException(status_code=409, detail="Seule une Mission en retard peut etre marquee comme ratee.")
+    old_status = occurrence.status
+    guarded = db.execute(update(FamilyTaskOccurrence).where(
+        FamilyTaskOccurrence.id == occurrence.id,
+        FamilyTaskOccurrence.status == FamilyTaskOccurrenceStatus.TODO,
+        select(FamilyTask.id).where(
+            FamilyTask.id == task.id,
+            FamilyTask.due_date == task.due_date,
+            FamilyTask.due_date < date.today(),
+        ).exists(),
+    ).values(status=FamilyTaskOccurrenceStatus.FAILED))
+    if guarded.rowcount != 1:
+        raise HTTPException(status_code=409, detail="Cette Mission a deja ete modifiee.")
+    db.refresh(occurrence)
+    now = datetime.now(timezone.utc)
+    record_occurrence_transition(
+        db, occurrence=occurrence, task=task, event_type="FAIL", old_status=old_status,
+        actor_user_id=user.id, completed_by_user_id=None, occurred_at=now,
     )
     return occurrence
 
@@ -440,7 +652,8 @@ def reopen_occurrence(
 def record_occurrence_transition(
     db: Session, *, occurrence: FamilyTaskOccurrence, task: FamilyTask, event_type: str,
     old_status: FamilyTaskOccurrenceStatus, actor_user_id: int,
-    completed_by_user_id: int | None, occurred_at: datetime,
+    completed_by_user_id: int | None, occurred_at: datetime, metadata: dict | None = None,
+    cycle_number: int | None = None,
 ) -> None:
     event = FamilyTaskOccurrenceEvent(
         family_id=task.family_id, task_id=task.id, occurrence_id=occurrence.id,
@@ -449,6 +662,8 @@ def record_occurrence_transition(
         event_type=event_type, status_from=old_status, status_to=occurrence.status,
         actor_user_id=actor_user_id, completed_by_user_id=completed_by_user_id,
         occurred_at=occurred_at, legacy_inferred=False,
+        cycle_number=occurrence.cycle_number if cycle_number is None else cycle_number,
+        metadata_json=json.dumps(metadata, separators=(",", ":")) if metadata is not None else None,
     )
     event.participants = [
         FamilyTaskOccurrenceEventParticipant(user_id=assignee.user_id)
@@ -505,6 +720,8 @@ def occurrence_payload(db: Session, occurrence: FamilyTaskOccurrence) -> dict:
         "recurrence": _enum_value(task.recurrence),
         "recurrence_interval": task.recurrence_interval,
         "status": _enum_value(occurrence.status),
+        "cycle_number": occurrence.cycle_number,
+        "contributors": occurrence_contributors_payload(db, occurrence),
         "validation_required": task.validation_required,
         "gamification_enabled": task.gamification_enabled,
         "priority": _enum_value(task.priority),
@@ -518,6 +735,7 @@ def occurrence_payload(db: Session, occurrence: FamilyTaskOccurrence) -> dict:
 
 
 def occurrence_event_payload(db: Session, event: FamilyTaskOccurrenceEvent) -> dict:
+    contributor_ids = occurrence_cycle_contributor_ids(db, event.occurrence_id, event.cycle_number)
     return {
         "id": event.id,
         "family_id": event.family_id,
@@ -529,6 +747,13 @@ def occurrence_event_payload(db: Session, event: FamilyTaskOccurrenceEvent) -> d
         "title": event.title,
         "scheduled_date": event.scheduled_date,
         "event_type": event.event_type,
+        "cycle_number": event.cycle_number,
+        "metadata": json.loads(event.metadata_json) if event.metadata_json else None,
+        "contributor_user_ids": contributor_ids,
+        "contributors": [
+            {"user_id": user_id, "display_name": (user_reference_payload(db, user_id) or {}).get("display_name", "Membre de la famille")}
+            for user_id in contributor_ids
+        ],
         "status_from": _enum_value(event.status_from),
         "status_to": _enum_value(event.status_to),
         "actor_user_id": event.actor_user_id,
@@ -538,6 +763,31 @@ def occurrence_event_payload(db: Session, event: FamilyTaskOccurrenceEvent) -> d
         "occurred_at": event.occurred_at,
         "legacy_inferred": event.legacy_inferred,
     }
+
+
+def occurrence_cycle_contributor_ids(db: Session, occurrence_id: int, cycle_number: int | None) -> list[int]:
+    if cycle_number is None:
+        return []
+    return db.scalars(select(FamilyTaskOccurrenceContributor.user_id).where(
+        FamilyTaskOccurrenceContributor.occurrence_id == occurrence_id,
+        FamilyTaskOccurrenceContributor.cycle_number == cycle_number,
+    ).order_by(FamilyTaskOccurrenceContributor.joined_at, FamilyTaskOccurrenceContributor.user_id)).all()
+
+
+def occurrence_contributors_payload(db: Session, occurrence: FamilyTaskOccurrence) -> list[dict]:
+    if occurrence.cycle_number <= 0:
+        return []
+    rows = db.execute(
+        select(User, ChildProfile, FamilyMember)
+        .join(FamilyTaskOccurrenceContributor, FamilyTaskOccurrenceContributor.user_id == User.id)
+        .join(FamilyMember, and_(FamilyMember.family_id == occurrence.task.family_id, FamilyMember.user_id == User.id))
+        .join(ChildProfile, ChildProfile.user_id == User.id, isouter=True)
+        .where(
+            FamilyTaskOccurrenceContributor.occurrence_id == occurrence.id,
+            FamilyTaskOccurrenceContributor.cycle_number == occurrence.cycle_number,
+        ).order_by(FamilyTaskOccurrenceContributor.joined_at, User.id)
+    ).all()
+    return [{"user_id": user.id, "display_name": display_name_for_user(user, profile)} for user, profile, _ in rows]
 
 
 def assignees_payload(db: Session, task: FamilyTask) -> list[dict]:
@@ -582,6 +832,10 @@ def group_items_by_member(items: list[dict]) -> list[dict]:
 
 def _ensure_can_complete(db: Session, *, task: FamilyTask, membership: FamilyMember, user: User) -> None:
     if user.role == UserRole.PARENT and membership.role == FamilyMemberRole.PARENT:
+        return
+    if task.scope == "HOUSE":
+        # Every family member may contribute; completion still requires a
+        # contributor record for the current cycle (checked by the caller).
         return
 
     assignee_ids = set(

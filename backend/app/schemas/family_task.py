@@ -1,5 +1,5 @@
 from datetime import date, datetime, time
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -156,6 +156,8 @@ class FamilyTaskOccurrenceResponse(BaseModel):
     recurrence: str
     recurrence_interval: int
     status: str
+    cycle_number: int
+    contributors: list[FamilyTaskActorResponse]
     validation_required: bool
     gamification_enabled: bool
     priority: str
@@ -178,6 +180,10 @@ class FamilyTaskOccurrenceEventResponse(BaseModel):
     title: str
     scheduled_date: date | None
     event_type: str
+    cycle_number: int | None
+    metadata: dict[str, Any] | None
+    contributor_user_ids: list[int]
+    contributors: list[FamilyTaskActorResponse]
     status_from: str
     status_to: str
     actor_user_id: int
@@ -193,6 +199,10 @@ class FamilyTaskOccurrenceEventsResponse(BaseModel):
     items: list[FamilyTaskOccurrenceEventResponse]
     limit: int
     offset: int
+
+
+class FamilyTaskMissionRescheduleRequest(BaseModel):
+    due_date: date
 
 
 class FamilyTaskOccurrenceMemberGroupResponse(BaseModel):

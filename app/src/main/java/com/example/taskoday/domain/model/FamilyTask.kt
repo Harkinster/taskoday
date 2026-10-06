@@ -94,6 +94,8 @@ data class FamilyTaskTodayItem(
     val scope: FamilyActionScope = FamilyActionType.fromCategory(category).scope,
     val kind: FamilyActionKind = FamilyActionType.fromCategory(category).kind,
     val endDate: String? = null,
+    val cycleNumber: Int = 0,
+    val contributors: List<FamilyTaskActor> = emptyList(),
 )
 
 data class FamilyTaskActor(
@@ -108,24 +110,28 @@ data class FamilyTaskAssignee(
 
 enum class FamilyTaskStatus {
     TODO,
+    IN_PROGRESS,
     COMPLETED,
     PENDING_VALIDATION,
     VALIDATED,
+    FAILED,
     SKIPPED,
     UNKNOWN,
     ;
 
     val countsAsDone: Boolean
-        get() = this == COMPLETED || this == VALIDATED
+        get() = this == COMPLETED || this == VALIDATED || this == FAILED
 
     companion object {
         fun fromBackend(value: String?): FamilyTaskStatus {
             val normalized = value.normalizedBackendKey()
             return when (normalized) {
                 "TODO", "TO_DO", "OPEN", "PLANNED", "PENDING" -> TODO
+                "IN_PROGRESS", "INPROGRESS", "STARTED" -> IN_PROGRESS
                 "COMPLETED", "COMPLETE", "DONE", "FINISHED" -> COMPLETED
                 "PENDING_VALIDATION", "AWAITING_VALIDATION", "WAITING_VALIDATION" -> PENDING_VALIDATION
                 "VALIDATED", "APPROVED" -> VALIDATED
+                "FAILED", "MISSED" -> FAILED
                 "SKIPPED", "IGNORED", "CANCELLED", "CANCELED" -> SKIPPED
                 else -> UNKNOWN
             }

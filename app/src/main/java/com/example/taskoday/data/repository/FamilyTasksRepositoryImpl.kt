@@ -138,6 +138,26 @@ class FamilyTasksRepositoryImpl
                 Unit
             }
 
+        override suspend fun startOccurrence(occurrenceId: Long): Result<Unit> = runCatching {
+            familyTasksApi.startOccurrence(occurrenceId)
+            Unit
+        }
+
+        override suspend fun joinOccurrence(occurrenceId: Long): Result<Unit> = runCatching {
+            familyTasksApi.joinOccurrence(occurrenceId)
+            Unit
+        }
+
+        override suspend fun rescheduleOccurrence(occurrenceId: Long, dueDate: String): Result<Unit> = runCatching {
+            familyTasksApi.rescheduleOccurrence(occurrenceId, mapOf("due_date" to dueDate))
+            Unit
+        }
+
+        override suspend fun failOccurrence(occurrenceId: Long): Result<Unit> = runCatching {
+            familyTasksApi.failOccurrence(occurrenceId)
+            Unit
+        }
+
         override suspend fun validateOccurrence(occurrenceId: Long): Result<Unit> =
             runCatching {
                 familyTasksApi.validateOccurrence(occurrenceId)

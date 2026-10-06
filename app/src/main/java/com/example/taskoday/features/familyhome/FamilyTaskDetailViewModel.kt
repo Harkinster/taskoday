@@ -57,11 +57,14 @@ class FamilyTaskDetailViewModel
                             return@onSuccess
                         }
                         val todayOccurrence =
-                            familyTasksRepository
-                                .fetchToday()
-                                .getOrNull()
-                                ?.tasks
+                            familyTasksRepository.fetchToday().getOrNull()?.tasks
                                 ?.firstOrNull { occurrence -> occurrence.taskId == taskId }
+                                ?: familyTasksRepository.fetchOverdueOccurrences().getOrNull()?.occurrences
+                                    ?.firstOrNull { occurrence -> occurrence.taskId == taskId }
+                                ?: task.dueDate?.let { dueDate ->
+                                    familyTasksRepository.fetchOccurrences(dueDate, dueDate).getOrNull()?.occurrences
+                                        ?.firstOrNull { occurrence -> occurrence.taskId == taskId }
+                                }
                         _uiState.update {
                             it.copy(
                                 isLoading = false,
@@ -81,6 +84,29 @@ class FamilyTaskDetailViewModel
                             )
                         }
                     }
+            }
+        }
+
+        fun rescheduleMission(dueDate: String) = runMissionOutcome("Mission reportée.") { occurrenceId ->
+            familyTasksRepository.rescheduleOccurrence(occurrenceId, dueDate)
+        }
+
+        fun failMission() = runMissionOutcome("Mission marquée comme ratée.") { occurrenceId ->
+            familyTasksRepository.failOccurrence(occurrenceId)
+        }
+
+        private fun runMissionOutcome(success: String, action: suspend (Long) -> Result<Unit>) {
+            val state = _uiState.value
+            val occurrenceId = state.todayOccurrence?.occurrenceId ?: return
+            if (!state.canManageOverdueMission || state.isDeleting || state.isValidating) return
+            _uiState.update { it.copy(isValidating = true, errorMessage = null, successMessage = null) }
+            viewModelScope.launch {
+                action(occurrenceId).onSuccess {
+                    _uiState.update { it.copy(isValidating = false) }
+                    refresh(successMessage = success)
+                }.onFailure { throwable ->
+                    _uiState.update { it.copy(isValidating = false, errorMessage = throwable.toRemoteUserMessage("Impossible de mettre à jour la Mission.")) }
+                }
             }
         }
 

@@ -18,9 +18,18 @@ data class FamilyTaskAccessPolicy(val userId: Long? = null, val role: String? = 
         userId != null && (canManage || role.equals("CHILD", ignoreCase = true)) &&
             (task.scope == com.example.taskoday.domain.model.FamilyActionScope.HOUSE || canView(task.assignees))
 
+    fun canView(task: FamilyTaskTodayItem): Boolean =
+        userId != null && (canManage || role.equals("CHILD", ignoreCase = true)) &&
+            (task.scope == com.example.taskoday.domain.model.FamilyActionScope.HOUSE || canView(task.assignees))
+
     fun quickAction(task: FamilyTaskTodayItem): FamilyTaskQuickAction? =
-        quickActionFor(task)?.takeIf { action ->
-            canView(task.assignees) && (canManage || action == FamilyTaskQuickAction.COMPLETE)
+        quickActionFor(task, userId)?.takeIf { action ->
+            canView(task) && (
+                canManage ||
+                    (task.scope == com.example.taskoday.domain.model.FamilyActionScope.HOUSE &&
+                        action in setOf(FamilyTaskQuickAction.START, FamilyTaskQuickAction.JOIN, FamilyTaskQuickAction.COMPLETE)) ||
+                    (task.scope == com.example.taskoday.domain.model.FamilyActionScope.PERSONAL && action == FamilyTaskQuickAction.COMPLETE)
+            )
         }
 
     companion object {

@@ -14,9 +14,13 @@ import java.time.temporal.TemporalAdjusters
 import java.util.Locale
 
 enum class FamilyTaskQuickAction {
+    START,
+    JOIN,
     COMPLETE,
     VALIDATE,
     REOPEN,
+    RESCHEDULE,
+    FAIL,
 }
 
 data class FamilyTaskWeekWindow(
@@ -294,9 +298,11 @@ fun familyTaskOccurrenceRecurrenceLabel(value: String?): String? {
 fun familyTaskStatusLabel(status: FamilyTaskStatus): String =
     when (status) {
         FamilyTaskStatus.TODO -> "À faire"
+        FamilyTaskStatus.IN_PROGRESS -> "En cours"
         FamilyTaskStatus.COMPLETED -> "Terminée"
         FamilyTaskStatus.PENDING_VALIDATION -> "En attente de validation"
         FamilyTaskStatus.VALIDATED -> "Validée"
+        FamilyTaskStatus.FAILED -> "Ratée"
         FamilyTaskStatus.SKIPPED -> "Ignorée"
         FamilyTaskStatus.UNKNOWN -> "À suivre"
     }
@@ -310,13 +316,17 @@ fun familyTaskPriorityLabel(priority: FamilyTaskPriority): String? =
         FamilyTaskPriority.UNKNOWN -> null
     }
 
-fun quickActionFor(task: FamilyTaskTodayItem): FamilyTaskQuickAction? =
+fun quickActionFor(task: FamilyTaskTodayItem, userId: Long? = null): FamilyTaskQuickAction? =
     when (task.status) {
-        FamilyTaskStatus.TODO -> FamilyTaskQuickAction.COMPLETE
+        FamilyTaskStatus.TODO -> if (task.scope == FamilyActionScope.HOUSE) FamilyTaskQuickAction.START else FamilyTaskQuickAction.COMPLETE
+        FamilyTaskStatus.IN_PROGRESS -> if (task.scope == FamilyActionScope.HOUSE) {
+            if (task.contributors.any { it.userId == userId }) FamilyTaskQuickAction.COMPLETE else FamilyTaskQuickAction.JOIN
+        } else null
         FamilyTaskStatus.PENDING_VALIDATION -> FamilyTaskQuickAction.VALIDATE
         FamilyTaskStatus.COMPLETED,
         FamilyTaskStatus.VALIDATED,
         -> FamilyTaskQuickAction.REOPEN
+        FamilyTaskStatus.FAILED,
         FamilyTaskStatus.SKIPPED,
         FamilyTaskStatus.UNKNOWN,
         -> null
@@ -324,9 +334,13 @@ fun quickActionFor(task: FamilyTaskTodayItem): FamilyTaskQuickAction? =
 
 fun familyTaskActionLabel(action: FamilyTaskQuickAction): String =
     when (action) {
+        FamilyTaskQuickAction.START -> "Commencer"
+        FamilyTaskQuickAction.JOIN -> "Participer"
         FamilyTaskQuickAction.COMPLETE -> "Terminer"
         FamilyTaskQuickAction.VALIDATE -> "Valider"
         FamilyTaskQuickAction.REOPEN -> "Rouvrir"
+        FamilyTaskQuickAction.RESCHEDULE -> "Reporter"
+        FamilyTaskQuickAction.FAIL -> "Marquer ratée"
     }
 
 fun canRunQuickAction(task: FamilyTaskTodayItem): Boolean =

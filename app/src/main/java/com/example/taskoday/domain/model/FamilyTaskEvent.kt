@@ -2,7 +2,7 @@ package com.example.taskoday.domain.model
 
 import java.time.Instant
 
-enum class FamilyTaskEventType { COMPLETE, VALIDATE, REOPEN }
+enum class FamilyTaskEventType { START, JOIN, COMPLETE, VALIDATE, REOPEN, RESCHEDULE, FAIL }
 
 data class FamilyTaskEvent(
     val id: Long,
@@ -22,4 +22,8 @@ data class FamilyTaskEvent(
     val legacyInferred: Boolean,
     val scope: FamilyActionScope = category.scope,
     val kind: FamilyActionKind = category.kind,
+    val cycleNumber: Int? = null,
+    val metadata: Map<String, String> = emptyMap(),
+    val contributorUserIds: List<Long> = emptyList(),
+    val contributors: List<FamilyTaskActor> = emptyList(),
 )

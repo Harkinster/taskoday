@@ -44,15 +44,23 @@ fun FamilyActionType.journalLabel(): String = when (this) {
 }
 
 fun FamilyTaskEvent.journalEventLabel(): String = when (eventType) {
+    FamilyTaskEventType.START -> "A commencée"
+    FamilyTaskEventType.JOIN -> "A rejoint l'action"
     FamilyTaskEventType.COMPLETE -> if (statusTo == FamilyTaskStatus.PENDING_VALIDATION) "Terminée · en attente de validation" else "Terminée"
     FamilyTaskEventType.VALIDATE -> "Validée"
     FamilyTaskEventType.REOPEN -> "Rouverte"
+    FamilyTaskEventType.RESCHEDULE -> "Reportée"
+    FamilyTaskEventType.FAIL -> "Ratée"
 }
 
 fun FamilyTaskEvent.journalActorLabel(): String = when (eventType) {
+    FamilyTaskEventType.START -> "Commencée par $actorName"
+    FamilyTaskEventType.JOIN -> "$actorName participe"
     FamilyTaskEventType.COMPLETE -> "Faite par $actorName"
     FamilyTaskEventType.VALIDATE -> "Validée par $actorName"
     FamilyTaskEventType.REOPEN -> "Rouverte par $actorName"
+    FamilyTaskEventType.RESCHEDULE -> "Reportée par $actorName"
+    FamilyTaskEventType.FAIL -> "Marquée ratée par $actorName"
 }
 
 fun Instant.journalTimeLabel(zone: ZoneId = ZoneId.systemDefault()): String =

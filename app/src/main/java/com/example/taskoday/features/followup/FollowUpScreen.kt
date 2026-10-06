@@ -131,6 +131,9 @@ private fun FollowUpItemRow(item: FollowUpItem, onOpenFamilyTask: (Long) -> Unit
                 familyTaskCompletionActorLabels(task).forEach { actorLabel ->
                     Text(actorLabel, color = ParchmentCream.copy(alpha = 0.72f), style = MaterialTheme.typography.bodySmall)
                 }
+                if (task.status == com.example.taskoday.domain.model.FamilyTaskStatus.IN_PROGRESS && task.contributors.isNotEmpty()) {
+                    Text("En cours · ${task.contributors.joinToString(", ") { it.displayName }}", color = ParchmentCream.copy(alpha = 0.72f), style = MaterialTheme.typography.bodySmall)
+                }
             }
             Text(when { item.overdue -> "En retard"; item.familyTask != null -> familyTaskStatusLabel(item.familyTask.status); item.completed -> "Terminée"; else -> "À faire" }, color = if (item.overdue) DangerGlow else ParchmentCream.copy(alpha = 0.72f), style = MaterialTheme.typography.bodySmall)
         }
