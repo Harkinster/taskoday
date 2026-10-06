@@ -12,6 +12,7 @@ def _task(*, start: date, recurrence: FamilyTaskRecurrence, interval: int = 1, w
     return SimpleNamespace(
         due_date=start,
         due_at=None,
+        end_date=None,
         created_at=None,
         recurrence=recurrence,
         recurrence_interval=interval,

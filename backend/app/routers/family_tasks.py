@@ -15,6 +15,7 @@ from app.models.user import User, UserRole
 from app.schemas.common import SuccessResponse
 from app.schemas.family_task import (
     FamilyTaskCreateRequest,
+    FamilyTaskDefinitionResponse,
     FamilyTaskOccurrenceResponse,
     FamilyTaskOccurrenceEventsResponse,
     FamilyTaskOccurrencesRangeResponse,
@@ -44,6 +45,7 @@ from app.services.family_task_service import (
     task_visible_to_member,
     weekdays_to_storage,
 )
+from app.services.action_identity import identity_from_category, resolve_action_identity, validate_identity_recurrence
 
 router = APIRouter(tags=["family-tasks"])
 
@@ -51,7 +53,7 @@ MAX_OCCURRENCE_RANGE_DAYS = 31
 OVERDUE_LOOKBACK_DAYS = 30
 
 
-@router.get("/families/{family_id}/tasks")
+@router.get("/families/{family_id}/tasks", response_model=SuccessResponse[list[FamilyTaskDefinitionResponse]])
 def list_family_tasks(
     family_id: int,
     include_inactive: bool = False,
@@ -71,7 +73,7 @@ def list_family_tasks(
     ])
 
 
-@router.post("/families/{family_id}/tasks", status_code=status.HTTP_201_CREATED)
+@router.post("/families/{family_id}/tasks", status_code=status.HTTP_201_CREATED, response_model=SuccessResponse[FamilyTaskDefinitionResponse])
 def create_family_task(
     family_id: int,
     payload: FamilyTaskCreateRequest,
@@ -79,31 +81,43 @@ def create_family_task(
     current_user: User = Depends(get_current_user),
 ):
     ensure_family_parent(db, family_id=family_id, user=current_user)
-    occurrence_category(payload.category)
+    action_scope, action_kind, action_category = resolve_action_identity(
+        category=payload.category, scope=payload.scope, kind=payload.kind,
+    )
     recurrence = FamilyTaskRecurrence(payload.recurrence)
+    validate_identity_recurrence(kind=action_kind, recurrence=recurrence.value)
     selected_weekdays = _selected_weekdays_for_recurrence(recurrence, payload.selected_weekdays)
     due_at, due_date, due_time = normalize_due_fields(
         due_at=payload.due_at,
         due_date=payload.due_date,
         due_time=payload.due_time,
     )
+    if payload.end_date is not None and action_kind != "ROUTINE":
+        raise HTTPException(status_code=422, detail="Une date de fin est reservee aux routines.")
+    if payload.end_date is not None and payload.end_date < (due_date or date.today()):
+        raise HTTPException(status_code=422, detail="La date de fin doit suivre le debut de la routine.")
     assignee_user_ids = validate_assignee_user_ids(
         db,
         family_id=family_id,
         assignee_user_ids=payload.assignee_user_ids,
     )
+    if action_scope == "PERSONAL" and len(assignee_user_ids) != 1:
+        raise HTTPException(status_code=422, detail="Une action personnelle doit concerner un seul membre.")
 
     task = FamilyTask(
         family_id=family_id,
         title=payload.title,
         description=payload.description,
         creator_user_id=current_user.id,
-        category=payload.category,
+        category=action_category,
+        scope=action_scope,
+        kind=action_kind,
         priority=FamilyTaskPriority(payload.priority),
         due_at=due_at,
         due_date=due_date,
         due_time=due_time,
         recurrence=recurrence,
+        end_date=payload.end_date,
         recurrence_interval=payload.recurrence_interval,
         selected_weekdays=selected_weekdays,
         validation_required=payload.validation_required,
@@ -239,14 +253,14 @@ def list_family_task_events(
     is_parent = current_user.role == UserRole.PARENT and membership.role == FamilyMemberRole.PARENT
     if not is_parent:
         own_personal = and_(
-            FamilyTaskOccurrenceEvent.category != "TASKODAY_HOUSE_QUEST",
+            FamilyTaskOccurrenceEvent.scope == "PERSONAL",
             select(FamilyTaskOccurrenceEventParticipant.id).where(
                 FamilyTaskOccurrenceEventParticipant.event_id == FamilyTaskOccurrenceEvent.id,
                 FamilyTaskOccurrenceEventParticipant.user_id == current_user.id,
             ).exists(),
         )
         own_house = and_(
-            FamilyTaskOccurrenceEvent.category == "TASKODAY_HOUSE_QUEST",
+            FamilyTaskOccurrenceEvent.scope == "HOUSE",
             or_(
                 FamilyTaskOccurrenceEvent.actor_user_id == current_user.id,
                 FamilyTaskOccurrenceEvent.completed_by_user_id == current_user.id,
@@ -268,7 +282,7 @@ def list_family_task_events(
     })
 
 
-@router.patch("/family-tasks/{task_id}")
+@router.patch("/family-tasks/{task_id}", response_model=SuccessResponse[FamilyTaskDefinitionResponse])
 def update_family_task(
     task_id: int,
     payload: FamilyTaskUpdateRequest,
@@ -279,12 +293,20 @@ def update_family_task(
     ensure_family_parent(db, family_id=task.family_id, user=current_user)
 
     data = payload.model_dump(exclude_unset=True)
-    if "category" in data and data["category"] != task.category:
+    if "category" in data and identity_from_category(data["category"]) != (task.scope, task.kind):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="La categorie d'une action ne peut pas etre modifiee apres sa creation.",
         )
+    if ("scope" in data and data["scope"] != task.scope) or ("kind" in data and data["kind"] != task.kind):
+        raise HTTPException(status_code=409, detail="Le scope et le kind d'une action sont immuables.")
+    if "recurrence" in data and data["recurrence"] != task.recurrence.value:
+        validate_identity_recurrence(kind=task.kind, recurrence=data["recurrence"])
+    if "end_date" in data and task.kind != "ROUTINE" and data["end_date"] is not None:
+        raise HTTPException(status_code=422, detail="Une date de fin est reservee aux routines.")
     assignee_user_ids = data.pop("assignee_user_ids", None)
+    if assignee_user_ids is not None and task.scope == "PERSONAL" and len(set(assignee_user_ids)) != 1:
+        raise HTTPException(status_code=422, detail="Une action personnelle doit concerner un seul membre.")
     recurrence_was_set = "recurrence" in data
     selected_weekdays_was_set = "selected_weekdays" in data
     selected_weekdays_payload = data.pop("selected_weekdays", None)
@@ -301,6 +323,10 @@ def update_family_task(
         task.due_at = due_at
         task.due_date = due_date
         task.due_time = due_time
+    if "end_date" in data:
+        task.end_date = data["end_date"]
+    if task.end_date is not None and task.end_date < (task.due_date or task.created_at.date()):
+        raise HTTPException(status_code=422, detail="La date de fin doit suivre le debut de la routine.")
     if "validation_required" in data:
         task.validation_required = data["validation_required"]
     if "gamification_enabled" in data:
@@ -342,7 +368,7 @@ def update_family_task(
     return success_response(task_payload(db, task), message="Tache familiale mise a jour.")
 
 
-@router.delete("/family-tasks/{task_id}")
+@router.delete("/family-tasks/{task_id}", response_model=SuccessResponse[FamilyTaskDefinitionResponse])
 def deactivate_family_task(
     task_id: int,
     db: Session = Depends(get_db),

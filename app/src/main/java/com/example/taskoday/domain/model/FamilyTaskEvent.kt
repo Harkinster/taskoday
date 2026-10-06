@@ -20,4 +20,6 @@ data class FamilyTaskEvent(
     val participantUserIds: List<Long>,
     val occurredAt: Instant,
     val legacyInferred: Boolean,
+    val scope: FamilyActionScope = category.scope,
+    val kind: FamilyActionKind = category.kind,
 )

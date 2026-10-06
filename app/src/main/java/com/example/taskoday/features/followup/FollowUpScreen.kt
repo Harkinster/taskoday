@@ -67,7 +67,7 @@ fun FollowUpScreen(
         item { Text("Membres du foyer", style = MaterialTheme.typography.titleMedium, color = ParchmentLight) }
         items(state.members, key = { "member-${it.memberId}" }) { member -> MemberSummaryCard(member, member.memberId == state.selectedMemberId) { viewModel.selectMember(member.memberId) } }
         state.house?.let { house ->
-            item { Text("Quêtes Maison", style = MaterialTheme.typography.titleMedium, color = ParchmentLight) }
+            item { Text("Actions Maison", style = MaterialTheme.typography.titleMedium, color = ParchmentLight) }
             item { MemberSummaryCard(house, false) {} }
             items(house.items, key = { "house-${it.key}" }) { item -> FollowUpItemRow(item, onOpenFamilyTask, onOpenLegacyTask) }
         }
@@ -122,12 +122,7 @@ private fun FollowUpItemRow(item: FollowUpItem, onOpenFamilyTask: (Long) -> Unit
         Column(Modifier.weight(1f)) {
             Text(item.title, color = ParchmentLight)
             item.familyTask?.let { task ->
-                val category = FamilyActionType.fromCategory(task.category)
-                Text(when (category) {
-                    FamilyActionType.HOUSE_QUEST -> if (task.assignees.isEmpty()) "Maison" else task.assignees.joinToString { it.displayName }
-                    FamilyActionType.PERSONAL_ROUTINE -> "Routine"
-                    FamilyActionType.PERSONAL_MISSION -> "Mission"
-                }, color = ParchmentCream, style = MaterialTheme.typography.bodySmall)
+                Text(task.followUpIdentityLabel(), color = ParchmentCream, style = MaterialTheme.typography.bodySmall)
                 familyTaskCompletionActorLabels(task).forEach { actorLabel ->
                     Text(actorLabel, color = ParchmentCream.copy(alpha = 0.72f), style = MaterialTheme.typography.bodySmall)
                 }

@@ -21,6 +21,11 @@ class ExplorationPolicyTest {
         assertEquals(ExplorationCategory.HOUSEHOLD, task.explorationCategory())
     }
 
+    @Test fun `house routine and mission stay outside personal exploration`() {
+        assertTrue(task(recurrence = "DAILY", category = FamilyActionType.HOUSE_ROUTINE.category).isHouseholdTask())
+        assertTrue(task(recurrence = "NONE", category = FamilyActionType.HOUSE_MISSION.category).isHouseholdTask())
+    }
+
     @Test fun `personal one shot is a personal task`() {
         val task = task(recurrence = "NONE", category = FamilyActionType.PERSONAL_MISSION.category)
         assertTrue(task.isPersonalTask())

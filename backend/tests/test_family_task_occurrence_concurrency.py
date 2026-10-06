@@ -46,6 +46,8 @@ def test_get_or_create_occurrence_recovers_from_unique_collision_and_keeps_sessi
     existing = FamilyTaskOccurrence(
         task_id=task.id,
         category=family_task_service.occurrence_category(task.category),
+        scope="HOUSE",
+        kind="QUEST",
         scheduled_date=scheduled_date,
         status=FamilyTaskOccurrenceStatus.TODO,
     )
@@ -108,6 +110,8 @@ def _create_family_task(db: Session) -> FamilyTask:
         family_id=family.id,
         title="Tache concurrence",
         creator_user_id=user.id,
+        scope="HOUSE",
+        kind="QUEST",
         priority=FamilyTaskPriority.NORMAL,
         due_date=date(2026, 8, 28),
         recurrence=FamilyTaskRecurrence.NONE,

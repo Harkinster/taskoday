@@ -19,6 +19,7 @@ def test_openapi_occurrence_contract_exposes_snapshot_category_without_losing_ex
     assert "category" in occurrence["required"]
     assert set(occurrence["properties"]["category"]["enum"]) == {
         "TASKODAY_HOUSE_QUEST", "TASKODAY_PERSONAL_ROUTINE", "TASKODAY_PERSONAL_MISSION",
+        "TASKODAY_HOUSE_ROUTINE", "TASKODAY_HOUSE_MISSION",
     }
     assert {"task_id", "occurrence_id", "title", "assignees", "scheduled_date", "status", "completed_at", "validated_at"} <= set(occurrence["properties"])
 
@@ -70,7 +71,8 @@ def test_occurrence_category_is_persisted_exposed_and_immutable_after_edits(clie
         assert "categorie" in changed.json()["error"]["message"]
 
     edited = client.patch(f"{API}/family-tasks/{task['id']}", headers=_headers(token), json={
-        "title": "Updated", "assignee_user_ids": [], "recurrence": "WEEKLY" if recurrence == "NONE" else "NONE",
+        "title": "Updated", "assignee_user_ids": [] if category == "TASKODAY_HOUSE_QUEST" else [parent_id],
+        "recurrence": "WEEKLY" if category == "TASKODAY_HOUSE_QUEST" else recurrence,
     })
     assert edited.status_code == 200
     assert edited.json()["data"]["category"] == category
@@ -94,13 +96,14 @@ def test_occurrence_category_is_persisted_exposed_and_immutable_after_edits(clie
     assert _range(client, token, family_id, today, today)["items"][0]["category"] == category
 
 
-def test_legacy_category_snapshots_house_quest_and_cannot_be_changed(client) -> None:
+def test_legacy_category_normalizes_to_house_quest_and_type_remains_immutable(client) -> None:
     token, _, family_id = _register_parent(client, "snapshot-legacy")
     task = _create_task(client, token, family_id, {"title": "Legacy", "category": "Maison", "due_date": date.today().isoformat()})
     item = _item_by_title(_today(client, token, family_id, date.today()), "Legacy")
     assert item["category"] == "TASKODAY_HOUSE_QUEST"
     assert client.patch(f"{API}/family-tasks/{task['id']}", headers=_headers(token), json={"category": "Maison"}).status_code == 200
-    assert client.patch(f"{API}/family-tasks/{task['id']}", headers=_headers(token), json={"category": "TASKODAY_HOUSE_QUEST"}).status_code == 409
+    assert client.patch(f"{API}/family-tasks/{task['id']}", headers=_headers(token), json={"category": "TASKODAY_HOUSE_QUEST"}).status_code == 200
+    assert client.patch(f"{API}/family-tasks/{task['id']}", headers=_headers(token), json={"category": "TASKODAY_HOUSE_MISSION"}).status_code == 409
 
 
 def _headers(token: str) -> dict[str, str]:

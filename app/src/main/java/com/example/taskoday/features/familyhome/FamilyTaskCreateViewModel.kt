@@ -45,7 +45,7 @@ class FamilyTaskCreateViewModel
                     category = requestedType.category,
                     isLoadingTask = taskId != null || reuseTaskId != null,
                     date = resolveFamilyTaskInitialDate(prefilledDate),
-                    recurrence = if (requestedType == FamilyActionType.PERSONAL_ROUTINE) FamilyTaskRecurrence.DAILY else FamilyTaskRecurrence.NONE,
+                    recurrence = if (requestedType.kind == com.example.taskoday.domain.model.FamilyActionKind.ROUTINE) FamilyTaskRecurrence.DAILY else FamilyTaskRecurrence.NONE,
                 ),
             )
         val uiState: StateFlow<FamilyTaskCreateUiState> = _uiState.asStateFlow()
@@ -73,7 +73,7 @@ class FamilyTaskCreateViewModel
                                 isLoadingMembers = false,
                                 members = members,
                                 selectedAssigneeUserIds =
-                                    if (it.actionType != FamilyActionType.HOUSE_QUEST && !it.isEditing) {
+                                    if (it.actionType.scope == com.example.taskoday.domain.model.FamilyActionScope.PERSONAL && !it.isEditing) {
                                         setOfNotNull(targetMemberId ?: ownUserId).filter { id -> members.any { member -> member.userId == id } }.toSet()
                                     } else it.selectedAssigneeUserIds,
                                 errorMessage = null,
@@ -138,7 +138,7 @@ class FamilyTaskCreateViewModel
 
         fun selectPersonalAssignee(userId: Long) {
             _uiState.update { state ->
-                if (state.actionType == FamilyActionType.HOUSE_QUEST || state.members.none { it.userId == userId && it.isActive }) state
+                if (state.actionType.scope == com.example.taskoday.domain.model.FamilyActionScope.HOUSE || state.members.none { it.userId == userId && it.isActive }) state
                 else state.copy(selectedAssigneeUserIds = setOf(userId), prefillWarning = null, requiresAssigneeReview = false, errorMessage = null)
             }
         }
@@ -153,6 +153,28 @@ class FamilyTaskCreateViewModel
 
         fun onDateChanged(value: String) {
             _uiState.update { it.copy(date = value, errorMessage = null) }
+        }
+
+        fun onEndDateChanged(value: String) {
+            _uiState.update { it.copy(endDate = value, errorMessage = null) }
+        }
+
+        fun onKindChanged(type: FamilyActionType) {
+            _uiState.update { state ->
+                if (state.isEditing || state.reusedSourceId != null || state.actionType.scope != type.scope) state
+                else state.copy(
+                    actionType = type, category = type.category, recentTasks = emptyList(),
+                    date = if (state.date.isBlank() && type.kind != com.example.taskoday.domain.model.FamilyActionKind.MISSION) java.time.LocalDate.now().toString() else state.date,
+                    recurrence = if (type.kind == com.example.taskoday.domain.model.FamilyActionKind.ROUTINE) FamilyTaskRecurrence.DAILY else FamilyTaskRecurrence.NONE,
+                    endDate = "", selectedWeekdays = emptySet(), errorMessage = null,
+                )
+            }
+            val state = _uiState.value
+            viewModelScope.launch {
+                familyTasksRepository.fetchTasks().onSuccess { tasks ->
+                    _uiState.update { current -> current.copy(recentTasks = recentTasksForContext(tasks, loadedFamilyId ?: -1L, current.actionType, targetMemberId ?: current.selectedAssigneeUserIds.singleOrNull())) }
+                }
+            }
         }
 
         fun onTimeChanged(value: String) {
@@ -212,12 +234,12 @@ class FamilyTaskCreateViewModel
         }
 
         fun selectHouseTask() {
-            _uiState.update { if (it.actionType == FamilyActionType.HOUSE_QUEST) it.copy(selectedAssigneeUserIds = emptySet(), prefillWarning = null, requiresAssigneeReview = false, errorMessage = null) else it }
+            _uiState.update { if (it.actionType.scope == com.example.taskoday.domain.model.FamilyActionScope.HOUSE) it.copy(selectedAssigneeUserIds = emptySet(), prefillWarning = null, requiresAssigneeReview = false, errorMessage = null) else it }
         }
 
         fun toggleAssignee(userId: Long) {
             _uiState.update {
-                if (it.actionType != FamilyActionType.HOUSE_QUEST) return@update it
+                if (it.actionType.scope != com.example.taskoday.domain.model.FamilyActionScope.HOUSE) return@update it
                 val next =
                     if (userId in it.selectedAssigneeUserIds) {
                         it.selectedAssigneeUserIds - userId
@@ -254,6 +276,7 @@ class FamilyTaskCreateViewModel
                         title = current.title,
                         description = current.description,
                         date = current.date,
+                        endDate = current.endDate,
                         time = current.time,
                         recurrence = current.recurrence,
                         recurrenceInterval = current.recurrenceInterval,
@@ -271,7 +294,10 @@ class FamilyTaskCreateViewModel
                 _uiState.update { it.copy(errorMessage = validation.errorMessage) }
                 return
             }
-            val ruleError = familyActionRuleError(current.actionType, current.recurrence, current.selectedAssigneeUserIds)
+            val legacyRecurringMission = current.isEditing && current.actionType.kind == com.example.taskoday.domain.model.FamilyActionKind.MISSION &&
+                current.originalRecurrence == current.recurrence && current.recurrence != FamilyTaskRecurrence.NONE
+            val ruleError = familyActionRuleError(current.actionType, current.recurrence, current.selectedAssigneeUserIds, current.date.isNotBlank())
+                .takeUnless { legacyRecurringMission && it == "Une mission est ponctuelle et ne peut pas se répéter." }
             if (ruleError != null) {
                 _uiState.update { it.copy(errorMessage = ruleError) }
                 return
@@ -296,9 +322,9 @@ class FamilyTaskCreateViewModel
                 }
                 val result =
                     if (current.isEditing && current.taskId != null) {
-                        familyTasksRepository.updateTask(current.taskId, input.copy(category = current.category))
+                        familyTasksRepository.updateTask(current.taskId, input.copy(category = current.category, scope = current.actionType.scope, kind = current.actionType.kind))
                     } else {
-                        familyTasksRepository.createTask(input.copy(category = current.category))
+                        familyTasksRepository.createTask(input.copy(category = current.category, scope = current.actionType.scope, kind = current.actionType.kind))
                     }
                 result
                     .onSuccess {
@@ -326,11 +352,12 @@ class FamilyTaskCreateViewModel
 private fun FamilyTaskCreateUiState.withTask(task: FamilyTaskDefinition): FamilyTaskCreateUiState =
     copy(
         isLoadingTask = false,
-        actionType = FamilyActionType.fromCategory(task.category),
+        actionType = FamilyActionType.fromWire(task.scope.name, task.kind.name, task.category),
         category = task.category,
         title = task.title,
         description = task.description.orEmpty(),
-        date = familyTaskDateFromFields(dueDate = task.dueDate, dueAt = task.dueAt) ?: date,
+        date = familyTaskDateFromFields(dueDate = task.dueDate, dueAt = task.dueAt).orEmpty(),
+        endDate = task.endDate.orEmpty(),
         time =
             familyTaskTimeFromFields(
                 hasDueTime = task.hasDueTime,
@@ -338,6 +365,7 @@ private fun FamilyTaskCreateUiState.withTask(task: FamilyTaskDefinition): Family
                 dueAt = task.dueAt,
             ),
         recurrence = task.recurrence,
+        originalRecurrence = task.recurrence,
         recurrenceInterval = task.recurrenceInterval.coerceIn(1, 52),
         isCustomRecurrence = task.recurrenceInterval > 1,
         customRecurrenceUnit = if (task.recurrence == FamilyTaskRecurrence.DAILY) CustomRecurrenceUnit.DAYS else CustomRecurrenceUnit.WEEKS,

@@ -16,7 +16,7 @@ data class FamilyTaskAccessPolicy(val userId: Long? = null, val role: String? = 
 
     fun canView(task: FamilyTaskDefinition): Boolean =
         userId != null && (canManage || role.equals("CHILD", ignoreCase = true)) &&
-            (FamilyActionType.fromCategory(task.category) == FamilyActionType.HOUSE_QUEST || canView(task.assignees))
+            (task.scope == com.example.taskoday.domain.model.FamilyActionScope.HOUSE || canView(task.assignees))
 
     fun quickAction(task: FamilyTaskTodayItem): FamilyTaskQuickAction? =
         quickActionFor(task)?.takeIf { action ->

@@ -17,6 +17,21 @@ import org.junit.Test
 class FamilyTaskDtosTest {
     private val gson = Gson()
 
+    @Test fun `new scope and kind survive definition occurrence and open mission payload`() {
+        val definition = gson.fromJson("""{"id":9,"family_id":7,"title":"Maison","category":"TASKODAY_HOUSE_ROUTINE","scope":"HOUSE","kind":"ROUTINE","end_date":"2026-10-16"}""", FamilyTaskDefinitionDto::class.java).toDomain()
+        assertEquals(com.example.taskoday.domain.model.FamilyActionScope.HOUSE, definition.scope)
+        assertEquals(com.example.taskoday.domain.model.FamilyActionKind.ROUTINE, definition.kind)
+        assertEquals("2026-10-16", definition.endDate)
+        val occurrence = gson.fromJson("""{"task_id":9,"occurrence_id":11,"title":"Maison","category":"TASKODAY_HOUSE_ROUTINE","scope":"HOUSE","kind":"ROUTINE","status":"TODO"}""", FamilyTaskOccurrenceDto::class.java).toDomain()
+        assertEquals(definition.scope, occurrence.scope)
+        assertEquals(definition.kind, occurrence.kind)
+        val openMission = FamilyTaskCreateInput("Ouverte", null, null, null, FamilyTaskRecurrence.NONE, emptyList(), listOf(25L), false, false, FamilyTaskPriority.NORMAL, category = FamilyActionType.PERSONAL_MISSION.category)
+        val json = JsonParser.parseString(gson.toJson(openMission.toRequestDto())).asJsonObject
+        assertEquals("PERSONAL", json.get("scope").asString)
+        assertEquals("MISSION", json.get("kind").asString)
+        assertFalse(json.has("due_date"))
+    }
+
     @Test
     fun `category is preserved in definitions and sent by quick creation`() {
         val definition = FamilyTaskDefinitionDto(id = 9L, title = "Routine", category = FamilyActionType.PERSONAL_ROUTINE.category).toDomain()

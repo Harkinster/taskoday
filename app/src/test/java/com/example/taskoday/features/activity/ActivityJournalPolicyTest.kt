@@ -17,6 +17,8 @@ class ActivityJournalPolicyTest {
         assertEquals("Routine", FamilyActionType.PERSONAL_ROUTINE.journalLabel())
         assertEquals("Mission", FamilyActionType.PERSONAL_MISSION.journalLabel())
         assertEquals("Quête Maison", FamilyActionType.HOUSE_QUEST.journalLabel())
+        assertEquals("Routine Maison", FamilyActionType.HOUSE_ROUTINE.journalLabel())
+        assertEquals("Mission Maison", FamilyActionType.HOUSE_MISSION.journalLabel())
         assertEquals("Terminée", event(1, FamilyTaskEventType.COMPLETE).journalEventLabel())
         assertEquals("Terminée · en attente de validation", event(2, FamilyTaskEventType.COMPLETE, FamilyTaskStatus.PENDING_VALIDATION).journalEventLabel())
         assertEquals("Validée", event(3, FamilyTaskEventType.VALIDATE).journalEventLabel())

@@ -9,7 +9,7 @@ from tests.test_family_action_category_migration import _config, _revision
 def test_sqlite_empty_upgrade_and_downgrade(tmp_path, monkeypatch) -> None:
     config, engine = _config(tmp_path, monkeypatch)
     try:
-        command.upgrade(config, "head")
+        command.upgrade(config, "20261005_0012")
         assert _revision(engine) == "20261005_0012"
         assert inspect(engine).get_columns("family_task_occurrence_events")
         assert inspect(engine).get_columns("family_task_occurrence_event_participants")

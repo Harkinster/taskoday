@@ -21,12 +21,13 @@ internal fun reuseTaskPrefill(
     now: LocalTime = LocalTime.now(),
 ): FamilyTaskCreateUiState {
     require(source.active && source.familyId == familyId) { "Cette action n'appartient plus à la famille active." }
-    val type = FamilyActionType.fromCategory(source.category)
+    val type = FamilyActionType.fromWire(source.scope.name, source.kind.name, source.category)
     require(type == state.actionType) { "Le type de cette action ne correspond pas à cet espace." }
     val sourceIds = source.assignees.mapNotNull { it.id }.toSet()
     val validIds = members.filter { it.isActive }.map { it.userId }.toSet()
     val assignees = sourceIds.intersect(validIds)
-    val invalidAssignment = assignees.size != sourceIds.size || (type != FamilyActionType.HOUSE_QUEST && assignees.size != 1)
+    val invalidAssignment = assignees.size != sourceIds.size || (type.scope == com.example.taskoday.domain.model.FamilyActionScope.PERSONAL && assignees.size != 1)
+    val legacyRecurringMission = type.kind == com.example.taskoday.domain.model.FamilyActionKind.MISSION && source.recurrence != FamilyTaskRecurrence.NONE
     val time = familyTaskTimeFromFields(source.hasDueTime, source.dueTime, source.dueAt)
     val earliest = if (time.isNotBlank() && parseFamilyTaskTimeInput(time)?.isBefore(now) == true) today.plusDays(1) else today
     val start = familyTaskDateFromFields(source.dueDate, source.dueAt)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
@@ -40,9 +41,10 @@ internal fun reuseTaskPrefill(
         taskId = null,
         title = source.title,
         description = source.description.orEmpty(),
-        date = date.toString(),
+        date = if (type.kind == com.example.taskoday.domain.model.FamilyActionKind.MISSION && source.dueDate == null) "" else date.toString(),
+        endDate = "",
         time = time,
-        recurrence = source.recurrence,
+        recurrence = if (legacyRecurringMission) FamilyTaskRecurrence.NONE else source.recurrence,
         recurrenceInterval = source.recurrenceInterval.coerceIn(1, 52),
         isCustomRecurrence = source.recurrenceInterval > 1,
         customRecurrenceUnit = if (source.recurrence == FamilyTaskRecurrence.DAILY) CustomRecurrenceUnit.DAYS else CustomRecurrenceUnit.WEEKS,
@@ -51,7 +53,11 @@ internal fun reuseTaskPrefill(
         validationRequired = source.validationRequired,
         gamificationEnabled = source.gamificationEnabled,
         priority = source.priority,
-        prefillWarning = if (invalidAssignment) "Un participant n'est plus disponible. Vérifiez l'attribution avant de créer." else null,
+        prefillWarning = when {
+            invalidAssignment -> "Un participant n'est plus disponible. Vérifiez l'attribution avant de créer."
+            legacyRecurringMission -> "Cette ancienne Mission se répétait. Sa copie est ponctuelle."
+            else -> null
+        },
         requiresAssigneeReview = invalidAssignment,
         reusedSourceId = source.id,
         errorMessage = null,
@@ -68,11 +74,12 @@ internal fun recentTasksForContext(
     memberId: Long?,
     limit: Int = 3,
 ): List<FamilyTaskDefinition> {
-    if (type == FamilyActionType.PERSONAL_ROUTINE) return emptyList()
+    if (type.kind == com.example.taskoday.domain.model.FamilyActionKind.ROUTINE) return emptyList()
     return definitions.asSequence()
         .filter { it.active && it.familyId == familyId }
-        .filter { runCatching { FamilyActionType.fromCategory(it.category) }.getOrNull() == type }
-        .filter { type == FamilyActionType.HOUSE_QUEST || (memberId != null && it.assignees.mapNotNull { assignee -> assignee.id }.toSet() == setOf(memberId)) }
+        .filter { runCatching { FamilyActionType.fromWire(it.scope.name, it.kind.name, it.category) }.getOrNull() == type }
+        .filter { type.kind != com.example.taskoday.domain.model.FamilyActionKind.MISSION || it.recurrence == FamilyTaskRecurrence.NONE }
+        .filter { type.scope == com.example.taskoday.domain.model.FamilyActionScope.HOUSE || (memberId != null && it.assignees.mapNotNull { assignee -> assignee.id }.toSet() == setOf(memberId)) }
         .mapNotNull { task -> task.createdAt?.let(::createdAtInstant)?.let { task to it } }
         .sortedByDescending { it.second }
         .take(limit.coerceIn(0, 5))

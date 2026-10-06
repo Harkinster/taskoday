@@ -136,6 +136,7 @@ fun FamilyTaskCreateScreen(
                         LoadingTaskCard()
                     }
                 } else {
+                    item { ActionKindCard(uiState, viewModel::onKindChanged) }
                     if (quickMode) {
                         item {
                             QuickTaskForm(
@@ -144,6 +145,7 @@ fun FamilyTaskCreateScreen(
                                 onSelectRecent = viewModel::selectRecentTask,
                                 onSelectPersonalAssignee = viewModel::selectPersonalAssignee,
                                 onDateChanged = viewModel::onDateChanged,
+                                onEndDateChanged = viewModel::onEndDateChanged,
                                 onTimeChanged = viewModel::onTimeChanged,
                                 onClearTime = viewModel::clearTime,
                                 onSelectHouse = viewModel::selectHouseTask,
@@ -162,7 +164,9 @@ fun FamilyTaskCreateScreen(
                     } else {
                         item { FamilyTaskCreateFormCard(uiState, viewModel::onTitleChanged, viewModel::onDescriptionChanged, viewModel::onDateChanged, viewModel::onTimeChanged, viewModel::clearTime) }
                         item { AssigneesCard(uiState, viewModel::selectHouseTask, viewModel::toggleAssignee) }
-                        item { RecurrenceCard(uiState, viewModel::onRecurrenceChanged, viewModel::toggleWeekday, viewModel::customizeRecurrence, viewModel::onRecurrenceIntervalChanged, viewModel::onCustomRecurrenceUnitChanged) }
+                        if (uiState.actionType.kind != com.example.taskoday.domain.model.FamilyActionKind.MISSION) {
+                            item { RecurrenceCard(uiState, viewModel::onRecurrenceChanged, viewModel::toggleWeekday, viewModel::customizeRecurrence, viewModel::onRecurrenceIntervalChanged, viewModel::onCustomRecurrenceUnitChanged, viewModel::onEndDateChanged) }
+                        }
                         item { TaskOptionsCard(uiState, viewModel::onValidationRequiredChanged, viewModel::onGamificationEnabledChanged, viewModel::onPriorityChanged) }
                     }
                 }
@@ -179,12 +183,36 @@ fun FamilyTaskCreateScreen(
 }
 
 @Composable
+private fun ActionKindCard(uiState: FamilyTaskCreateUiState, onKindChanged: (FamilyActionType) -> Unit) {
+    FamilyTaskCreateCard(title = if (uiState.actionType.scope == com.example.taskoday.domain.model.FamilyActionScope.HOUSE) "Action Maison" else "Action personnelle") {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FamilyActionType.entries.filter { it.scope == uiState.actionType.scope }.forEach { type ->
+                FilterChip(
+                    selected = uiState.actionType == type,
+                    enabled = !uiState.isEditing && uiState.reusedSourceId == null,
+                    onClick = { onKindChanged(type) },
+                    label = { Text(when (type.kind) {
+                        com.example.taskoday.domain.model.FamilyActionKind.ROUTINE -> "Routine"
+                        com.example.taskoday.domain.model.FamilyActionKind.MISSION -> "Mission"
+                        com.example.taskoday.domain.model.FamilyActionKind.QUEST -> "Quête"
+                    }) },
+                )
+            }
+        }
+        if (uiState.actionType.kind == com.example.taskoday.domain.model.FamilyActionKind.QUEST) {
+            Text("Challenge du foyer", style = MaterialTheme.typography.bodySmall, color = InkMuted)
+        }
+    }
+}
+
+@Composable
 private fun QuickTaskForm(
     uiState: FamilyTaskCreateUiState,
     onTitleChanged: (String) -> Unit,
     onSelectRecent: (Long) -> Unit,
     onSelectPersonalAssignee: (Long) -> Unit,
     onDateChanged: (String) -> Unit,
+    onEndDateChanged: (String) -> Unit,
     onTimeChanged: (String) -> Unit,
     onClearTime: () -> Unit,
     onSelectHouse: () -> Unit,
@@ -250,7 +278,7 @@ private fun QuickTaskForm(
             Text("Cette copie répétera aussi l'action selon la cadence affichée dans Plus d'options.", style = MaterialTheme.typography.bodySmall, color = InkMuted)
         }
         Text("Pour qui ?", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = InkBrown)
-        if (uiState.actionType == FamilyActionType.HOUSE_QUEST) {
+        if (uiState.actionType.scope == com.example.taskoday.domain.model.FamilyActionScope.HOUSE) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 FilterChip(selected = uiState.isHouseTask, onClick = onSelectHouse, label = { Text("Maison") })
                 uiState.members.sortedWith(compareBy<FamilyTaskMember> { it.role != FamilyTaskMemberRole.CHILD }.thenBy { it.displayName }).forEach { member ->
@@ -281,19 +309,27 @@ private fun QuickTaskForm(
                 val selected = parseFamilyTaskDateInput(uiState.date) ?: today
                 DatePickerDialog(context, { _, year, month, day -> onDateChanged(LocalDate.of(year, month + 1, day).toString()) }, selected.year, selected.monthValue - 1, selected.dayOfMonth).show()
             }, label = { Text("Choisir une date") })
+            if (uiState.actionType.kind == com.example.taskoday.domain.model.FamilyActionKind.MISSION) {
+                FilterChip(selected = uiState.date.isBlank(), onClick = { onDateChanged(""); onClearTime() }, label = { Text("Sans échéance") })
+            }
         }
-        if (uiState.date != today.toString() && uiState.date != today.plusDays(1).toString()) {
+        if (uiState.date.isNotBlank() && uiState.date != today.toString() && uiState.date != today.plusDays(1).toString()) {
             Text("Prévue le ${formatFamilyTaskDateLabel(uiState.date)}", style = MaterialTheme.typography.bodySmall, color = InkMuted)
         }
-        TextButton(onClick = {
+        if (uiState.date.isNotBlank()) TextButton(onClick = {
             val selected = parseFamilyTaskTimeInput(uiState.time) ?: LocalTime.now()
             TimePickerDialog(context, { _, hour, minute -> onTimeChanged(String.format(Locale.US, "%02d:%02d", hour, minute)) }, selected.hour, selected.minute, true).show()
         }) { Text(if (uiState.time.isBlank()) "+ Ajouter une heure" else "Heure : ${uiState.time}") }
         if (uiState.time.isNotBlank()) TextButton(onClick = onClearTime) { Text("Retirer l'heure") }
+        if (uiState.actionType.kind == com.example.taskoday.domain.model.FamilyActionKind.ROUTINE) {
+            RecurrenceCard(uiState, onRecurrenceChanged, onToggleWeekday, onCustomizeRecurrence, onIntervalChanged, onCustomUnitChanged, onEndDateChanged)
+        }
         TextButton(onClick = { showMore = !showMore }) { Text(if (showMore) "Moins d'options" else "Plus d'options") }
         if (showMore) {
             OutlinedTextField(value = uiState.description, onValueChange = onDescriptionChanged, label = { Text("Note (facultatif)") }, minLines = 2, maxLines = 3, modifier = Modifier.fillMaxWidth())
-            RecurrenceCard(uiState, onRecurrenceChanged, onToggleWeekday, onCustomizeRecurrence, onIntervalChanged, onCustomUnitChanged)
+            if (uiState.actionType.kind == com.example.taskoday.domain.model.FamilyActionKind.QUEST) {
+                RecurrenceCard(uiState, onRecurrenceChanged, onToggleWeekday, onCustomizeRecurrence, onIntervalChanged, onCustomUnitChanged, onEndDateChanged)
+            }
             TaskOptionsCard(uiState, onValidationRequiredChanged, onGamificationEnabledChanged, onPriorityChanged)
         }
     }
@@ -329,6 +365,8 @@ private fun FamilyTaskCreateHeader(
                 Text(
                     text = if (isEditing) "Modifier l'action" else when (actionType) {
                         FamilyActionType.HOUSE_QUEST -> "Nouvelle quête Maison"
+                        FamilyActionType.HOUSE_ROUTINE -> "Nouvelle routine Maison"
+                        FamilyActionType.HOUSE_MISSION -> "Nouvelle mission Maison"
                         FamilyActionType.PERSONAL_ROUTINE -> "Nouvelle routine"
                         FamilyActionType.PERSONAL_MISSION -> "Nouvelle mission"
                     },
@@ -422,6 +460,9 @@ private fun FamilyTaskCreateFormCard(
                 Text("Retirer l'heure")
             }
         }
+        if (uiState.actionType.kind == com.example.taskoday.domain.model.FamilyActionKind.MISSION) {
+            TextButton(onClick = { onDateChanged(""); onClearTime() }) { Text("Sans échéance") }
+        }
     }
 }
 
@@ -493,14 +534,16 @@ private fun RecurrenceCard(
     onCustomizeRecurrence: () -> Unit,
     onIntervalChanged: (Int) -> Unit,
     onCustomUnitChanged: (CustomRecurrenceUnit) -> Unit,
+    onEndDateChanged: (String) -> Unit,
 ) {
+    val context = LocalContext.current
     FamilyTaskCreateCard(title = "Répéter") {
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            FamilyTaskRecurrence.entries.forEach { recurrence ->
+            FamilyTaskRecurrence.entries.filter { uiState.actionType.kind != com.example.taskoday.domain.model.FamilyActionKind.ROUTINE || it != FamilyTaskRecurrence.NONE }.forEach { recurrence ->
                 FilterChip(
                     selected = !uiState.isCustomRecurrence && uiState.recurrence == recurrence,
                     onClick = { onRecurrenceChanged(recurrence) },
@@ -534,6 +577,14 @@ private fun RecurrenceCard(
                     )
                 }
             }
+        }
+        if (uiState.actionType.kind == com.example.taskoday.domain.model.FamilyActionKind.ROUTINE) {
+            Text("Date de fin facultative", style = MaterialTheme.typography.titleSmall)
+            FilterChip(selected = uiState.endDate.isBlank(), onClick = { onEndDateChanged("") }, label = { Text("Sans date de fin") })
+            TextButton(onClick = {
+                val selected = parseFamilyTaskDateInput(uiState.endDate) ?: parseFamilyTaskDateInput(uiState.date) ?: LocalDate.now()
+                DatePickerDialog(context, { _, year, month, day -> onEndDateChanged(LocalDate.of(year, month + 1, day).toString()) }, selected.year, selected.monthValue - 1, selected.dayOfMonth).show()
+            }) { Text(if (uiState.endDate.isBlank()) "Jusqu'au..." else "Jusqu'au ${formatFamilyTaskDateLabel(uiState.endDate)}") }
         }
     }
 }

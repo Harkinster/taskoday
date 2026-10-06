@@ -92,8 +92,8 @@ def test_parent_detaches_child_only_from_target_family_and_preserves_user_profil
     child_token, child_id = child(client, family_a, owner_token, "remove-child")
     with db_session(client) as db:
         db.add(FamilyMember(family_id=family_b, user_id=child_id, role=FamilyMemberRole.CHILD))
-        task = FamilyTask(family_id=family_a, title="Test assignment", creator_user_id=owner_id)
-        other_task = FamilyTask(family_id=family_b, title="Other family assignment", creator_user_id=owner_id)
+        task = FamilyTask(family_id=family_a, title="Test assignment", creator_user_id=owner_id, scope="HOUSE", kind="QUEST")
+        other_task = FamilyTask(family_id=family_b, title="Other family assignment", creator_user_id=owner_id, scope="HOUSE", kind="QUEST")
         db.add(task)
         db.add(other_task)
         db.flush()
@@ -217,10 +217,10 @@ def test_archive_preserves_history_and_other_families_but_closes_all_active_path
     active_id = family(client, owner_token, "archive-stays-active")
     child_token, child_id = child(client, archived_id, owner_token, "archive-history")
     with db_session(client) as db:
-        task = FamilyTask(family_id=archived_id, title="Historique", creator_user_id=owner_id)
+        task = FamilyTask(family_id=archived_id, title="Historique", creator_user_id=owner_id, scope="HOUSE", kind="QUEST")
         db.add(task)
         db.flush()
-        db.add(FamilyTaskOccurrence(task_id=task.id, category="TASKODAY_HOUSE_QUEST", scheduled_date=date(2026, 10, 3), status=FamilyTaskOccurrenceStatus.COMPLETED, completed_by_user_id=child_id))
+        db.add(FamilyTaskOccurrence(task_id=task.id, category="TASKODAY_HOUSE_QUEST", scope="HOUSE", kind="QUEST", scheduled_date=date(2026, 10, 3), status=FamilyTaskOccurrenceStatus.COMPLETED, completed_by_user_id=child_id))
         task_id = task.id
         db.commit()
     pending = client.post(f"{API}/families/{archived_id}/parent-invites", headers=headers(owner_token))

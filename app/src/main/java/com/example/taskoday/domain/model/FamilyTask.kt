@@ -31,7 +31,7 @@ enum class FamilyTaskMemberRole {
 data class FamilyTaskCreateInput(
     val title: String,
     val description: String?,
-    val dueDate: String,
+    val dueDate: String?,
     val dueTime: String?,
     val recurrence: FamilyTaskRecurrence,
     val selectedWeekdays: List<Int>,
@@ -41,6 +41,9 @@ data class FamilyTaskCreateInput(
     val priority: FamilyTaskPriority,
     val recurrenceInterval: Int = 1,
     val category: String? = null,
+    val scope: FamilyActionScope = FamilyActionType.fromCategory(category).scope,
+    val kind: FamilyActionKind = FamilyActionType.fromCategory(category).kind,
+    val endDate: String? = null,
 )
 
 data class FamilyTaskDefinition(
@@ -62,6 +65,9 @@ data class FamilyTaskDefinition(
     val recurrenceInterval: Int = 1,
     val category: String? = null,
     val createdAt: String? = null,
+    val scope: FamilyActionScope = FamilyActionType.fromCategory(category).scope,
+    val kind: FamilyActionKind = FamilyActionType.fromCategory(category).kind,
+    val endDate: String? = null,
 )
 
 data class FamilyTaskTodayItem(
@@ -85,6 +91,9 @@ data class FamilyTaskTodayItem(
     val completedByUser: FamilyTaskActor? = null,
     val validatedByUser: FamilyTaskActor? = null,
     val category: String? = null,
+    val scope: FamilyActionScope = FamilyActionType.fromCategory(category).scope,
+    val kind: FamilyActionKind = FamilyActionType.fromCategory(category).kind,
+    val endDate: String? = null,
 )
 
 data class FamilyTaskActor(

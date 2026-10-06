@@ -121,6 +121,7 @@ class FamilyTasksRepositoryImpl
                 val current = loadDefinitions(resolveFamilyId()).firstOrNull { it.id == taskId }
                     ?: error("Action introuvable dans la famille active.")
                 requireUnchangedFamilyActionCategory(current.category, input.category)
+                check(current.scope == input.scope && current.kind == input.kind) { "Le scope et le kind sont immuables." }
                 familyTasksApi.updateTask(taskId, input.toUpdateRequestDto())
                 Unit
             }
@@ -182,7 +183,13 @@ internal fun attachFamilyActionCategories(
         val definition = byId[occurrence.taskId]
             ?: error("Définition de l'action ${occurrence.taskId} indisponible.")
         check(definition.familyId == familyId) { "Action liée à une autre famille." }
-        FamilyActionType.fromCategory(definition.category)
-        occurrence.copy(category = definition.category)
+        if (occurrence.category != null) {
+            val snapshot = FamilyActionType.fromWire(occurrence.scope.name, occurrence.kind.name, occurrence.category)
+            check(snapshot.scope == occurrence.scope && snapshot.kind == occurrence.kind) { "Snapshot d'action incohérent." }
+            occurrence
+        } else {
+            val identity = FamilyActionType.fromWire(definition.scope.name, definition.kind.name, definition.category)
+            occurrence.copy(category = definition.category, scope = identity.scope, kind = identity.kind)
+        }
     }
 }

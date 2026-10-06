@@ -5,6 +5,8 @@ import com.example.taskoday.domain.model.FamilyTaskPriority
 import com.example.taskoday.domain.model.FamilyTaskStatus
 import com.example.taskoday.domain.model.FamilyTaskTodayItem
 import com.example.taskoday.domain.model.FamilyActionType
+import com.example.taskoday.domain.model.FamilyActionScope
+import com.example.taskoday.domain.model.FamilyActionKind
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -61,7 +63,7 @@ fun buildFamilyTaskSections(tasks: List<FamilyTaskTodayItem>): List<FamilyTaskMe
 
 /** Historical FamilyTask rows and explicit house quests are collective, even when assigned. */
 fun familyHouseTasks(tasks: List<FamilyTaskTodayItem>): List<FamilyTaskTodayItem> =
-    tasks.filter { task -> FamilyActionType.fromCategory(task.category) == FamilyActionType.HOUSE_QUEST }
+    tasks.filter { task -> task.scope == com.example.taskoday.domain.model.FamilyActionScope.HOUSE }
 
 /** Every family member sees the collective day; completion rights still follow the assignees. */
 fun visibleDailyTasks(tasks: List<FamilyTaskTodayItem>, access: FamilyTaskAccessPolicy): List<FamilyTaskTodayItem> =
@@ -137,12 +139,21 @@ fun familyTaskOverdueMetaLabel(
             ?: "Date à vérifier"
     val time = task.occurrenceTimeLabel()
     val dateAndTime = if (time == null) dateLabel else "$dateLabel à $time"
-    return listOf(dateAndTime, familyTaskAssignmentLabel(task)).joinToString(" · ")
+    return listOf(dateAndTime, familyTaskKindLabel(task), familyTaskAssignmentLabel(task)).joinToString(" · ")
 }
 
 fun familyTaskUpcomingMetaLabel(task: FamilyTaskTodayItem): String {
     val time = task.occurrenceTimeLabel()
-    return listOfNotNull(time, familyTaskAssignmentLabel(task)).joinToString(" · ")
+    return listOfNotNull(time, familyTaskKindLabel(task), familyTaskAssignmentLabel(task)).joinToString(" · ")
+}
+
+fun familyTaskKindLabel(task: FamilyTaskTodayItem): String = when (task.scope to task.kind) {
+    FamilyActionScope.PERSONAL to FamilyActionKind.ROUTINE -> "Routine"
+    FamilyActionScope.PERSONAL to FamilyActionKind.MISSION -> "Mission"
+    FamilyActionScope.HOUSE to FamilyActionKind.ROUTINE -> "Routine Maison"
+    FamilyActionScope.HOUSE to FamilyActionKind.MISSION -> "Mission Maison"
+    FamilyActionScope.HOUSE to FamilyActionKind.QUEST -> "Quête Maison"
+    else -> "Action"
 }
 
 fun familyTaskAssignmentLabel(task: FamilyTaskTodayItem): String =

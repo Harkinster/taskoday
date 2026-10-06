@@ -8,9 +8,12 @@ class FamilyTaskCreateRequest(BaseModel):
     title: str = Field(min_length=1, max_length=255)
     description: str | None = None
     category: str | None = Field(default=None, max_length=100)
+    scope: Literal["PERSONAL", "HOUSE"] | None = None
+    kind: Literal["ROUTINE", "MISSION", "QUEST"] | None = None
     priority: str = Field(default="NORMAL", pattern="^(LOW|NORMAL|HIGH|URGENT)$")
     due_at: datetime | None = None
     due_date: date | None = None
+    end_date: date | None = None
     due_time: time | None = None
     recurrence: str = Field(default="NONE", pattern="^(NONE|DAILY|WEEKLY|SELECTED_WEEKDAYS)$")
     recurrence_interval: int = Field(default=1, ge=1)
@@ -48,9 +51,12 @@ class FamilyTaskUpdateRequest(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=255)
     description: str | None = None
     category: str | None = Field(default=None, max_length=100)
+    scope: Literal["PERSONAL", "HOUSE"] | None = None
+    kind: Literal["ROUTINE", "MISSION", "QUEST"] | None = None
     priority: str | None = Field(default=None, pattern="^(LOW|NORMAL|HIGH|URGENT)$")
     due_at: datetime | None = None
     due_date: date | None = None
+    end_date: date | None = None
     due_time: time | None = None
     recurrence: str | None = Field(default=None, pattern="^(NONE|DAILY|WEEKLY|SELECTED_WEEKDAYS)$")
     recurrence_interval: int | None = Field(default=None, ge=1)
@@ -89,6 +95,8 @@ FamilyActionCategory = Literal[
     "TASKODAY_HOUSE_QUEST",
     "TASKODAY_PERSONAL_ROUTINE",
     "TASKODAY_PERSONAL_MISSION",
+    "TASKODAY_HOUSE_ROUTINE",
+    "TASKODAY_HOUSE_MISSION",
 ]
 
 
@@ -97,6 +105,32 @@ class FamilyTaskAssigneeResponse(BaseModel):
     role: str
     email: str
     display_name: str
+
+
+class FamilyTaskDefinitionResponse(BaseModel):
+    id: int
+    family_id: int
+    title: str
+    description: str | None
+    creator_user_id: int
+    category: str | None
+    scope: Literal["PERSONAL", "HOUSE"]
+    kind: Literal["ROUTINE", "MISSION", "QUEST"]
+    priority: str
+    due_at: datetime | None
+    due_date: date | None
+    due_time: time | None
+    has_due_time: bool
+    end_date: date | None
+    recurrence: str
+    recurrence_interval: int
+    selected_weekdays: list[int]
+    assignees: list[FamilyTaskAssigneeResponse]
+    validation_required: bool
+    gamification_enabled: bool
+    active: bool
+    created_at: datetime
+    updated_at: datetime
 
 
 class FamilyTaskActorResponse(BaseModel):
@@ -108,12 +142,15 @@ class FamilyTaskOccurrenceResponse(BaseModel):
     task_id: int
     occurrence_id: int
     category: FamilyActionCategory
+    scope: Literal["PERSONAL", "HOUSE"]
+    kind: Literal["ROUTINE", "MISSION", "QUEST"]
     title: str
     description: str | None
     assignees: list[FamilyTaskAssigneeResponse]
-    scheduled_date: date
+    scheduled_date: date | None
     due_at: datetime | None
     due_date: date | None
+    end_date: date | None
     has_due_time: bool
     due_time: time | None
     recurrence: str
@@ -136,8 +173,10 @@ class FamilyTaskOccurrenceEventResponse(BaseModel):
     task_id: int
     occurrence_id: int
     category: FamilyActionCategory
+    scope: Literal["PERSONAL", "HOUSE"]
+    kind: Literal["ROUTINE", "MISSION", "QUEST"]
     title: str
-    scheduled_date: date
+    scheduled_date: date | None
     event_type: str
     status_from: str
     status_to: str

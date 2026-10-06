@@ -8,9 +8,22 @@ import com.example.taskoday.domain.model.FamilyActionType
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class FamilyHomeUiPolicyTest {
+    @Test fun `kind labels cover all supported scope kind pairs and overdue metadata` () {
+        val labels = listOf(
+            FamilyActionType.PERSONAL_ROUTINE to "Routine",
+            FamilyActionType.PERSONAL_MISSION to "Mission",
+            FamilyActionType.HOUSE_ROUTINE to "Routine Maison",
+            FamilyActionType.HOUSE_MISSION to "Mission Maison",
+            FamilyActionType.HOUSE_QUEST to "Quête Maison",
+        )
+        labels.forEach { (type, label) -> assertEquals(label, familyTaskKindLabel(task(category = type.category))) }
+        assertTrue(familyTaskOverdueMetaLabel(task(category = FamilyActionType.HOUSE_MISSION.category), LocalDate.of(2026, 8, 23)).contains("Mission Maison"))
+    }
+
     @Test
     fun `empty today list has no sections`() {
         assertEquals(emptyList<FamilyTaskMemberSection>(), buildFamilyTaskSections(emptyList()))
@@ -39,6 +52,17 @@ class FamilyHomeUiPolicyTest {
             )
 
         assertEquals(listOf("Maison", "Partagee"), familyHouseTasks(tasks).map { it.title })
+    }
+
+    @Test fun `maison contains all three house kinds regardless of assignment`() {
+        val member = FamilyTaskAssignee(id = 1L, displayName = "Ada")
+        val tasks = listOf(
+            task(title = "Routine Maison", assignees = listOf(member), category = FamilyActionType.HOUSE_ROUTINE.category),
+            task(title = "Mission Maison", assignees = emptyList(), category = FamilyActionType.HOUSE_MISSION.category),
+            task(title = "Quête Maison", assignees = listOf(member), category = FamilyActionType.HOUSE_QUEST.category),
+            task(title = "Routine personnelle", assignees = listOf(member), category = FamilyActionType.PERSONAL_ROUTINE.category),
+        )
+        assertEquals(listOf("Routine Maison", "Mission Maison", "Quête Maison"), familyHouseTasks(tasks).map { it.title })
     }
 
     @Test
@@ -312,14 +336,14 @@ class FamilyHomeUiPolicyTest {
         val today = LocalDate.of(2026, 8, 23)
 
         assertEquals(
-            "Hier · Maison",
+            "Hier · Quête Maison · Maison",
             familyTaskOverdueMetaLabel(
                 task = task(title = "Maison", assignees = emptyList(), scheduledDate = "2026-08-22"),
                 today = today,
             ),
         )
         assertEquals(
-            "21 août · Ada, Nino",
+            "21 août · Quête Maison · Ada, Nino",
             familyTaskOverdueMetaLabel(
                 task =
                     task(
@@ -335,7 +359,7 @@ class FamilyHomeUiPolicyTest {
             ),
         )
         assertEquals(
-            "20 août à 00:00 · Ada",
+            "20 août à 00:00 · Quête Maison · Ada",
             familyTaskOverdueMetaLabel(
                 task = task(title = "Minuit", scheduledDate = "2026-08-20", dueTime = "00:00", hasDueTime = true),
                 today = today,
@@ -385,8 +409,8 @@ class FamilyHomeUiPolicyTest {
 
         val rows = sections.single().tasks
         assertEquals(listOf("Minuit", "Soir", "Sans heure"), rows.map { row -> row.task.title })
-        assertEquals("00:00 · Ada", familyTaskUpcomingMetaLabel(rows[0].task))
-        assertEquals("Ada", familyTaskUpcomingMetaLabel(rows[2].task))
+        assertEquals("00:00 · Quête Maison · Ada", familyTaskUpcomingMetaLabel(rows[0].task))
+        assertEquals("Quête Maison · Ada", familyTaskUpcomingMetaLabel(rows[2].task))
     }
 
     @Test

@@ -1032,6 +1032,11 @@ private enum class MessageTone {
 
 private fun FamilyTaskTodayItem.details(): List<String> =
     buildList {
+        add(when (kind) {
+            com.example.taskoday.domain.model.FamilyActionKind.ROUTINE -> "Routine Maison"
+            com.example.taskoday.domain.model.FamilyActionKind.MISSION -> "Mission Maison"
+            com.example.taskoday.domain.model.FamilyActionKind.QUEST -> "Quête Maison"
+        })
         add(familyTaskAssignmentLabel(this@details))
         familyTaskDueLabel(
             dueDate = dueDate,

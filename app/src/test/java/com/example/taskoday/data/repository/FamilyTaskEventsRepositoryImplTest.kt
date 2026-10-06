@@ -27,6 +27,14 @@ class FamilyTaskEventsRepositoryImplTest {
         assertEquals(listOf(27L), item.participantUserIds)
     }
 
+    @Test fun `journal maps new house scope kind without rereading a definition`() {
+        val raw = JsonParser.parseString("""{"family_id":7,"items":[{"id":3,"family_id":7,"task_id":9,"occurrence_id":11,"category":"TASKODAY_HOUSE_MISSION","scope":"HOUSE","kind":"MISSION","title":"Garage","event_type":"REOPEN","status_from":"COMPLETED","status_to":"TODO","actor_user_id":25,"participant_user_ids":[],"occurred_at":"2026-10-06T10:00:00Z"}]}""")
+        val event = raw.toFamilyTaskEventsResponseDto(gson).items.single().toDomain()
+        assertEquals(FamilyActionType.HOUSE_MISSION, event.category)
+        assertEquals(com.example.taskoday.domain.model.FamilyActionScope.HOUSE, event.scope)
+        assertEquals(com.example.taskoday.domain.model.FamilyActionKind.MISSION, event.kind)
+    }
+
     @Test fun `repository uses active family once and excludes another family`() = runTest {
         var calls = 0
         val api = proxy<FamilyTasksApi> { name, args ->

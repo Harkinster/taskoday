@@ -1,7 +1,7 @@
 import enum
 from datetime import date, datetime, time
 
-from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, Enum, ForeignKey, Integer, String, Text, Time, UniqueConstraint, func, text
+from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, Enum, ForeignKey, Index, Integer, String, Text, Time, UniqueConstraint, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.declarative import Base
@@ -39,6 +39,8 @@ class FamilyTask(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     creator_user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), nullable=False, index=True)
     category: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    scope: Mapped[str] = mapped_column(String(16), nullable=False)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
     priority: Mapped[FamilyTaskPriority] = mapped_column(
         Enum(FamilyTaskPriority),
         default=FamilyTaskPriority.NORMAL,
@@ -47,6 +49,7 @@ class FamilyTask(Base):
     )
     due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
     due_date: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)
+    end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     due_time: Mapped[time | None] = mapped_column(Time, nullable=True)
     recurrence: Mapped[FamilyTaskRecurrence] = mapped_column(
         Enum(FamilyTaskRecurrence),
@@ -85,12 +88,17 @@ class FamilyTaskAssignee(Base):
 
 class FamilyTaskOccurrence(Base):
     __tablename__ = "family_task_occurrences"
-    __table_args__ = (UniqueConstraint("task_id", "scheduled_date", name="uq_family_task_occurrence_task_date"),)
+    __table_args__ = (
+        UniqueConstraint("task_id", "scheduled_date", name="uq_family_task_occurrence_task_date"),
+        Index("uq_family_task_occurrence_undated", "task_id", unique=True, sqlite_where=text("scheduled_date IS NULL")),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     task_id: Mapped[int] = mapped_column(ForeignKey("family_tasks.id", ondelete="CASCADE"), nullable=False, index=True)
     category: Mapped[str] = mapped_column(String(100), nullable=False)
-    scheduled_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    scope: Mapped[str] = mapped_column(String(16), nullable=False)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    scheduled_date: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)
     status: Mapped[FamilyTaskOccurrenceStatus] = mapped_column(
         Enum(FamilyTaskOccurrenceStatus),
         default=FamilyTaskOccurrenceStatus.TODO,
@@ -132,8 +140,10 @@ class FamilyTaskOccurrenceEvent(Base):
     task_id: Mapped[int] = mapped_column(ForeignKey("family_tasks.id", ondelete="RESTRICT"), nullable=False, index=True)
     occurrence_id: Mapped[int] = mapped_column(ForeignKey("family_task_occurrences.id", ondelete="RESTRICT"), nullable=False, index=True)
     category: Mapped[str] = mapped_column(String(100), nullable=False)
+    scope: Mapped[str] = mapped_column(String(16), nullable=False)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
-    scheduled_date: Mapped[date] = mapped_column(Date, nullable=False)
+    scheduled_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     event_type: Mapped[str] = mapped_column(String(20), nullable=False)
     status_from: Mapped[FamilyTaskOccurrenceStatus] = mapped_column(Enum(FamilyTaskOccurrenceStatus), nullable=False)
     status_to: Mapped[FamilyTaskOccurrenceStatus] = mapped_column(Enum(FamilyTaskOccurrenceStatus), nullable=False)

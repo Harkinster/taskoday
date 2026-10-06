@@ -53,6 +53,25 @@ class FamilyTaskReusePolicyTest {
         assertEquals("2026-10-20", copy.date)
     }
 
+    @Test fun `house routine mission and quest copies preserve identity`() {
+        for (type in listOf(FamilyActionType.HOUSE_ROUTINE, FamilyActionType.HOUSE_MISSION, FamilyActionType.HOUSE_QUEST)) {
+            val source = task(type = type, assignees = listOf(27, 28), recurrence = if (type.kind == com.example.taskoday.domain.model.FamilyActionKind.ROUTINE) FamilyTaskRecurrence.DAILY else FamilyTaskRecurrence.NONE)
+            val copy = reuseTaskPrefill(state(type), source, 7, members, today, LocalTime.NOON)
+            assertEquals(type, copy.actionType)
+            assertEquals(type.category, copy.category)
+            assertEquals(setOf(27L, 28L), copy.selectedAssigneeUserIds)
+        }
+    }
+
+    @Test fun `legacy recurring mission copy becomes punctual and is not suggested`() {
+        val source = task(type = FamilyActionType.PERSONAL_MISSION, assignees = listOf(25), recurrence = FamilyTaskRecurrence.WEEKLY, createdAt = "2026-10-03T10:00:00")
+        val copy = reuseTaskPrefill(state(FamilyActionType.PERSONAL_MISSION), source, 7, members, today, LocalTime.NOON)
+        assertEquals(FamilyActionType.PERSONAL_MISSION, copy.actionType)
+        assertEquals(FamilyTaskRecurrence.NONE, copy.recurrence)
+        assertTrue(copy.prefillWarning?.contains("ponctuelle") == true)
+        assertTrue(recentTasksForContext(listOf(source), 7, FamilyActionType.PERSONAL_MISSION, 25).isEmpty())
+    }
+
     @Test fun `cross family copy is rejected`() {
         val source = task(type = FamilyActionType.HOUSE_QUEST, assignees = emptyList())
         assertTrue(runCatching { reuseTaskPrefill(state(FamilyActionType.HOUSE_QUEST), source, 8, members, today, LocalTime.NOON) }.isFailure)

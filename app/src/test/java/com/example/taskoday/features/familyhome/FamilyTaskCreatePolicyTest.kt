@@ -20,9 +20,9 @@ class FamilyTaskCreatePolicyTest {
     }
 
     @Test
-    fun `a mission may be one off or recurring but remains personal`() {
+    fun `a mission is one off and remains personal`() {
         assertNull(familyActionRuleError(FamilyActionType.PERSONAL_MISSION, FamilyTaskRecurrence.NONE, setOf(25L)))
-        assertNull(familyActionRuleError(FamilyActionType.PERSONAL_MISSION, FamilyTaskRecurrence.WEEKLY, setOf(25L)))
+        assertEquals("Une mission est ponctuelle et ne peut pas se répéter.", familyActionRuleError(FamilyActionType.PERSONAL_MISSION, FamilyTaskRecurrence.WEEKLY, setOf(25L)))
         assertEquals("Choisis une seule personne pour cette action personnelle.",
             familyActionRuleError(FamilyActionType.PERSONAL_MISSION, FamilyTaskRecurrence.NONE, emptySet()))
     }
@@ -32,6 +32,24 @@ class FamilyTaskCreatePolicyTest {
         assertNull(familyActionRuleError(FamilyActionType.HOUSE_QUEST, FamilyTaskRecurrence.NONE, emptySet()))
         assertNull(familyActionRuleError(FamilyActionType.HOUSE_QUEST, FamilyTaskRecurrence.NONE, setOf(25L)))
         assertNull(familyActionRuleError(FamilyActionType.HOUSE_QUEST, FamilyTaskRecurrence.DAILY, setOf(25L, 26L)))
+    }
+
+    @Test fun `house routine mission and quest follow kind recurrence rules`() {
+        assertNull(familyActionRuleError(FamilyActionType.HOUSE_ROUTINE, FamilyTaskRecurrence.DAILY, emptySet()))
+        assertEquals("Une routine doit se répéter.", familyActionRuleError(FamilyActionType.HOUSE_ROUTINE, FamilyTaskRecurrence.NONE, emptySet()))
+        assertNull(familyActionRuleError(FamilyActionType.HOUSE_MISSION, FamilyTaskRecurrence.NONE, emptySet()))
+        assertEquals("Une mission est ponctuelle et ne peut pas se répéter.", familyActionRuleError(FamilyActionType.HOUSE_MISSION, FamilyTaskRecurrence.WEEKLY, emptySet()))
+        assertNull(familyActionRuleError(FamilyActionType.HOUSE_QUEST, FamilyTaskRecurrence.WEEKLY, emptySet()))
+    }
+
+    @Test fun `mission may omit deadline while routine may omit end date`() {
+        val mission = validateFamilyTaskCreateForm(validForm().copy(date = "", time = ""))
+        assertTrue(mission.isValid)
+        assertNull(mission.input?.dueDate)
+        assertNull(familyActionRuleError(FamilyActionType.PERSONAL_MISSION, FamilyTaskRecurrence.NONE, setOf(25L), hasDueDate = false))
+        assertEquals("Choisis une date de début.", familyActionRuleError(FamilyActionType.HOUSE_ROUTINE, FamilyTaskRecurrence.DAILY, emptySet(), hasDueDate = false))
+        val routine = validateFamilyTaskCreateForm(validForm().copy(endDate = ""))
+        assertNull(routine.input?.endDate)
     }
 
     @Test

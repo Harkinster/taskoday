@@ -39,6 +39,8 @@ fun FamilyActionType.journalLabel(): String = when (this) {
     FamilyActionType.PERSONAL_ROUTINE -> "Routine"
     FamilyActionType.PERSONAL_MISSION -> "Mission"
     FamilyActionType.HOUSE_QUEST -> "Quête Maison"
+    FamilyActionType.HOUSE_ROUTINE -> "Routine Maison"
+    FamilyActionType.HOUSE_MISSION -> "Mission Maison"
 }
 
 fun FamilyTaskEvent.journalEventLabel(): String = when (eventType) {

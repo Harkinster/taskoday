@@ -8,73 +8,73 @@ Dans Taskoday, Parent et Enfant sont des membres de famille avec des droits diff
 
 `Action réelle → Taskoday → Validation → Reward Engine → Chronodria`
 
-Taskoday organise la vie réelle : famille, personnes, calendrier, attribution et validation. Le Reward Engine traduit une action validée en récompense. Chronodria consomme cette récompense pour la progression et l'aventure. Taskoday ne connaît ni éclosion, ni évolution, ni inventaire ; Chronodria ne décide ni l'obligation, ni l'assignation, ni la famille d'une action.
+Taskoday organise la vie réelle : famille, personnes, calendrier, attribution et validation. Le Reward Engine traduira une action validée en récompense. Chronodria consommera cette récompense pour la progression et l'aventure. Taskoday ne connaît ni éclosion, ni évolution, ni inventaire ; Chronodria ne décide ni qui devait agir, ni si une action était obligatoire, ni quelle famille la possède. Aucun moteur de récompense n'est implémenté dans le modèle d'actions.
 
-Événement cible `ActionValidated` : identifiant de l'utilisateur/joueur, famille, `actionId`, `actionType`, horodatage, paramètres de difficulté éventuels. Pour une Quête Maison, le contrat cible est `QuestHouseValidated → Reward Engine → bonus`. Le Reward Engine doit éviter au Parent de régler manuellement des valeurs quotidiennes complexes.
+## Identité canonique d'une action
 
-## Glossaire
+Deux dimensions indépendantes décrivent chaque `FamilyTask` :
 
-| Terme | Sens produit | Exemples | Récompense cible |
-|---|---|---|---|
-| Action | Terme générique interne | Toute action réelle suivie | Selon le type |
-| Routine | Action personnelle répétitive | Dents, sac, matin | Normale |
-| Mission | Obligation ou objectif personnel | Devoirs, sport, chambre | Normale, éventuellement accrue selon difficulté |
-| Quête Maison | Action collective appartenant au foyer, avec zéro, un ou plusieurs participants | Table, lave-vaisselle, salon, poubelles | Bonus |
+| Dimension | Valeur | Sens |
+|---|---|---|
+| `scope` | `PERSONAL` | Action d'un membre ; Exploration de ce membre |
+| `scope` | `HOUSE` | Action du foyer ; Ma maison, visible collectivement |
+| `kind` | `ROUTINE` | Action répétitive, avec récurrence obligatoire et date de fin facultative |
+| `kind` | `MISSION` | Action ponctuelle, sans récurrence, avec échéance facultative |
+| `kind` | `QUEST` | Challenge bonus du foyer, ponctuel ou récurrent |
 
-L'assignation d'une Quête Maison ne la transforme pas en Mission personnelle. Tous les membres la voient dans Ma maison. Le participant désigné conserve seul le droit de la terminer selon les règles actuelles, sauf Quête non attribuée, commune à tous.
+Les cinq combinaisons supportées sont `PERSONAL/ROUTINE`, `PERSONAL/MISSION`, `HOUSE/ROUTINE`, `HOUSE/MISSION` et `HOUSE/QUEST`. `PERSONAL/QUEST` est interdit pour l'instant. La répétition ne transforme pas une Quête en Routine ; l'attribution à une personne ne transforme pas une action Maison en action personnelle.
+
+Une Routine possède une règle de répétition valide (`DAILY`, `WEEKLY` ou `SELECTED_WEEKDAYS`) ; son début est explicite ou calculé depuis la création et sa fin peut être absente. Une Mission a `recurrence=NONE` et peut rester ouverte sans échéance : son occurrence possède alors `scheduled_date=NULL`, sans fausse date d'échéance. Une Quête appartient toujours à `HOUSE` et peut avoir `recurrence=NONE` ou une règle de répétition. Le bonus des Quêtes sera défini plus tard par le Reward Engine.
+
+Un Parent peut créer et gérer selon ses droits. Une action personnelle nouvelle concerne un membre dans le parcours Android ; les données historiques multi assignées restent conservées. Une action Maison peut être non attribuée, attribuée à une personne ou à plusieurs. Visibilité collective et permission de terminer restent distinctes.
 
 ## Navigation officielle
 
 | Espace | Parent | Enfant |
 |---|---|---|
-| Ma maison | Quêtes Maison : voir et agir ; retard, aujourd'hui, terminées, heure et participants | Les mêmes Quêtes Maison collectives ; action seulement si autorisée |
-| Exploration | Mon parcours personnel : mes Routines et Missions, retard/aujourd'hui/terminées | Son parcours personnel, écran d'arrivée, sans actions d'autrui |
-| Suivi | Tableau synthétique de supervision : Routines et Missions par membre ; Quêtes Maison et leurs participants, états et validations | Absent |
+| Ma maison | Routines, Missions et Quêtes Maison ; actions et participants | Les mêmes actions Maison collectives ; peut agir selon attribution |
+| Exploration | Mes Routines et Missions personnelles | Ses Routines et Missions personnelles ; écran d'arrivée, sans celles d'autrui |
+| Suivi | Supervision synthétique des actions personnelles des membres et des trois kinds Maison | Absent |
 | Le Nid | Entrée joueur vers Chronodria | Même statut de joueur |
 
-Un Parent arrive sur Ma maison. Un Enfant connecté arrive sur Exploration. Les quatre noms restent inchangés. Le Nid n'a pas de rôle d'administration Chronodria. Le rôle Taskoday ne définit aucune hiérarchie entre joueurs.
+Le Parent arrive sur Ma maison. L'Enfant arrive sur Exploration. Les quatre noms restent inchangés. Suivi décrit **l'état actuel** ; le Journal secondaire raconte **les transitions passées**. Parent ouvre le Journal familial depuis Suivi ; Enfant ouvre Mon journal depuis Exploration. Le Journal Taskoday n'est pas un historique XP ou d'inventaire.
 
-Le Journal est un écran secondaire : Suivi montre l'état actuel de la famille, tandis que le Journal raconte les transitions réelles des actions Taskoday (completion, validation, réouverture) depuis leur historique serveur. Le Parent accède au Journal familial depuis Suivi ; l'Enfant accède à Mon journal depuis Exploration. L'historique XP et les souhaits ne servent pas de substitut à cet historique d'actions.
+## Mapping technique et compatibilité
 
-## Mapping du modèle actuel
+Le backend conserve provisoirement `category` comme champ de compatibilité, tandis que `scope` et `kind` deviennent l'identité explicite de la définition. `FamilyActionType` côté Android représente uniquement une combinaison supportée et centralise le mapping du champ legacy ; les décisions de visibilité utilisent `scope`, celles de récurrence et d'affichage utilisent `kind`.
 
-Le backend possède `Routine`, `Mission` et `Quest` dans son ancien moteur de planification pour ChildProfile. Ces tables et API demeurent intactes. Les Routines/Missions distantes synchronisées sont personnelles et restent dans Exploration et Suivi. Les anciennes `Quest` de ce moteur sont liées à un enfant ; elles ne sont pas automatiquement des Quêtes Maison au sens du nouveau produit.
+| `category` historique | `scope` | `kind` |
+|---|---|---|
+| `TASKODAY_PERSONAL_ROUTINE` | `PERSONAL` | `ROUTINE` |
+| `TASKODAY_PERSONAL_MISSION` | `PERSONAL` | `MISSION` |
+| `TASKODAY_HOUSE_QUEST` | `HOUSE` | `QUEST` |
+| `NULL`, vide ou `Maison` sur une définition ancienne | `HOUSE` | `QUEST` |
 
-`FamilyTask` est un modèle de tâche de famille avec membres assignés, occurrences, dates, récurrence et validation. Son champ `category` décrit le type de la définition. Depuis la migration `20261004_0011`, chaque `FamilyTaskOccurrence` conserve son propre `category`, copié à sa création et exposé directement par l'API. Le client Android actuel continue provisoirement sa jointure avec les définitions ; il sera simplifié dans une passe suivante.
+Les nouvelles combinaisons Maison utilisent temporairement `TASKODAY_HOUSE_ROUTINE` et `TASKODAY_HOUSE_MISSION` dans `category`. Une valeur inconnue fait échouer le mapping ; elle n'est jamais déduite de la récurrence ou des assignataires. Les anciennes tables `Routine`, `Mission` et `Quest` du moteur ChildProfile restent distinctes et ne sont pas renommées.
 
-Pour les nouvelles actions, Android écrit les catégories `TASKODAY_HOUSE_QUEST`, `TASKODAY_PERSONAL_ROUTINE` ou `TASKODAY_PERSONAL_MISSION`. Les `FamilyTask` historiques avec `category` nulle, vide ou `Maison` restent **Quêtes Maison**. Ce choix conserve leur visibilité collective, y compris quand elles ont des assignataires. Une autre catégorie inconnue est une erreur de données. Il évite de reclasser silencieusement des données existantes à partir de la récurrence ou des assignataires. Une Routine personnelle créée dans ce modèle est limitée à un seul membre par l'UI Android ; l'API historique permet encore plusieurs assignataires. Les cas multi assignés anciens doivent être examinés avant toute migration future.
+La migration `20261006_0013` backfille chaque définition depuis sa propre `category`, chaque occurrence depuis **son propre snapshot** et chaque événement depuis **son propre snapshot**. Elle ne réécrit pas l'identité historique à partir de la définition courante. Le backend expose `scope` et `kind` sur les définitions, occurrences et événements, en gardant `category` pendant la transition. Le client Android existant avant cette passe sait lire les trois catégories anciennes ; son déploiement doit précéder toute création des deux nouvelles catégories Maison en production.
 
-Les noms de tables, classes et routes backend ne sont pas renommés pour le vocabulaire produit. Aucun ancien enregistrement n'est modifié par ce mapping. Les actions créées depuis Ma maison sont des Quêtes Maison ; depuis Exploration ou Suivi, le Parent choisit Routine ou Mission et le même formulaire rapide est préconfiguré pour une personne.
+Après création, `scope` et `kind` sont immuables. Un PATCH renvoyant les mêmes valeurs est accepté ; un changement retourne 409 avant mutation. Transformer une action impose une nouvelle définition. La validation backend refuse `PERSONAL/QUEST`, une Routine sans répétition et une Mission récurrente. Les définitions historiques déjà récurrentes avec `kind=MISSION` restent en base sans réécriture ; une nouvelle création invalide est refusée. La duplication crée une nouvelle définition avec le même `scope` et le même `kind`, sans copier occurrence ou completion. « Récemment créées » est un raccourci contextuel issu des définitions actives, pas un modèle persistant ; une Routine active n'est pas suggérée à la recréation quotidienne.
 
-## Invariants du type d'action
+## Occurrences et historique
 
-- `actionType` est une donnée métier explicite, indépendante des assignataires et de la récurrence. Une Quête Maison reste collective avec zéro, un ou plusieurs participants. Une Routine ou une Mission reste personnelle et possède exactement un participant dans le parcours Android.
-- Une Routine doit avoir une récurrence ; la création propose « quotidien » et refuse « jamais ». Une Mission peut être ponctuelle ou récurrente. La récurrence ne reclasse jamais une Mission en Routine.
-- Android ne propose pas de conversion du type lors d'une modification et son repository refuse une catégorie différente de celle de la définition chargée. Le backend refuse également un `PATCH category` différent avec HTTP 409 ; renvoyer la même valeur reste accepté. Titre, horaire, récurrence et participants restent modifiables selon les droits existants. Transformer une Mission en Routine impose à terme de désactiver l'ancienne définition et d'en créer une autre.
-- Les catégories historiques `null`, vide ou `Maison` sont interprétées comme Quête Maison. Une valeur inconnue ou une occurrence sans définition correspondante est une erreur de données : Android ne la classe pas silencieusement dans Ma maison.
-- Chaque occurrence snapshotte `category` dans une colonne non nullable au moment de sa création. Les réponses aujourd'hui, période, retard, completion, validation et réouverture lisent ce snapshot, jamais la catégorie courante de la définition. Android lit encore les définitions de la même famille et joint par `task_id` ; cette lecture supplémentaire reste à retirer côté client.
-- Les occurrences antérieures à `20261004_0011` sont backfillées avec la meilleure catégorie actuellement connue de leur définition. `null`, vide et `Maison` deviennent `TASKODAY_HOUSE_QUEST` ; une catégorie inconnue ou une occurrence orpheline fait échouer la migration. Le type historique réel avant cette migration n'est pas reconstructible avec certitude. La garantie forte du snapshot commence avec les occurrences créées après migration. Le titre et les assignataires des anciennes occurrences restent projetés depuis la définition courante : ils ne sont pas des snapshots historiques.
-- Un futur `ActionValidated` pourra prendre `actionType` de l'occurrence, avec `task_id`, `occurrence_id`, famille via la définition et horodatage de validation. Le participant récompensé et la structure de l'événement restent à définir ; aucun moteur de récompense n'est ajouté ici.
+Depuis `20261004_0011`, une occurrence snapshotte sa catégorie à sa naissance. Depuis `20261006_0013`, elle snapshotte aussi `scope` et `kind`. Modifier ensuite titre, date, assignataires ou définition ne change pas ces snapshots. La migration des anciennes occurrences utilise la meilleure classification connue de leur propre `category` ; l'identité antérieure à 0011 n'est pas reconstructible avec certitude. Un événement task-events conserve séparément la catégorie et le couple `scope/kind` de l'occurrence, ainsi que son titre, son acteur et son horodatage.
+
+Depuis `20261005_0012`, chaque transition effective `COMPLETE`, `VALIDATE` ou `REOPEN` reste dans un registre append-only. L'occurrence exprime l'état courant ; une réouverture remet cet état à `TODO` sans effacer les transitions précédentes. Le registre distingue l'acteur réel du participant prévu et permet plusieurs cycles. Les cycles rouverts avant 0012 sont irrécupérables. Une action Maison multi attribuée conserve une occurrence et un état partagés ; le futur bénéficiaire d'une récompense n'est pas encore défini.
+
+Pour un futur `ActionValidated`, famille, action, occurrence, `scope`, `kind`, acteur de completion, acteur de validation et horodatages proviennent de l'occurrence et du registre. Le Reward Engine et sa politique multi assignée restent à concevoir.
 
 ## Droits et validation
 
-Le Parent est membre avec des droits de création, édition, suppression, gestion de famille, validation et accès Suivi. L'Enfant est membre avec droits limités : pas de création/édition/suppression/gestion Parent, mais accomplissement d'une action accessible. `PENDING_VALIDATION` s'affiche « En attente de validation » ; `COMPLETED` et `VALIDATED` s'affichent « Terminée » selon le statut réel. Le backend garde l'autorité sur les transitions.
-
-La duplication crée une nouvelle définition préremplie dans le formulaire rapide. Elle ne copie ni occurrence ni historique. Les actions récemment créées sont des raccourcis contextuels issus des définitions actives, pas des modèles persistants.
-
-## Cycle historique des accomplissements
-
-Depuis la migration `20261005_0012`, chaque transition effective `complete`, `validate` ou `reopen` d'une occurrence FamilyTask est conservée dans un registre append-only. L'occurrence reste l'état courant ; rouvrir efface ses champs courants de complétion mais ne supprime plus les transitions passées. Le registre distingue l'acteur réel des participants prévus, conserve la catégorie snapshot de l'occurrence et permet de raconter plusieurs cycles sur la même occurrence. Les appels répétés sans changement d'état n'ajoutent pas de transition.
-
-Le backfill de `0012` marque comme hérité le seul cycle courant reconstructible à partir des acteurs et horodatages existants. Les cycles rouverts avant cette migration sont irrécupérables ; la garantie historique complète commence après `0012`. Une Quête Maison multi-attribuée conserve **une** occurrence et **un** état partagé. Le registre garde l'acteur de chaque transition sans choisir le bénéficiaire d'une future récompense : cette règle reste à définir dans le Reward Engine.
+Le Parent est un membre doté de droits supplémentaires de création, édition, désactivation, validation, gestion familiale et Suivi. L'Enfant a des droits limités, mais peut accomplir une action accessible selon l'attribution. Le backend filtre les actions personnelles et événements d'autres membres avant de répondre à un CHILD ; les actions Maison demeurent visibles collectivement. `PENDING_VALIDATION` s'affiche « En attente de validation », `COMPLETED` « Terminée », `VALIDATED` « Validée ». Le backend reste l'autorité des transitions.
 
 ## Pas encore implémenté
 
-- Reward Engine complet et calcul automatique des récompenses ;
-- bonus réel des Quêtes Maison, si absent du moteur actuel ;
-- inventaire Chronodria final, progression des créatures, grimoire enrichi ;
-- défis familiaux ;
+- Reward Engine complet, calcul automatique et bonus réel des Quêtes ;
+- règles de bénéficiaire pour une action multi attribuée ;
+- inventaire Chronodria final, créatures, grimoire enrichi et défis familiaux ;
+- `IN_PROGRESS`, rejoindre une action en cours, contributeurs réels multiples ;
+- report ou échec d'une Mission ;
 - modèles persistants et tâches fréquentes ;
-- normalisation backend des catégories et examen des anciennes données multi assignées ;
-- parcours de création personnelle pour un Parent sans famille active (actuellement la création familiale requiert une famille).
-- identité de joueur Chronodria autonome pour chaque Parent : Le Nid Android reste actuellement alimenté par un `ChildProfile` actif ; l'interface n'affiche pas de mode administrateur, mais la séparation des données joueur Parent/Enfant nécessite un contrat backend dédié.
+- création personnelle sans famille active ;
+- identité de joueur Chronodria autonome pour chaque Parent.

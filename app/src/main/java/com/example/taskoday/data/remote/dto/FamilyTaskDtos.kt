@@ -11,6 +11,7 @@ import com.example.taskoday.domain.model.FamilyTaskPriority
 import com.example.taskoday.domain.model.FamilyTaskRecurrence
 import com.example.taskoday.domain.model.FamilyTaskStatus
 import com.example.taskoday.domain.model.FamilyTaskTodayItem
+import com.example.taskoday.domain.model.FamilyActionType
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonNull
@@ -47,6 +48,10 @@ data class FamilyTaskOccurrenceDto(
     val occurrenceId: Long? = null,
     @SerializedName("title")
     val title: String? = null,
+    @SerializedName("category") val category: String? = null,
+    @SerializedName("scope") val scope: String? = null,
+    @SerializedName("kind") val kind: String? = null,
+    @SerializedName("end_date") val endDate: String? = null,
     @SerializedName("assignees")
     val assignees: List<FamilyTaskAssigneeDto> = emptyList(),
     @SerializedName(value = "scheduled_date", alternate = ["scheduledDate"])
@@ -104,6 +109,9 @@ data class FamilyTaskDefinitionDto(
     val description: String? = null,
     @SerializedName("category")
     val category: String? = null,
+    @SerializedName("scope") val scope: String? = null,
+    @SerializedName("kind") val kind: String? = null,
+    @SerializedName("end_date") val endDate: String? = null,
     @SerializedName("created_at")
     val createdAt: String? = null,
     @SerializedName("assignees")
@@ -151,12 +159,15 @@ data class FamilyTaskCreateRequestDto(
     val title: String,
     @SerializedName("category")
     val category: String? = null,
+    @SerializedName("scope") val scope: String? = null,
+    @SerializedName("kind") val kind: String? = null,
+    @SerializedName("end_date") val endDate: String? = null,
     @SerializedName("description")
     val description: String? = null,
     @SerializedName("priority")
     val priority: String,
     @SerializedName("due_date")
-    val dueDate: String,
+    val dueDate: String?,
     @SerializedName("due_time")
     val dueTime: JsonElement,
     @SerializedName("recurrence")
@@ -179,12 +190,15 @@ data class FamilyTaskUpdateRequestDto(
     val title: String,
     @SerializedName("category")
     val category: String? = null,
+    @SerializedName("scope") val scope: String? = null,
+    @SerializedName("kind") val kind: String? = null,
+    @SerializedName("end_date") val endDate: String? = null,
     @SerializedName("description")
     val description: String? = null,
     @SerializedName("priority")
     val priority: String,
     @SerializedName("due_date")
-    val dueDate: String,
+    val dueDate: String?,
     @SerializedName("due_time")
     val dueTime: JsonElement,
     @SerializedName("recurrence")
@@ -213,9 +227,12 @@ class FamilyTaskCreateRequestDtoJsonAdapter : TypeAdapter<FamilyTaskCreateReques
         out.beginObject()
         out.name("title").value(value.title)
         value.category?.let { out.name("category").value(it) }
+        value.scope?.let { out.name("scope").value(it) }
+        value.kind?.let { out.name("kind").value(it) }
+        value.endDate?.let { out.name("end_date").value(it) }
         value.description?.let { description -> out.name("description").value(description) }
         out.name("priority").value(value.priority)
-        out.name("due_date").value(value.dueDate)
+        value.dueDate?.let { out.name("due_date").value(it) }
         out.writeDueTime(value.dueTime)
         out.name("recurrence").value(value.recurrence)
         out.name("recurrence_interval").value(value.recurrenceInterval.coerceAtLeast(1))
@@ -242,9 +259,17 @@ class FamilyTaskUpdateRequestDtoJsonAdapter : TypeAdapter<FamilyTaskUpdateReques
         out.beginObject()
         out.name("title").value(value.title)
         value.category?.let { out.name("category").value(it) }
+        value.scope?.let { out.name("scope").value(it) }
+        value.kind?.let { out.name("kind").value(it) }
+        val previousSerializeNulls = out.serializeNulls
+        out.serializeNulls = true
+        if (value.endDate == null) out.name("end_date").nullValue() else out.name("end_date").value(value.endDate)
+        out.serializeNulls = previousSerializeNulls
         out.name("description").value(value.description)
         out.name("priority").value(value.priority)
-        out.name("due_date").value(value.dueDate)
+        out.serializeNulls = true
+        if (value.dueDate == null) out.name("due_date").nullValue() else out.name("due_date").value(value.dueDate)
+        out.serializeNulls = previousSerializeNulls
         out.writeDueTime(value.dueTime)
         out.name("recurrence").value(value.recurrence)
         out.name("recurrence_interval").value(value.recurrenceInterval.coerceAtLeast(1))
@@ -321,6 +346,7 @@ fun JsonElement.toFamilyTaskMemberDtos(gson: Gson): List<FamilyTaskMemberDto> =
 
 fun FamilyTaskOccurrenceDto.toDomain(): FamilyTaskTodayItem {
     val resolvedOccurrenceId = occurrenceId ?: taskId ?: 0L
+    val identity = FamilyActionType.fromWire(scope, kind, category)
     return FamilyTaskTodayItem(
         taskId = taskId ?: resolvedOccurrenceId,
         occurrenceId = resolvedOccurrenceId,
@@ -341,6 +367,10 @@ fun FamilyTaskOccurrenceDto.toDomain(): FamilyTaskTodayItem {
         selectedWeekdays = selectedWeekdays.filter { it in 1..7 }.distinct().sorted(),
         completedByUser = completedByUser?.toDomain(),
         validatedByUser = validatedByUser?.toDomain(),
+        category = category,
+        scope = identity.scope,
+        kind = identity.kind,
+        endDate = endDate,
     )
 }
 
@@ -364,6 +394,7 @@ fun FamilyTaskOccurrencesRangeResponseDto.toDomain(
 
 fun FamilyTaskDefinitionDto.toDomain(): FamilyTaskDefinition {
     val resolvedId = id ?: 0L
+    val identity = FamilyActionType.fromWire(scope, kind, category)
     return FamilyTaskDefinition(
         id = resolvedId,
         familyId = familyId ?: 0L,
@@ -382,6 +413,9 @@ fun FamilyTaskDefinitionDto.toDomain(): FamilyTaskDefinition {
         priority = FamilyTaskPriority.fromBackend(priority),
         active = active ?: true,
         category = category,
+        scope = identity.scope,
+        kind = identity.kind,
+        endDate = endDate,
         createdAt = createdAt,
     )
 }
@@ -404,6 +438,9 @@ fun FamilyTaskCreateInput.toRequestDto(): FamilyTaskCreateRequestDto =
     FamilyTaskCreateRequestDto(
         title = title,
         category = category,
+        scope = scope.name,
+        kind = kind.name,
+        endDate = endDate,
         description = description,
         priority = priority.backendValue(),
         dueDate = dueDate,
@@ -420,6 +457,9 @@ fun FamilyTaskCreateInput.toUpdateRequestDto(): FamilyTaskUpdateRequestDto =
     FamilyTaskUpdateRequestDto(
         title = title,
         category = category,
+        scope = scope.name,
+        kind = kind.name,
+        endDate = endDate,
         description = description.orEmpty(),
         priority = priority.backendValue(),
         dueDate = dueDate,

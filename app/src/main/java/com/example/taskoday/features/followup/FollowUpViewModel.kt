@@ -90,15 +90,15 @@ class FollowUpViewModel
         }
 
         private fun personalItems(memberId: Long, today: List<FamilyTaskTodayItem>, overdue: List<FamilyTaskTodayItem>): List<FollowUpItem> {
-            val current = today.filter { task -> FamilyActionType.fromCategory(task.category) != FamilyActionType.HOUSE_QUEST && task.assignees.any { it.id == memberId } }
-            val old = overdue.filter { task -> FamilyActionType.fromCategory(task.category) != FamilyActionType.HOUSE_QUEST && task.assignees.any { it.id == memberId } && current.none { it.occurrenceId == task.occurrenceId } }
+            val current = today.filter { task -> task.scope == com.example.taskoday.domain.model.FamilyActionScope.PERSONAL && task.assignees.any { it.id == memberId } }
+            val old = overdue.filter { task -> task.scope == com.example.taskoday.domain.model.FamilyActionScope.PERSONAL && task.assignees.any { it.id == memberId } && current.none { it.occurrenceId == task.occurrenceId } }
             return current.map { FollowUpItem("family-${it.occurrenceId}", it.title, it.status.countsAsDone, familyTask = it) } +
                 old.map { FollowUpItem("family-${it.occurrenceId}", it.title, false, overdue = true, familyTask = it) }
         }
 
         private fun householdItems(today: List<FamilyTaskTodayItem>, overdue: List<FamilyTaskTodayItem>): List<FollowUpItem> {
-            val current = today.filter { FamilyActionType.fromCategory(it.category) == FamilyActionType.HOUSE_QUEST }
-            val old = overdue.filter { FamilyActionType.fromCategory(it.category) == FamilyActionType.HOUSE_QUEST && current.none { currentTask -> currentTask.occurrenceId == it.occurrenceId } }
+            val current = today.filter { it.scope == com.example.taskoday.domain.model.FamilyActionScope.HOUSE }
+            val old = overdue.filter { it.scope == com.example.taskoday.domain.model.FamilyActionScope.HOUSE && current.none { currentTask -> currentTask.occurrenceId == it.occurrenceId } }
             return current.map { FollowUpItem("house-${it.occurrenceId}", it.title, it.status.countsAsDone, familyTask = it) } +
                 old.map { FollowUpItem("house-${it.occurrenceId}", it.title, false, overdue = true, familyTask = it) }
         }

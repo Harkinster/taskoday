@@ -55,11 +55,7 @@ WEEKDAY_ALIASES = {
 }
 
 HOUSE_QUEST_CATEGORY = "TASKODAY_HOUSE_QUEST"
-ACTION_CATEGORIES = {
-    HOUSE_QUEST_CATEGORY,
-    "TASKODAY_PERSONAL_ROUTINE",
-    "TASKODAY_PERSONAL_MISSION",
-}
+from app.services.action_identity import IDENTITY_TO_CATEGORY, identity_from_category
 
 
 def occurrence_category(category: str | None) -> str:
@@ -67,7 +63,7 @@ def occurrence_category(category: str | None) -> str:
     normalized = category.strip().upper() if category is not None else ""
     if normalized in {"", "MAISON"}:
         return HOUSE_QUEST_CATEGORY
-    if normalized in ACTION_CATEGORIES:
+    if normalized in IDENTITY_TO_CATEGORY.values():
         return normalized
     raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Categorie d'action inconnue.")
 
@@ -220,7 +216,7 @@ def task_visible_to_member(*, task: FamilyTask, membership: FamilyMember, user: 
         return True
     if user.role != UserRole.CHILD or membership.role != FamilyMemberRole.CHILD:
         return False
-    if occurrence_category(task.category) == HOUSE_QUEST_CATEGORY:
+    if task.scope == "HOUSE":
         return True
     return any(assignee.user_id == user.id for assignee in task.assignees)
 
@@ -231,6 +227,8 @@ def ensure_task_visible(*, task: FamilyTask, membership: FamilyMember, user: Use
 
 
 def is_task_scheduled_for_date(task: FamilyTask, target_date: date) -> bool:
+    if task.end_date is not None and target_date > task.end_date:
+        return False
     if task.recurrence == FamilyTaskRecurrence.NONE and task.due_date is None and task.due_at is None:
         return False
 
@@ -258,6 +256,37 @@ def is_task_scheduled_for_date(task: FamilyTask, target_date: date) -> bool:
     return False
 
 
+def get_or_create_undated_occurrence(db: Session, *, task: FamilyTask) -> FamilyTaskOccurrence:
+    occurrence = db.scalar(select(FamilyTaskOccurrence).where(
+        FamilyTaskOccurrence.task_id == task.id,
+        FamilyTaskOccurrence.scheduled_date.is_(None),
+    ))
+    if occurrence is not None:
+        return occurrence
+    try:
+        with db.begin_nested():
+            db.execute(insert(FamilyTaskOccurrence).values(
+                task_id=task.id, category=occurrence_category(task.category),
+                scope=task.scope, kind=task.kind, scheduled_date=None,
+                status=FamilyTaskOccurrenceStatus.TODO,
+            ))
+    except IntegrityError:
+        occurrence = db.scalar(select(FamilyTaskOccurrence).where(
+            FamilyTaskOccurrence.task_id == task.id,
+            FamilyTaskOccurrence.scheduled_date.is_(None),
+        ))
+        if occurrence is not None:
+            return occurrence
+        raise
+    occurrence = db.scalar(select(FamilyTaskOccurrence).where(
+        FamilyTaskOccurrence.task_id == task.id,
+        FamilyTaskOccurrence.scheduled_date.is_(None),
+    ))
+    if occurrence is None:
+        raise RuntimeError("Occurrence ouverte creee mais introuvable.")
+    return occurrence
+
+
 def get_or_create_occurrence(db: Session, *, task: FamilyTask, scheduled_date: date) -> FamilyTaskOccurrence:
     occurrence = _find_occurrence(db, task_id=task.id, scheduled_date=scheduled_date)
     if occurrence is not None:
@@ -269,6 +298,8 @@ def get_or_create_occurrence(db: Session, *, task: FamilyTask, scheduled_date: d
                 insert(FamilyTaskOccurrence).values(
                     task_id=task.id,
                     category=occurrence_category(task.category),
+                    scope=task.scope,
+                    kind=task.kind,
                     scheduled_date=scheduled_date,
                     status=FamilyTaskOccurrenceStatus.TODO,
                 )
@@ -300,11 +331,19 @@ def get_or_create_occurrences_for_date(
     tasks: list[FamilyTask],
     scheduled_date: date,
 ) -> list[FamilyTaskOccurrence]:
-    return [
+    scheduled = [
         get_or_create_occurrence(db, task=task, scheduled_date=scheduled_date)
         for task in tasks
         if is_task_scheduled_for_date(task, scheduled_date)
     ]
+    if scheduled_date == date.today():
+        scheduled += [
+            get_or_create_undated_occurrence(db, task=task)
+            for task in tasks
+            if task.kind == "MISSION" and task.recurrence == FamilyTaskRecurrence.NONE
+            and task.due_date is None and task.due_at is None
+        ]
+    return scheduled
 
 
 def complete_occurrence(
@@ -406,6 +445,7 @@ def record_occurrence_transition(
     event = FamilyTaskOccurrenceEvent(
         family_id=task.family_id, task_id=task.id, occurrence_id=occurrence.id,
         category=occurrence.category, title=task.title, scheduled_date=occurrence.scheduled_date,
+        scope=occurrence.scope, kind=occurrence.kind,
         event_type=event_type, status_from=old_status, status_to=occurrence.status,
         actor_user_id=actor_user_id, completed_by_user_id=completed_by_user_id,
         occurred_at=occurred_at, legacy_inferred=False,
@@ -425,6 +465,9 @@ def task_payload(db: Session, task: FamilyTask) -> dict:
         "description": task.description,
         "creator_user_id": task.creator_user_id,
         "category": task.category,
+        "scope": task.scope,
+        "kind": task.kind,
+        "end_date": task.end_date,
         "priority": _enum_value(task.priority),
         "due_at": task.due_at,
         "due_date": task.due_date,
@@ -448,6 +491,9 @@ def occurrence_payload(db: Session, occurrence: FamilyTaskOccurrence) -> dict:
         "task_id": task.id,
         "occurrence_id": occurrence.id,
         "category": occurrence.category,
+        "scope": occurrence.scope,
+        "kind": occurrence.kind,
+        "end_date": task.end_date,
         "title": task.title,
         "description": task.description,
         "assignees": assignees_payload(db, task),
@@ -478,6 +524,8 @@ def occurrence_event_payload(db: Session, event: FamilyTaskOccurrenceEvent) -> d
         "task_id": event.task_id,
         "occurrence_id": event.occurrence_id,
         "category": event.category,
+        "scope": event.scope,
+        "kind": event.kind,
         "title": event.title,
         "scheduled_date": event.scheduled_date,
         "event_type": event.event_type,

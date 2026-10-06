@@ -22,7 +22,7 @@ enum class ExplorationCategory {
     HOUSEHOLD,
 }
 
-fun FamilyTaskTodayItem.isHouseholdTask(): Boolean = FamilyActionType.fromCategory(category) == FamilyActionType.HOUSE_QUEST
+fun FamilyTaskTodayItem.isHouseholdTask(): Boolean = scope == com.example.taskoday.domain.model.FamilyActionScope.HOUSE
 
 fun FamilyTaskTodayItem.isPersonalTask(): Boolean = !isHouseholdTask()
 
@@ -34,7 +34,7 @@ fun FamilyTaskTodayItem.isRecurringTask(): Boolean = recurrenceLabel
 
 fun FamilyTaskTodayItem.explorationCategory(): ExplorationCategory = when {
     isHouseholdTask() -> ExplorationCategory.HOUSEHOLD
-    FamilyActionType.fromCategory(category) == FamilyActionType.PERSONAL_ROUTINE -> ExplorationCategory.PERSONAL_ROUTINE
+    kind == com.example.taskoday.domain.model.FamilyActionKind.ROUTINE -> ExplorationCategory.PERSONAL_ROUTINE
     else -> ExplorationCategory.PERSONAL_TASK
 }
 

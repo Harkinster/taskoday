@@ -19,10 +19,15 @@ fun familyActionRuleError(
     actionType: FamilyActionType,
     recurrence: FamilyTaskRecurrence,
     assigneeUserIds: Set<Long>,
+    hasDueDate: Boolean = true,
 ): String? = when {
-    actionType == FamilyActionType.PERSONAL_ROUTINE && recurrence == FamilyTaskRecurrence.NONE ->
+    actionType.kind == com.example.taskoday.domain.model.FamilyActionKind.ROUTINE && recurrence == FamilyTaskRecurrence.NONE ->
         "Une routine doit se répéter."
-    actionType != FamilyActionType.HOUSE_QUEST && assigneeUserIds.size != 1 ->
+    actionType.kind == com.example.taskoday.domain.model.FamilyActionKind.MISSION && recurrence != FamilyTaskRecurrence.NONE ->
+        "Une mission est ponctuelle et ne peut pas se répéter."
+    actionType.kind != com.example.taskoday.domain.model.FamilyActionKind.MISSION && !hasDueDate ->
+        "Choisis une date de début."
+    actionType.scope == com.example.taskoday.domain.model.FamilyActionScope.PERSONAL && assigneeUserIds.size != 1 ->
         "Choisis une seule personne pour cette action personnelle."
     else -> null
 }
@@ -39,6 +44,7 @@ data class FamilyTaskCreateForm(
     val title: String,
     val description: String,
     val date: String,
+    val endDate: String = "",
     val time: String,
     val recurrence: FamilyTaskRecurrence,
     val selectedWeekdays: Set<Int>,
@@ -74,10 +80,12 @@ fun validateFamilyTaskCreateForm(
         return FamilyTaskCreateValidation(errorMessage = "Choisis la personne responsable.")
     }
 
-    val dueDate =
-        buildFamilyTaskDueDate(
-            dateText = form.date,
-        ).getOrElse { return FamilyTaskCreateValidation(errorMessage = it.message ?: "Date invalide.") }
+    val dueDate = if (form.date.isBlank()) null else buildFamilyTaskDueDate(form.date)
+        .getOrElse { return FamilyTaskCreateValidation(errorMessage = it.message ?: "Date invalide.") }
+    val endDate = if (form.endDate.isBlank()) null else buildFamilyTaskDueDate(form.endDate)
+        .getOrElse { return FamilyTaskCreateValidation(errorMessage = it.message ?: "Date de fin invalide.") }
+    if (form.time.isNotBlank() && dueDate == null) return FamilyTaskCreateValidation(errorMessage = "Choisis une date pour l'heure.")
+    if (endDate != null && dueDate != null && endDate < dueDate) return FamilyTaskCreateValidation(errorMessage = "La fin doit suivre le début.")
     val dueTime =
         buildFamilyTaskDueTime(
             timeText = form.time,
@@ -89,6 +97,7 @@ fun validateFamilyTaskCreateForm(
                 title = title,
                 description = form.description.trim().takeIf { it.isNotBlank() },
                 dueDate = dueDate,
+                endDate = endDate,
                 dueTime = dueTime,
                 recurrence = form.recurrence,
                 selectedWeekdays = form.selectedWeekdays.sorted(),
