@@ -8,6 +8,7 @@ data class FollowUpItem(
     val title: String,
     val completed: Boolean,
     val overdue: Boolean = false,
+    val undated: Boolean = false,
     val familyTask: FamilyTaskTodayItem? = null,
     val legacyTask: TaskForDay? = null,
 )

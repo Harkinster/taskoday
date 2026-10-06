@@ -83,11 +83,16 @@ fun FollowUpScreen(
             }
             if (member.items.isEmpty()) item { Text("Aucune tâche prévue aujourd’hui.", color = ParchmentCream.copy(alpha = 0.72f)) }
             val overdue = member.items.filter { it.overdue }
-            val pending = member.items.filter { !it.completed && !it.overdue }
+            val pending = member.items.filter { !it.completed && !it.overdue && !it.undated }
+            val undated = member.items.filter { it.undated && !it.completed }
             val completed = member.items.filter { it.completed }
             if (pending.isNotEmpty()) {
-                item { Text("À faire", style = MaterialTheme.typography.titleSmall, color = ParchmentLight) }
+                item { Text("Aujourd'hui", style = MaterialTheme.typography.titleSmall, color = ParchmentLight) }
                 items(pending, key = { "pending-${it.key}" }) { item -> FollowUpItemRow(item, onOpenFamilyTask, onOpenLegacyTask) }
+            }
+            if (undated.isNotEmpty()) {
+                item { Text("À faire", style = MaterialTheme.typography.titleSmall, color = ParchmentLight) }
+                items(undated, key = { "undated-${it.key}" }) { item -> FollowUpItemRow(item, onOpenFamilyTask, onOpenLegacyTask) }
             }
             if (completed.isNotEmpty()) {
                 item { Text("Terminées", style = MaterialTheme.typography.titleSmall, color = ParchmentLight) }

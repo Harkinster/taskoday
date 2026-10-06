@@ -9,6 +9,7 @@ import com.example.taskoday.features.familyhome.FamilyTaskAccessPolicy
 import com.example.taskoday.features.familyhome.FamilyTaskQuickAction
 import com.example.taskoday.features.familyhome.familyTaskActionLabel
 import com.example.taskoday.features.familyhome.familyTaskStatusLabel
+import com.example.taskoday.features.familyhome.isOpenUndatedMission
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -37,6 +38,14 @@ class ExplorationPolicyTest {
         val task = task(recurrence = "DAILY", category = FamilyActionType.PERSONAL_ROUTINE.category)
         assertEquals(ExplorationCategory.PERSONAL_ROUTINE, task.explorationCategory())
         assertEquals("Tous les jours", familyTaskOccurrenceRecurrenceLabel(task.recurrenceLabel))
+    }
+
+    @Test fun `undated personal mission belongs in open work while routine remains occurrence based`() {
+        val mission = task(recurrence = "NONE", category = FamilyActionType.PERSONAL_MISSION.category, scheduledDate = null, dueDate = null)
+        val routine = task(recurrence = "DAILY", category = FamilyActionType.PERSONAL_ROUTINE.category, scheduledDate = null, dueDate = null)
+
+        assertTrue(mission.isOpenUndatedMission())
+        assertFalse(routine.isOpenUndatedMission())
     }
 
     @Test fun `a recurring mission does not turn into a routine`() {
@@ -72,6 +81,12 @@ class ExplorationPolicyTest {
         assertEquals("Validée", familyTaskStatusLabel(FamilyTaskStatus.VALIDATED))
     }
 
-    private fun task(assignees: List<FamilyTaskAssignee> = listOf(FamilyTaskAssignee(1L, "Naomy")), recurrence: String, category: String? = null): FamilyTaskTodayItem =
-        FamilyTaskTodayItem(1L, 2L, "Test", assignees, "2026-09-19", "2026-09-19", null, false, null, FamilyTaskStatus.TODO, false, false, FamilyTaskPriority.NORMAL, recurrence, category = category)
+    private fun task(
+        assignees: List<FamilyTaskAssignee> = listOf(FamilyTaskAssignee(1L, "Naomy")),
+        recurrence: String,
+        category: String? = null,
+        scheduledDate: String? = "2026-09-19",
+        dueDate: String? = scheduledDate,
+    ): FamilyTaskTodayItem =
+        FamilyTaskTodayItem(1L, 2L, "Test", assignees, scheduledDate, dueDate, null, false, null, FamilyTaskStatus.TODO, false, false, FamilyTaskPriority.NORMAL, recurrence, category = category)
 }

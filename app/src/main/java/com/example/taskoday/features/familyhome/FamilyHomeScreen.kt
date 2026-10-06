@@ -214,12 +214,24 @@ fun FamilyHomeScreen(
                         }
                     }
 
-                    if (uiState.todayTasks.isEmpty() && uiState.completedTodayTasks.isEmpty() && uiState.overdueTotalTasks == 0) {
+                    if (uiState.todayTasks.isEmpty() && uiState.openUndatedTasks.isEmpty() && uiState.completedTodayTasks.isEmpty() && uiState.overdueTotalTasks == 0) {
                         item { EmptyFamilyHomeCard() }
                     } else {
                         if (uiState.todayTasks.isNotEmpty()) {
                             item { FamilyHomeSectionTitle(title = "Aujourd'hui", detail = "${uiState.todayTasks.size} à faire") }
                             items(uiState.todayTasks, key = { "today-${it.task.occurrenceId}" }) { row ->
+                                FamilyTaskRowCard(
+                                    access = uiState.access,
+                                    task = row.task,
+                                    isActing = uiState.actingOccurrenceId == row.task.occurrenceId,
+                                    onQuickAction = viewModel::runQuickAction,
+                                    onOpenTask = onOpenTask,
+                                )
+                            }
+                        }
+                        if (uiState.openUndatedTasks.isNotEmpty()) {
+                            item { FamilyHomeSectionTitle(title = "À faire", detail = "${uiState.openUndatedTasks.size} sans échéance") }
+                            items(uiState.openUndatedTasks, key = { "undated-${it.task.occurrenceId}" }) { row ->
                                 FamilyTaskRowCard(
                                     access = uiState.access,
                                     task = row.task,

@@ -30,6 +30,7 @@ import com.example.taskoday.core.ui.theme.ParchmentLight
 import com.example.taskoday.domain.model.FamilyActionType
 import com.example.taskoday.features.familyhome.familyTaskStatusLabel
 import com.example.taskoday.features.familyhome.familyTaskActionLabel
+import com.example.taskoday.features.familyhome.isOpenUndatedMission
 
 @Composable
 fun ExplorationScreen(
@@ -80,7 +81,8 @@ fun ExplorationScreen(
         } else {
         if (!state.errorMessage.isNullOrBlank()) item { Text(state.errorMessage.orEmpty(), color = MaterialTheme.colorScheme.error) }
         val overdue = actions.filter { it.overdue && !it.completed }
-        val today = actions.filter { !it.overdue && !it.completed }
+        val today = actions.filter { !it.overdue && !it.completed && !it.undated }
+        val undated = actions.filter { it.undated && !it.completed }
         val completed = actions.filter { it.completed }
         if (overdue.isNotEmpty()) {
             item { SectionTitle("En retard") }
@@ -89,6 +91,10 @@ fun ExplorationScreen(
         item { SectionTitle("Aujourd'hui") }
         if (today.isEmpty()) item { Text("Rien à faire aujourd'hui.", color = ParchmentCream) }
         items(today, key = { "today-${it.key}" }) { action -> ActionRow(action, onOpenFamilyTask) }
+        if (undated.isNotEmpty()) {
+            item { SectionTitle("À faire") }
+            items(undated, key = { "undated-${it.key}" }) { action -> ActionRow(action, onOpenFamilyTask) }
+        }
         if (completed.isNotEmpty()) {
             item { SectionTitle("Terminées") }
             items(completed, key = { "done-${it.key}" }) { action -> ActionRow(action, onOpenFamilyTask) }
@@ -107,6 +113,7 @@ private data class ExplorationDayAction(
     val taskId: Long? = null,
     val actionLabel: String?,
     val onToggle: () -> Unit,
+    val undated: Boolean = false,
 )
 
 private fun explorationDayActions(state: ExplorationUiState, viewModel: ExplorationViewModel): List<ExplorationDayAction> =
@@ -114,7 +121,7 @@ private fun explorationDayActions(state: ExplorationUiState, viewModel: Explorat
         state.personalTasks.forEach { item ->
             val task = item.occurrence
             add(ExplorationDayAction("mission-${task.occurrenceId}", task.title, "Mission", familyTaskStatusLabel(task.status), task.status.countsAsDone, item.overdue,
-                task.taskId, state.access.quickAction(task)?.let(::familyTaskActionLabel), { viewModel.toggleFamilyTask(item) }))
+                task.taskId, state.access.quickAction(task)?.let(::familyTaskActionLabel), { viewModel.toggleFamilyTask(item) }, task.isOpenUndatedMission()))
         }
         state.routines.forEach { item ->
             val task = item.familyTask?.occurrence

@@ -25,6 +25,42 @@ class FamilyHomeUiPolicyTest {
     }
 
     @Test
+    fun `undated missions have an open work group while dated and completed tasks keep temporal groups`() {
+        val today = LocalDate.of(2026, 10, 6)
+        val personalNoDue = task(title = "Personal sans date", scheduledDate = null, dueDate = null, category = FamilyActionType.PERSONAL_MISSION.category)
+        val houseNoDue = task(title = "Maison sans date", scheduledDate = null, dueDate = null, category = FamilyActionType.HOUSE_MISSION.category)
+        val doneNoDue = personalNoDue.copy(status = FamilyTaskStatus.COMPLETED)
+
+        assertEquals(FamilyTaskTemporalGroup.OPEN_UNDATED, familyTaskTemporalGroup(personalNoDue, today))
+        assertEquals(FamilyTaskTemporalGroup.OPEN_UNDATED, familyTaskTemporalGroup(houseNoDue, today))
+        assertEquals(FamilyTaskTemporalGroup.TODAY, familyTaskTemporalGroup(task(scheduledDate = today.toString()), today))
+        assertEquals(FamilyTaskTemporalGroup.OVERDUE, familyTaskTemporalGroup(task(scheduledDate = "2026-10-05"), today))
+        assertEquals(FamilyTaskTemporalGroup.UPCOMING, familyTaskTemporalGroup(task(scheduledDate = "2026-10-07"), today))
+        assertEquals(FamilyTaskTemporalGroup.COMPLETED, familyTaskTemporalGroup(doneNoDue, today))
+    }
+
+    @Test
+    fun `undated routines and quests retain occurrence behavior and are not missions without due dates`() {
+        val today = LocalDate.of(2026, 10, 6)
+        val routine = task(title = "Routine", scheduledDate = null, dueDate = null, category = FamilyActionType.HOUSE_ROUTINE.category)
+        val quest = task(title = "Quest", scheduledDate = null, dueDate = null, category = FamilyActionType.HOUSE_QUEST.category)
+
+        assertEquals(FamilyTaskTemporalGroup.TODAY, familyTaskTemporalGroup(routine, today))
+        assertEquals(FamilyTaskTemporalGroup.TODAY, familyTaskTemporalGroup(quest, today))
+        assertEquals(emptyList<FamilyTaskTodayItem>(), openUndatedMissions(listOf(routine, quest)))
+    }
+
+    @Test
+    fun `open undated mission policy separates it from scheduled today tasks`() {
+        val today = LocalDate.of(2026, 10, 6)
+        val noDue = task(title = "Sans date", scheduledDate = null, dueDate = null, category = FamilyActionType.HOUSE_MISSION.category)
+        val scheduled = task(title = "Aujourd'hui", scheduledDate = today.toString(), category = FamilyActionType.HOUSE_MISSION.category)
+
+        assertEquals(listOf("Aujourd'hui"), todayScheduledTasks(listOf(noDue, scheduled), today).map { it.title })
+        assertEquals(listOf("Sans date"), openUndatedMissions(listOf(noDue)).map { it.title })
+    }
+
+    @Test
     fun `empty today list has no sections`() {
         assertEquals(emptyList<FamilyTaskMemberSection>(), buildFamilyTaskSections(emptyList()))
     }
@@ -463,7 +499,7 @@ class FamilyHomeUiPolicyTest {
         title: String = "Tâche",
         assignees: List<FamilyTaskAssignee> = listOf(FamilyTaskAssignee(id = 1L, displayName = "Ada")),
         status: FamilyTaskStatus = FamilyTaskStatus.TODO,
-        scheduledDate: String = "2026-08-22",
+        scheduledDate: String? = "2026-08-22",
         dueDate: String? = scheduledDate,
         dueTime: String? = null,
         hasDueTime: Boolean = false,

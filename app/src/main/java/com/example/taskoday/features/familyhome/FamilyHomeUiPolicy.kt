@@ -76,6 +76,42 @@ fun pendingDailyTasks(tasks: List<FamilyTaskTodayItem>): List<FamilyTaskTodayIte
 fun completedDailyTasks(tasks: List<FamilyTaskTodayItem>): List<FamilyTaskTodayItem> =
     tasks.filter { it.status.countsAsDone }
 
+/** Open missions without a scheduled date are unscheduled work, never today's work. */
+enum class FamilyTaskTemporalGroup {
+    OVERDUE,
+    TODAY,
+    OPEN_UNDATED,
+    UPCOMING,
+    COMPLETED,
+}
+
+fun FamilyTaskTodayItem.isOpenUndatedMission(): Boolean =
+    kind == FamilyActionKind.MISSION &&
+        status in setOf(FamilyTaskStatus.TODO, FamilyTaskStatus.PENDING_VALIDATION) &&
+        scheduledDate.isNullOrBlank() && dueDate.isNullOrBlank() && dueAt.isNullOrBlank()
+
+fun familyTaskTemporalGroup(
+    task: FamilyTaskTodayItem,
+    today: LocalDate,
+    markedOverdue: Boolean = false,
+): FamilyTaskTemporalGroup {
+    if (task.status.countsAsDone) return FamilyTaskTemporalGroup.COMPLETED
+    if (task.isOpenUndatedMission()) return FamilyTaskTemporalGroup.OPEN_UNDATED
+    if (markedOverdue) return FamilyTaskTemporalGroup.OVERDUE
+    val date = task.occurrenceLocalDate()
+    return when {
+        date == null || date == today -> FamilyTaskTemporalGroup.TODAY
+        date < today -> FamilyTaskTemporalGroup.OVERDUE
+        else -> FamilyTaskTemporalGroup.UPCOMING
+    }
+}
+
+fun todayScheduledTasks(tasks: List<FamilyTaskTodayItem>, today: LocalDate): List<FamilyTaskTodayItem> =
+    tasks.filter { task -> familyTaskTemporalGroup(task, today) == FamilyTaskTemporalGroup.TODAY }
+
+fun openUndatedMissions(tasks: List<FamilyTaskTodayItem>): List<FamilyTaskTodayItem> =
+    tasks.filter(FamilyTaskTodayItem::isOpenUndatedMission)
+
 fun buildFamilyTaskOverduePreview(
     tasks: List<FamilyTaskTodayItem>,
     previewLimit: Int = FAMILY_TASK_OVERDUE_PREVIEW_LIMIT,

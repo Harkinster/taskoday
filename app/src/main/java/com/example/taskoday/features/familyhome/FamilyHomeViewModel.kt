@@ -198,6 +198,9 @@ class FamilyHomeViewModel
                     val visibleOverdueTasks = visibleDailyTasks(overdueTasks, _uiState.value.access)
                     val visibleUpcomingTasks = visibleDailyTasks(upcomingTasks, _uiState.value.access)
                     val sections = buildFamilyTaskSections(dailyTasks)
+                    val openUndated = openUndatedMissions(dailyTasks)
+                    val todayPending = todayScheduledTasks(dailyTasks, todayReference)
+                    val completedToday = completedDailyTasks(dailyTasks)
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -206,10 +209,11 @@ class FamilyHomeViewModel
                             todayDate = todayDate,
                             dateLabel = formatFamilyHomeDateLabel(todayDate, fallback = todayReference),
                             sections = sections,
-                            todayTasks = pendingDailyTasks(dailyTasks).map(::FamilyTaskRow),
-                            completedTodayTasks = completedDailyTasks(dailyTasks).map(::FamilyTaskRow),
-                            totalTasks = dailyTasks.size,
-                            completedTasks = dailyTasks.count { task -> task.status.countsAsDone },
+                            todayTasks = todayPending.map(::FamilyTaskRow),
+                            openUndatedTasks = openUndated.map(::FamilyTaskRow),
+                            completedTodayTasks = completedToday.map(::FamilyTaskRow),
+                            totalTasks = todayPending.size + completedToday.size,
+                            completedTasks = completedToday.size,
                             pendingValidationTasks = familyTaskPendingValidationCount(dailyTasks),
                             overdueTasks = buildFamilyTaskOverduePreview(visibleOverdueTasks),
                             overdueTotalTasks = visibleOverdueTasks.size,
@@ -241,6 +245,7 @@ class FamilyHomeViewModel
                             dateLabel = formatFamilyHomeDateLabel(null),
                             sections = emptyList(),
                             todayTasks = emptyList(),
+                            openUndatedTasks = emptyList(),
                             completedTodayTasks = emptyList(),
                             totalTasks = 0,
                             completedTasks = 0,
@@ -324,6 +329,7 @@ class FamilyHomeViewModel
                     dateLabel = formatFamilyHomeDateLabel(today.toString()),
                     sections = sections,
                     todayTasks = pendingDailyTasks(selectedTasks).map(::FamilyTaskRow),
+                    openUndatedTasks = emptyList(),
                     completedTodayTasks = completedDailyTasks(selectedTasks).map(::FamilyTaskRow),
                     totalTasks = selectedTasks.size,
                     completedTasks = selectedTasks.count { task -> task.status.countsAsDone },
