@@ -1,4 +1,4 @@
-"""Revision 0013 runs only on disposable SQLite files."""
+"""Scope/kind and current-head migrations run only on disposable SQLite files."""
 
 import pytest
 from alembic import command
@@ -11,7 +11,7 @@ def test_empty_sqlite_upgrade_downgrade(tmp_path, monkeypatch):
     config, engine = _config(tmp_path, monkeypatch)
     try:
         command.upgrade(config, "head")
-        assert _revision(engine) == "20261006_0014"
+        assert _revision(engine) == "20261006_0015"
         for table in ("family_tasks", "family_task_occurrences", "family_task_occurrence_events"):
             columns = {item["name"]: item for item in inspect(engine).get_columns(table)}
             assert columns["scope"]["nullable"] is False

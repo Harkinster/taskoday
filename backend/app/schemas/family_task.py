@@ -1,5 +1,6 @@
 from datetime import date, datetime, time
 from typing import Any, Literal
+from app.models.family_task import FamilyTaskOccurrenceStatus
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -155,7 +156,8 @@ class FamilyTaskOccurrenceResponse(BaseModel):
     due_time: time | None
     recurrence: str
     recurrence_interval: int
-    status: str
+    status: FamilyTaskOccurrenceStatus
+    reward_points_awarded_to_me: int | None = None
     cycle_number: int
     contributors: list[FamilyTaskActorResponse]
     validation_required: bool

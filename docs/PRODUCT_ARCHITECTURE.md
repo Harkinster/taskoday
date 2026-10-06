@@ -8,7 +8,7 @@ Dans Taskoday, Parent et Enfant sont des membres de famille avec des droits diff
 
 `Action réelle → Taskoday → Validation → Reward Engine → Chronodria`
 
-Taskoday organise la vie réelle : famille, personnes, calendrier, attribution et validation. Le Reward Engine traduira une action validée en récompense. Chronodria consommera cette récompense pour la progression et l'aventure. Taskoday ne connaît ni éclosion, ni évolution, ni inventaire ; Chronodria ne décide ni qui devait agir, ni si une action était obligatoire, ni quelle famille la possède. Aucun moteur de récompense n'est implémenté dans le modèle d'actions.
+Taskoday organise la vie réelle : famille, personnes, calendrier, attribution et validation. Le Reward Engine traduit une réalisation finale reconnue en points de récompense neutres. Chronodria consommera ces points plus tard pour la progression et l'aventure. Taskoday ne connaît ni éclosion, ni évolution, ni inventaire ; Chronodria ne décide ni qui devait agir, ni si une action était obligatoire, ni quelle famille la possède.
 
 ## Identité canonique d'une action
 
@@ -60,13 +60,21 @@ Après création, `scope` et `kind` sont immuables. Un PATCH renvoyant les même
 
 Depuis `20261004_0011`, une occurrence snapshotte sa catégorie à sa naissance. Depuis `20261006_0013`, elle snapshotte aussi `scope` et `kind`. Modifier ensuite titre, date, assignataires ou définition ne change pas ces snapshots. La migration des anciennes occurrences utilise la meilleure classification connue de leur propre `category` ; l'identité antérieure à 0011 n'est pas reconstructible avec certitude. Un événement task-events conserve séparément la catégorie et le couple `scope/kind` de l'occurrence, ainsi que son titre, son acteur et son horodatage.
 
-Depuis `20261005_0012`, chaque transition effective `COMPLETE`, `VALIDATE` ou `REOPEN` reste dans un registre append-only. L'occurrence exprime l'état courant ; une réouverture remet cet état à `TODO` sans effacer les transitions précédentes. Le registre distingue l'acteur réel du participant prévu et permet plusieurs cycles. Les cycles rouverts avant 0012 sont irrécupérables. Une action Maison multi attribuée conserve une occurrence et un état partagés ; le futur bénéficiaire d'une récompense n'est pas encore défini.
+Depuis `20261005_0012`, chaque transition effective `COMPLETE`, `VALIDATE` ou `REOPEN` reste dans un registre append-only. L'occurrence exprime l'état courant ; une réouverture remet cet état à `TODO` sans effacer les transitions précédentes. Le registre distingue l'acteur réel du participant prévu et permet plusieurs cycles. Les cycles rouverts avant 0012 sont irrécupérables. Une action Maison multi attribuée conserve une occurrence et un état partagés ; les bénéficiaires de récompense sont déterminés depuis les contributeurs réels du cycle.
 
 Depuis `20261006_0014`, les actions `HOUSE` distinguent les assignataires prévus des contributeurs réels. `START` ajoute le premier contributeur, `JOIN` ajoute un membre de la famille, et seul un contributeur du cycle peut terminer l'occurrence partagée. `REOPEN` conserve les contributeurs du cycle précédent et ouvre un nouveau cycle sans participants. La validation Parent n'ajoute pas le Parent aux contributeurs. L'historique legacy ne déduit que l'acteur `COMPLETE` comme contribution certaine ; la collaboration complète est garantie à partir de 0014.
 
 Une `MISSION` ponctuelle échue reste ouverte et en retard jusqu'à décision du Parent. Le Parent peut la reporter (`RESCHEDULE`, ancienne et nouvelle échéances journalisées) ou la marquer ratée (`FAIL`, état final `FAILED`). Une Mission sans échéance reste ouverte ; les Routines manquées et les Quêtes échues ne sont pas automatiquement marquées ratées.
 
-Pour un futur `ActionValidated`, famille, action, occurrence, `scope`, `kind`, acteur de completion, acteur de validation et horodatages proviennent de l'occurrence et du registre. Le Reward Engine et sa politique multi assignée restent à concevoir.
+Pour un futur `ActionValidated`, famille, action, occurrence, `scope`, `kind`, acteur de completion, acteur de validation et horodatages proviennent de l'occurrence et du registre.
+
+## Reward Engine V1
+
+Le backend est l'autorité et appelle le Reward Engine dans la même transaction que la transition finale. `COMPLETE` produit un grant uniquement quand aucune validation Parent n'est requise ; sinon `VALIDATE` le produit. `START`, `JOIN`, `RESCHEDULE` et `FAIL` ne donnent aucun point. Un `REOPEN` conserve les grants historiques et les marque révoqués pour le cycle rouvert ; le cycle suivant peut recevoir de nouveaux grants. `FAILED` ne donne jamais de récompense.
+
+Les grants forment le registre de référence et sont idempotents par occurrence, cycle et bénéficiaire. Le solde actif est calculé à partir des grants non révoqués. Pour `PERSONAL`, le bénéficiaire est l'unique membre assigné, même si un Parent a effectué la completion. Pour `HOUSE`, seuls les contributeurs réels du cycle finalisé sont bénéficiaires ; les assignataires ne sont pas supposés avoir participé. Chaque contributeur reçoit le montant complet de la policy V1.
+
+Les montants centralisés provisoires sont Routine 10, Mission 20 et Quête 30 + bonus Quête 10, avec un modificateur d'effort neutre de 1.0. Ces points mesurent l'effort reconnu par Taskoday ; ils ne constituent pas l'économie finale de Chronodria. Aucun grant rétroactif n'est créé pour les anciennes completions. Les règles d'équilibrage multi contributeurs restent provisoires.
 
 ## Droits et validation
 
@@ -74,10 +82,9 @@ Le Parent est un membre doté de droits supplémentaires de création, édition,
 
 ## Pas encore implémenté
 
-- Reward Engine complet, calcul automatique et bonus réel des Quêtes ;
-- règles de bénéficiaire pour une action multi attribuée ;
+- économie et conversions Chronodria ;
+- estimation automatique de l'effort et équilibrage final des points ;
 - inventaire Chronodria final, créatures, grimoire enrichi et défis familiaux ;
-- règles de récompense des contributeurs et bonus réel des Quêtes ;
 - séries/streaks de Routines ;
 - modèles persistants et tâches fréquentes ;
 - création personnelle sans famille active ;

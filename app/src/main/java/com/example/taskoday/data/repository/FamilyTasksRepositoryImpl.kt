@@ -138,6 +138,13 @@ class FamilyTasksRepositoryImpl
                 Unit
             }
 
+        override suspend fun completeOccurrenceWithReward(occurrenceId: Long): Result<Int> =
+            runCatching {
+                familyTasksApi.completeOccurrence(occurrenceId).data
+                    .asJsonObject?.get("reward_points_awarded_to_me")
+                    ?.takeUnless { it.isJsonNull }?.asInt ?: 0
+            }
+
         override suspend fun startOccurrence(occurrenceId: Long): Result<Unit> = runCatching {
             familyTasksApi.startOccurrence(occurrenceId)
             Unit
@@ -162,6 +169,13 @@ class FamilyTasksRepositoryImpl
             runCatching {
                 familyTasksApi.validateOccurrence(occurrenceId)
                 Unit
+            }
+
+        override suspend fun validateOccurrenceWithReward(occurrenceId: Long): Result<Int> =
+            runCatching {
+                familyTasksApi.validateOccurrence(occurrenceId).data
+                    .asJsonObject?.get("reward_points_awarded_to_me")
+                    ?.takeUnless { it.isJsonNull }?.asInt ?: 0
             }
 
         override suspend fun reopenOccurrence(occurrenceId: Long): Result<Unit> =

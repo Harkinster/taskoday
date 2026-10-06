@@ -22,6 +22,7 @@ data class ExplorationUiState(
     val houseTasks: List<ExplorationTask> = emptyList(),
     val objectives: List<QuestForDay> = emptyList(),
     val errorMessage: String? = null,
+    val userMessage: String? = null,
     val actingKey: String? = null,
 )
 

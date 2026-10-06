@@ -221,6 +221,8 @@ class AccountSessionViewModelTest {
                     current = current.copy(status = FamilyTaskStatus.VALIDATED)
                     return Result.success(Unit)
                 }
+                override suspend fun validateOccurrenceWithReward(occurrenceId: Long): Result<Int> =
+                    validateOccurrence(occurrenceId).map { 0 }
             }
             val parent = auth(identity(100L, "PARENT"))
             val children = object : ChildrenRepository by unused() {

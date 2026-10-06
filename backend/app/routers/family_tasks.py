@@ -23,6 +23,7 @@ from app.schemas.family_task import (
     FamilyTaskUpdateRequest,
     FamilyTasksTodayResponse,
 )
+from app.schemas.reward_engine import RewardSummaryResponse
 from app.services.family_task_service import (
     complete_occurrence,
     ensure_family_member,
@@ -50,12 +51,40 @@ from app.services.family_task_service import (
     task_visible_to_member,
     weekdays_to_storage,
 )
+from app.services.reward_engine import reward_summary
 from app.services.action_identity import identity_from_category, resolve_action_identity, validate_identity_recurrence
 
 router = APIRouter(tags=["family-tasks"])
 
 MAX_OCCURRENCE_RANGE_DAYS = 31
 OVERDUE_LOOKBACK_DAYS = 30
+
+
+@router.get("/families/{family_id}/rewards/me", response_model=SuccessResponse[RewardSummaryResponse])
+def get_my_family_rewards(
+    family_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    ensure_family_member(db, family_id=family_id, user=current_user)
+    summary = reward_summary(db, family_id=family_id, user_id=current_user.id)
+    summary["grants"] = [
+        {
+            "id": grant.id,
+            "action_id": grant.action_id,
+            "action_title": grant.action_title,
+            "occurrence_id": grant.occurrence_id,
+            "cycle_number": grant.cycle_number,
+            "scope": grant.scope,
+            "kind": grant.kind,
+            "points": grant.points,
+            "trigger_event_id": grant.trigger_event_id,
+            "created_at": grant.created_at,
+            "revoked_at": grant.revoked_at,
+        }
+        for grant in summary["grants"]
+    ]
+    return success_response(summary)
 
 
 @router.get("/families/{family_id}/tasks", response_model=SuccessResponse[list[FamilyTaskDefinitionResponse]])

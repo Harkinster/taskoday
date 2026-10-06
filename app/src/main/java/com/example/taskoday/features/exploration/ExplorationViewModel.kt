@@ -7,6 +7,8 @@ import com.example.taskoday.data.repository.RemotePlanningIdCodec
 import com.example.taskoday.data.repository.toRemoteUserMessage
 import com.example.taskoday.features.familyhome.FamilyTaskAccessPolicy
 import com.example.taskoday.features.familyhome.FamilyTaskQuickAction
+import com.example.taskoday.features.familyhome.taskCompletionFeedback
+import com.example.taskoday.features.familyhome.taskValidationFeedback
 import com.example.taskoday.domain.model.TaskForDay
 import com.example.taskoday.domain.model.TaskStatus
 import com.example.taskoday.domain.repository.AuthRepository
@@ -54,9 +56,9 @@ class ExplorationViewModel
             refresh()
         }
 
-        fun refresh() {
+        fun refresh(successMessage: String? = null) {
             loadJob?.cancel()
-            _uiState.value = ExplorationUiState()
+            _uiState.value = ExplorationUiState(userMessage = successMessage)
             loadJob = viewModelScope.launch {
                 runCatching {
                     val me = authRepository.fetchMe()
@@ -108,9 +110,12 @@ class ExplorationViewModel
             if (_uiState.value.actingKey != null) return
             _uiState.update { it.copy(actingKey = key, errorMessage = null) }
             viewModelScope.launch {
+                var rewardPoints = 0
                 val result = when (action) {
-                    FamilyTaskQuickAction.COMPLETE -> familyTasksRepository.completeOccurrence(occurrence.occurrenceId)
-                    FamilyTaskQuickAction.VALIDATE -> familyTasksRepository.validateOccurrence(occurrence.occurrenceId)
+                    FamilyTaskQuickAction.COMPLETE -> familyTasksRepository.completeOccurrenceWithReward(occurrence.occurrenceId)
+                        .onSuccess { rewardPoints = it }.map { Unit }
+                    FamilyTaskQuickAction.VALIDATE -> familyTasksRepository.validateOccurrenceWithReward(occurrence.occurrenceId)
+                        .onSuccess { rewardPoints = it }.map { Unit }
                     FamilyTaskQuickAction.REOPEN -> familyTasksRepository.reopenOccurrence(occurrence.occurrenceId)
                     FamilyTaskQuickAction.START,
                     FamilyTaskQuickAction.JOIN,
@@ -120,7 +125,14 @@ class ExplorationViewModel
                 }
                 result.onFailure { error -> _uiState.update { it.copy(errorMessage = error.message ?: "Action impossible.") } }
                 _uiState.update { it.copy(actingKey = null) }
-                if (result.isSuccess) refresh()
+                if (result.isSuccess) {
+                    val message = when {
+                        action == FamilyTaskQuickAction.COMPLETE -> taskCompletionFeedback(rewardPoints)
+                        action == FamilyTaskQuickAction.VALIDATE -> taskValidationFeedback(rewardPoints)
+                        else -> null
+                    }
+                    refresh(message)
+                }
             }
         }
 

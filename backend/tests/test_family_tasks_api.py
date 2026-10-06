@@ -22,6 +22,13 @@ def test_openapi_occurrence_contract_exposes_snapshot_category_without_losing_ex
         "TASKODAY_HOUSE_ROUTINE", "TASKODAY_HOUSE_MISSION",
     }
     assert {"task_id", "occurrence_id", "title", "assignees", "scheduled_date", "status", "completed_at", "validated_at"} <= set(occurrence["properties"])
+    status_schema = occurrence["properties"]["status"]
+    if "$ref" in status_schema:
+        status_schema = components[status_schema["$ref"].split("/")[-1]]
+    assert set(status_schema["enum"]) >= {
+        "TODO", "IN_PROGRESS", "COMPLETED", "PENDING_VALIDATION", "VALIDATED", "FAILED", "SKIPPED",
+    }
+    assert "reward_points_awarded_to_me" in occurrence["properties"]
 
     routes = (
         ("get", "/api/v1/families/{family_id}/tasks/today"),
@@ -40,6 +47,15 @@ def test_openapi_occurrence_contract_exposes_snapshot_category_without_losing_ex
             assert item_ref.endswith("/FamilyTaskOccurrenceResponse")
         else:
             assert data_schema is occurrence
+
+    reward_path = schema["paths"]["/api/v1/families/{family_id}/rewards/me"]["get"]
+    reward_response = reward_path["responses"]["200"]["content"]["application/json"]["schema"]
+    reward_envelope = components[reward_response["$ref"].split("/")[-1]]
+    summary_ref = reward_envelope["properties"]["data"]["$ref"]
+    summary = components[summary_ref.split("/")[-1]]
+    assert {"family_id", "user_id", "active_points", "grants"} <= set(summary["properties"])
+    grant = components["RewardGrantResponse"]
+    assert {"action_title", "occurrence_id", "cycle_number", "scope", "kind", "points", "revoked_at"} <= set(grant["properties"])
 
 
 @pytest.mark.parametrize(

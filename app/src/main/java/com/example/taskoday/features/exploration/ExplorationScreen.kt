@@ -80,6 +80,7 @@ fun ExplorationScreen(
             item { CircularProgressIndicator() }
         } else {
         if (!state.errorMessage.isNullOrBlank()) item { Text(state.errorMessage.orEmpty(), color = MaterialTheme.colorScheme.error) }
+        if (!state.userMessage.isNullOrBlank()) item { Text(state.userMessage.orEmpty(), color = ParchmentLight) }
         val overdue = actions.filter { it.overdue && !it.completed }
         val today = actions.filter { !it.overdue && !it.completed && !it.undated }
         val undated = actions.filter { it.undated && !it.completed }

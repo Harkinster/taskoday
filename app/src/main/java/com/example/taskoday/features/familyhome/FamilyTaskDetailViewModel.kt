@@ -116,10 +116,10 @@ class FamilyTaskDetailViewModel
             if (!state.canValidateToday || state.isValidating || state.isDeleting) return
             _uiState.update { it.copy(isValidating = true, errorMessage = null, successMessage = null) }
             viewModelScope.launch {
-                familyTasksRepository.validateOccurrence(occurrenceId)
-                    .onSuccess {
+                familyTasksRepository.validateOccurrenceWithReward(occurrenceId)
+                    .onSuccess { rewardPoints ->
                         _uiState.update { it.copy(isValidating = false) }
-                        refresh(successMessage = "Tâche validée.")
+                        refresh(successMessage = taskValidationFeedback(rewardPoints))
                     }
                     .onFailure { throwable ->
                         _uiState.update {

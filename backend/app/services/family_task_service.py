@@ -23,6 +23,7 @@ from app.models.family_task import (
 )
 from app.models.user import User, UserRole
 from app.services.user_identity_service import display_name_for_user, user_reference_payload
+from app.services.reward_engine import grant_for_finalization, revoke_cycle_rewards
 
 
 WEEKDAY_ALIASES = {
@@ -390,6 +391,7 @@ def complete_occurrence(
         FamilyTaskOccurrence.cycle_number == occurrence.cycle_number,
     ).values(
         status=new_status,
+        cycle_number=case((FamilyTaskOccurrence.cycle_number == 0, 1), else_=FamilyTaskOccurrence.cycle_number),
         completed_at=now,
         completed_by_user_id=user.id,
         validated_at=None,
@@ -405,9 +407,12 @@ def complete_occurrence(
             return occurrence
         raise HTTPException(status_code=409, detail="Cette action a deja ete modifiee.")
     db.refresh(occurrence)
-    record_occurrence_transition(
+    event = record_occurrence_transition(
         db, occurrence=occurrence, task=task, event_type="COMPLETE", old_status=old_status,
         actor_user_id=user.id, completed_by_user_id=user.id, occurred_at=now,
+    )
+    occurrence._reward_points_awarded_to_me = grant_for_finalization(
+        db, occurrence=occurrence, task=task, trigger_event=event, actor_user_id=user.id,
     )
     return occurrence
 
@@ -538,10 +543,13 @@ def validate_occurrence(
             return occurrence
         raise HTTPException(status_code=409, detail="Cette occurrence a deja ete modifiee.")
     db.refresh(occurrence)
-    record_occurrence_transition(
+    event = record_occurrence_transition(
         db, occurrence=occurrence, task=task, event_type="VALIDATE", old_status=old_status,
         actor_user_id=user.id, completed_by_user_id=occurrence.completed_by_user_id,
         occurred_at=validated_at,
+    )
+    occurrence._reward_points_awarded_to_me = grant_for_finalization(
+        db, occurrence=occurrence, task=task, trigger_event=event, actor_user_id=user.id,
     )
     return occurrence
 
@@ -580,11 +588,13 @@ def reopen_occurrence(
             return occurrence
         raise HTTPException(status_code=409, detail="Cette occurrence a deja ete modifiee.")
     db.refresh(occurrence)
-    record_occurrence_transition(
+    event = record_occurrence_transition(
         db, occurrence=occurrence, task=task, event_type="REOPEN", old_status=old_status,
         actor_user_id=user.id, completed_by_user_id=completed_by_user_id, occurred_at=now,
         cycle_number=old_cycle_number,
     )
+    db.flush()
+    revoke_cycle_rewards(db, occurrence=occurrence, cycle_number=old_cycle_number, reopen_event=event)
     return occurrence
 
 
@@ -654,7 +664,7 @@ def record_occurrence_transition(
     old_status: FamilyTaskOccurrenceStatus, actor_user_id: int,
     completed_by_user_id: int | None, occurred_at: datetime, metadata: dict | None = None,
     cycle_number: int | None = None,
-) -> None:
+) -> FamilyTaskOccurrenceEvent:
     event = FamilyTaskOccurrenceEvent(
         family_id=task.family_id, task_id=task.id, occurrence_id=occurrence.id,
         category=occurrence.category, title=task.title, scheduled_date=occurrence.scheduled_date,
@@ -670,6 +680,8 @@ def record_occurrence_transition(
         for assignee in task.assignees
     ]
     db.add(event)
+    db.flush()
+    return event
 
 
 def task_payload(db: Session, task: FamilyTask) -> dict:
@@ -731,6 +743,7 @@ def occurrence_payload(db: Session, occurrence: FamilyTaskOccurrence) -> dict:
         "validated_at": occurrence.validated_at,
         "validated_by": occurrence.validated_by_user_id,
         "validated_by_user": user_reference_payload(db, occurrence.validated_by_user_id),
+        "reward_points_awarded_to_me": getattr(occurrence, "_reward_points_awarded_to_me", None),
     }
 
 
