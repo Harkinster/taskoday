@@ -55,6 +55,8 @@ import com.example.taskoday.features.gamification.InventoryScreen
 import com.example.taskoday.features.gamification.NestScreen
 import com.example.taskoday.features.gamification.NestViewModel
 import com.example.taskoday.features.gamification.RecentNestReward
+import com.example.taskoday.features.gamification.ResourceUtilityScreen
+import com.example.taskoday.features.gamification.ResourceUtilityViewModel
 import com.example.taskoday.features.gamification.ScrollsScreen
 import com.example.taskoday.features.familyhome.FamilyHomeScreen
 import com.example.taskoday.features.familyhome.FamilyHomeViewModel
@@ -79,8 +81,6 @@ import com.example.taskoday.features.quests.QuestsScreen
 import com.example.taskoday.features.quests.QuestsViewModel
 import com.example.taskoday.features.settings.SettingsScreen
 import com.example.taskoday.features.settings.SettingsViewModel
-import com.example.taskoday.features.shop.ShopScreen
-import com.example.taskoday.features.shop.ShopViewModel
 import com.example.taskoday.features.splash.SplashScreen
 import com.example.taskoday.features.tasks.TasksScreen
 import com.example.taskoday.features.tasks.TasksViewModel
@@ -601,14 +601,12 @@ fun TaskodayApp() {
                         },
                     ),
             ) { entry ->
-                val viewModel: ShopViewModel = hiltViewModel()
-                ShopScreen(
+                val viewModel: ResourceUtilityViewModel = hiltViewModel()
+                ResourceUtilityScreen(
                     viewModel = viewModel,
                     initialSection = entry.arguments?.getString(TaskodayDestination.Shop.ARG_SECTION) ?: TaskodayDestination.Shop.SECTION_WISHES,
-                    isLocalChildMode = localChildMode,
                     onOpenProfile = navigateToProfile,
                     onBackToNest = { navController.navigate(TaskodayDestination.Nest.route) { launchSingleTop = true } },
-                    onOpenPremium = navigateToPremium,
                 )
             }
 

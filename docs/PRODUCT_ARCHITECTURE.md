@@ -80,6 +80,20 @@ Les anciens `RewardGrant` conservent leurs montants et leur policy version 1 ; i
 
 Le Nid montre uniquement les ressources personnelles du compte connect?. Les futures r?gles de la Caverne (demande, validation Parent, d?bit apr?s acceptation) et les co?ts/contenus des coffres restent ? d?finir. Les futurs D?fis familiaux formeront un syst?me s?par? et ne mutualiseront aucun portefeuille.
 
+## Utilisation des ressources V1
+
+Depuis la migration `20261007_0017`, les Flammèches et Cristaux sont dépensables via des écritures append-only. Le solde est calculé depuis les grants actifs moins les dépenses non annulées ; aucun champ de solde mutable et aucun portefeuille familial ne sont ajoutés. Les Points Taskoday restent permanents et ne peuvent pas être dépensés.
+
+La Caverne des souhaits utilise les Flammèches. Le Parent crée, modifie et désactive le catalogue de sa famille. Un Enfant peut créer une demande `PENDING` ou l'annuler tant qu'elle attend ; aucune Flammèche ne part avant acceptation. L'approbation Parent débite et passe la demande à `APPROVED` dans la même transaction. Un refus conserve `REJECTED` sans débit. Un Parent peut aussi `Obtenir` un souhait pour lui-même ; la demande personnelle est directement approuvée et débitée. Les demandes gardent leur titre et leur coût au moment de la demande.
+
+Les Coffres utilisent les Cristaux du compte connecté et s'ouvrent directement : Commun = 3 Cristaux / 1 drop, Rare = 8 / 3 drops, Épique = 15 / 6 drops. La policy est centralisée et provisoire. Une ouverture persistée conserve son type, son coût, sa clé d'idempotence et tous ses drops. Les tirages réutilisent les objets du catalogue Chronodria existant et incrémentent `ItemInventory`, sans créer de portefeuille de coffres ni de nouvel inventaire parallèle. Parent et Enfant ont des collections distinctes. Les doublons augmentent la quantité ; aucun œuf n'éclot automatiquement.
+
+Un retry d'approbation ou d'ouverture ne redébite pas et ne relance pas le tirage. Une réouverture d'action vérifie d'abord l'effet de révocation du bundle sur les Flammèches et Cristaux. Elle est refusée avec 409 si une balance deviendrait négative ; autrement le bundle entier est révoqué atomiquement. Les dépenses ne peuvent pas rendre un compte débiteur.
+
+Les anciennes tables Chronodria (`ItemInventory`, oeufs, dragons, progression et coffres hérités) restent des systèmes persistés distincts. Le nouveau coffre utilise le catalogue `ITEM_CATALOG` et `ItemInventory` comme collection, mais n'altère pas le flux legacy d'ouverture, d'évolution ou d'éclosion. Les anciennes tables de portefeuille mutable restent hors du calcul des nouvelles balances.
+
+La Caverne future peut demander une validation Parent avant de réaliser une récompense du monde réel ; le débit actuel a lieu à l'acceptation. Les Cristaux servent aux coffres. Les prix, raretés et tables de loot restent provisoires. Les Défis familiaux seront un système indépendant et n'utiliseront pas de portefeuille partagé.
+
 ## Droits et validation
 
 Le Parent est un membre doté de droits supplémentaires de création, édition, désactivation, validation, gestion familiale et Suivi. L'Enfant a des droits limités, mais peut accomplir une action accessible selon l'attribution. Le backend filtre les actions personnelles et événements d'autres membres avant de répondre à un CHILD ; les actions Maison demeurent visibles collectivement. `PENDING_VALIDATION` s'affiche « En attente de validation », `COMPLETED` « Terminée », `VALIDATED` « Validée ». Le backend reste l'autorité des transitions.
@@ -88,7 +102,7 @@ Le Parent est un membre doté de droits supplémentaires de création, édition,
 
 - économie et conversions Chronodria ;
 - estimation automatique de l'effort et équilibrage final des points ;
-- inventaire Chronodria final, créatures, grimoire enrichi et défis familiaux ;
+- approfondissement de la collection Chronodria, créatures, grimoire enrichi et défis familiaux ;
 - séries/streaks de Routines ;
 - modèles persistants et tâches fréquentes ;
 - création personnelle sans famille active ;

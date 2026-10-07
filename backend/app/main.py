@@ -17,6 +17,7 @@ from app.routers import (
     quests,
     rewards,
     routines,
+    resource_utility,
 )
 
 
@@ -103,6 +104,7 @@ def create_application() -> FastAPI:
     application.include_router(quests.router, prefix=settings.api_v1_prefix)
     application.include_router(gamification.router, prefix=settings.api_v1_prefix)
     application.include_router(rewards.router, prefix=settings.api_v1_prefix)
+    application.include_router(resource_utility.router, prefix=settings.api_v1_prefix)
     application.include_router(profile.router, prefix=settings.api_v1_prefix)
 
     return application

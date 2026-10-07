@@ -23,7 +23,7 @@ from app.models.family_task import (
 )
 from app.models.user import User, UserRole
 from app.services.user_identity_service import display_name_for_user, user_reference_payload
-from app.services.reward_engine import grant_for_finalization, revoke_cycle_rewards
+from app.services.reward_engine import ensure_cycle_resources_reversible, grant_for_finalization, revoke_cycle_rewards
 
 
 WEEKDAY_ALIASES = {
@@ -569,6 +569,11 @@ def reopen_occurrence(
     old_status = occurrence.status
     completed_by_user_id = occurrence.completed_by_user_id
     old_cycle_number = occurrence.cycle_number
+    try:
+        ensure_cycle_resources_reversible(db, occurrence=occurrence, cycle_number=old_cycle_number)
+    except ValueError as exc:
+        raise HTTPException(status_code=409,
+            detail="Impossible de rouvrir cette action : une partie de ses récompenses a déjà été utilisée.") from exc
     now = datetime.now(timezone.utc)
     result = db.execute(update(FamilyTaskOccurrence).where(
         FamilyTaskOccurrence.id == occurrence.id,

@@ -8,6 +8,8 @@ from sqlalchemy.orm import Session
 
 from app.models.family_task import FamilyTask, FamilyTaskAssignee, FamilyTaskOccurrence, FamilyTaskOccurrenceContributor, FamilyTaskOccurrenceEvent
 from app.models.reward_grant import RewardGrant, RewardResourceGrant
+from app.models.resource_utility import RewardResourceSpend
+from app.models.user import User
 
 
 class RewardRandomSource:
@@ -132,6 +134,30 @@ def revoke_cycle_rewards(db: Session, *, occurrence: FamilyTaskOccurrence, cycle
         RewardResourceGrant.cycle_number == cycle_number, RewardResourceGrant.revoked_at.is_(None)).values(**values))
 
 
+def ensure_cycle_resources_reversible(db: Session, *, occurrence: FamilyTaskOccurrence, cycle_number: int) -> None:
+    cycle = db.execute(select(RewardResourceGrant.family_id, RewardResourceGrant.beneficiary_user_id, RewardResourceGrant.resource_type,
+        func.sum(RewardResourceGrant.amount)).where(RewardResourceGrant.occurrence_id == occurrence.id,
+        RewardResourceGrant.cycle_number == cycle_number, RewardResourceGrant.revoked_at.is_(None)).group_by(
+        RewardResourceGrant.family_id, RewardResourceGrant.beneficiary_user_id, RewardResourceGrant.resource_type)).all()
+    # Serialize against spends for every affected beneficiary until the reopen
+    # and its grant revocations are committed by the request transaction.
+    beneficiary_ids = sorted({row[1] for row in cycle})
+    if beneficiary_ids:
+        db.scalars(select(User).where(User.id.in_(beneficiary_ids)).order_by(User.id).with_for_update()).all()
+        if db.bind is not None and db.bind.dialect.name == "sqlite":
+            for user_id in beneficiary_ids:
+                db.execute(update(User).where(User.id == user_id).values(id=User.id))
+    for family_id, user_id, resource_type, amount in cycle:
+        all_grants = int(db.scalar(select(func.coalesce(func.sum(RewardResourceGrant.amount), 0)).where(
+            RewardResourceGrant.family_id == family_id, RewardResourceGrant.beneficiary_user_id == user_id,
+            RewardResourceGrant.resource_type == resource_type, RewardResourceGrant.revoked_at.is_(None))) or 0)
+        all_spends = int(db.scalar(select(func.coalesce(func.sum(RewardResourceSpend.amount), 0)).where(
+            RewardResourceSpend.family_id == family_id, RewardResourceSpend.user_id == user_id,
+            RewardResourceSpend.resource_type == resource_type, RewardResourceSpend.reversed_at.is_(None))) or 0)
+        if all_grants - all_spends - int(amount) < 0:
+            raise ValueError("Une partie des récompenses a déjà été utilisée.")
+
+
 def reward_summary(db: Session, *, family_id: int, user_id: int, limit: int = 20) -> dict:
     points = db.scalar(select(func.coalesce(func.sum(RewardGrant.points), 0)).where(
         RewardGrant.family_id == family_id, RewardGrant.beneficiary_user_id == user_id,
@@ -141,6 +167,10 @@ def reward_summary(db: Session, *, family_id: int, user_id: int, limit: int = 20
     ).where(RewardResourceGrant.family_id == family_id,
         RewardResourceGrant.beneficiary_user_id == user_id,
         RewardResourceGrant.revoked_at.is_(None)).group_by(RewardResourceGrant.resource_type)).all()}
+    spends = {row[0]: int(row[1]) for row in db.execute(select(
+        RewardResourceSpend.resource_type, func.coalesce(func.sum(RewardResourceSpend.amount), 0)
+    ).where(RewardResourceSpend.family_id == family_id, RewardResourceSpend.user_id == user_id,
+        RewardResourceSpend.reversed_at.is_(None)).group_by(RewardResourceSpend.resource_type)).all()}
     grants = db.scalars(select(RewardGrant).where(RewardGrant.family_id == family_id,
         RewardGrant.beneficiary_user_id == user_id).order_by(RewardGrant.created_at.desc(),
         RewardGrant.id.desc()).limit(limit)).all()
@@ -159,5 +189,6 @@ def reward_summary(db: Session, *, family_id: int, user_id: int, limit: int = 20
         grant.resource_bundle = amounts[grant.id]
         grant.resource_bundle["mission_bonus_crystals"] = grant.mission_bonus_crystals
     return {"family_id": family_id, "user_id": user_id, "taskoday_points": int(points),
-            "flames": balances.get("FLAME", 0), "crystals": balances.get("CRYSTAL", 0),
+            "flames": balances.get("FLAME", 0) - spends.get("FLAME", 0),
+            "crystals": balances.get("CRYSTAL", 0) - spends.get("CRYSTAL", 0),
             "active_points": int(points), "grants": grants}

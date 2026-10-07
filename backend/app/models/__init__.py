@@ -30,6 +30,7 @@ from app.models.pairing import PairingCode
 from app.models.refresh_token import RefreshToken
 from app.models.reward import ExternalReward, RewardCoupon, RewardRequest, RewardRequestStatus, ScaleTransaction, ScrollStatus
 from app.models.reward_grant import RewardGrant, RewardResourceGrant
+from app.models.resource_utility import ChestOpen, ChestOpenDrop, RewardResourceSpend, WishOffer, WishRequest
 from app.models.task import Mission, Quest, Routine, TaskCompletion, TaskStatus, TaskType
 from app.models.user import User, UserRole
 from app.models.xp import XpHistory
@@ -71,6 +72,11 @@ __all__ = [
     "RewardRequestStatus",
     "RewardGrant",
     "RewardResourceGrant",
+    "RewardResourceSpend",
+    "WishOffer",
+    "WishRequest",
+    "ChestOpen",
+    "ChestOpenDrop",
     "ScrollStatus",
     "Routine",
     "ScaleTransaction",
