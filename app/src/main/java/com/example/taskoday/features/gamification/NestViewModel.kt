@@ -11,6 +11,7 @@ import com.example.taskoday.data.remote.dto.EggsDto
 import com.example.taskoday.data.remote.dto.InventoryDto
 import com.example.taskoday.data.remote.dto.NestProgressDto
 import com.example.taskoday.data.remote.dto.ScrollsDto
+import com.example.taskoday.data.remote.dto.PersonalRewardSummaryDto
 import com.example.taskoday.data.repository.NestSnapshot
 import com.example.taskoday.data.repository.NestRepository
 import com.example.taskoday.data.repository.toRemoteUserMessage
@@ -35,6 +36,7 @@ data class NestUiState(
     val eggs: EggsDto? = null,
     val dragons: DragonsDto? = null,
     val scrolls: ScrollsDto? = null,
+    val personalRewards: PersonalRewardSummaryDto? = null,
     val userMessage: String? = null,
     val hatchingCelebration: NestHatchingCelebration? = null,
 )
@@ -82,6 +84,12 @@ class NestViewModel
             }
             _uiState.value = NestUiState(hasRemoteSession = true)
             refreshJob = viewModelScope.launch {
+                launch {
+                    nestRepository.loadPersonalRewards().onSuccess { summary ->
+                        ensureActive()
+                        _uiState.update { it.copy(personalRewards = summary) }
+                    }
+                }
                 nestRepository
                     .loadSnapshot()
                     .onSuccess { snapshot ->

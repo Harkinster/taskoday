@@ -158,6 +158,7 @@ class FamilyTaskOccurrenceResponse(BaseModel):
     recurrence_interval: int
     status: FamilyTaskOccurrenceStatus
     reward_points_awarded_to_me: int | None = None
+    reward_bundle_awarded_to_me: dict[str, int] | None = None
     cycle_number: int
     contributors: list[FamilyTaskActorResponse]
     validation_required: bool

@@ -12,6 +12,7 @@ import com.example.taskoday.data.remote.dto.InventoryDto
 import com.example.taskoday.data.remote.dto.NestProgressDto
 import com.example.taskoday.data.remote.dto.OpenCatalogChestDto
 import com.example.taskoday.data.remote.dto.ScrollsDto
+import com.example.taskoday.data.remote.dto.PersonalRewardSummaryDto
 import com.example.taskoday.data.remote.gamification.NestApi
 import com.example.taskoday.domain.repository.AuthRepository
 import javax.inject.Inject
@@ -40,6 +41,14 @@ class NestRepository
         val progressChanges = _progressChanges.asSharedFlow()
 
         fun hasRemoteSession(): Boolean = !authRepository.getAccessToken().isNullOrBlank()
+
+        suspend fun loadPersonalRewards(): Result<PersonalRewardSummaryDto> = runCatching {
+            val familyId = authRepository.getActiveFamilyId()
+                ?: throw IllegalStateException("Aucune famille active pour ce compte.")
+            nestApi.getPersonalRewards(familyId).data.also {
+                check(it.familyId == familyId) { "Solde rattaché à une autre famille." }
+            }
+        }
 
         fun notifyProgressChanged() {
             _progressChanges.tryEmit(Unit)

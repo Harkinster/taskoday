@@ -20,6 +20,14 @@ data class NestWalletDto(
     @SerializedName("crystals") val crystals: Int,
 )
 
+data class PersonalRewardSummaryDto(
+    @SerializedName("family_id") val familyId: Long,
+    @SerializedName("user_id") val userId: Long,
+    @SerializedName("taskoday_points") val taskodayPoints: Int,
+    @SerializedName("flames") val flames: Int,
+    @SerializedName("crystals") val crystals: Int,
+)
+
 data class NestInfoDto(
     @SerializedName("level") val level: Int,
     @SerializedName("name") val name: String,

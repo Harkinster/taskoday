@@ -68,13 +68,17 @@ Une `MISSION` ponctuelle échue reste ouverte et en retard jusqu'à décision du
 
 Pour un futur `ActionValidated`, famille, action, occurrence, `scope`, `kind`, acteur de completion, acteur de validation et horodatages proviennent de l'occurrence et du registre.
 
-## Reward Engine V1
+## Reward Engine et ?conomie personnelle V1
 
-Le backend est l'autorité et appelle le Reward Engine dans la même transaction que la transition finale. `COMPLETE` produit un grant uniquement quand aucune validation Parent n'est requise ; sinon `VALIDATE` le produit. `START`, `JOIN`, `RESCHEDULE` et `FAIL` ne donnent aucun point. Un `REOPEN` conserve les grants historiques et les marque révoqués pour le cycle rouvert ; le cycle suivant peut recevoir de nouveaux grants. `FAILED` ne donne jamais de récompense.
+Le backend est l'autorit? et attribue un bundle dans la m?me transaction que la finalisation reconnue. Sans validation Parent, `COMPLETE` attribue le bundle ; avec validation, `COMPLETE` reste sans r?compense et `VALIDATE` l'attribue. `START`, `JOIN`, `RESCHEDULE` et `FAIL` ne donnent rien. `REOPEN` conserve et r?voque toutes les composantes du bundle ; le nouveau cycle est ind?pendant.
 
-Les grants forment le registre de référence et sont idempotents par occurrence, cycle et bénéficiaire. Le solde actif est calculé à partir des grants non révoqués. Pour `PERSONAL`, le bénéficiaire est l'unique membre assigné, même si un Parent a effectué la completion. Pour `HOUSE`, seuls les contributeurs réels du cycle finalisé sont bénéficiaires ; les assignataires ne sont pas supposés avoir participé. Chaque contributeur reçoit le montant complet de la policy V1.
+Chaque membre poss?de ses propres ressources : aucun portefeuille familial, transfert, don ou partage. Les Points Taskoday sont permanents et non d?pensables ; ils mesurent l'effort total reconnu. Les Flamm?ches sont personnelles et d?pensables dans la future Caverne des souhaits. Les Cristaux sont personnels et destin?s aux futurs coffres Chronodria. Aucune d?pense ni conversion n'est impl?ment?e ici.
 
-Les montants centralisés provisoires sont Routine 10, Mission 20 et Quête 30 + bonus Quête 10, avec un modificateur d'effort neutre de 1.0. Ces points mesurent l'effort reconnu par Taskoday ; ils ne constituent pas l'économie finale de Chronodria. Aucun grant rétroactif n'est créé pour les anciennes completions. Les règles d'équilibrage multi contributeurs restent provisoires.
+La policy centralis?e provisoire V2 (version 2, effort modifier 1.0) est : Routine = 10 Points, 1 Flamm?che, 1 Cristal ; Qu?te = 25 Points, 2 Flamm?ches, 3 Cristaux ; Mission = 30 Points, 3 Flamm?ches, 4 Cristaux, plus une chance ind?pendante de 25 % par b?n?ficiaire de gagner 2 Cristaux. Une Mission reste plus r?mun?ratrice qu'une Qu?te sans bonus. Ces chiffres sont des valeurs d'?quilibrage V1 modifiables dans un seul emplacement, pas l'?conomie finale Chronodria.
+
+Les anciens `RewardGrant` conservent leurs montants et leur policy version 1 ; ils ne sont ni recalcul?s ni convertis en ressources. La migration `20261006_0016` ne cr?e aucun grant de ressources r?troactif. Le ledger des grants constitue la source de v?rit? ; les soldes sont la somme des grants actifs. Les lignes de Points et de ressources partagent beneficiary, occurrence, cycle et d?clencheur. Le bonus Mission est tir? une seule fois et son r?sultat (0 ou 2 Cristaux) est persist? sur le grant ainsi que sa composante ?ventuelle ; un retry ne peut pas relancer le tirage. Chaque contributeur Maison re?oit le bundle complet ; les assignataires et Parent validateur ne sont r?compens?s que s'ils sont eux-m?mes b?n?ficiaires selon les r?gles d'action. Le r?sultat du Parent validateur n'expose jamais les gains d'un autre membre comme siens.
+
+Le Nid montre uniquement les ressources personnelles du compte connect?. Les futures r?gles de la Caverne (demande, validation Parent, d?bit apr?s acceptation) et les co?ts/contenus des coffres restent ? d?finir. Les futurs D?fis familiaux formeront un syst?me s?par? et ne mutualiseront aucun portefeuille.
 
 ## Droits et validation
 

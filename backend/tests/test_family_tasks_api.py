@@ -29,6 +29,7 @@ def test_openapi_occurrence_contract_exposes_snapshot_category_without_losing_ex
         "TODO", "IN_PROGRESS", "COMPLETED", "PENDING_VALIDATION", "VALIDATED", "FAILED", "SKIPPED",
     }
     assert "reward_points_awarded_to_me" in occurrence["properties"]
+    assert "reward_bundle_awarded_to_me" in occurrence["properties"]
 
     routes = (
         ("get", "/api/v1/families/{family_id}/tasks/today"),
@@ -53,9 +54,10 @@ def test_openapi_occurrence_contract_exposes_snapshot_category_without_losing_ex
     reward_envelope = components[reward_response["$ref"].split("/")[-1]]
     summary_ref = reward_envelope["properties"]["data"]["$ref"]
     summary = components[summary_ref.split("/")[-1]]
-    assert {"family_id", "user_id", "active_points", "grants"} <= set(summary["properties"])
+    assert {"family_id", "user_id", "active_points", "taskoday_points", "flames", "crystals", "grants"} <= set(summary["properties"])
     grant = components["RewardGrantResponse"]
     assert {"action_title", "occurrence_id", "cycle_number", "scope", "kind", "points", "revoked_at"} <= set(grant["properties"])
+    assert {"policy_version", "flames", "crystals", "mission_bonus_crystals"} <= set(grant["properties"])
 
 
 @pytest.mark.parametrize(

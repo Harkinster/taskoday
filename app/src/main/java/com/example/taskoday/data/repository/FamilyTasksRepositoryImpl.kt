@@ -15,6 +15,7 @@ import com.example.taskoday.domain.model.FamilyTaskMember
 import com.example.taskoday.domain.model.FamilyTaskOccurrencesRange
 import com.example.taskoday.domain.model.FamilyTaskTodayItem
 import com.example.taskoday.domain.model.FamilyTasksToday
+import com.example.taskoday.domain.model.CompletionReward
 import com.example.taskoday.domain.repository.AuthRepository
 import com.example.taskoday.domain.repository.FamilyTasksRepository
 import com.google.gson.Gson
@@ -145,6 +146,9 @@ class FamilyTasksRepositoryImpl
                     ?.takeUnless { it.isJsonNull }?.asInt ?: 0
             }
 
+        override suspend fun completeOccurrenceWithBundle(occurrenceId: Long): Result<CompletionReward> =
+            runCatching { familyTasksApi.completeOccurrence(occurrenceId).data.asRewardBundle(gson) }
+
         override suspend fun startOccurrence(occurrenceId: Long): Result<Unit> = runCatching {
             familyTasksApi.startOccurrence(occurrenceId)
             Unit
@@ -178,6 +182,9 @@ class FamilyTasksRepositoryImpl
                     ?.takeUnless { it.isJsonNull }?.asInt ?: 0
             }
 
+        override suspend fun validateOccurrenceWithBundle(occurrenceId: Long): Result<CompletionReward> =
+            runCatching { familyTasksApi.validateOccurrence(occurrenceId).data.asRewardBundle(gson) }
+
         override suspend fun reopenOccurrence(occurrenceId: Long): Result<Unit> =
             runCatching {
                 familyTasksApi.reopenOccurrence(occurrenceId)
@@ -204,6 +211,18 @@ class FamilyTasksRepositoryImpl
 
 internal fun requireUnchangedFamilyActionCategory(existing: String?, requested: String?) {
     check(existing == requested) { "Le type d'une action existante ne peut pas être modifié." }
+}
+
+private fun com.google.gson.JsonElement?.asRewardBundle(gson: Gson): CompletionReward {
+    val data = this?.asJsonObject ?: return CompletionReward()
+    val bundle = data.get("reward_bundle_awarded_to_me")?.takeUnless { it.isJsonNull }?.asJsonObject
+    if (bundle != null) return CompletionReward(
+        xp = bundle.get("taskoday_points")?.asInt ?: 0,
+        flammeches = bundle.get("flames")?.asInt ?: 0,
+        crystals = bundle.get("crystals")?.asInt ?: 0,
+        missionBonusCrystals = bundle.get("mission_bonus_crystals")?.asInt ?: 0,
+    )
+    return CompletionReward(xp = data.get("reward_points_awarded_to_me")?.takeUnless { it.isJsonNull }?.asInt ?: 0)
 }
 
 /** A missing definition is an incomplete response, never evidence of a house quest. */

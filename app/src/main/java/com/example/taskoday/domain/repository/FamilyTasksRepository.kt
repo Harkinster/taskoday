@@ -5,6 +5,7 @@ import com.example.taskoday.domain.model.FamilyTaskDefinition
 import com.example.taskoday.domain.model.FamilyTaskMember
 import com.example.taskoday.domain.model.FamilyTaskOccurrencesRange
 import com.example.taskoday.domain.model.FamilyTasksToday
+import com.example.taskoday.domain.model.CompletionReward
 
 interface FamilyTasksRepository {
     suspend fun fetchToday(): Result<FamilyTasksToday>
@@ -36,6 +37,9 @@ interface FamilyTasksRepository {
     suspend fun completeOccurrenceWithReward(occurrenceId: Long): Result<Int> =
         completeOccurrence(occurrenceId).map { 0 }
 
+    suspend fun completeOccurrenceWithBundle(occurrenceId: Long): Result<CompletionReward> =
+        completeOccurrenceWithReward(occurrenceId).map { CompletionReward(xp = it) }
+
     suspend fun startOccurrence(occurrenceId: Long): Result<Unit> = Result.failure(UnsupportedOperationException())
 
     suspend fun joinOccurrence(occurrenceId: Long): Result<Unit> = Result.failure(UnsupportedOperationException())
@@ -48,6 +52,9 @@ interface FamilyTasksRepository {
 
     suspend fun validateOccurrenceWithReward(occurrenceId: Long): Result<Int> =
         validateOccurrence(occurrenceId).map { 0 }
+
+    suspend fun validateOccurrenceWithBundle(occurrenceId: Long): Result<CompletionReward> =
+        validateOccurrenceWithReward(occurrenceId).map { CompletionReward(xp = it) }
 
     suspend fun reopenOccurrence(occurrenceId: Long): Result<Unit>
 }

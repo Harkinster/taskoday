@@ -223,6 +223,8 @@ class AccountSessionViewModelTest {
                 }
                 override suspend fun validateOccurrenceWithReward(occurrenceId: Long): Result<Int> =
                     validateOccurrence(occurrenceId).map { 0 }
+                override suspend fun validateOccurrenceWithBundle(occurrenceId: Long): Result<com.example.taskoday.domain.model.CompletionReward> =
+                    validateOccurrence(occurrenceId).map { com.example.taskoday.domain.model.CompletionReward() }
             }
             val parent = auth(identity(100L, "PARENT"))
             val children = object : ChildrenRepository by unused() {

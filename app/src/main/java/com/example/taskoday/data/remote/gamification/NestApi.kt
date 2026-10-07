@@ -13,11 +13,14 @@ import com.example.taskoday.data.remote.dto.InventoryDto
 import com.example.taskoday.data.remote.dto.NestProgressDto
 import com.example.taskoday.data.remote.dto.OpenCatalogChestDto
 import com.example.taskoday.data.remote.dto.ScrollsDto
+import com.example.taskoday.data.remote.dto.PersonalRewardSummaryDto
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
 
 interface NestApi {
+    @GET("families/{familyId}/rewards/me")
+    suspend fun getPersonalRewards(@Path("familyId") familyId: Long): ApiEnvelopeDto<PersonalRewardSummaryDto>
     @GET("children/{childId}/progress")
     suspend fun getProgress(@Path("childId") childId: Long): ApiEnvelopeDto<NestProgressDto>
 

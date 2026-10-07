@@ -744,6 +744,7 @@ def occurrence_payload(db: Session, occurrence: FamilyTaskOccurrence) -> dict:
         "validated_by": occurrence.validated_by_user_id,
         "validated_by_user": user_reference_payload(db, occurrence.validated_by_user_id),
         "reward_points_awarded_to_me": getattr(occurrence, "_reward_points_awarded_to_me", None),
+        "reward_bundle_awarded_to_me": getattr(occurrence, "_reward_bundle_awarded_to_me", None),
     }
 
 

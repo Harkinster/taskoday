@@ -110,12 +110,12 @@ class ExplorationViewModel
             if (_uiState.value.actingKey != null) return
             _uiState.update { it.copy(actingKey = key, errorMessage = null) }
             viewModelScope.launch {
-                var rewardPoints = 0
+                var rewardBundle = com.example.taskoday.domain.model.CompletionReward()
                 val result = when (action) {
-                    FamilyTaskQuickAction.COMPLETE -> familyTasksRepository.completeOccurrenceWithReward(occurrence.occurrenceId)
-                        .onSuccess { rewardPoints = it }.map { Unit }
-                    FamilyTaskQuickAction.VALIDATE -> familyTasksRepository.validateOccurrenceWithReward(occurrence.occurrenceId)
-                        .onSuccess { rewardPoints = it }.map { Unit }
+                    FamilyTaskQuickAction.COMPLETE -> familyTasksRepository.completeOccurrenceWithBundle(occurrence.occurrenceId)
+                        .onSuccess { rewardBundle = it }.map { Unit }
+                    FamilyTaskQuickAction.VALIDATE -> familyTasksRepository.validateOccurrenceWithBundle(occurrence.occurrenceId)
+                        .onSuccess { rewardBundle = it }.map { Unit }
                     FamilyTaskQuickAction.REOPEN -> familyTasksRepository.reopenOccurrence(occurrence.occurrenceId)
                     FamilyTaskQuickAction.START,
                     FamilyTaskQuickAction.JOIN,
@@ -127,8 +127,8 @@ class ExplorationViewModel
                 _uiState.update { it.copy(actingKey = null) }
                 if (result.isSuccess) {
                     val message = when {
-                        action == FamilyTaskQuickAction.COMPLETE -> taskCompletionFeedback(rewardPoints)
-                        action == FamilyTaskQuickAction.VALIDATE -> taskValidationFeedback(rewardPoints)
+                        action == FamilyTaskQuickAction.COMPLETE -> taskCompletionFeedback(rewardBundle)
+                        action == FamilyTaskQuickAction.VALIDATE -> taskValidationFeedback(rewardBundle)
                         else -> null
                     }
                     refresh(message)

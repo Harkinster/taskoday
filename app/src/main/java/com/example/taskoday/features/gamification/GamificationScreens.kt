@@ -168,11 +168,10 @@ fun NestScreen(
             }
         }
         item {
-            NestCurrencyBar(
-                flammeches = progress?.wallet?.flammeches ?: if (uiState.hasRemoteSession) 0 else 20,
-                crystals = uiState.crystals?.balance ?: progress?.wallet?.crystals ?: if (uiState.hasRemoteSession) 0 else 6,
-                onOpenWishes = onOpenWishes,
-                onOpenChests = onOpenChests,
+            PersonalRewardResourcesCard(
+                points = uiState.personalRewards?.taskodayPoints ?: 0,
+                flames = uiState.personalRewards?.flames ?: 0,
+                crystals = uiState.personalRewards?.crystals ?: 0,
             )
         }
         visibleRecentReward?.let { reward ->
@@ -649,6 +648,29 @@ private data class RecentNestRewardDisplayRow(
     val assetResId: Int,
     val color: Color,
 )
+
+@Composable
+private fun PersonalRewardResourcesCard(points: Int, flames: Int, crystals: Int) {
+    FantasyCard(tone = FantasyTone.Night, contentPadding = PaddingValues(14.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("MES RESSOURCES", style = MaterialTheme.typography.titleSmall, color = ParchmentLight)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ResourceBalance("Points Taskoday", points.toString(), NestAssets.interfaceAsset("nid"), MossGreen, Modifier.weight(1f))
+                ResourceBalance("Flammèches · Caverne", flames.toString(), NestAssets.interfaceAsset("flammeche"), EmberOrange, Modifier.weight(1f))
+                ResourceBalance("Cristaux · Coffres", crystals.toString(), NestAssets.interfaceAsset("crystal"), CrystalBlue, Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ResourceBalance(label: String, value: String, icon: Int, tint: Color, modifier: Modifier) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Image(painter = painterResource(icon), contentDescription = null, modifier = Modifier.size(22.dp))
+        Text(value, style = MaterialTheme.typography.titleMedium, color = tint)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = ParchmentLight, maxLines = 2, overflow = TextOverflow.Ellipsis)
+    }
+}
 
 private fun recentNestRewardRows(reward: RecentNestReward): List<RecentNestRewardDisplayRow> =
     buildList {

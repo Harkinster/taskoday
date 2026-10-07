@@ -115,15 +115,15 @@ class FamilyHomeViewModel
                         userMessage = null,
                     )
                 }
-                var rewardPoints = 0
+                var rewardBundle = com.example.taskoday.domain.model.CompletionReward()
                 val result =
                     when (action) {
                         FamilyTaskQuickAction.START -> familyTasksRepository.startOccurrence(task.occurrenceId)
                         FamilyTaskQuickAction.JOIN -> familyTasksRepository.joinOccurrence(task.occurrenceId)
-                        FamilyTaskQuickAction.COMPLETE -> familyTasksRepository.completeOccurrenceWithReward(task.occurrenceId)
-                            .onSuccess { rewardPoints = it }.map { Unit }
-                        FamilyTaskQuickAction.VALIDATE -> familyTasksRepository.validateOccurrenceWithReward(task.occurrenceId)
-                            .onSuccess { rewardPoints = it }.map { Unit }
+                        FamilyTaskQuickAction.COMPLETE -> familyTasksRepository.completeOccurrenceWithBundle(task.occurrenceId)
+                            .onSuccess { rewardBundle = it }.map { Unit }
+                        FamilyTaskQuickAction.VALIDATE -> familyTasksRepository.validateOccurrenceWithBundle(task.occurrenceId)
+                            .onSuccess { rewardBundle = it }.map { Unit }
                         FamilyTaskQuickAction.REOPEN -> familyTasksRepository.reopenOccurrence(task.occurrenceId)
                         FamilyTaskQuickAction.RESCHEDULE -> Result.failure(IllegalStateException("Choisissez une nouvelle échéance."))
                         FamilyTaskQuickAction.FAIL -> familyTasksRepository.failOccurrence(task.occurrenceId)
@@ -133,7 +133,7 @@ class FamilyHomeViewModel
                         _uiState.update {
                             it.copy(
                                 actingOccurrenceId = null,
-                                userMessage = action.successMessage(rewardPoints),
+                                userMessage = action.successMessage(rewardBundle),
                             )
                         }
                         when (_uiState.value.mode) {
@@ -417,12 +417,12 @@ internal fun accountAvatarInitials(user: com.example.taskoday.domain.model.Authe
             .joinToString("") { name -> name.first().uppercase() }
     }.orEmpty()
 
-private fun FamilyTaskQuickAction.successMessage(rewardPoints: Int = 0): String =
+private fun FamilyTaskQuickAction.successMessage(rewardBundle: com.example.taskoday.domain.model.CompletionReward = com.example.taskoday.domain.model.CompletionReward()): String =
     when (this) {
-        FamilyTaskQuickAction.COMPLETE -> taskCompletionFeedback(rewardPoints)
+        FamilyTaskQuickAction.COMPLETE -> taskCompletionFeedback(rewardBundle)
         FamilyTaskQuickAction.START -> "Tâche commencée."
         FamilyTaskQuickAction.JOIN -> "Vous participez à cette tâche."
-        FamilyTaskQuickAction.VALIDATE -> taskValidationFeedback(rewardPoints)
+        FamilyTaskQuickAction.VALIDATE -> taskValidationFeedback(rewardBundle)
         FamilyTaskQuickAction.REOPEN -> "Tâche rouverte."
         FamilyTaskQuickAction.RESCHEDULE -> "Mission reportée."
         FamilyTaskQuickAction.FAIL -> "Mission marquée comme ratée."
