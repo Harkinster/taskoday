@@ -96,6 +96,7 @@ fun HomeScreen(
     onOpenTask: (Long) -> Unit,
     onEditTask: (Long) -> Unit,
     onOpenProfile: () -> Unit,
+    onOpenLogin: () -> Unit = {},
     onAddAction: () -> Unit,
     onOpenJournal: () -> Unit,
     onOpenWishes: () -> Unit,
@@ -179,9 +180,10 @@ fun HomeScreen(
                     .padding(innerPadding),
         ) {
             if (uiState.isLoading) {
-                Box(
+                Column(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     FantasyStateCard(
                         title = "Le Nid se réveille",
@@ -189,6 +191,14 @@ fun HomeScreen(
                         loading = true,
                         tone = FantasyTone.Gold,
                     )
+                    if (shouldOfferHomeLogin(uiState.hasRemoteSession)) {
+                        FantasyButton(
+                            text = "Se connecter",
+                            onClick = onOpenLogin,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = spacing.medium, vertical = spacing.small),
+                            style = FantasyButtonStyle.Filled,
+                        )
+                    }
                 }
                 return@FantasyScreenBackground
             }

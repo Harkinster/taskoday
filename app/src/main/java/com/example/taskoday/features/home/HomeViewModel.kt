@@ -54,6 +54,7 @@ class HomeViewModel
                     selectedDayStartMillis = selectedDay.value,
                     dateLabel = DateTimeUtils.formatDayLabel(selectedDay.value),
                     isLoading = true,
+                    hasRemoteSession = !authRepository.getAccessToken().isNullOrBlank(),
                 ),
             )
         val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()

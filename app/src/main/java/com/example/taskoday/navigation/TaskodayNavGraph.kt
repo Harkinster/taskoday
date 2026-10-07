@@ -351,7 +351,7 @@ fun TaskodayApp() {
                     onOpenDragons = { navController.navigate(TaskodayDestination.Dragons.route) },
                     onOpenEggs = { navController.navigate(TaskodayDestination.Eggs.route) },
                     onOpenWishes = { navController.navigate(TaskodayDestination.Shop.createRoute(TaskodayDestination.Shop.SECTION_WISHES)) },
-                    onOpenChests = { navController.navigate(TaskodayDestination.Shop.createRoute(TaskodayDestination.Shop.SECTION_CHESTS)) },
+                    onOpenChests = { navController.navigate(chestUtilityRoute()) },
                     onOpenScrolls = { navController.navigate(TaskodayDestination.Scrolls.route) },
                     onOpenProfile = navigateToProfile,
                 )
@@ -504,12 +504,23 @@ fun TaskodayApp() {
 
             composable(TaskodayDestination.Home.route) {
                 val viewModel: HomeViewModel = hiltViewModel()
+                val authViewModel: AuthViewModel = hiltViewModel()
                 HomeScreen(
                     viewModel = viewModel,
                     isLocalChildMode = localChildMode,
                     onOpenTask = { taskId -> navController.navigate(TaskodayDestination.TaskDetail.createRoute(taskId)) },
                     onEditTask = { taskId -> navController.navigate(TaskodayDestination.TaskEdit.createRoute(taskId)) },
                     onOpenProfile = navigateToProfile,
+                    onOpenLogin = {
+                        if (!viewModel.uiState.value.hasRemoteSession) {
+                            localChildMode = false
+                            authViewModel.logout()
+                            navController.navigate(TaskodayDestination.Login.route) {
+                                popUpTo(navController.graph.id) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }
+                    },
                     onAddAction = { navController.navigate(TaskodayDestination.ParentPlanning.createRoute("routine")) },
                     onOpenJournal = { navController.navigate(TaskodayDestination.ActivityJournal.route) },
                     onOpenWishes = { navController.navigate(TaskodayDestination.Shop.createRoute(TaskodayDestination.Shop.SECTION_WISHES)) },

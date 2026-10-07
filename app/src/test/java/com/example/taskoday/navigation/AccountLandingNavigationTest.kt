@@ -30,5 +30,8 @@ class AccountLandingNavigationTest {
     @Test fun `brand navigation preserves demo session`() {
         assertEquals(TaskodayDestination.Home, accountHomeDestination(false, false))
     }
+    @Test fun `nest crystal entry opens canonical resource utility chest section`() {
+        assertEquals("shop?section=chests", chestUtilityRoute())
+    }
     private fun user(role: String) = AuthenticatedUser(1L, "ada@example.com", role, true, listOf(7L), "Ada")
 }

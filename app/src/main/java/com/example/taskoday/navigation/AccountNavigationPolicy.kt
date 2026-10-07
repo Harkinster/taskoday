@@ -26,6 +26,9 @@ internal fun canEnterParentDestination(
 internal fun canEnterHouseholdDestination(hasRemoteSession: Boolean, localChildMode: Boolean): Boolean =
     hasRemoteSession && !localChildMode
 
+internal fun chestUtilityRoute(): String =
+    TaskodayDestination.Shop.createRoute(TaskodayDestination.Shop.SECTION_CHESTS)
+
 internal fun visibleAccountDestinations(isChild: Boolean, localChildMode: Boolean = false): List<TaskodayDestination> =
     TopLevelDestinations.filterNot {
         ((isChild || localChildMode) && it == TaskodayDestination.FollowUp) ||

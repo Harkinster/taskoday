@@ -27,6 +27,7 @@ data class ResourceUtilityUiState(
     val chests: ResourceChestCatalogDto? = null,
     val collection: CollectionDto? = null,
     val chestOpens: List<ChestOpenDto> = emptyList(),
+    val chestReveal: ChestOpenDto? = null,
     val message: String? = null,
     val error: String? = null,
 )
@@ -86,13 +87,17 @@ class ResourceUtilityViewModel @Inject constructor(private val repository: Resou
                 savedStateHandle.remove<String>(PENDING_CHEST_TYPE_KEY)
                 val loot = chestRevealText(result.drops)
                 runCatching { loadState() }.onSuccess { loaded ->
-                    _state.value = loaded.copy(message = "${result.drops.size} découverte(s) : $loot")
+                    _state.value = loaded.copy(chestReveal = result, message = "${result.drops.size} découverte(s) : $loot")
                 }.onFailure { error -> _state.update { it.copy(submitting = false, error = error.toRemoteUserMessage("Coffre ouvert, mais les ressources n’ont pas pu être actualisées.")) } }
             }
             .onFailure { error -> _state.update { it.copy(submitting = false, error = error.toRemoteUserMessage("Impossible d’ouvrir ce coffre.")) } }
     }
 
     fun consumeMessage() = _state.update { it.copy(message = null, error = null) }
+
+    fun dismissChestReveal() = _state.update { it.copy(chestReveal = null) }
+
+    fun showChestReveal(opened: ChestOpenDto) = _state.update { it.copy(chestReveal = opened) }
 
     private fun mutate(success: String, call: suspend (Long) -> Any) = viewModelScope.launch {
         val family = _state.value.familyId ?: return@launch

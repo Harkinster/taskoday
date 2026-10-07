@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -129,9 +130,10 @@ fun ResourceUtilityScreen(
                 if (state.chestOpens.isNotEmpty()) item { Text("Coffres ouverts récemment", style = MaterialTheme.typography.titleLarge) }
                 items(state.chestOpens, key = { "open-${it.id}" }) { opened ->
                     Card(Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("${opened.chestType.lowercase().replaceFirstChar(Char::uppercase)} · ${opened.crystalCost} Cristaux")
                             Text(chestRevealText(opened.drops))
+                            OutlinedButton(onClick = { viewModel.showChestReveal(opened) }) { Text("Voir la découverte") }
                         }
                     }
                 }
@@ -144,5 +146,34 @@ fun ResourceUtilityScreen(
             }
             item { androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = 20.dp)) }
         }
+    }
+    state.chestReveal?.let { opened ->
+        AlertDialog(
+            onDismissRequest = viewModel::dismissChestReveal,
+            title = { Text("Découverte du coffre ${opened.chestType.lowercase().replaceFirstChar(Char::uppercase)}") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    opened.drops.forEach { drop ->
+                        val totalQuantity = state.collection?.items?.firstOrNull { it.title == drop.title }?.quantity
+                        Card(Modifier.fillMaxWidth()) {
+                            Row(
+                                Modifier.fillMaxWidth().padding(14.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                Text(drop.title, style = MaterialTheme.typography.titleMedium)
+                                Column(horizontalAlignment = androidx.compose.ui.Alignment.End) {
+                                    Text("×${drop.quantity}", style = MaterialTheme.typography.titleMedium)
+                                    totalQuantity?.let { Text("Collection : ×$it", style = MaterialTheme.typography.bodySmall) }
+                                }
+                            }
+                        }
+                    }
+                    Text("Ta collection a été mise à jour.", style = MaterialTheme.typography.bodyMedium)
+                }
+            },
+            confirmButton = {
+                Button(onClick = viewModel::dismissChestReveal) { Text("Continuer") }
+            },
+        )
     }
 }

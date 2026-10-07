@@ -172,6 +172,8 @@ fun NestScreen(
                 points = uiState.personalRewards?.taskodayPoints ?: 0,
                 flames = uiState.personalRewards?.flames ?: 0,
                 crystals = uiState.personalRewards?.crystals ?: 0,
+                onOpenWishes = onOpenWishes,
+                onOpenChests = onOpenChests,
             )
         }
         visibleRecentReward?.let { reward ->
@@ -650,22 +652,23 @@ private data class RecentNestRewardDisplayRow(
 )
 
 @Composable
-private fun PersonalRewardResourcesCard(points: Int, flames: Int, crystals: Int) {
+private fun PersonalRewardResourcesCard(points: Int, flames: Int, crystals: Int, onOpenWishes: () -> Unit, onOpenChests: () -> Unit) {
     FantasyCard(tone = FantasyTone.Night, contentPadding = PaddingValues(14.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("MES RESSOURCES", style = MaterialTheme.typography.titleSmall, color = ParchmentLight)
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ResourceBalance("Points Taskoday", points.toString(), NestAssets.interfaceAsset("nid"), MossGreen, Modifier.weight(1f))
-                ResourceBalance("Flammèches · Caverne", flames.toString(), NestAssets.interfaceAsset("flammeche"), EmberOrange, Modifier.weight(1f))
-                ResourceBalance("Cristaux · Coffres", crystals.toString(), NestAssets.interfaceAsset("crystal"), CrystalBlue, Modifier.weight(1f))
+                ResourceBalance("Flammèches · Caverne", flames.toString(), NestAssets.interfaceAsset("flammeche"), EmberOrange, Modifier.weight(1f), onOpenWishes)
+                ResourceBalance("Cristaux · Coffres", crystals.toString(), NestAssets.interfaceAsset("crystal"), CrystalBlue, Modifier.weight(1f), onOpenChests)
             }
         }
     }
 }
 
 @Composable
-private fun ResourceBalance(label: String, value: String, icon: Int, tint: Color, modifier: Modifier) {
-    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+private fun ResourceBalance(label: String, value: String, icon: Int, tint: Color, modifier: Modifier, onClick: (() -> Unit)? = null) {
+    val actionModifier = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
+    Column(modifier = modifier.then(actionModifier).padding(vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
         Image(painter = painterResource(icon), contentDescription = null, modifier = Modifier.size(22.dp))
         Text(value, style = MaterialTheme.typography.titleMedium, color = tint)
         Text(label, style = MaterialTheme.typography.labelSmall, color = ParchmentLight, maxLines = 2, overflow = TextOverflow.Ellipsis)

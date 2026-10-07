@@ -19,6 +19,7 @@ data class HomeUiState(
     val remoteFlammeches: Int? = null,
     val remoteCrystals: Int? = null,
     val usingRemoteData: Boolean = false,
+    val hasRemoteSession: Boolean = false,
     val canManageActions: Boolean = false,
     val isParentUser: Boolean = false,
     val hasParentPin: Boolean = false,
@@ -32,3 +33,5 @@ data class HomeUiState(
     val successMessage: String? = null,
     val errorMessage: String? = null,
 )
+
+internal fun shouldOfferHomeLogin(hasRemoteSession: Boolean): Boolean = !hasRemoteSession
