@@ -14,8 +14,8 @@ android {
         applicationId = "com.harkinster.taskoday"
         minSdk = 24
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.0-beta03"
+        versionCode = 5
+        versionName = "1.0-beta04"
         buildConfigField("String", "TASKODAY_BASE_URL", "\"https://harkserv.ddns.net/taskoday-api/\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
