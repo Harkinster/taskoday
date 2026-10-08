@@ -1,6 +1,75 @@
+from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+
+
+class LineageId(str, Enum):
+    FULMIO = "FULMIO"
+    SYLVYN = "SYLVYN"
+    PHENOR = "PHENOR"
+    LUNARYS = "LUNARYS"
+    PYRON = "PYRON"
+    CHRONYX = "CHRONYX"
+    AMBRIO = "AMBRIO"
+    CRISTAO = "CRISTAO"
+
+
+class LineageResponse(BaseModel):
+    id: LineageId
+    founder_name: str
+    region_name: str
+    affinity: str
+
+
+class LineageListResponse(BaseModel):
+    lineages: list[LineageResponse]
+
+
+class CompanionResponse(BaseModel):
+    dragon_id: int
+    owner_user_id: int
+    dragon_key: str
+    lineage_id: LineageId | None
+    lineage_status: str
+    lineage: LineageResponse | None
+    display_name: str | None
+    stage: str
+    progress: int
+    active: bool
+
+
+class MyCompanionsResponse(BaseModel):
+    companions: list[CompanionResponse]
+    active_companion: CompanionResponse | None
+    active_state: str
+
+
+class ActiveMyCompanionResponse(BaseModel):
+    companion: CompanionResponse | None
+
+
+class StarterCompanionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    lineage_id: LineageId
+    display_name: str
+
+
+class RenameCompanionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    display_name: str
+
+
+class StarterCompanionResponse(BaseModel):
+    companion: CompanionResponse
+    created: bool
+    reused_existing: bool
+
+
+class CompanionMutationResponse(BaseModel):
+    companion: CompanionResponse
 
 
 class ChestCatalogEntryResponse(BaseModel):

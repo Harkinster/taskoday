@@ -7,6 +7,7 @@ from app.core.config import settings
 from app.routers import (
     auth,
     children,
+    companions,
     families,
     family_invites,
     family_tasks,
@@ -103,6 +104,7 @@ def create_application() -> FastAPI:
     application.include_router(missions.router, prefix=settings.api_v1_prefix)
     application.include_router(quests.router, prefix=settings.api_v1_prefix)
     application.include_router(gamification.router, prefix=settings.api_v1_prefix)
+    application.include_router(companions.router, prefix=settings.api_v1_prefix)
     application.include_router(rewards.router, prefix=settings.api_v1_prefix)
     application.include_router(resource_utility.router, prefix=settings.api_v1_prefix)
     application.include_router(profile.router, prefix=settings.api_v1_prefix)

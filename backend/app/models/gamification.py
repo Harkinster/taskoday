@@ -1,7 +1,7 @@
 import enum
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String, UniqueConstraint, func
+from sqlalchemy import Boolean, CheckConstraint, DateTime, Enum, ForeignKey, Integer, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.declarative import Base
@@ -125,13 +125,25 @@ class DragonDefinition(Base):
 
 class ChildDragon(Base):
     __tablename__ = "child_dragons"
-    __table_args__ = (UniqueConstraint("child_id", "dragon_key", name="uq_child_dragons_child_dragon"),)
+    __table_args__ = (
+        UniqueConstraint("child_id", "dragon_key", name="uq_child_dragons_child_dragon"),
+        UniqueConstraint("child_id", "starter_key", name="uq_child_dragons_owner_starter"),
+        CheckConstraint(
+            "lineage_id IS NULL OR lineage_id IN ('FULMIO','SYLVYN','PHENOR','LUNARYS','PYRON','CHRONYX','AMBRIO','CRISTAO')",
+            name="ck_child_dragon_lineage_official",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     child_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     dragon_key: Mapped[str] = mapped_column(ForeignKey("dragons.key", ondelete="CASCADE"), nullable=False, index=True)
     stage: Mapped[DragonStage] = mapped_column(Enum(DragonStage), default=DragonStage.BABY, nullable=False)
     progress: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    # Nullable for untouched legacy egg-hatched dragons. child_id is the historical
+    # column name; it has always stored the owning users.id value.
+    lineage_id: Mapped[str | None] = mapped_column(String(16), nullable=True, index=True)
+    display_name: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    starter_key: Mapped[str | None] = mapped_column(String(16), nullable=True)
     active_companion: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
     unlocked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
