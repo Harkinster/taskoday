@@ -205,6 +205,51 @@ class AccountSessionViewModelTest {
         assertEquals("Validée", familyTaskStatusLabel(FamilyTaskStatus.VALIDATED))
     }
 
+    @Test fun `child detail completes eligible personal occurrence and refreshes pending validation`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        try {
+            val todo = occurrence(2L, "Mission", 102L, FamilyActionType.PERSONAL_MISSION.category)
+            val pending = todo.copy(status = FamilyTaskStatus.PENDING_VALIDATION, validationRequired = true)
+            var current = todo
+            var completeCalls = 0
+            val base = familyRepository()
+            val family = object : FamilyTasksRepository by base {
+                override suspend fun fetchToday() = Result.success(FamilyTasksToday(1L, "2026-10-08", listOf(current)))
+                override suspend fun fetchTask(taskId: Long) = Result.success(
+                    definition(taskId, "Mission", 102L).copy(validationRequired = true),
+                )
+                override suspend fun completeOccurrenceWithBundle(occurrenceId: Long): Result<com.example.taskoday.domain.model.CompletionReward> {
+                    assertEquals(todo.occurrenceId, occurrenceId)
+                    completeCalls++
+                    current = pending
+                    return Result.success(com.example.taskoday.domain.model.CompletionReward())
+                }
+            }
+            val detail = FamilyTaskDetailViewModel(
+                SavedStateHandle(mapOf("taskId" to 2L)), family, auth(identity(102L, "CHILD")),
+            )
+
+            assertTrue(detail.uiState.value.canCompleteToday)
+            detail.completeTodayOccurrence()
+
+            assertEquals(1, completeCalls)
+            assertEquals(FamilyTaskStatus.PENDING_VALIDATION, detail.uiState.value.todayOccurrence?.status)
+            assertFalse(detail.uiState.value.canCompleteToday)
+            assertTrue(detail.uiState.value.canValidateToday.not())
+            assertEquals("Tâche terminée.", detail.uiState.value.successMessage)
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test fun `detail hides completion for finished or unauthorized occurrences`() {
+        val occurrence = occurrence(2L, "Mission", 102L, FamilyActionType.PERSONAL_MISSION.category)
+        val child = FamilyTaskAccessPolicy(102L, "CHILD")
+        assertTrue(FamilyTaskDetailUiState(access = child, todayOccurrence = occurrence).canCompleteToday)
+        assertFalse(FamilyTaskDetailUiState(access = child, todayOccurrence = occurrence.copy(status = FamilyTaskStatus.COMPLETED)).canCompleteToday)
+        assertFalse(FamilyTaskDetailUiState(access = child, todayOccurrence = occurrence.copy(status = FamilyTaskStatus.VALIDATED)).canCompleteToday)
+        assertFalse(FamilyTaskDetailUiState(access = child, todayOccurrence = occurrence.copy(status = FamilyTaskStatus.PENDING_VALIDATION)).canCompleteToday)
+        assertFalse(FamilyTaskDetailUiState(access = FamilyTaskAccessPolicy(103L, "CHILD"), todayOccurrence = occurrence).canCompleteToday)
+    }
+
     @Test fun `detail validates through existing repository and preserves suivi selection`() = runTest {
         Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
         try {

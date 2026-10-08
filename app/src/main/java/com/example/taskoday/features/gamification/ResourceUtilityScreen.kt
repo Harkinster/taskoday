@@ -18,6 +18,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -63,7 +64,14 @@ fun ResourceUtilityScreen(
                 if (b != null) Text("${b.flames} Flammèches  ·  ${b.crystals} Cristaux", style = MaterialTheme.typography.titleMedium)
             }
             if (state.loading) item { Text("Chargement…", Modifier.padding(16.dp)) }
-            state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
+            state.error?.let { message ->
+                item {
+                    Column {
+                        Text(message, color = MaterialTheme.colorScheme.error)
+                        TextButton(onClick = viewModel::refresh) { Text("Réessayer") }
+                    }
+                }
+            }
 
             if (initialSection != "chests") {
                 if (state.isParent) {
@@ -99,13 +107,16 @@ fun ResourceUtilityScreen(
                         }
                     }
                 }
+                if (state.offers.isEmpty() && !state.loading && state.error == null) {
+                    item { Text("Aucun souhait disponible pour le moment.", modifier = Modifier.padding(vertical = 12.dp)) }
+                }
                 item { Text(if (state.isParent) "Demandes de la famille" else "Mes demandes", style = MaterialTheme.typography.titleLarge) }
                 items(state.requests, key = { "request-${it.id}" }) { request ->
                     Card(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(request.title, style = MaterialTheme.typography.titleMedium)
                             if (state.isParent) Text("Demandé par ${request.requesterName}")
-                            Text("${request.flameCost} Flammèches · ${request.status}")
+                            Text("${request.flameCost} Flammèches · ${wishRequestStatusLabel(request.status)}")
                             if (state.isParent && request.status == "PENDING") Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Button(onClick = { viewModel.approve(request.id) }, enabled = !state.submitting && (state.balance?.flames ?: Int.MAX_VALUE) >= 0) { Text("Accepter") }
                                 OutlinedButton(onClick = { viewModel.reject(request.id) }, enabled = !state.submitting) { Text("Refuser") }
@@ -113,6 +124,9 @@ fun ResourceUtilityScreen(
                             if (!state.isParent && request.status == "PENDING") OutlinedButton(onClick = { viewModel.cancel(request.id) }, enabled = !state.submitting) { Text("Annuler la demande") }
                         }
                     }
+                }
+                if (state.requests.isEmpty() && !state.loading && state.error == null) {
+                    item { Text(if (state.isParent) "Aucune demande à traiter." else "Aucune demande pour le moment.", modifier = Modifier.padding(vertical = 12.dp)) }
                 }
             } else {
                 items(state.chests?.chests.orEmpty(), key = { it.chestType }) { chest ->
@@ -131,7 +145,7 @@ fun ResourceUtilityScreen(
                 items(state.chestOpens, key = { "open-${it.id}" }) { opened ->
                     Card(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("${opened.chestType.lowercase().replaceFirstChar(Char::uppercase)} · ${opened.crystalCost} Cristaux")
+                            Text("Coffre ${chestTypeLabel(opened.chestType)} · ${opened.crystalCost} Cristaux")
                             Text(chestRevealText(opened.drops))
                             OutlinedButton(onClick = { viewModel.showChestReveal(opened) }) { Text("Voir la découverte") }
                         }
@@ -143,6 +157,12 @@ fun ResourceUtilityScreen(
                         Text(item.title); Text("×${item.quantity}")
                     } }
                 }
+                if (state.collection?.items.isNullOrEmpty() && !state.loading && state.error == null) {
+                    item { Text("Aucune découverte pour le moment.", modifier = Modifier.padding(vertical = 12.dp)) }
+                }
+                if (state.chests?.chests.isNullOrEmpty() && !state.loading && state.error == null) {
+                    item { Text("Les coffres ne sont pas disponibles pour le moment.", modifier = Modifier.padding(vertical = 12.dp)) }
+                }
             }
             item { androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = 20.dp)) }
         }
@@ -150,7 +170,7 @@ fun ResourceUtilityScreen(
     state.chestReveal?.let { opened ->
         AlertDialog(
             onDismissRequest = viewModel::dismissChestReveal,
-            title = { Text("Découverte du coffre ${opened.chestType.lowercase().replaceFirstChar(Char::uppercase)}") },
+            title = { Text("Découverte du coffre ${chestTypeLabel(opened.chestType)}") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     opened.drops.forEach { drop ->

@@ -98,17 +98,6 @@ fun SettingsScreen(
     var showPasswordDialog by remember { mutableStateOf(false) }
     var returnParentPinError by rememberSaveable { mutableStateOf<String?>(null) }
 
-    val xp = uiState.totalXp
-    val level = uiState.level
-    val nextLevelXp = uiState.nextLevelXp
-    val levelXp = uiState.levelXp
-    val levelProgress =
-        if (nextLevelXp == 0) {
-            0f
-        } else {
-            levelXp.toFloat() / nextLevelXp.toFloat()
-        }
-
     val stats =
         listOf(
             TaskodayStatItem(label = "Missions", value = uiState.missionsStat),
@@ -116,24 +105,6 @@ fun SettingsScreen(
             TaskodayStatItem(label = "Serie", value = uiState.streakStat),
             TaskodayStatItem(label = "Succès", value = uiState.successStat),
         )
-
-    val rewardItems =
-        uiState.xpHistoryTokens
-            .take(4)
-            .mapIndexed { index, token ->
-                TaskodayRewardItem(
-                    label = "XP ${index + 1}",
-                    value = token,
-                    emoji = rewardEmojiForIndex(index),
-                )
-            }.ifEmpty {
-                listOf(
-                    TaskodayRewardItem(label = "XP", value = "--", emoji = "✨"),
-                    TaskodayRewardItem(label = "XP", value = "--", emoji = "⭐"),
-                    TaskodayRewardItem(label = "XP", value = "--", emoji = "🔥"),
-                    TaskodayRewardItem(label = "XP", value = "--", emoji = "🏆"),
-                )
-            }
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -157,18 +128,6 @@ fun SettingsScreen(
                     TaskodayHeader(
                         title = "Profil",
                         subtitle = if (uiState.isParentUser) "Gérez votre famille et le mode enfant." else "Votre profil et vos préférences.",
-                        avatarInitials = uiState.profileInitials,
-                    )
-                }
-
-                item {
-                    ProfileHeroCard(
-                        name = uiState.profileName,
-                        subtitle = uiState.profileSubtitle,
-                        pointsLabel = "$xp XP",
-                        levelLabel = "NIV $level",
-                        xpLabel = "$levelXp / $nextLevelXp XP - prochain niveau ${level + 1}",
-                        progress = levelProgress,
                         avatarInitials = uiState.profileInitials,
                     )
                 }
@@ -336,13 +295,6 @@ fun SettingsScreen(
                     StatsCard(
                         title = "Statistiques",
                         stats = stats,
-                    )
-                }
-
-                item {
-                    RewardsCard(
-                        title = "Souhaits validés",
-                        rewards = rewardItems,
                     )
                 }
 

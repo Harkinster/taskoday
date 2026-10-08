@@ -18,6 +18,11 @@ data class FamilyTaskDetailUiState(
     val showDeleteConfirmation: Boolean = false,
     val deleted: Boolean = false,
 ) {
+    val canCompleteToday: Boolean
+        get() = todayOccurrence?.let { occurrence ->
+            occurrence.occurrenceId > 0L && access.quickAction(occurrence) == FamilyTaskQuickAction.COMPLETE
+        } == true
+
     val canValidateToday: Boolean
         get() = todayOccurrence?.let { occurrence ->
             occurrence.occurrenceId > 0L && access.quickAction(occurrence) == FamilyTaskQuickAction.VALIDATE

@@ -100,6 +100,7 @@ class ResourceUtilityViewModel @Inject constructor(private val repository: Resou
     fun showChestReveal(opened: ChestOpenDto) = _state.update { it.copy(chestReveal = opened) }
 
     private fun mutate(success: String, call: suspend (Long) -> Any) = viewModelScope.launch {
+        if (_state.value.submitting) return@launch
         val family = _state.value.familyId ?: return@launch
         _state.update { it.copy(submitting = true, message = null, error = null) }
         runCatching { call(family) }

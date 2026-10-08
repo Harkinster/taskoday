@@ -129,6 +129,25 @@ class FamilyTaskDetailViewModel
             }
         }
 
+        fun completeTodayOccurrence() {
+            val state = _uiState.value
+            val occurrence = state.todayOccurrence ?: return
+            if (!state.canCompleteToday || state.isValidating || state.isDeleting) return
+            _uiState.update { it.copy(isValidating = true, errorMessage = null, successMessage = null) }
+            viewModelScope.launch {
+                familyTasksRepository.completeOccurrenceWithBundle(occurrence.occurrenceId)
+                    .onSuccess { rewardBundle ->
+                        _uiState.update { it.copy(isValidating = false) }
+                        refresh(successMessage = taskCompletionFeedback(rewardBundle))
+                    }
+                    .onFailure { throwable ->
+                        _uiState.update {
+                            it.copy(isValidating = false, errorMessage = throwable.toRemoteUserMessage("Impossible de terminer la tâche."))
+                        }
+                    }
+            }
+        }
+
         fun requestDelete() {
             if (!_uiState.value.access.canManage) return
             _uiState.update { it.copy(showDeleteConfirmation = true, errorMessage = null) }

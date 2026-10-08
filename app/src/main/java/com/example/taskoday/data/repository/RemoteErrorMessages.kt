@@ -13,11 +13,13 @@ fun Throwable.toRemoteUserMessage(fallback: String = "Erreur réseau."): String 
         is HttpException ->
             when (code()) {
                 400 -> "Cette action n'est pas possible pour le moment."
-                401 -> "Session expiree."
+                401 -> "Session expirée."
                 403 -> "Action non autorisée."
-                404 -> "Element introuvable."
+                404 -> "Élément introuvable."
+                409 -> "Cette action a changé. Actualise l’écran et réessaie."
                 422 -> "Certaines informations sont invalides."
-                else -> "Erreur API (${code()})."
+                in 500..599 -> "Le service rencontre un problème. Réessaie plus tard."
+                else -> fallback
             }
 
         is IOException -> fallback

@@ -20,4 +20,18 @@ class ResourceUtilityPolicyTest {
             ChestDropDto("rune_ancienne", "Rune ancienne", 1),
         )))
     }
+
+    @Test fun `wish request statuses use human labels`() {
+        assertEquals("En attente", wishRequestStatusLabel("PENDING"))
+        assertEquals("Acceptée", wishRequestStatusLabel("APPROVED"))
+        assertEquals("Refusée", wishRequestStatusLabel("REJECTED"))
+        assertEquals("Annulée", wishRequestStatusLabel("CANCELLED"))
+        assertEquals("Statut indisponible", wishRequestStatusLabel("UNEXPECTED"))
+    }
+
+    @Test fun `chest types use French labels`() {
+        assertEquals("commun", chestTypeLabel("COMMON"))
+        assertEquals("rare", chestTypeLabel("RARE"))
+        assertEquals("épique", chestTypeLabel("EPIC"))
+    }
 }

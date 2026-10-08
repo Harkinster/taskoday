@@ -66,6 +66,7 @@ import com.example.taskoday.core.ui.component.fantasy.ScrollCard
 import com.example.taskoday.core.ui.format.toTaskodayDisplayLabel
 import com.example.taskoday.core.ui.theme.CrystalBlue
 import com.example.taskoday.core.ui.theme.EmberOrange
+import com.example.taskoday.core.ui.theme.InkBrown
 import com.example.taskoday.core.ui.theme.InkMuted
 import com.example.taskoday.core.ui.theme.MagicViolet
 import com.example.taskoday.core.ui.theme.MossGreen
@@ -132,14 +133,6 @@ fun NestScreen(
             dragons.firstOrNull { dragon -> dragon.key == activeCompanionKey }
         }
     val activeNestEgg = selectActiveNestEgg(nestEggs)
-    val progress = uiState.progress
-    val hasEmptyNestProgress =
-        uiState.hasRemoteSession &&
-            progress != null &&
-            progress.guardian.xp == 0 &&
-            progress.wallet.flammeches == 0 &&
-            progress.wallet.crystals == 0
-
     LaunchedEffect(recentRewardEventId) {
         if (recentReward == null) return@LaunchedEffect
         if (shouldShowRecentNestReward(recentReward)) {
@@ -184,17 +177,6 @@ fun NestScreen(
                 )
             }
         }
-        if (hasEmptyNestProgress) {
-            item {
-                FantasyStateCard(
-                    title = "Le Nid attend ses premières étincelles",
-                    message = "Commencez par une routine simple pour faire grandir ce refuge.",
-                    assetResId = NestAssets.interfaceAsset("nid"),
-                    assetDescription = null,
-                    tone = FantasyTone.Gold,
-                )
-            }
-        }
         item {
             ActiveNestDisplayCard(
                 dragon = activeDragon,
@@ -210,12 +192,14 @@ fun NestScreen(
                 onOpenWishes = onOpenWishes,
             )
         }
-        item {
-            NestActiveEggCard(
-                egg = activeNestEgg,
-                onOpenEggs = onOpenEggs,
-                onEvolveEgg = { activeNestEgg?.id?.let(viewModel::evolveEgg) },
-            )
+        if (activeNestEgg != null || activeDragon != null) {
+            item {
+                NestActiveEggCard(
+                    egg = activeNestEgg,
+                    onOpenEggs = onOpenEggs,
+                    onEvolveEgg = { activeNestEgg?.id?.let(viewModel::evolveEgg) },
+                )
+            }
         }
     }
     uiState.hatchingCelebration?.let { celebration ->
@@ -655,7 +639,7 @@ private data class RecentNestRewardDisplayRow(
 private fun PersonalRewardResourcesCard(points: Int, flames: Int, crystals: Int, onOpenWishes: () -> Unit, onOpenChests: () -> Unit) {
     FantasyCard(tone = FantasyTone.Night, contentPadding = PaddingValues(14.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("MES RESSOURCES", style = MaterialTheme.typography.titleSmall, color = ParchmentLight)
+            Text("MES RESSOURCES", style = MaterialTheme.typography.titleSmall, color = InkBrown)
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ResourceBalance("Points Taskoday", points.toString(), NestAssets.interfaceAsset("nid"), MossGreen, Modifier.weight(1f))
                 ResourceBalance("Flammèches · Caverne", flames.toString(), NestAssets.interfaceAsset("flammeche"), EmberOrange, Modifier.weight(1f), onOpenWishes)
@@ -671,7 +655,7 @@ private fun ResourceBalance(label: String, value: String, icon: Int, tint: Color
     Column(modifier = modifier.then(actionModifier).padding(vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
         Image(painter = painterResource(icon), contentDescription = null, modifier = Modifier.size(22.dp))
         Text(value, style = MaterialTheme.typography.titleMedium, color = tint)
-        Text(label, style = MaterialTheme.typography.labelSmall, color = ParchmentLight, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = InkMuted, maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -788,7 +772,7 @@ private fun ActiveNestDisplayCard(
 ) {
     if (dragon == null && egg == null) {
         FantasyStateCard(
-            title = "Le Nid attend ses premières étincelles",
+            title = "Choisis un compagnon",
             message = "Découvre un œuf ou un dragon pour choisir un compagnon.",
             assetResId = NestAssets.interfaceAsset("egg_locked"),
             assetDescription = "Compagnon à découvrir",

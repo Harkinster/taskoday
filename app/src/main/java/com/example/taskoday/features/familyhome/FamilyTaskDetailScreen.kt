@@ -126,6 +126,18 @@ fun FamilyTaskDetailScreen(
                                 FamilyTaskDefinitionCard(task = task, todayOccurrence = uiState.todayOccurrence)
                             }
 
+                            if (uiState.canCompleteToday) item {
+                                Button(
+                                    onClick = viewModel::completeTodayOccurrence,
+                                    enabled = !uiState.isValidating,
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = WoodBrown, contentColor = ParchmentLight),
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Text(if (uiState.isValidating) "Mise à jour..." else "Terminer")
+                                }
+                            }
+
                             if (uiState.canValidateToday) item {
                                 Button(
                                     onClick = viewModel::validateTodayOccurrence,
