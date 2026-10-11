@@ -37,6 +37,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -76,6 +77,7 @@ import com.example.taskoday.core.ui.theme.NeonCyan
 import com.example.taskoday.core.ui.theme.StarWhite
 import com.example.taskoday.core.ui.theme.TextMuted
 import com.example.taskoday.core.ui.theme.spacing
+import com.example.taskoday.update.LocalTaskodayUpdateCheck
 
 @Composable
 fun SettingsScreen(
@@ -90,6 +92,7 @@ fun SettingsScreen(
     onOpenNotifications: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val checkForUpdates = LocalTaskodayUpdateCheck.current
     val spacing = MaterialTheme.spacing
     var pairingCodeInput by rememberSaveable { mutableStateOf("") }
     var showLogoutConfirmation by rememberSaveable { mutableStateOf(false) }
@@ -321,6 +324,7 @@ fun SettingsScreen(
                                     style = MaterialTheme.typography.bodySmall,
                                     color = TextMuted,
                                 )
+                                TextButton(onClick = checkForUpdates) { Text("Rechercher des mises à jour") }
                             }
                         }
                     }

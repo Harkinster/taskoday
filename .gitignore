@@ -18,5 +18,7 @@ local.properties
 *.p12
 signing.properties
 qa/
+!app/src/qa/
+!app/src/qa/**
 .maestro-cli/
 maestro.zip

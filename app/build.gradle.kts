@@ -14,8 +14,16 @@ android {
         applicationId = "com.harkinster.taskoday"
         minSdk = 24
         targetSdk = 36
-        versionCode = 5
-        versionName = "1.0-beta04"
+        versionCode = 6
+        versionName = "1.0-beta05"
+        // Public certificate pinned from the existing signed beta03 APK and confirmed against
+        // the configured external keystore. Override only when deliberately rotating the key.
+        buildConfigField("String", "UPDATE_SIGNER_SHA256", "\"${providers.gradleProperty("taskodayReleaseSignerSha256").orElse("4783e3e7f20c4bfec5e6b22fb0e3cfcaeb0dfddca3ebc380929c7fb1243a666b").get()}\"")
+        buildConfigField("String", "UPDATE_MANIFEST_URL", "\"https://harkserv.ddns.net/taskoday/version.json\"")
+        buildConfigField("String", "UPDATE_SERVER_HOST", "\"harkserv.ddns.net\"")
+        buildConfigField("int", "UPDATE_SERVER_PORT", "443")
+        buildConfigField("long", "UPDATE_CHECK_INTERVAL_MS", "86400000L")
+        buildConfigField("long", "UPDATE_FAILURE_RETRY_INTERVAL_MS", "1800000L")
         buildConfigField("String", "TASKODAY_BASE_URL", "\"https://harkserv.ddns.net/taskoday-api/\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -38,9 +46,9 @@ android {
         }
     }
 
-    if (gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) } && !betaSigningReady) {
+    if (gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) || it.contains("Qa", ignoreCase = true) } && !betaSigningReady) {
         throw GradleException(
-            "Signature bêta absente. Fournir taskodayKeystorePath/taskodayKeystorePassword/taskodayKeyAlias/taskodayKeyPassword dans gradle.properties utilisateur ou via TASKODAY_*.",
+            "Signature Release/QA absente. Fournir taskodayKeystorePath/taskodayKeystorePassword/taskodayKeyAlias/taskodayKeyPassword dans gradle.properties utilisateur ou via TASKODAY_*.",
         )
     }
 
@@ -52,6 +60,18 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+        create("qa") {
+            initWith(getByName("release"))
+            matchingFallbacks += listOf("release")
+            signingConfig = signingConfigs.getByName("beta")
+            buildConfigField("String", "UPDATE_MANIFEST_URL", "\"https://10.0.2.2:8443/taskoday-test/version.json\"")
+            buildConfigField("String", "UPDATE_SERVER_HOST", "\"10.0.2.2\"")
+            buildConfigField("int", "UPDATE_SERVER_PORT", "8443")
+            buildConfigField("long", "UPDATE_CHECK_INTERVAL_MS", "5000L")
+            buildConfigField("long", "UPDATE_FAILURE_RETRY_INTERVAL_MS", "2000L")
+            // QA builds deliberately cannot read or write the production family API.
+            buildConfigField("String", "TASKODAY_BASE_URL", "\"https://harkserv.ddns.net/taskoday-test-api/\"")
         }
     }
     compileOptions {
@@ -71,6 +91,18 @@ android {
                 "FrequentlyChangingValue",
                 "NullSafeMutableLiveData",
             )
+    }
+}
+
+val taskodayQaVersionCode = providers.gradleProperty("taskodayQaVersionCode").map { it.toInt() }.orElse(6)
+val taskodayQaVersionName = providers.gradleProperty("taskodayQaVersionName").orElse("1.0-beta05-qa")
+
+androidComponents {
+    onVariants(selector().withBuildType("qa")) { variant ->
+        variant.outputs.forEach { output ->
+            output.versionCode.set(taskodayQaVersionCode)
+            output.versionName.set(taskodayQaVersionName)
+        }
     }
 }
 
