@@ -1,6 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <application android:usesCleartextTraffic="true" />
+    <application android:usesCleartextTraffic="true">
+        <activity
+            android:name=".debug.TaskodayV3ComponentGalleryActivity"
+            android:exported="true"
+            android:label="Galerie composants Taskoday V4.3" />
+        <activity
+            android:name=".features.familyhome.FamilyHomeV3FixtureActivity"
+            android:exported="true"
+            android:label="Ma maison V3 Â· aperÃ§u DEBUG" />
+        <activity
+            android:name=".features.familyhome.FamilyHomeV3CleanPreviewActivity"
+            android:exported="true"
+            android:label="Ma maison V3 Â· aperÃ§u visuel" />
+        <activity
+            android:name=".features.taskodayv4.TaskodayV4AssetGalleryActivity"
+            android:exported="true"
+            android:label="Taskoday V4 · galerie assets DEBUG" />
+    </application>
 
 </manifest>

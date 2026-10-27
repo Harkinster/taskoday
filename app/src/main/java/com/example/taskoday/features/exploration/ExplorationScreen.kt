@@ -1,6 +1,13 @@
 package com.example.taskoday.features.exploration
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.font.FontWeight
+import com.example.taskoday.features.taskodayv4.*
+import com.example.taskoday.core.ui.component.fantasy.FantasyScreenBackground
+import com.example.taskoday.core.ui.component.fantasy.FantasyButton
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -36,12 +43,13 @@ import com.example.taskoday.features.familyhome.isOpenUndatedMission
 fun ExplorationScreen(
     viewModel: ExplorationViewModel,
     onOpenJournal: () -> Unit = {},
+    onOpenProfile: () -> Unit = {},
     onOpenFamilyTask: (Long) -> Unit = {},
     onCreatePersonal: (FamilyActionType) -> Unit = {},
     openCreateChoices: Boolean = false,
     onCreateChoicesOpened: () -> Unit = {},
 ) {
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.onScreenResumed() }
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showCreateChoices by remember { mutableStateOf(false) }
     androidx.compose.runtime.LaunchedEffect(openCreateChoices) {
@@ -51,28 +59,34 @@ fun ExplorationScreen(
         }
     }
     val actions = explorationDayActions(state, viewModel)
+    FantasyScreenBackground {
     LazyColumn(
         modifier = Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 18.dp, bottom = 28.dp),
     ) {
+        item { FantasyPageHeader("Exploration", "Mon parcours · ${state.selectedMemberName}", onOpenProfile) }
         item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Column {
-                    Text("Exploration", style = MaterialTheme.typography.headlineSmall, color = ParchmentLight)
-                    Text("Mon parcours · ${state.dateLabel}", color = ParchmentCream)
+            FantasySummaryPanel {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Mon aventure du jour", color = JourneyGold, style = MaterialTheme.typography.titleMedium)
+                    Text(if (state.isLoading) "Préparation de ton parcours…" else "${actions.count { it.completed }} / ${actions.size} actions accomplies",
+                        color = JourneyParchment, style = MaterialTheme.typography.titleLarge)
+                    Text("Mes missions et mes routines personnelles", color = JourneyParchment, style = MaterialTheme.typography.bodySmall)
                 }
-                Row {
-                    TextButton(onClick = onOpenJournal) { Text("Journal") }
-                    if (state.access.canManage) TextButton(onClick = { showCreateChoices = !showCreateChoices }) { Text("Ajouter") }
-                }
+            }
+        }
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FantasyFramedButton(label = "Mon journal", onClick = onOpenJournal, modifier = Modifier.weight(1f))
+                if (state.access.canManage) FantasyFramedButton(label = "Ajouter", onClick = { showCreateChoices = !showCreateChoices }, modifier = Modifier.weight(1f))
             }
         }
         if (showCreateChoices && state.access.canManage) {
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    TextButton(onClick = { showCreateChoices = false; onCreatePersonal(FamilyActionType.PERSONAL_ROUTINE) }) { Text("Routine") }
-                    TextButton(onClick = { showCreateChoices = false; onCreatePersonal(FamilyActionType.PERSONAL_MISSION) }) { Text("Mission") }
+                    FantasyFramedButton(label = "Routine", onClick = { showCreateChoices = false; onCreatePersonal(FamilyActionType.PERSONAL_ROUTINE) }, modifier = Modifier.weight(1f))
+                    FantasyFramedButton(label = "Mission", onClick = { showCreateChoices = false; onCreatePersonal(FamilyActionType.PERSONAL_MISSION) }, modifier = Modifier.weight(1f))
                 }
             }
         }
@@ -87,20 +101,26 @@ fun ExplorationScreen(
         val completed = actions.filter { it.completed }
         if (overdue.isNotEmpty()) {
             item { SectionTitle("En retard") }
-            items(overdue, key = { "overdue-${it.key}" }) { action -> ActionRow(action, onOpenFamilyTask) }
+            items(overdue, key = { "overdue-${it.key}" }) { action -> ActionRow(action, onOpenFamilyTask, state.actingKey != null) }
         }
         item { SectionTitle("Aujourd'hui") }
-        if (today.isEmpty()) item { Text("Rien à faire aujourd'hui.", color = ParchmentCream) }
-        items(today, key = { "today-${it.key}" }) { action -> ActionRow(action, onOpenFamilyTask) }
+        if (today.isEmpty()) item {
+            FantasyParchmentCard {
+                Text("Une journée à ton rythme", color = JourneyInk, style = MaterialTheme.typography.titleMedium)
+                Text("Rien à faire aujourd'hui. Tes missions et routines apparaîtront ici.", color = JourneyMuted)
+            }
+        }
+        items(today, key = { "today-${it.key}" }) { action -> ActionRow(action, onOpenFamilyTask, state.actingKey != null) }
         if (undated.isNotEmpty()) {
             item { SectionTitle("À faire") }
-            items(undated, key = { "undated-${it.key}" }) { action -> ActionRow(action, onOpenFamilyTask) }
+            items(undated, key = { "undated-${it.key}" }) { action -> ActionRow(action, onOpenFamilyTask, state.actingKey != null) }
         }
         if (completed.isNotEmpty()) {
             item { SectionTitle("Terminées") }
-            items(completed, key = { "done-${it.key}" }) { action -> ActionRow(action, onOpenFamilyTask) }
+            items(completed, key = { "done-${it.key}" }) { action -> ActionRow(action, onOpenFamilyTask, state.actingKey != null) }
         }
         }
+    }
     }
 }
 
@@ -142,16 +162,19 @@ private fun explorationDayActions(state: ExplorationUiState, viewModel: Explorat
 
 @Composable
 private fun SectionTitle(text: String) {
-    Text(text, style = MaterialTheme.typography.titleMedium, color = ParchmentLight, modifier = Modifier.padding(top = 8.dp))
+    FantasySectionHeading(text)
 }
 
 @Composable
-private fun ActionRow(action: ExplorationDayAction, onOpenFamilyTask: (Long) -> Unit) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Column(Modifier.weight(1f).clickable(enabled = action.taskId != null) { action.taskId?.let(onOpenFamilyTask) }) {
-            Text(action.title, color = ParchmentLight)
-            Text("${action.kind} · ${action.status}", color = if (action.overdue) DangerGlow else ParchmentCream, style = MaterialTheme.typography.bodySmall)
+private fun ActionRow(action: ExplorationDayAction, onOpenFamilyTask: (Long) -> Unit, isActing: Boolean) {
+    FantasyParchmentCard {
+        Column(Modifier.fillMaxWidth().clickable(enabled = action.taskId != null) { action.taskId?.let(onOpenFamilyTask) }) {
+            Text(action.title, color = JourneyInk, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Text("${action.kind} · ${action.status}", color = if (action.overdue) JourneyDangerInk else JourneyMuted, style = MaterialTheme.typography.bodySmall)
         }
-        action.actionLabel?.let { label -> TextButton(onClick = action.onToggle) { Text(label) } }
+        action.actionLabel?.let { label ->
+            FantasyButton(text = label, onClick = action.onToggle,
+                modifier = Modifier.align(Alignment.End).heightIn(min = 48.dp), enabled = !isActing)
+        }
     }
 }

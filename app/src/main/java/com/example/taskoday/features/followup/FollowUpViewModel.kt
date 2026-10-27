@@ -41,6 +41,9 @@ class FollowUpViewModel
         private val _uiState = MutableStateFlow(FollowUpUiState())
         val uiState: StateFlow<FollowUpUiState> = _uiState.asStateFlow()
         private var loadJob: Job? = null
+        private val resumeRefresh = com.example.taskoday.core.util.InitialResumeRefresh()
+
+        fun onScreenResumed() = resumeRefresh.onResume { refresh() }
 
         init { refresh() }
 

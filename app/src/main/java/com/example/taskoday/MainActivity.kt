@@ -48,7 +48,14 @@ class MainActivity : ComponentActivity() {
         hideNavigationBar()
         setContent {
             TaskodayTheme {
-                androidx.compose.runtime.CompositionLocalProvider(LocalTaskodayUpdateCheck provides { checkForUpdates() }) {
+                androidx.compose.runtime.CompositionLocalProvider(
+                    LocalTaskodayUpdateCheck provides { checkForUpdates() },
+                    com.example.taskoday.features.taskodayv4.LocalHomeHeaderStudyVariant provides
+                        com.example.taskoday.features.taskodayv4.HomeHeaderStudyVariant.fromRequest(
+                            BuildConfig.DEBUG && BuildConfig.APPLICATION_ID.endsWith(".familyqa"),
+                            intent.getStringExtra("taskoday_header_study"),
+                        ),
+                ) {
                     TaskodayApp()
                     val manifest = updateManifest
                     if (updateDialog) AlertDialog(

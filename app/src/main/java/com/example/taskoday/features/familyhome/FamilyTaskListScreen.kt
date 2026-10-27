@@ -7,35 +7,18 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -47,16 +30,12 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.taskoday.core.ui.component.fantasy.FantasyScreenBackground
-import com.example.taskoday.core.ui.component.DarkSurfaceFilterChip
-import com.example.taskoday.core.ui.theme.DangerGlow
-import com.example.taskoday.core.ui.theme.InkBrown
-import com.example.taskoday.core.ui.theme.InkMuted
-import com.example.taskoday.core.ui.theme.ParchmentCream
-import com.example.taskoday.core.ui.theme.ParchmentLight
 import com.example.taskoday.core.ui.theme.SoftGold
-import com.example.taskoday.core.ui.theme.WoodBrown
 import com.example.taskoday.core.ui.theme.spacing
 import com.example.taskoday.domain.model.FamilyTaskDefinition
+import com.example.taskoday.features.taskodayv4.*
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.layout.widthIn
 
 @Composable
 fun FamilyTaskListScreen(
@@ -115,6 +94,8 @@ fun FamilyTaskListScreen(
                     }
                 }
 
+                item { FantasySectionHeading("Actions de la famille", "${uiState.visibleTasks.size} affichée${if(uiState.visibleTasks.size>1) "s" else ""}") }
+
                 uiState.errorMessage?.takeIf { it.isNotBlank() }?.let { error ->
                     item {
                         FamilyTaskListMessage(
@@ -145,62 +126,19 @@ fun FamilyTaskListScreen(
 }
 
 @Composable
-private fun FamilyTaskListHeader(
+internal fun FamilyTaskListHeader(
     totalTasks: Int,
     onBack: () -> Unit,
     onAddTask: (() -> Unit)?,
 ) {
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        colors =
-            CardDefaults.elevatedCardColors(
-                containerColor = ParchmentLight.copy(alpha = 0.98f),
-                contentColor = InkBrown,
-            ),
-    ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Retour", tint = WoodBrown)
-                }
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    Text(
-                        text = "Toutes les tâches",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = InkBrown,
-                    )
-                    Text(
-                        text = "$totalTasks définition${if (totalTasks > 1) "s" else ""} familiale${if (totalTasks > 1) "s" else ""}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = InkMuted,
-                    )
-                }
-                Icon(Icons.Outlined.Home, contentDescription = null, tint = WoodBrown, modifier = Modifier.size(28.dp))
-            }
-
-            if (onAddTask != null) Button(
-                onClick = onAddTask,
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = WoodBrown, contentColor = ParchmentLight),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Ajouter une tâche")
-            }
+    Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
+        FantasyCompactHeader(title="Actions globales")
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+            FantasyFramedButton("Retour",onBack,Modifier.widthIn(min=96.dp))
+            Text("$totalTasks définition${if (totalTasks > 1) "s" else ""} familiale${if (totalTasks > 1) "s" else ""}",
+                Modifier.weight(1f),style=MaterialTheme.typography.bodyMedium,color=JourneyParchment)
         }
+        if(onAddTask!=null) FantasyFramedButton("Ajouter une tâche",onAddTask,Modifier.fillMaxWidth())
     }
 }
 
@@ -218,7 +156,7 @@ private fun FamilyTaskListFilters(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         filters.forEach { filter ->
-            DarkSurfaceFilterChip(
+            FantasyTrailTab(
                 selected = filter.key == selectedFilterKey,
                 onClick = { onSelectFilter(filter.key) },
                 label = filter.label,
@@ -232,86 +170,49 @@ private fun FamilyTaskDefinitionListCard(
     task: FamilyTaskDefinition,
     onOpenTask: (Long) -> Unit,
 ) {
-    ElevatedCard(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(enabled = task.id > 0L) { onOpenTask(task.id) },
-        shape = RoundedCornerShape(8.dp),
-        colors =
-            CardDefaults.elevatedCardColors(
-                containerColor = ParchmentLight.copy(alpha = 0.97f),
-                contentColor = InkBrown,
-            ),
-    ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
+    FantasyParchmentCard(Modifier.clickable(enabled=task.id>0L,role=Role.Button) {onOpenTask(task.id)}) {
             Text(
                 text = task.title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = InkBrown,
+                color = JourneyInk,
             )
             Text(
                 text = task.assignmentLabel(),
                 style = MaterialTheme.typography.bodyMedium,
-                color = InkMuted,
+                color = JourneyMuted,
             )
             Text(
                 text = task.scheduleLabel(),
                 style = MaterialTheme.typography.bodySmall,
-                color = InkMuted,
+                color = JourneyMuted,
             )
             val metadata = task.listMetadataLabels()
             if (metadata.isNotEmpty()) {
                 Text(
                     text = metadata.joinToString(" • "),
                     style = MaterialTheme.typography.bodySmall,
-                    color = InkMuted,
+                    color = JourneyMuted,
                 )
             }
-        }
     }
 }
 
 @Composable
 private fun EmptyFamilyTaskListCard(onAddTask: (() -> Unit)?) {
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        colors =
-            CardDefaults.elevatedCardColors(
-                containerColor = ParchmentLight.copy(alpha = 0.97f),
-                contentColor = InkBrown,
-            ),
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
+    FantasyParchmentCard {
             Text(
                 text = "Aucune tâche familiale pour le moment.",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = InkBrown,
+                color = JourneyInk,
             )
             Text(
                 text = if (onAddTask != null) "Crée une tâche pour organiser la maison sans passer par une occurrence du jour." else "Aucune tâche accessible pour le moment.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = InkMuted,
+                color = JourneyMuted,
             )
-            if (onAddTask != null) OutlinedButton(
-                onClick = onAddTask,
-                shape = RoundedCornerShape(8.dp),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Ajouter une tâche")
-            }
-        }
+            if(onAddTask!=null) FantasyFramedButton("Ajouter une tâche",onAddTask,Modifier.fillMaxWidth())
     }
 }
 
@@ -320,24 +221,13 @@ private fun FamilyTaskListMessage(
     message: String,
     onRetry: () -> Unit,
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        color = ParchmentCream.copy(alpha = 0.95f),
-        contentColor = DangerGlow,
-    ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
+    FantasyParchmentCard {
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
+                color=JourneyDangerInk,
             )
-            TextButton(onClick = onRetry) {
-                Text("Réessayer")
-            }
-        }
+            FantasyFramedButton("Réessayer",onRetry)
     }
 }

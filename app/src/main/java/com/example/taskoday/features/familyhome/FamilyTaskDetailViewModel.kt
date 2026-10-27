@@ -158,16 +158,11 @@ class FamilyTaskDetailViewModel
         }
 
         fun deleteTask() {
-            if (!_uiState.value.access.canManage || _uiState.value.isDeleting || taskId <= 0L) return
+            if (!_uiState.value.access.canManage || _uiState.value.isDeleting || _uiState.value.deleted ||
+                _uiState.value.isValidating || _uiState.value.isLoading || taskId <= 0L) return
 
+            _uiState.update { it.copy(isDeleting = true, showDeleteConfirmation = false, errorMessage = null) }
             viewModelScope.launch {
-                _uiState.update {
-                    it.copy(
-                        isDeleting = true,
-                        showDeleteConfirmation = false,
-                        errorMessage = null,
-                    )
-                }
                 familyTasksRepository
                     .deleteTask(taskId)
                     .onSuccess {

@@ -28,7 +28,9 @@ class AndroidFamilyNotificationNotifier
         @ApplicationContext private val context: Context,
     ) : FamilyDailySummaryNotificationPublisher {
         override fun publish(content: FamilyDailySummaryNotificationContent): Boolean {
-            if (!canPostNotifications()) return false
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+            ) return false
 
             createChannelIfNeeded()
 
@@ -60,10 +62,6 @@ class AndroidFamilyNotificationNotifier
                 true
             }.getOrDefault(false)
         }
-
-        private fun canPostNotifications(): Boolean =
-            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 
         private fun createChannelIfNeeded() {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return

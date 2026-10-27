@@ -87,7 +87,11 @@ class UpdateClient(private val context: Context) {
                 md.digest().joinToString("") { "%02x".format(it) }
             }
             require(digest == manifest.sha256) { "Empreinte APK invalide" }
-            val archiveSigningFlags = PackageManager.GET_SIGNING_CERTIFICATES or PackageManager.GET_SIGNATURES
+            val archiveSigningFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                PackageManager.GET_SIGNING_CERTIFICATES or PackageManager.GET_SIGNATURES
+            } else {
+                PackageManager.GET_SIGNATURES
+            }
             val info = if (Build.VERSION.SDK_INT >= 33) context.packageManager.getPackageArchiveInfo(file.path, PackageManager.PackageInfoFlags.of(archiveSigningFlags.toLong())) else @Suppress("DEPRECATION") context.packageManager.getPackageArchiveInfo(file.path, archiveSigningFlags)
             require(info?.packageName == UpdateManifestParser.PACKAGE) { "APK invalide" }
             val apkCode = if (Build.VERSION.SDK_INT >= 28) info.longVersionCode else @Suppress("DEPRECATION") info.versionCode.toLong()

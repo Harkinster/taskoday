@@ -39,12 +39,13 @@ import com.example.taskoday.domain.model.FamilyTaskEvent
 fun ActivityJournalScreen(
     viewModel: ActivityJournalViewModel,
     isLocalChildMode: Boolean = false,
+    personalOnly: Boolean = false,
     onBack: () -> Unit,
     onOpenProfile: () -> Unit,
 ) {
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val sections = journalSections(state.visibleEvents)
+    val sections = journalSections(if (personalOnly) personalJournalEvents(state.events, state.currentUserId).filter { state.selectedType == null || it.category == state.selectedType } else state.visibleEvents)
     Scaffold(containerColor = androidx.compose.ui.graphics.Color.Transparent, contentWindowInsets = WindowInsets(0, 0, 0, 0)) { padding ->
         FantasyScreenBackground(modifier = Modifier.statusBarsPadding().padding(padding)) {
             LazyColumn(
@@ -57,7 +58,7 @@ fun ActivityJournalScreen(
                         TextButton(onClick = onBack) { Text("Retour") }
                         TextButton(onClick = viewModel::refresh) { Text("Actualiser") }
                     }
-                    Text(if (state.isParent && !isLocalChildMode) "Journal familial" else "Mon journal", style = MaterialTheme.typography.headlineSmall, color = ParchmentLight)
+                    Text(if (state.isParent && !isLocalChildMode && !personalOnly) "Journal familial" else "Mon journal", style = MaterialTheme.typography.headlineSmall, color = ParchmentLight)
                     Text("Ce qui s'est passé dans les 7 derniers jours", color = ParchmentCream)
                 }
                 if (isLocalChildMode && state.isParent) {
@@ -66,7 +67,7 @@ fun ActivityJournalScreen(
                     item { CircularProgressIndicator() }
                 } else {
                     state.errorMessage?.let { message -> item { Text(message, color = MaterialTheme.colorScheme.error) } }
-                    if (state.isParent && state.members.isNotEmpty()) {
+                    if (!personalOnly && state.isParent && state.members.isNotEmpty()) {
                         item {
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 item { DarkSurfaceFilterChip(selected = state.selectedMemberId == null, onClick = { viewModel.selectMember(null) }, label = "Tous") }
@@ -79,7 +80,7 @@ fun ActivityJournalScreen(
                     item {
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             item { DarkSurfaceFilterChip(selected = state.selectedType == null, onClick = { viewModel.selectType(null) }, label = "Tous les types") }
-                            items(FamilyActionType.entries) { type ->
+                            items(FamilyActionType.entries.filter { !personalOnly || it.scope == com.example.taskoday.domain.model.FamilyActionScope.PERSONAL }) { type ->
                                 DarkSurfaceFilterChip(selected = state.selectedType == type, onClick = { viewModel.selectType(type) }, label = type.journalLabel())
                             }
                         }

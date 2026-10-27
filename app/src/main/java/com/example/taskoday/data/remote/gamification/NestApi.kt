@@ -14,11 +14,41 @@ import com.example.taskoday.data.remote.dto.NestProgressDto
 import com.example.taskoday.data.remote.dto.OpenCatalogChestDto
 import com.example.taskoday.data.remote.dto.ScrollsDto
 import com.example.taskoday.data.remote.dto.PersonalRewardSummaryDto
+import com.example.taskoday.data.remote.dto.LineageListDto
+import com.example.taskoday.data.remote.dto.MyCompanionsDto
+import com.example.taskoday.data.remote.dto.PersonalCompanionDto
+import com.example.taskoday.data.remote.dto.StarterCompanionDto
+import com.example.taskoday.data.remote.dto.StarterCompanionRequestDto
+import com.example.taskoday.data.remote.dto.CompanionMutationDto
+import com.example.taskoday.data.remote.dto.RenameCompanionRequestDto
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.PATCH
+import retrofit2.http.Body
 import retrofit2.http.Path
 
 interface NestApi {
+    @GET("gamification/lineages")
+    suspend fun getLineages(): ApiEnvelopeDto<LineageListDto>
+
+    @GET("me/companions")
+    suspend fun getMyCompanions(): ApiEnvelopeDto<MyCompanionsDto>
+
+    @GET("me/companions/active")
+    suspend fun getMyActiveCompanion(): ApiEnvelopeDto<PersonalCompanionDto?>
+
+    @POST("me/companions/starter")
+    suspend fun createStarter(@Body request: StarterCompanionRequestDto): ApiEnvelopeDto<StarterCompanionDto>
+
+    @POST("me/companions/{dragonId}/activate")
+    suspend fun activateMyCompanion(@Path("dragonId") dragonId: Long): ApiEnvelopeDto<CompanionMutationDto>
+
+    @PATCH("me/companions/{dragonId}/name")
+    suspend fun renameMyCompanion(
+        @Path("dragonId") dragonId: Long,
+        @Body request: RenameCompanionRequestDto,
+    ): ApiEnvelopeDto<CompanionMutationDto>
+
     @GET("families/{familyId}/rewards/me")
     suspend fun getPersonalRewards(@Path("familyId") familyId: Long): ApiEnvelopeDto<PersonalRewardSummaryDto>
     @GET("children/{childId}/progress")

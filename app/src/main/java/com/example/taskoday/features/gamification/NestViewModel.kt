@@ -12,6 +12,9 @@ import com.example.taskoday.data.remote.dto.InventoryDto
 import com.example.taskoday.data.remote.dto.NestProgressDto
 import com.example.taskoday.data.remote.dto.ScrollsDto
 import com.example.taskoday.data.remote.dto.PersonalRewardSummaryDto
+import com.example.taskoday.data.remote.dto.LineageDto
+import com.example.taskoday.data.remote.dto.MyCompanionsDto
+import com.example.taskoday.data.remote.dto.PersonalCompanionDto
 import com.example.taskoday.data.repository.NestSnapshot
 import com.example.taskoday.data.repository.NestRepository
 import com.example.taskoday.data.repository.toRemoteUserMessage
@@ -37,6 +40,14 @@ data class NestUiState(
     val dragons: DragonsDto? = null,
     val scrolls: ScrollsDto? = null,
     val personalRewards: PersonalRewardSummaryDto? = null,
+    val accountUserId: Long? = null,
+    val personalCompanions: MyCompanionsDto? = null,
+    val personalCompanionsLoaded: Boolean = false,
+    val personalCompanionsLoading: Boolean = false,
+    val personalCompanionMessage: String? = null,
+    val lineages: List<LineageDto> = emptyList(),
+    val isLoadingLineages: Boolean = false,
+    val starterCreated: Boolean = false,
     val userMessage: String? = null,
     val hatchingCelebration: NestHatchingCelebration? = null,
 )
@@ -62,6 +73,9 @@ class NestViewModel
         val uiState: StateFlow<NestUiState> = _uiState.asStateFlow()
         private var nextHatchingEventId = 0L
         private var refreshJob: Job? = null
+        private val resumeRefresh = com.example.taskoday.core.util.InitialResumeRefresh()
+
+        fun onScreenResumed() = resumeRefresh.onResume { refresh() }
 
         init {
             observeProgressChanges()
@@ -84,6 +98,16 @@ class NestViewModel
             }
             _uiState.value = NestUiState(hasRemoteSession = true)
             refreshJob = viewModelScope.launch {
+                val userId = runCatching { nestRepository.currentUserId() }.getOrElse { error ->
+                    ensureActive()
+                    _uiState.update {
+                        it.copy(isLoading = false, userMessage = error.toRemoteUserMessage("Impossible de vérifier la session."))
+                    }
+                    return@launch
+                }
+                ensureActive()
+                _uiState.update { it.copy(accountUserId = userId, personalCompanionsLoading = true) }
+                launch { refreshPersonalCompanions(userId) }
                 launch {
                     nestRepository.loadPersonalRewards().onSuccess { summary ->
                         ensureActive()
@@ -111,6 +135,104 @@ class NestViewModel
                         }
                     }
             }
+        }
+
+        fun loadLineages() {
+            val state = _uiState.value
+            if (state.lineages.isNotEmpty() || state.isLoadingLineages || !state.hasRemoteSession) return
+            _uiState.update { it.copy(isLoadingLineages = true, userMessage = null) }
+            viewModelScope.launch {
+                nestRepository.loadLineages()
+                    .onSuccess { lineages ->
+                        _uiState.update { it.copy(lineages = lineages, isLoadingLineages = false) }
+                    }
+                    .onFailure { error ->
+                        _uiState.update { it.copy(isLoadingLineages = false, userMessage = error.toRemoteUserMessage("Impossible de charger les lignées.")) }
+                    }
+            }
+        }
+
+        fun createStarter(lineageId: String, displayName: String) {
+            val expectedUserId = _uiState.value.accountUserId ?: return
+            if (_uiState.value.isSubmitting || !_uiState.value.hasRemoteSession) return
+            _uiState.update { it.copy(isSubmitting = true, userMessage = null) }
+            viewModelScope.launch {
+                nestRepository.createStarter(lineageId, displayName)
+                    .onSuccess { starter ->
+                        if (_uiState.value.accountUserId != expectedUserId) return@onSuccess
+                        refreshPersonalCompanions(expectedUserId)
+                        updatePersonalMutation(expectedUserId) {
+                            it.copy(isSubmitting = false, starterCreated = true, userMessage = if (starter.reusedExisting) "Ton compagnon existant a été retrouvé." else "Ton dragon a rejoint le Nid.")
+                        }
+                    }
+                    .onFailure { error ->
+                        if (_uiState.value.accountUserId != expectedUserId) return@onFailure
+                        if ((error as? retrofit2.HttpException)?.code() == 409) {
+                            refreshPersonalCompanions(expectedUserId)
+                        }
+                        updatePersonalMutation(expectedUserId) { it.copy(isSubmitting = false, userMessage = error.toRemoteUserMessage("Impossible d'accueillir ce dragon.")) }
+                    }
+            }
+        }
+
+        fun activatePersonalCompanion(dragonId: Long) {
+            val expectedUserId = _uiState.value.accountUserId ?: return
+            if (_uiState.value.isSubmitting || !_uiState.value.hasRemoteSession) return
+            _uiState.update { it.copy(isSubmitting = true, userMessage = null) }
+            viewModelScope.launch {
+                nestRepository.activatePersonalCompanion(dragonId)
+                    .onSuccess { result ->
+                        if (_uiState.value.accountUserId != expectedUserId) return@onSuccess
+                        refreshPersonalCompanions(expectedUserId)
+                        updatePersonalMutation(expectedUserId) { it.copy(isSubmitting = false, userMessage = "Compagnon actif mis à jour.") }
+                    }
+                    .onFailure { error ->
+                        updatePersonalMutation(expectedUserId) { it.copy(isSubmitting = false, userMessage = error.toRemoteUserMessage("Impossible de changer de compagnon.")) }
+                    }
+            }
+        }
+
+        fun renamePersonalCompanion(dragonId: Long, displayName: String) {
+            val expectedUserId = _uiState.value.accountUserId ?: return
+            if (_uiState.value.isSubmitting || !_uiState.value.hasRemoteSession) return
+            _uiState.update { it.copy(isSubmitting = true, userMessage = null) }
+            viewModelScope.launch {
+                nestRepository.renamePersonalCompanion(dragonId, displayName)
+                    .onSuccess { result ->
+                        if (_uiState.value.accountUserId != expectedUserId) return@onSuccess
+                        refreshPersonalCompanions(expectedUserId)
+                        updatePersonalMutation(expectedUserId) { it.copy(isSubmitting = false, userMessage = "Nom du compagnon mis à jour.") }
+                    }
+                    .onFailure { error ->
+                        updatePersonalMutation(expectedUserId) { it.copy(isSubmitting = false, userMessage = error.toRemoteUserMessage("Vérifie le nom de ton dragon.")) }
+                    }
+            }
+        }
+
+        private fun updatePersonalMutation(expectedUserId: Long, transform: (NestUiState) -> NestUiState) {
+            _uiState.update { if (it.accountUserId == expectedUserId && it.hasRemoteSession) transform(it) else it }
+        }
+
+        private suspend fun refreshPersonalCompanions(expectedUserId: Long) {
+            if (_uiState.value.accountUserId != expectedUserId || !_uiState.value.hasRemoteSession) return
+            _uiState.update {
+                if (it.accountUserId != expectedUserId) it
+                else it.copy(personalCompanionsLoading = true, personalCompanionMessage = null)
+            }
+            nestRepository.loadPersonalCompanions()
+                .onSuccess { companions ->
+                    if (companions.companions.any { it.ownerUserId != expectedUserId }) return@onSuccess
+                    _uiState.update {
+                        if (it.accountUserId != expectedUserId) it
+                        else it.copy(personalCompanions = companions, personalCompanionsLoaded = true, personalCompanionsLoading = false, personalCompanionMessage = null)
+                    }
+                }
+                .onFailure { error ->
+                    _uiState.update {
+                        if (it.accountUserId != expectedUserId) it
+                        else it.copy(personalCompanionsLoaded = false, personalCompanionsLoading = false, personalCompanionMessage = error.toRemoteUserMessage("Impossible de charger tes compagnons."))
+                    }
+                }
         }
 
         fun evolveEgg(eggId: Long) {
@@ -223,6 +345,10 @@ class NestViewModel
 
         fun consumeMessage() {
             _uiState.update { it.copy(userMessage = null) }
+        }
+
+        fun consumeStarterCreated() {
+            _uiState.update { it.copy(starterCreated = false) }
         }
 
         fun consumeHatchingCelebration() {

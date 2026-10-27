@@ -130,12 +130,20 @@ fun SettingsScreen(
                 item {
                     TaskodayHeader(
                         title = "Profil",
-                        subtitle = if (uiState.isParentUser) "Gérez votre famille et le mode enfant." else "Votre profil et vos préférences.",
-                        avatarInitials = uiState.profileInitials,
+                        subtitle = if (uiState.isProfileLoading) "Chargement du profil…" else if (uiState.isParentUser) "Gérez votre famille et le mode enfant." else "Votre profil et vos préférences.",
+                        avatarInitials = if (uiState.isProfileLoading) "…" else uiState.profileInitials,
                     )
                 }
 
-                if (!isLocalChildMode) {
+                if (!isLocalChildMode && uiState.isProfileLoading) {
+                    item {
+                        NeonCard(tone = NeonTone.Blue) {
+                            Text("Chargement du profil…", color = StarWhite)
+                        }
+                    }
+                }
+
+                if (!isLocalChildMode && uiState.canEditProfile && !uiState.isProfileLoading) {
                     item {
                         ProfileIdentityCard(
                             displayName = uiState.profileName,

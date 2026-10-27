@@ -1,5 +1,10 @@
 package com.example.taskoday.features.auth
 
+import android.app.Activity
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -30,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.taskoday.core.ui.theme.spacing
+import com.example.taskoday.core.ui.theme.ParchmentCream
 import com.example.taskoday.core.ui.component.FormBottomBar
 import com.example.taskoday.domain.model.AuthenticatedUser
 
@@ -42,6 +48,18 @@ fun RegisterParentScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val spacing = MaterialTheme.spacing
+    val view = LocalView.current
+    val window = (view.context as? Activity)?.window
+    DisposableEffect(window, view) {
+        val controller = window?.let { WindowCompat.getInsetsController(it, view) }
+        val previous = controller?.isAppearanceLightStatusBars
+        onDispose { previous?.let { controller?.isAppearanceLightStatusBars = it } }
+    }
+    SideEffect {
+        if (!view.isInEditMode && window != null) {
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = true
+        }
+    }
 
     var selectedRole by rememberSaveable { mutableStateOf(RegistrationRole.Parent) }
     var parentDisplayName by rememberSaveable { mutableStateOf("") }
@@ -58,6 +76,8 @@ fun RegisterParentScreen(
     }
 
     Scaffold(
+        // The form uses dark parchment ink; keep a matching readable surface.
+        containerColor = RegistrationFormBackground,
         topBar = { TopAppBar(title = { Text("Créer un compte") }) },
         bottomBar = {
             if (!uiState.isCheckingSession) {
@@ -285,3 +305,5 @@ private enum class RegistrationRole {
     Parent,
     Child,
 }
+
+internal val RegistrationFormBackground = ParchmentCream

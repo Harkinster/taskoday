@@ -50,6 +50,7 @@ class ActivityJournalViewModel @Inject constructor(
                 _uiState.value = ActivityJournalUiState(
                     isLoading = false,
                     isParent = isParent,
+                    currentUserId = me.id,
                     familyId = familyId,
                     events = events.filter { it.familyId == familyId },
                     members = members,

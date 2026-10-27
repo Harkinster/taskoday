@@ -170,6 +170,9 @@ class HomeViewModel
 
             _uiState.update {
                 it.copy(
+                    // A fast local flow may have emitted before sync set loading.
+                    // Completion of sync must always leave the screen usable.
+                    isLoading = false,
                     usingRemoteData = syncResult.usedRemoteData,
                     canManageActions = if (syncResult.usedRemoteData) isParent else it.canManageActions,
                     isParentUser = isParent,
@@ -369,7 +372,6 @@ class HomeViewModel
 
         fun selectDay(dayStartMillis: Long) {
             val normalized = DateTimeUtils.startOfDayMillis(dayStartMillis)
-            selectedDay.value = normalized
             _uiState.update {
                 it.copy(
                     selectedDayStartMillis = normalized,
@@ -377,6 +379,8 @@ class HomeViewModel
                     isLoading = true,
                 )
             }
+            // Trigger flows after entering loading, including synchronous caches.
+            selectedDay.value = normalized
         }
 
         private suspend fun applyTaskPoints(item: TaskForDay, dayStart: Long, checked: Boolean) {

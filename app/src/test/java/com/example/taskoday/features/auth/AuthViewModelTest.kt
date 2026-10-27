@@ -20,6 +20,9 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import okhttp3.ResponseBody.Companion.toResponseBody
+import retrofit2.HttpException
+import retrofit2.Response
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AuthViewModelTest {
@@ -110,13 +113,106 @@ class AuthViewModelTest {
                 Dispatchers.resetMain()
             }
         }
+
+    @Test
+    fun `successful parent login authenticates parent role`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        try {
+            val repository = FakeAuthRepository(loginUserRole = "PARENT")
+            val viewModel = AuthViewModel(repository)
+            viewModel.login("parent@example.test", "unused-test-password")
+            assertTrue(viewModel.uiState.value.isAuthenticated)
+            assertTrue(viewModel.uiState.value.currentUser?.role == "PARENT")
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test
+    fun `successful child login authenticates child role`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        try {
+            val repository = FakeAuthRepository(loginUserRole = "CHILD")
+            val viewModel = AuthViewModel(repository)
+            viewModel.login("child@example.test", "unused-test-password")
+            assertTrue(viewModel.uiState.value.isAuthenticated)
+            assertTrue(viewModel.uiState.value.currentUser?.role == "CHILD")
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test
+    fun `login 401 is reported as invalid credentials`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        try {
+            val repository = FakeAuthRepository(loginFailure = httpError(401))
+            val viewModel = AuthViewModel(repository)
+            viewModel.login("person@example.test", "unused-test-password")
+            assertFalse(viewModel.uiState.value.isAuthenticated)
+            assertTrue(viewModel.uiState.value.errorMessage == "Email ou mot de passe incorrect.")
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test
+    fun `login succeeds but profile 403 remains an access denial`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        try {
+            val repository = FakeAuthRepository(loginUserRole = "PARENT", fetchMeFailure = httpError(403))
+            val viewModel = AuthViewModel(repository)
+            viewModel.login("parent@example.test", "unused-test-password")
+            assertFalse(viewModel.uiState.value.isAuthenticated)
+            assertTrue(viewModel.uiState.value.errorMessage == "Ce compte n’est pas autorisé à accéder à Taskoday.")
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test
+    fun `invalid restored session is distinguished from rejected login`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        try {
+            val repository = FakeAuthRepository(accessToken = "stored-access", fetchMeFailure = httpError(401))
+            val viewModel = AuthViewModel(repository)
+            assertTrue(viewModel.uiState.value.errorMessage == "Session invalide. Reconnectez-vous.")
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test fun `blank login remains a local validation without repository call`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        try {
+            val repository = FakeAuthRepository()
+            val viewModel = AuthViewModel(repository)
+            viewModel.login("", "")
+            assertTrue(viewModel.uiState.value.errorMessage == "Email et mot de passe sont requis.")
+            assertTrue(repository.loginCalls == 0)
+            assertFalse(viewModel.uiState.value.isAuthenticated)
+        } finally { Dispatchers.resetMain() }
+    }
+
+    @Test fun `offline and timeout login errors remain readable without authentication`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        try {
+            for ((failure, expected) in listOf(
+                java.net.UnknownHostException() to "Serveur indisponible. Vérifiez votre connexion.",
+                java.net.SocketTimeoutException() to "Connexion au serveur expirée.",
+            )) {
+                val viewModel = AuthViewModel(FakeAuthRepository(loginFailure = failure))
+                viewModel.login("local@example.test", "not-a-real-credential")
+                assertTrue(viewModel.uiState.value.errorMessage == expected)
+                assertFalse(viewModel.uiState.value.isAuthenticated)
+                assertFalse(viewModel.uiState.value.isLoading)
+            }
+        } finally { Dispatchers.resetMain() }
+    }
 }
+
+private fun httpError(code: Int) = HttpException(
+    Response.error<Any>(code, "".toResponseBody(null)),
+)
 
 private class FakeAuthRepository(
     private val accessToken: String? = null,
     private val fetchMeFailure: Throwable? = null,
+    private val loginFailure: Throwable? = null,
+    private val loginUserRole: String = "PARENT",
 ) : AuthRepository {
     var sessionCleared: Boolean = false
+    var loginCalls: Int = 0
 
     override suspend fun registerParent(
         displayName: String,
@@ -132,14 +228,18 @@ private class FakeAuthRepository(
         birthDate: String?,
     ): AuthSession = error("Not used")
 
-    override suspend fun login(email: String, password: String): AuthSession = error("Not used")
+    override suspend fun login(email: String, password: String): AuthSession {
+        loginCalls++
+        loginFailure?.let { throw it }
+        return AuthSession(accessToken = "test-access", tokenType = "bearer", expiresInSeconds = 3600, role = loginUserRole)
+    }
 
     override suspend fun fetchMe(): AuthenticatedUser {
         fetchMeFailure?.let { throw it }
         return AuthenticatedUser(
             id = 1L,
             email = "parent@example.test",
-            role = "PARENT",
+            role = loginUserRole,
             isActive = true,
             familyIds = listOf(7L),
         )

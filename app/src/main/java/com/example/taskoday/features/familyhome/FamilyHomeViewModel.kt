@@ -104,17 +104,14 @@ class FamilyHomeViewModel
         }
 
         fun runQuickAction(task: FamilyTaskTodayItem) {
+            if (_uiState.value.actingOccurrenceId != null || _uiState.value.isLoading) return
             val action = _uiState.value.access.quickAction(task) ?: return
             if (!canRunQuickAction(task)) return
 
+            _uiState.update {
+                it.copy(actingOccurrenceId = task.occurrenceId, errorMessage = null, userMessage = null)
+            }
             viewModelScope.launch {
-                _uiState.update {
-                    it.copy(
-                        actingOccurrenceId = task.occurrenceId,
-                        errorMessage = null,
-                        userMessage = null,
-                    )
-                }
                 var rewardBundle = com.example.taskoday.domain.model.CompletionReward()
                 val result =
                     when (action) {
@@ -132,7 +129,6 @@ class FamilyHomeViewModel
                     .onSuccess {
                         _uiState.update {
                             it.copy(
-                                actingOccurrenceId = null,
                                 userMessage = action.successMessage(rewardBundle),
                             )
                         }
@@ -145,6 +141,7 @@ class FamilyHomeViewModel
                                     preferredSelectedDate = selectedWeekDate,
                                 )
                         }
+                        _uiState.update { it.copy(actingOccurrenceId = null) }
                     }
                     .onFailure { throwable ->
                         _uiState.update {
@@ -391,11 +388,13 @@ class FamilyHomeViewModel
         }
 
         private fun runMissionOutcome(occurrenceId: Long, request: suspend () -> Result<Unit>) {
+            if (_uiState.value.actingOccurrenceId != null || _uiState.value.isLoading) return
+            _uiState.update { it.copy(actingOccurrenceId = occurrenceId, errorMessage = null, userMessage = null) }
             viewModelScope.launch {
-                _uiState.update { it.copy(actingOccurrenceId = occurrenceId, errorMessage = null, userMessage = null) }
                 request().onSuccess {
-                    _uiState.update { it.copy(actingOccurrenceId = null, userMessage = "Mission mise à jour.") }
+                    _uiState.update { it.copy(userMessage = "Mission mise à jour.") }
                     loadToday(showLoading = false)
+                    _uiState.update { it.copy(actingOccurrenceId = null) }
                 }.onFailure { throwable ->
                     _uiState.update {
                         it.copy(actingOccurrenceId = null, errorMessage = throwable.toRemoteUserMessage("Mission impossible à mettre à jour."))

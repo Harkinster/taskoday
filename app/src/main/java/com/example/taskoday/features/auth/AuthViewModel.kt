@@ -70,11 +70,11 @@ class AuthViewModel
                 val me = try {
                     withTimeoutOrNull(35_000L) { authRepository.fetchMe() }
                 } catch (throwable: Throwable) {
-                    handleAuthenticationFailure(throwable)
+                    handleAuthenticationFailure(throwable, AuthenticationFailureContext.SESSION)
                     return@launch
                 }
                 if (me == null) {
-                    handleAuthenticationFailure(SocketTimeoutException())
+                    handleAuthenticationFailure(SocketTimeoutException(), AuthenticationFailureContext.SESSION)
                 } else {
                     setAuthenticated(me)
                 }
@@ -92,12 +92,16 @@ class AuthViewModel
             }
             demoModeStore.setEnabled(false)
             viewModelScope.launch {
-                runCatching {
+                val loginResult = runCatching {
                     authRepository.login(email = email, password = password)
-                    authRepository.fetchMe()
-                }.onSuccess { me ->
+                }
+                if (loginResult.isFailure) {
+                    handleAuthenticationFailure(loginResult.exceptionOrNull()!!, AuthenticationFailureContext.LOGIN)
+                    return@launch
+                }
+                runCatching { authRepository.fetchMe() }.onSuccess { me ->
                     setAuthenticated(me)
-                }.onFailure(::handleAuthenticationFailure)
+                }.onFailure { handleAuthenticationFailure(it, AuthenticationFailureContext.SESSION) }
             }
         }
 
@@ -135,7 +139,7 @@ class AuthViewModel
                     authRepository.fetchMe()
                 }.onSuccess { me ->
                     setAuthenticated(me)
-                }.onFailure(::handleAuthenticationFailure)
+                }.onFailure { handleAuthenticationFailure(it, AuthenticationFailureContext.SESSION) }
             }
         }
 
@@ -166,7 +170,7 @@ class AuthViewModel
                     authRepository.fetchMe()
                 }.onSuccess { me ->
                     setAuthenticated(me)
-                }.onFailure(::handleAuthenticationFailure)
+                }.onFailure { handleAuthenticationFailure(it, AuthenticationFailureContext.SESSION) }
             }
         }
 
@@ -219,7 +223,10 @@ class AuthViewModel
             }
         }
 
-        private fun handleAuthenticationFailure(throwable: Throwable) {
+        private fun handleAuthenticationFailure(
+            throwable: Throwable,
+            context: AuthenticationFailureContext = AuthenticationFailureContext.SESSION,
+        ) {
             val sessionStillStored = !authRepository.getAccessToken().isNullOrBlank()
             _uiState.update {
                 it.copy(
@@ -227,7 +234,7 @@ class AuthViewModel
                     isLoading = false,
                     isAuthenticated = false,
                     currentUser = null,
-                    errorMessage = throwable.toMessage(),
+                    errorMessage = throwable.toMessage(context),
                     canRetrySession = sessionStillStored,
                 )
             }
@@ -238,13 +245,22 @@ class AuthViewModel
         }
     }
 
-private fun Throwable.toMessage(): String =
+private enum class AuthenticationFailureContext {
+    LOGIN,
+    SESSION,
+}
+
+private fun Throwable.toMessage(context: AuthenticationFailureContext): String =
     when (this) {
         is UnknownHostException, is ConnectException -> "Serveur indisponible. Vérifiez votre connexion."
         is SocketTimeoutException -> "Connexion au serveur expirée."
         is HttpException -> when (code()) {
             400, 409, 422 -> "Vérifiez les informations saisies puis réessayez."
-            401, 403 -> "Cette action n’est pas autorisée."
+            401 -> when (context) {
+                AuthenticationFailureContext.LOGIN -> "Email ou mot de passe incorrect."
+                AuthenticationFailureContext.SESSION -> "Session invalide. Reconnectez-vous."
+            }
+            403 -> "Ce compte n’est pas autorisé à accéder à Taskoday."
             else -> "Impossible de créer le compte pour le moment."
         }
         is IOException -> "Erreur réseau. Vérifiez votre connexion."

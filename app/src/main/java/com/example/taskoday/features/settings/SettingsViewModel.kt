@@ -56,6 +56,7 @@ class SettingsViewModel
         }
 
         fun updateProfile(displayName: String, birthDate: String) {
+            if (_uiState.value.isProfileLoading || !_uiState.value.canEditProfile || _uiState.value.isProfileSaving) return
             if (displayName.isBlank() || !Regex("""\d{4}-\d{2}-\d{2}""").matches(birthDate.trim())) {
                 _uiState.update { it.copy(profileErrorMessage = "Pseudo et date de naissance valide requis.") }
                 return
@@ -595,6 +596,7 @@ class SettingsViewModel
 
         private fun refreshProfile() {
             val refreshVersion = ++profileRefreshVersion
+            _uiState.update { it.copy(isProfileLoading = true, canEditProfile = false) }
             if (authRepository.getAccessToken().isNullOrBlank()) {
                 _uiState.update {
                     it.copy(
@@ -602,6 +604,8 @@ class SettingsViewModel
                         familyIds = emptyList(),
                         selectedFamilyId = null,
                         profileName = "Profil local",
+                        isProfileLoading = false,
+                        canEditProfile = false,
                         profileSubtitle = "Mode hors-ligne",
                         profileEmail = "",
                         profileInitials = "TL",
@@ -661,6 +665,8 @@ class SettingsViewModel
                 _uiState.update {
                     it.copy(
                         isParentUser = isParent,
+                        isProfileLoading = false,
+                        canEditProfile = me != null,
                         familyIds = familyIds,
                         selectedFamilyId = preferredFamilyId,
                         profileName = identity.name,
@@ -684,12 +690,16 @@ class SettingsViewModel
                             else it.childManagementErrorMessage,
                         activeChildId = activeChildId,
                         hasParentPin = authRepository.hasParentPin(),
-                        profileErrorMessage =
+                        profileErrorMessage = if (me == null) {
+                            meResult.exceptionOrNull()?.toMessage()
+                                ?: "Impossible de charger ton profil. Rouvre cet écran pour réessayer."
+                        } else {
                             (
                                 dashboardResult.exceptionOrNull()
                                     ?: activeChildResult.exceptionOrNull()
                                     ?: meResult.exceptionOrNull()
-                            )?.toMessage(),
+                            )?.toMessage()
+                        },
                     )
                 }
             }

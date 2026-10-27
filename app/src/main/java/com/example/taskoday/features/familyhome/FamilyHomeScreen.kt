@@ -2,37 +2,36 @@ package com.example.taskoday.features.familyhome
 
 import android.app.DatePickerDialog
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.automirrored.outlined.Undo
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -48,25 +47,39 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.taskoday.core.ui.component.fantasy.FantasyScreenBackground
-import com.example.taskoday.core.ui.component.fantasy.TaskodayTopBar
-import com.example.taskoday.core.ui.theme.DangerGlow
-import com.example.taskoday.core.ui.theme.InkBrown
-import com.example.taskoday.core.ui.theme.InkMuted
-import com.example.taskoday.core.ui.theme.MossGreen
-import com.example.taskoday.core.ui.theme.ParchmentCream
-import com.example.taskoday.core.ui.theme.ParchmentLight
-import com.example.taskoday.core.ui.theme.SoftGold
-import com.example.taskoday.core.ui.theme.SoftRed
-import com.example.taskoday.core.ui.theme.WarningGlow
-import com.example.taskoday.core.ui.theme.WoodBrown
+import com.example.taskoday.R
+import com.example.taskoday.features.taskodayv4.FantasyProfileMedallion
+import com.example.taskoday.features.taskodayv4.FantasyTrailTab
+import com.example.taskoday.features.taskodayv4.FantasyCompactHeader
+import com.example.taskoday.features.taskodayv4.FantasyPurpleButton
+import com.example.taskoday.features.taskodayv4.FantasySummaryPanel
+import com.example.taskoday.features.taskodayv4.FantasyTaskCardBackground
+import com.example.taskoday.features.taskodayv4.FantasyTaskMedallion
+import com.example.taskoday.core.ui.component.taskodayv3.TaskodayV3ActionKind
+import com.example.taskoday.core.ui.component.taskodayv3.TaskodayV3ActionTypeBadge
+import com.example.taskoday.core.ui.component.taskodayv3.TaskodayV3FamilyAvatar
+import com.example.taskoday.core.ui.component.taskodayv3.TaskodayV3InfoBlock
+import com.example.taskoday.core.ui.component.taskodayv3.TaskodayV3PrimaryButton
+import com.example.taskoday.core.ui.component.taskodayv3.TaskodayV3SelectableChip
+import com.example.taskoday.core.ui.component.taskodayv3.TaskodayV3SecondaryButton
+import com.example.taskoday.core.ui.component.taskodayv3.TaskodayV3StatusBadge
+import com.example.taskoday.core.ui.component.taskodayv3.TaskodayV3TaskStatus
+import com.example.taskoday.core.ui.component.taskodayv3.TaskodayV3TaskCard
+import com.example.taskoday.core.ui.component.taskodayv3.TaskodayV3TertiaryButton
+import com.example.taskoday.core.ui.theme.TaskodayV3Colors
+import com.example.taskoday.core.ui.theme.TaskodayV3UtilityTheme
 import com.example.taskoday.core.ui.theme.spacing
+import com.example.taskoday.core.ui.theme.taskodayV3Palette
 import com.example.taskoday.domain.model.FamilyTaskPriority
 import com.example.taskoday.domain.model.FamilyTaskStatus
 import com.example.taskoday.domain.model.FamilyTaskTodayItem
@@ -80,8 +93,28 @@ fun FamilyHomeScreen(
     onOpenAllTasks: () -> Unit,
     onOpenTask: (Long) -> Unit,
 ) {
+    TaskodayV3UtilityTheme {
+        FamilyHomeScreenContent(
+            viewModel = viewModel,
+            onOpenProfile = onOpenProfile,
+            onAddTask = onAddTask,
+            onOpenAllTasks = onOpenAllTasks,
+            onOpenTask = onOpenTask,
+        )
+    }
+}
+
+@Composable
+private fun FamilyHomeScreenContent(
+    viewModel: FamilyHomeViewModel,
+    onOpenProfile: () -> Unit,
+    onAddTask: (String?) -> Unit,
+    onOpenAllTasks: () -> Unit,
+    onOpenTask: (Long) -> Unit,
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val spacing = MaterialTheme.spacing
+    val todaySections = uiState.todayDisplaySections()
     val creationDate =
         familyTaskCreationDateForMode(
             mode = uiState.mode,
@@ -101,56 +134,66 @@ fun FamilyHomeScreen(
     }
 
     Scaffold(
-        containerColor = Color.Transparent,
+        containerColor = Color(0xFF21162F),
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
     ) { innerPadding ->
-        FantasyScreenBackground(
-            modifier =
-                Modifier
-                    .statusBarsPadding()
-                    .padding(innerPadding),
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = Color(0xFF21162F),
         ) {
             if (uiState.isLoading) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
-                    CircularProgressIndicator(color = SoftGold)
+                    CircularProgressIndicator(color = TaskodayV3Colors.brandPrimary)
                 }
-                return@FantasyScreenBackground
+                return@Surface
+            }
+
+            if (!uiState.hasResolvedHouseholdAccess()) {
+                Box(
+                    modifier = Modifier.fillMaxSize().padding(20.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    MessagePanel(
+                        message = uiState.errorMessage ?: "Impossible de vérifier votre session. Réessayez.",
+                        tone = MessageTone.Error,
+                        actionLabel = "Réessayer",
+                        onAction = viewModel::refresh,
+                        onDismiss = viewModel::clearMessages,
+                    )
+                }
+                return@Surface
             }
 
             LazyColumn(
                 modifier =
                     Modifier
                         .fillMaxSize()
+                        .statusBarsPadding()
+                        .padding(innerPadding)
                         .padding(horizontal = spacing.medium),
-                contentPadding = PaddingValues(top = 10.dp, bottom = 72.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                contentPadding = PaddingValues(top = 8.dp, bottom = 28.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                item {
-                    TaskodayTopBar(
-                        avatarInitials = uiState.avatarInitials,
-                        compact = true,
-                        showNotification = false,
-                        onAvatarClick = onOpenProfile,
-                    )
-                }
-
                 item {
                     FamilyHomeHeader(
                         mode = uiState.mode,
+                        avatarInitials = uiState.avatarInitials,
                         dateLabel = uiState.dateLabel,
                         weekRangeLabel = uiState.weekRangeLabel,
                         completedTasks = uiState.completedTasks,
                         totalTasks = uiState.totalTasks,
                         pendingValidationTasks = uiState.pendingValidationTasks,
                         overdueTotalTasks = uiState.overdueTotalTasks,
+                        hasLoadError = uiState.errorMessage != null || uiState.secondaryErrorMessage != null,
                         creationDate = creationDate,
-                        onAddTask = onAddTask.takeIf { uiState.access.canManage },
+                        onAddTask = onAddTask.takeIf { uiState.access.canManage && uiState.errorMessage == null },
                         onOpenAllTasks = onOpenAllTasks,
                         onShowToday = viewModel::showToday,
                         onShowWeek = viewModel::showWeek,
+                        onOpenProfile = onOpenProfile,
                     )
                 }
 
@@ -206,79 +249,64 @@ fun FamilyHomeScreen(
                 }
 
                 if (uiState.mode == FamilyHomeMode.TODAY) {
-                    if (uiState.overdueTotalTasks > 0) {
+                    if (uiState.shouldShowTodayEmptyState()) {
                         item {
-                            FamilyOverdueSectionCard(
-                                access = uiState.access,
-                                totalCount = uiState.overdueTotalTasks,
-                                rows = uiState.overdueTasks,
-                                todayDate = uiState.todayDate,
-                                actingOccurrenceId = uiState.actingOccurrenceId,
-                                onQuickAction = viewModel::runQuickAction,
-                                onOpenTask = onOpenTask,
-                                onReschedule = { task ->
-                                    val initialDate = LocalDate.now().plusDays(1)
-                                    DatePickerDialog(
-                                        context,
-                                        { _, year, month, day ->
-                                            viewModel.rescheduleMission(
-                                                task.occurrenceId,
-                                                LocalDate.of(year, month + 1, day).toString(),
-                                            )
-                                        },
-                                        initialDate.year,
-                                        initialDate.monthValue - 1,
-                                        initialDate.dayOfMonth,
-                                    ).apply {
-                                        datePicker.minDate = System.currentTimeMillis()
-                                    }.show()
-                                },
-                                onFail = { task -> failConfirmationOccurrenceId = task.occurrenceId },
-                            )
+                            EmptyFamilyHomeCard()
                         }
-                    }
-
-                    if (uiState.todayTasks.isEmpty() && uiState.openUndatedTasks.isEmpty() && uiState.completedTodayTasks.isEmpty() && uiState.overdueTotalTasks == 0) {
-                        item { EmptyFamilyHomeCard() }
                     } else {
-                        if (uiState.todayTasks.isNotEmpty()) {
-                            item { FamilyHomeSectionTitle(title = "Aujourd'hui", detail = "${uiState.todayTasks.size} à faire") }
-                            items(uiState.todayTasks, key = { "today-${it.task.occurrenceId}" }) { row ->
-                                FamilyTaskRowCard(
+                        if (todaySections.toDo.isNotEmpty()) {
+                            item { FamilyHomeSectionTitle(title = "À faire aujourd'hui", detail = todaySections.toDo.size.toString()) }
+                            items(todaySections.toDo, key = { "todo-${it.task.occurrenceId}" }) { row ->
+                                FamilyTaskRowCard(uiState.access, row.task, uiState.actingOccurrenceId == row.task.occurrenceId, viewModel::runQuickAction, onOpenTask)
+                            }
+                        }
+                        if (todaySections.withoutDueDate.isNotEmpty()) {
+                            item { FamilyHomeSectionTitle(title = "Missions sans échéance", detail = todaySections.withoutDueDate.size.toString()) }
+                            items(todaySections.withoutDueDate, key = { "undated-${it.task.occurrenceId}" }) { row ->
+                                FamilyTaskRowCard(uiState.access, row.task, uiState.actingOccurrenceId == row.task.occurrenceId, viewModel::runQuickAction, onOpenTask)
+                            }
+                        }
+                        if (todaySections.inProgress.isNotEmpty()) {
+                            item { FamilyHomeSectionTitle(title = "En cours", detail = todaySections.inProgress.size.toString()) }
+                            items(todaySections.inProgress, key = { "progress-${it.task.occurrenceId}" }) { row ->
+                                FamilyTaskRowCard(uiState.access, row.task, uiState.actingOccurrenceId == row.task.occurrenceId, viewModel::runQuickAction, onOpenTask)
+                            }
+                        }
+                        if (todaySections.pendingValidation.isNotEmpty()) {
+                            item { FamilyHomeSectionTitle(title = "À valider", detail = todaySections.pendingValidation.size.toString()) }
+                            items(todaySections.pendingValidation, key = { "validation-${it.task.occurrenceId}" }) { row ->
+                                FamilyTaskRowCard(uiState.access, row.task, uiState.actingOccurrenceId == row.task.occurrenceId, viewModel::runQuickAction, onOpenTask)
+                            }
+                        }
+                        if (todaySections.overdue.isNotEmpty()) {
+                            item {
+                                FamilyOverdueSectionCard(
                                     access = uiState.access,
-                                    task = row.task,
-                                    isActing = uiState.actingOccurrenceId == row.task.occurrenceId,
+                                    totalCount = uiState.overdueTotalTasks,
+                                    rows = todaySections.overdue,
+                                    todayDate = uiState.todayDate,
+                                    actingOccurrenceId = uiState.actingOccurrenceId,
                                     onQuickAction = viewModel::runQuickAction,
                                     onOpenTask = onOpenTask,
+                                    onReschedule = { task ->
+                                        val initialDate = LocalDate.now().plusDays(1)
+                                        DatePickerDialog(context, { _, year, month, day ->
+                                            viewModel.rescheduleMission(task.occurrenceId, LocalDate.of(year, month + 1, day).toString())
+                                        }, initialDate.year, initialDate.monthValue - 1, initialDate.dayOfMonth).apply {
+                                            datePicker.minDate = System.currentTimeMillis()
+                                        }.show()
+                                    },
+                                    onFail = { task -> failConfirmationOccurrenceId = task.occurrenceId },
                                 )
                             }
                         }
-                        if (uiState.openUndatedTasks.isNotEmpty()) {
-                            item { FamilyHomeSectionTitle(title = "À faire", detail = "${uiState.openUndatedTasks.size} sans échéance") }
-                            items(uiState.openUndatedTasks, key = { "undated-${it.task.occurrenceId}" }) { row ->
-                                FamilyTaskRowCard(
-                                    access = uiState.access,
-                                    task = row.task,
-                                    isActing = uiState.actingOccurrenceId == row.task.occurrenceId,
-                                    onQuickAction = viewModel::runQuickAction,
-                                    onOpenTask = onOpenTask,
-                                )
+                        if (todaySections.completed.isNotEmpty()) {
+                            item { FamilyHomeSectionTitle(title = "Terminées", detail = todaySections.completed.size.toString()) }
+                            items(todaySections.completed, key = { "done-${it.task.occurrenceId}" }) { row ->
+                                FamilyTaskRowCard(uiState.access, row.task, uiState.actingOccurrenceId == row.task.occurrenceId, viewModel::runQuickAction, onOpenTask)
                             }
                         }
-                        if (uiState.completedTodayTasks.isNotEmpty()) {
-                            item { FamilyHomeSectionTitle(title = "Terminées", detail = "${uiState.completedTodayTasks.size}") }
-                            items(uiState.completedTodayTasks, key = { "done-${it.task.occurrenceId}" }) { row ->
-                                FamilyTaskRowCard(
-                                    access = uiState.access,
-                                    task = row.task,
-                                    isActing = uiState.actingOccurrenceId == row.task.occurrenceId,
-                                    onQuickAction = viewModel::runQuickAction,
-                                    onOpenTask = onOpenTask,
-                                )
-                            }
-                        }
-                    }
-                } else {
+                    }                } else {
                     if (uiState.sections.isEmpty()) {
                         item {
                             if (uiState.isWeekEmpty) {
@@ -330,82 +358,68 @@ fun FamilyHomeScreen(
 }
 
 @Composable
-private fun FamilyHomeHeader(
+internal fun FamilyHomeHeader(
     mode: FamilyHomeMode,
+    avatarInitials: String,
     dateLabel: String,
     weekRangeLabel: String,
     completedTasks: Int,
     totalTasks: Int,
     pendingValidationTasks: Int,
     overdueTotalTasks: Int,
+    hasLoadError: Boolean = false,
     creationDate: String?,
     onAddTask: ((String?) -> Unit)?,
     onOpenAllTasks: () -> Unit,
     onShowToday: () -> Unit,
     onShowWeek: () -> Unit,
+    onOpenProfile: () -> Unit,
 ) {
-    val subtitle =
-        when (mode) {
-            FamilyHomeMode.TODAY -> dateLabel
-            FamilyHomeMode.WEEK -> weekRangeLabel
-        }
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                Text(
-                    text = "Ma maison",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = ParchmentLight,
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = ParchmentCream.copy(alpha = 0.72f),
-                )
-            }
-            if (onAddTask != null) TextButton(
-                onClick = { onAddTask(creationDate) },
-                colors = ButtonDefaults.textButtonColors(contentColor = ParchmentLight),
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Add,
-                    contentDescription = null,
-                    modifier = Modifier.size(17.dp),
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("Ajouter")
-            }
-        }
-
-        if (mode == FamilyHomeMode.TODAY && (totalTasks > 0 || overdueTotalTasks > 0 || pendingValidationTasks > 0)) {
-            Text(
-                text =
-                    buildList {
-                        if (totalTasks > 0) add("$completedTasks / $totalTasks terminées")
-                        if (pendingValidationTasks > 0) add("$pendingValidationTasks à valider")
+    val subtitle = if (mode == FamilyHomeMode.TODAY) dateLabel else weekRangeLabel
+    val unavailable = hasLoadError
+    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        FantasyCompactHeader(
+            trailingContent = {
+                FantasyProfileMedallion(onOpenProfile,
+                    Modifier.align(Alignment.CenterEnd).padding(end = 16.dp))
+            },
+        )
+        Text(subtitle, modifier = Modifier.padding(start = 22.dp), color = Color(0xFFF1DEB9), style = MaterialTheme.typography.bodySmall, maxLines = 1)
+        Box(Modifier.fillMaxWidth()) {
+            FantasySummaryPanel(Modifier.fillMaxWidth().heightIn(min = 126.dp)) {
+                Column(Modifier.padding(top = 9.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(
+                        if (unavailable) "Informations indisponibles" else if (mode == FamilyHomeMode.TODAY) "Aujourd'hui" else "Cette semaine",
+                        color = Color(0xFFE4BB77),
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Text(
+                        familyHomeSummaryCountText(totalTasks, unavailable),
+                        color = Color(0xFFF1DEB9),
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    if (!unavailable && totalTasks > 0 && completedTasks > 0) {
+                        Text("$completedTasks sur $totalTasks termin\u00e9es", color = Color(0xFFE0D1E1), style = MaterialTheme.typography.bodySmall)
+                    }
+                    val alerts = buildList {
+                        if (pendingValidationTasks > 0) add("$pendingValidationTasks \u00e0 valider")
                         if (overdueTotalTasks > 0) add("$overdueTotalTasks en retard")
-                    }.joinToString(" · "),
-                style = MaterialTheme.typography.bodySmall,
-                color = ParchmentCream.copy(alpha = 0.72f),
+                    }
+                    if (alerts.isNotEmpty() && !unavailable) {
+                        Text(alerts.joinToString("  \u00b7  "), color = Color(0xFFF1DEB9), style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+            Image(
+                painter = painterResource(R.drawable.v4_top_ornament),
+                contentDescription = null,
+                modifier = Modifier.align(Alignment.TopCenter).width(112.dp).height(45.dp).offset(y = (-17).dp),
             )
         }
-
-        FamilyHomeModeSwitch(
-            mode = mode,
-            onShowToday = onShowToday,
-            onShowWeek = onShowWeek,
-            onOpenAllTasks = onOpenAllTasks,
-        )
+        FamilyHomeModeSwitch(mode, onShowToday, onShowWeek, onOpenAllTasks)
     }
-
 }
 
 @Composable
@@ -415,57 +429,15 @@ private fun FamilyHomeModeSwitch(
     onShowWeek: () -> Unit,
     onOpenAllTasks: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        FamilyHomeModeButton(
-            label = "Aujourd'hui",
-            selected = mode == FamilyHomeMode.TODAY,
-            onClick = onShowToday,
-            modifier = Modifier.weight(1f),
-        )
-        FamilyHomeModeButton(
-            label = "À venir",
-            selected = mode == FamilyHomeMode.WEEK,
-            onClick = onShowWeek,
-            modifier = Modifier.weight(1f),
-        )
-        FamilyHomeModeButton(
-            label = "Toutes",
-            selected = false,
-            onClick = onOpenAllTasks,
-            modifier = Modifier.weight(1f),
-        )
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        FamilyHomeFilter("Aujourd'hui", mode == FamilyHomeMode.TODAY, onShowToday, Modifier.weight(1f))
+        FamilyHomeFilter("\u00c0 venir", mode == FamilyHomeMode.WEEK, onShowWeek, Modifier.weight(1f))
     }
 }
 
 @Composable
-private fun FamilyHomeModeButton(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val shape = RoundedCornerShape(10.dp)
-    Box(
-        modifier =
-            modifier
-                .clip(shape)
-                .background(if (selected) ParchmentLight else Color.White.copy(alpha = 0.05f))
-                .border(1.dp, ParchmentLight.copy(alpha = if (selected) 0f else 0.12f), shape)
-                .clickable(onClick = onClick)
-                .padding(vertical = 8.dp, horizontal = 4.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-            color = if (selected) InkBrown else ParchmentCream.copy(alpha = 0.74f),
-            maxLines = 1,
-        )
-    }
+private fun FamilyHomeFilter(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    FantasyTrailTab(label, selected, onClick, modifier)
 }
 
 @Composable
@@ -479,17 +451,9 @@ private fun FamilyHomeWeekControls(
     onCurrentWeek: () -> Unit,
     onSelectDate: (String) -> Unit,
 ) {
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        colors =
-            CardDefaults.elevatedCardColors(
-                containerColor = ParchmentLight.copy(alpha = 0.98f),
-                contentColor = InkBrown,
-            ),
-    ) {
+    FantasySummaryPanel(Modifier.fillMaxWidth()) {
         Column(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 18.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Row(
@@ -498,27 +462,21 @@ private fun FamilyHomeWeekControls(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 TextButton(onClick = onPreviousWeek) {
-                    Text("<")
+                    Text("\u2039", color = Color(0xFFE4BB77), style = MaterialTheme.typography.titleLarge)
                 }
                 Text(
                     text = weekRangeLabel,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = InkBrown,
+                    color = Color(0xFFF1DEB9),
                 )
                 TextButton(onClick = onNextWeek) {
-                    Text(">")
+                    Text("\u203a", color = Color(0xFFE4BB77), style = MaterialTheme.typography.titleLarge)
                 }
             }
 
             if (!isCurrentWeek) {
-                OutlinedButton(
-                    onClick = onCurrentWeek,
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text("Semaine actuelle")
-                }
+                FantasyPurpleButton("Semaine actuelle", Modifier.fillMaxWidth(), onClick = onCurrentWeek)
             }
 
             Row(
@@ -538,7 +496,7 @@ private fun FamilyHomeWeekControls(
                 text = selectedDateLabel,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = InkBrown,
+                color = Color(0xFFF1DEB9),
             )
         }
     }
@@ -550,23 +508,14 @@ private fun FamilyHomeWeekDayButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val background =
-        when {
-            day.isSelected -> WoodBrown
-            day.isToday -> SoftGold.copy(alpha = 0.28f)
-            else -> ParchmentCream.copy(alpha = 0.82f)
-        }
-    val content =
-        if (day.isSelected) {
-            ParchmentLight
-        } else {
-            InkBrown
-        }
+    val background = if (day.isSelected) Color(0xFF4C2B60) else Color(0xFF35243F)
+    val content = if (day.isSelected) Color(0xFFE4BB77) else Color(0xFFF1DEB9)
     Surface(
         modifier = modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(10.dp),
         color = background,
         contentColor = content,
+        border = BorderStroke(if (day.isSelected || day.isToday) 1.dp else 0.dp, if (day.isSelected) Color(0xFFE4BB77) else Color(0xFF785B82)),
     ) {
         Column(
             modifier = Modifier.padding(vertical = 8.dp),
@@ -593,33 +542,21 @@ private fun FamilyHomeWeekDayButton(
 }
 
 @Composable
-private fun FamilyHomeSectionTitle(
+internal fun FamilyHomeSectionTitle(
     title: String,
     detail: String?,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = ParchmentLight,
-        )
-        detail?.takeIf { !it.startsWith("0 / 0") }?.let {
-            Text(
-                text = it,
-                style = MaterialTheme.typography.labelLarge,
-                color = ParchmentCream.copy(alpha = 0.70f),
-            )
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color(0xFFF1DEB9))
+            detail?.takeIf { !it.startsWith("0 / 0") }?.let { Text(it, style = MaterialTheme.typography.labelLarge, color = Color(0xFFE4BB77)) }
         }
+        Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFFA97735).copy(alpha = 0.82f)))
     }
 }
 
 @Composable
-private fun FamilyOverdueSectionCard(
+internal fun FamilyOverdueSectionCard(
     access: FamilyTaskAccessPolicy,
     totalCount: Int,
     rows: List<FamilyTaskRow>,
@@ -644,16 +581,17 @@ private fun FamilyOverdueSectionCard(
                     text = "En retard · $totalCount",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = ParchmentLight,
+                    color = Color(0xFFF1DEB9),
                 )
                 if (rows.size < totalCount) {
                     Text(
                         text = "${rows.size} affichées",
                         style = MaterialTheme.typography.labelMedium,
-                        color = ParchmentCream.copy(alpha = 0.72f),
+                        color = Color(0xFFE4BB77),
                     )
                 }
             }
+            Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFFA97735).copy(alpha = 0.82f)))
             rows.forEach { row ->
                 FamilyOverdueRow(
                     access = access,
@@ -681,67 +619,38 @@ private fun FamilyOverdueRow(
     onFail: (FamilyTaskTodayItem) -> Unit,
 ) {
     val action = access.quickAction(task)
-    Surface(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(enabled = task.taskId > 0L) { onOpenTask(task.taskId) },
-        shape = RoundedCornerShape(8.dp),
-        color = ParchmentLight.copy(alpha = 0.92f),
-        contentColor = InkBrown,
+    val icon = when (task.kind) {
+        com.example.taskoday.domain.model.FamilyActionKind.ROUTINE -> R.drawable.v4_task_routine
+        com.example.taskoday.domain.model.FamilyActionKind.MISSION -> R.drawable.v4_task_mission
+        com.example.taskoday.domain.model.FamilyActionKind.QUEST -> R.drawable.v4_task_quest
+    }
+    FantasyTaskCardBackground(
+        modifier = Modifier.fillMaxWidth().clickable(enabled = task.taskId > 0L) { if (task.taskId > 0L) onOpenTask(task.taskId) },
+        contentStartPadding = 55.dp,
+        verticalContentPadding = 5.dp,
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top,
-            ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(5.dp),
-                ) {
-                    Text(
-                        text = task.title,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = InkBrown,
-                    )
-                    Text(
-                        text = familyTaskOverdueMetaLabel(task = task, today = today),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = InkMuted,
-                    )
-                }
-                familyTaskPriorityLabel(task.priority)?.let { priorityLabel ->
-                    PriorityChip(priority = task.priority, label = priorityLabel)
-                }
-            }
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(task.title, color = Color(0xFF39263F), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+            Text("EN RETARD  \u00b7  ${familyTaskKindLabel(task).uppercase()}", color = Color(0xFF9D3D3D), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+            Text(familyTaskOverdueMetaLabel(task, today), color = Color(0xFF695D65), style = MaterialTheme.typography.bodySmall)
+            FamilyTaskPeopleLine("Pr\u00e9vu", task.assignees.map { it.id to it.displayName })
             if (action != null) {
-                OutlinedButton(
-                    onClick = { onQuickAction(task) },
-                    enabled = !isActing && canRunQuickAction(task),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Check,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    FantasyPurpleButton(
+                        label = if (isActing) "Mise \u00e0 jour\u2026" else familyTaskActionLabel(action),
+                        enabled = !isActing && canRunQuickAction(task),
+                        onClick = { onQuickAction(task) },
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(if (isActing) "Mise à jour..." else familyTaskActionLabel(action))
-                }
-            }
-            if (access.canManage && task.kind == com.example.taskoday.domain.model.FamilyActionKind.MISSION) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(enabled = !isActing, onClick = { onReschedule(task) }) { Text("Reporter") }
-                    TextButton(enabled = !isActing, onClick = { onFail(task) }) { Text("Ratée") }
+                    if (access.canManage && task.kind == com.example.taskoday.domain.model.FamilyActionKind.MISSION) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            TextButton(enabled = !isActing, onClick = { onReschedule(task) }, modifier = Modifier.heightIn(min = 48.dp)) { Text("Reporter") }
+                            TextButton(enabled = !isActing, onClick = { onFail(task) }, modifier = Modifier.heightIn(min = 48.dp)) { Text("Rat\u00e9e") }
+                        }
+                    }
                 }
             }
         }
+        Box(Modifier.align(Alignment.TopStart).offset(x = (-40).dp, y = 1.dp)) { FantasyTaskMedallion(icon, "Mission en retard", medallionSize = 40.dp, iconSize = 20.dp) }
     }
 }
 
@@ -766,12 +675,12 @@ private fun FamilyUpcomingSectionCard(
                 text = "À venir",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = ParchmentLight,
+                color = Color(0xFFF1DEB9),
             )
             Text(
                 text = "$totalCount sur 7 jours",
                 style = MaterialTheme.typography.labelMedium,
-                color = ParchmentCream.copy(alpha = 0.70f),
+                color = Color(0xFFE4BB77),
             )
         }
         sections.forEach { section ->
@@ -780,7 +689,7 @@ private fun FamilyUpcomingSectionCard(
                     text = section.label,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold,
-                    color = ParchmentCream.copy(alpha = 0.82f),
+                    color = Color(0xFFE4BB77),
                 )
                 section.tasks.forEach { row ->
                     FamilyUpcomingRow(
@@ -799,44 +708,29 @@ private fun FamilyUpcomingSectionCard(
 }
 
 @Composable
-private fun FamilyUpcomingRow(
-    task: FamilyTaskTodayItem,
-    onOpenTask: (Long) -> Unit,
-) {
-    Surface(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(enabled = task.taskId > 0L) { onOpenTask(task.taskId) },
-        shape = RoundedCornerShape(8.dp),
-        color = ParchmentLight.copy(alpha = 0.96f),
-        contentColor = InkBrown,
+private fun FamilyUpcomingRow(task: FamilyTaskTodayItem, onOpenTask: (Long) -> Unit) {
+    val icon = when (task.kind) {
+        com.example.taskoday.domain.model.FamilyActionKind.ROUTINE -> R.drawable.v4_task_routine
+        com.example.taskoday.domain.model.FamilyActionKind.MISSION -> R.drawable.v4_task_mission
+        com.example.taskoday.domain.model.FamilyActionKind.QUEST -> R.drawable.v4_task_quest
+    }
+    FantasyTaskCardBackground(
+        Modifier.fillMaxWidth().clickable(enabled = task.taskId > 0L) { if (task.taskId > 0L) onOpenTask(task.taskId) },
+        contentStartPadding = 55.dp,
+        verticalContentPadding = 5.dp,
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top,
-        ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(5.dp),
-            ) {
-                Text(
-                    text = task.title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = InkBrown,
-                )
-                Text(
-                    text = familyTaskUpcomingMetaLabel(task),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = InkMuted,
-                )
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(task.title, color = Color(0xFF39263F), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                Text(familyTaskKindLabel(task).uppercase(), color = Color(0xFF80602C), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+                Text(familyTaskStatusLabel(task.status), color = Color(0xFF514653), style = MaterialTheme.typography.labelMedium)
             }
-            familyTaskPriorityLabel(task.priority)?.let { priorityLabel ->
-                PriorityChip(priority = task.priority, label = priorityLabel)
-            }
+            val due = familyTaskDueLabel(task.dueDate, task.dueTime, task.hasDueTime, task.dueAt)
+            if (due != null) Text("\u00c9ch\u00e9ance \u00b7 $due", color = Color(0xFF695D65), style = MaterialTheme.typography.bodySmall, maxLines = 1)
+            FamilyTaskPeopleLine("Pr\u00e9vu", task.assignees.map { it.id to it.displayName })
+            familyTaskOccurrenceRecurrenceLabel(task.recurrenceLabel)?.let { Text(it, color = Color(0xFF695D65), style = MaterialTheme.typography.bodySmall, maxLines = 1) }
         }
+        Box(Modifier.align(Alignment.TopStart).offset(x = (-40).dp, y = 1.dp)) { FantasyTaskMedallion(icon, familyTaskKindLabel(task), medallionSize = 40.dp, iconSize = 20.dp) }
     }
 }
 
@@ -861,12 +755,12 @@ private fun FamilyMemberSectionCard(
                     text = section.name,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = InkBrown,
+                    color = Color(0xFFF1DEB9),
                 )
                 Text(
                     text = "${section.completedCount} / ${section.totalCount}",
                     style = MaterialTheme.typography.labelLarge,
-                    color = InkMuted,
+                    color = Color(0xFFE4BB77),
                 )
             }
 
@@ -883,7 +777,7 @@ private fun FamilyMemberSectionCard(
 }
 
 @Composable
-private fun FamilyTaskRowCard(
+internal fun FamilyTaskRowCard(
     access: FamilyTaskAccessPolicy,
     task: FamilyTaskTodayItem,
     isActing: Boolean,
@@ -891,93 +785,147 @@ private fun FamilyTaskRowCard(
     onOpenTask: (Long) -> Unit,
 ) {
     val action = access.quickAction(task)
-    Surface(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(enabled = task.taskId > 0L) { onOpenTask(task.taskId) },
-        shape = RoundedCornerShape(8.dp),
-        color = ParchmentCream.copy(alpha = 0.78f),
-        contentColor = InkBrown,
+    val icon = when (task.kind) {
+        com.example.taskoday.domain.model.FamilyActionKind.ROUTINE -> R.drawable.v4_task_routine
+        com.example.taskoday.domain.model.FamilyActionKind.MISSION -> R.drawable.v4_task_mission
+        com.example.taskoday.domain.model.FamilyActionKind.QUEST -> R.drawable.v4_task_quest
+    }
+    val kindColor = when (task.kind) {
+        com.example.taskoday.domain.model.FamilyActionKind.ROUTINE -> Color(0xFF397A74)
+        com.example.taskoday.domain.model.FamilyActionKind.MISSION -> Color(0xFFA94F37)
+        com.example.taskoday.domain.model.FamilyActionKind.QUEST -> Color(0xFF80602C)
+    }
+    val statusColor = when (task.status) {
+        FamilyTaskStatus.PENDING_VALIDATION -> Color(0xFF4C2B60)
+        FamilyTaskStatus.IN_PROGRESS -> Color(0xFF3C6C86)
+        FamilyTaskStatus.COMPLETED, FamilyTaskStatus.VALIDATED -> Color(0xFF34744D)
+        FamilyTaskStatus.FAILED -> Color(0xFF9D3D3D)
+        else -> Color(0xFF514653)
+    }
+    FantasyTaskCardBackground(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = task.taskId > 0L) { if (task.taskId > 0L) onOpenTask(task.taskId) },
+        contentStartPadding = 55.dp,
+        verticalContentPadding = 5.dp,
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top,
-            ) {
+        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(task.title, color = Color(0xFF39263F), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                Text(familyTaskKindLabel(task).uppercase(), color = kindColor, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+                Text("\u00b7", color = Color(0xFF8B6A47))
+                Text(familyTaskStatusLabel(task.status), color = statusColor, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelMedium)
+                familyTaskPriorityLabel(task.priority)?.let { Text("\u00b7 $it", color = Color(0xFF80602C), style = MaterialTheme.typography.labelSmall) }
+                val due = familyTaskDueLabel(task.dueDate, task.dueTime, task.hasDueTime, task.dueAt)
+                when {
+                    due != null -> Text("\u00b7 $due", color = Color(0xFF695D65), style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                    task.isOpenUndatedMission() -> Text("\u00b7 Sans \u00e9ch\u00e9ance", color = Color(0xFF695D65), style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                }
+            }
+            Box(Modifier.fillMaxWidth().heightIn(min = 52.dp)) {
                 Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.align(Alignment.CenterStart).fillMaxWidth().padding(end = if (action != null) 170.dp else 0.dp),
+                    verticalArrangement = Arrangement.spacedBy(0.dp),
                 ) {
-                    Text(
-                        text = task.title,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = InkBrown,
+                    if (task.assignees.isEmpty()) {
+                        Text("Pour toute la maison", color = Color(0xFF695D65), style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                    } else {
+                        FamilyTaskPeopleAvatarLine("Pour", task.assignees.map { it.id to it.displayName })
+                    }
+                    if (task.contributors.isNotEmpty()) {
+                        FamilyTaskPeopleAvatarLine("Avec", task.contributors.map { it.userId to it.displayName })
+                    }
+                }
+                if (action != null) {
+                    FantasyPurpleButton(
+                        label = if (isActing) "Mise \u00e0 jour\u2026" else familyTaskActionLabel(action),
+                        modifier = Modifier.align(Alignment.BottomEnd).offset(x = 48.dp).heightIn(min = 48.dp),
+                        enabled = !isActing && canRunQuickAction(task),
+                        onClick = { onQuickAction(task) },
                     )
-                    StatusChip(status = task.status)
-                }
-                familyTaskPriorityLabel(task.priority)?.let { priorityLabel ->
-                    PriorityChip(priority = task.priority, label = priorityLabel)
                 }
             }
-
-            val details = task.details()
-            if (details.isNotEmpty()) {
-                Text(
-                    text = details.joinToString(" • "),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = InkMuted,
-                )
-            }
-            if (task.status == FamilyTaskStatus.IN_PROGRESS && task.contributors.isNotEmpty()) {
-                Text(
-                    text = "En cours · ${task.contributors.joinToString(", ") { it.displayName }}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = InkMuted,
-                )
-            }
-
-            if (action != null) {
-                OutlinedButton(
-                    onClick = { onQuickAction(task) },
-                    enabled = !isActing && canRunQuickAction(task),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(
-                        imageVector = action.icon(),
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(if (isActing) "Mise à jour..." else familyTaskActionLabel(action))
-                }
-            }
+        }
+        Box(Modifier.align(Alignment.TopStart).offset(x = (-40).dp, y = 1.dp)) {
+            FantasyTaskMedallion(icon, familyTaskKindLabel(task), medallionSize = 40.dp, iconSize = 20.dp)
         }
     }
 }
 
 @Composable
-private fun StatusChip(status: FamilyTaskStatus) {
-    Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = status.containerColor(),
-        contentColor = status.contentColor(),
+private fun FamilyTaskPeopleAvatarLine(label: String, people: List<Pair<Long?, String>>) {
+    Row(
+        modifier = Modifier.fillMaxWidth().heightIn(min = 22.dp).semantics {
+            this.contentDescription = "$label : ${people.joinToString { it.second }}"
+        },
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
+        people.take(1).forEach { (id, name) ->
+            TaskodayV3FamilyAvatar(
+                initials = name.trim().split(Regex("\\s+")).mapNotNull { it.firstOrNull()?.uppercaseChar() }.take(2).joinToString(""),
+                contentDescription = name,
+                color = familyMemberAvatarColor(id ?: name.hashCode().toLong()),
+                size = 20.dp,
+            )
+        }
+        if (people.size > 3) {
+            Text("+${people.size - 3}", color = Color(0xFF695D65), style = MaterialTheme.typography.labelSmall)
+        } else if (people.size > 1) {
+            Text("+${people.size - 1}", color = Color(0xFF695D65), style = MaterialTheme.typography.labelSmall)
+        }
+    }
+}
+
+@Composable
+private fun FamilyTaskPeopleLine(label: String, people: List<Pair<Long?, String>>) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        people.take(3).forEach { (id, name) ->
+            TaskodayV3FamilyAvatar(
+                initials = name.trim().split(Regex("\\s+")).mapNotNull { it.firstOrNull()?.uppercaseChar() }.take(2).joinToString(""),
+                contentDescription = name,
+                color = familyMemberAvatarColor(id ?: name.hashCode().toLong()),
+                size = 24.dp,
+            )
+        }
+        val names = people.joinToString { it.second }
         Text(
-            text = familyTaskStatusLabel(status),
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold,
+            text = "$label · $names${if (people.size > 3) " +${people.size - 3}" else ""}",
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodySmall,
+            color = TaskodayV3Colors.textSecondary,
+            maxLines = 2,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
         )
     }
 }
 
+private fun familyMemberAvatarColor(id: Long): Color = when (Math.floorMod(id, 5L).toInt()) {
+    0 -> Color(0xFFD9EEF4)
+    1 -> Color(0xFFEAE3FF)
+    2 -> Color(0xFFF8D8C6)
+    3 -> Color(0xFFDDF0E3)
+    else -> Color(0xFFF8EDC8)
+}
+
+private fun FamilyTaskTodayItem.v3ActionKind(): TaskodayV3ActionKind = when (kind) {
+    com.example.taskoday.domain.model.FamilyActionKind.ROUTINE -> TaskodayV3ActionKind.ROUTINE
+    com.example.taskoday.domain.model.FamilyActionKind.MISSION -> TaskodayV3ActionKind.MISSION
+    com.example.taskoday.domain.model.FamilyActionKind.QUEST -> TaskodayV3ActionKind.QUEST
+}
+
+private fun FamilyTaskStatus.v3Status(): TaskodayV3TaskStatus = when (this) {
+    FamilyTaskStatus.TODO -> TaskodayV3TaskStatus.TODO
+    FamilyTaskStatus.IN_PROGRESS -> TaskodayV3TaskStatus.IN_PROGRESS
+    FamilyTaskStatus.PENDING_VALIDATION -> TaskodayV3TaskStatus.PENDING_VALIDATION
+    FamilyTaskStatus.COMPLETED, FamilyTaskStatus.VALIDATED -> TaskodayV3TaskStatus.COMPLETED
+    FamilyTaskStatus.FAILED -> TaskodayV3TaskStatus.ERROR
+    FamilyTaskStatus.SKIPPED, FamilyTaskStatus.UNKNOWN -> TaskodayV3TaskStatus.TODO
+}
 @Composable
 private fun PriorityChip(
     priority: FamilyTaskPriority,
@@ -987,10 +935,10 @@ private fun PriorityChip(
         shape = RoundedCornerShape(8.dp),
         color =
             when (priority) {
-                FamilyTaskPriority.URGENT -> SoftRed.copy(alpha = 0.18f)
-                else -> WarningGlow.copy(alpha = 0.20f)
+                FamilyTaskPriority.URGENT -> TaskodayV3Colors.errorInk.copy(alpha = 0.18f)
+                else -> TaskodayV3Colors.questInk.copy(alpha = 0.20f)
             },
-        contentColor = if (priority == FamilyTaskPriority.URGENT) SoftRed else WoodBrown,
+        contentColor = if (priority == FamilyTaskPriority.URGENT) TaskodayV3Colors.errorInk else TaskodayV3Colors.brandDeep,
     ) {
         Text(
             text = label,
@@ -1006,57 +954,20 @@ private fun EmptyFamilyWeekCard(
     title: String,
     message: String,
 ) {
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        colors =
-            CardDefaults.elevatedCardColors(
-                containerColor = ParchmentLight.copy(alpha = 0.97f),
-                contentColor = InkBrown,
-            ),
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = InkBrown,
-            )
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = InkMuted,
-            )
-        }
+    com.example.taskoday.features.taskodayv4.FantasyParchmentCard {
+        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
+            color = com.example.taskoday.features.taskodayv4.JourneyInk)
+        Text(message, style = MaterialTheme.typography.bodyMedium,
+            color = com.example.taskoday.features.taskodayv4.JourneyMuted)
     }
 }
 
 @Composable
 private fun EmptyFamilyHomeCard() {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp),
-        color = ParchmentLight.copy(alpha = 0.96f),
-        contentColor = InkBrown,
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(
-                text = "Aucune tâche aujourd'hui",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = InkBrown,
-            )
-            Text(
-                text = "Rien de prévu pour la maison aujourd'hui.",
-                style = MaterialTheme.typography.bodySmall,
-                color = InkMuted,
-            )
+    FantasySummaryPanel(Modifier.fillMaxWidth().heightIn(min = 104.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("Le calme r\u00e8gne aujourd'hui", color = Color(0xFFE4BB77), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+            Text("Rien n'est pr\u00e9vu pour la maison aujourd'hui.", color = Color(0xFFF1DEB9), style = MaterialTheme.typography.bodyMedium)
         }
     }
 }
@@ -1069,29 +980,14 @@ private fun MessagePanel(
     onAction: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val color = if (tone == MessageTone.Error) DangerGlow else MossGreen
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        color = ParchmentLight.copy(alpha = 0.97f),
-        contentColor = InkBrown,
-    ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = color,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = onAction) {
-                    Text(actionLabel)
-                }
-                TextButton(onClick = onDismiss) {
-                    Text("Fermer")
-                }
+    FantasySummaryPanel(Modifier.fillMaxWidth().heightIn(min = 112.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Text(if (tone == MessageTone.Error) "Informations indisponibles" else "C'est enregistr\u00e9", color = Color(0xFFE4BB77), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+            Text(message, color = Color(0xFFF1DEB9), style = MaterialTheme.typography.bodyMedium)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (tone == MessageTone.Error) FantasyPurpleButton(actionLabel, enabled = true, onClick = onAction)
+                else TextButton(onClick = onAction, modifier = Modifier.heightIn(min = 48.dp)) { Text(actionLabel) }
+                if (tone == MessageTone.Error) TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = 48.dp)) { Text("Fermer") }
             }
         }
     }
@@ -1102,63 +998,5 @@ private enum class MessageTone {
     Success,
 }
 
-private fun FamilyTaskTodayItem.details(): List<String> =
-    buildList {
-        add(when (kind) {
-            com.example.taskoday.domain.model.FamilyActionKind.ROUTINE -> "Routine Maison"
-            com.example.taskoday.domain.model.FamilyActionKind.MISSION -> "Mission Maison"
-            com.example.taskoday.domain.model.FamilyActionKind.QUEST -> "Quête Maison"
-        })
-        add(familyTaskAssignmentLabel(this@details))
-        familyTaskDueLabel(
-            dueDate = dueDate,
-            dueTime = dueTime,
-            hasDueTime = hasDueTime,
-            dueAt = dueAt,
-        )?.let { add("Échéance $it") }
-        familyTaskOccurrenceRecurrenceLabel(recurrenceLabel)?.let { add(it) }
-        if (validationRequired) add("Validation requise")
-    }
-
-private fun FamilyTaskQuickAction.icon() =
-    when (this) {
-        FamilyTaskQuickAction.START -> Icons.Outlined.Check
-        FamilyTaskQuickAction.JOIN -> Icons.Outlined.Add
-        FamilyTaskQuickAction.COMPLETE -> Icons.Outlined.Check
-        FamilyTaskQuickAction.VALIDATE -> Icons.Outlined.Check
-        FamilyTaskQuickAction.REOPEN -> Icons.AutoMirrored.Outlined.Undo
-        FamilyTaskQuickAction.RESCHEDULE -> Icons.AutoMirrored.Outlined.Undo
-        FamilyTaskQuickAction.FAIL -> Icons.Outlined.Home
-    }
-
 private fun FamilyTaskWeekDaySummary.progressLabel(): String =
     if (totalCount == 0) "-" else "$completedCount/$totalCount"
-
-
-@Composable
-private fun FamilyTaskStatus.containerColor(): Color =
-    when (this) {
-        FamilyTaskStatus.TODO -> ParchmentLight
-        FamilyTaskStatus.IN_PROGRESS -> SoftGold.copy(alpha = 0.22f)
-        FamilyTaskStatus.COMPLETED -> MossGreen.copy(alpha = 0.18f)
-        FamilyTaskStatus.PENDING_VALIDATION -> WarningGlow.copy(alpha = 0.22f)
-        FamilyTaskStatus.VALIDATED -> MossGreen.copy(alpha = 0.24f)
-        FamilyTaskStatus.FAILED -> WarningGlow.copy(alpha = 0.22f)
-        FamilyTaskStatus.SKIPPED -> InkMuted.copy(alpha = 0.12f)
-        FamilyTaskStatus.UNKNOWN -> ParchmentCream
-    }
-
-@Composable
-private fun FamilyTaskStatus.contentColor(): Color =
-    when (this) {
-        FamilyTaskStatus.COMPLETED,
-        FamilyTaskStatus.VALIDATED,
-        -> MossGreen
-        FamilyTaskStatus.IN_PROGRESS -> WoodBrown
-        FamilyTaskStatus.FAILED -> WarningGlow
-        FamilyTaskStatus.PENDING_VALIDATION -> WoodBrown
-        FamilyTaskStatus.SKIPPED,
-        FamilyTaskStatus.UNKNOWN,
-        -> InkMuted
-        FamilyTaskStatus.TODO -> InkBrown
-    }

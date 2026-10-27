@@ -1,6 +1,7 @@
 package com.example.taskoday.data.repository
 
 import com.example.taskoday.data.remote.dto.toDomain
+import com.example.taskoday.data.remote.dto.ApiEnvelopeDto
 import com.example.taskoday.data.remote.dto.toFamilyTaskDefinitionDtos
 import com.example.taskoday.data.remote.dto.toFamilyTaskMemberDtos
 import com.example.taskoday.data.remote.dto.toFamilyTaskOccurrencesRangeResponseDto
@@ -110,7 +111,7 @@ class FamilyTasksRepositoryImpl
         override suspend fun createTask(input: FamilyTaskCreateInput): Result<Unit> =
             runCatching {
                 val familyId = resolveFamilyId()
-                familyTasksApi.createTask(familyId, input.toRequestDto())
+                familyTasksApi.createTask(familyId, input.toRequestDto()).confirmedData()
                 Unit
             }
 
@@ -123,71 +124,71 @@ class FamilyTasksRepositoryImpl
                     ?: error("Action introuvable dans la famille active.")
                 requireUnchangedFamilyActionCategory(current.category, input.category)
                 check(current.scope == input.scope && current.kind == input.kind) { "Le scope et le kind sont immuables." }
-                familyTasksApi.updateTask(taskId, input.toUpdateRequestDto())
+                familyTasksApi.updateTask(taskId, input.toUpdateRequestDto()).confirmedData()
                 Unit
             }
 
         override suspend fun deleteTask(taskId: Long): Result<Unit> =
             runCatching {
-                familyTasksApi.deleteTask(taskId)
+                familyTasksApi.deleteTask(taskId).confirmedData()
                 Unit
             }
 
         override suspend fun completeOccurrence(occurrenceId: Long): Result<Unit> =
             runCatching {
-                familyTasksApi.completeOccurrence(occurrenceId)
+                familyTasksApi.completeOccurrence(occurrenceId).confirmedData()
                 Unit
             }
 
         override suspend fun completeOccurrenceWithReward(occurrenceId: Long): Result<Int> =
             runCatching {
-                familyTasksApi.completeOccurrence(occurrenceId).data
+                familyTasksApi.completeOccurrence(occurrenceId).confirmedData()
                     .asJsonObject?.get("reward_points_awarded_to_me")
                     ?.takeUnless { it.isJsonNull }?.asInt ?: 0
             }
 
         override suspend fun completeOccurrenceWithBundle(occurrenceId: Long): Result<CompletionReward> =
-            runCatching { familyTasksApi.completeOccurrence(occurrenceId).data.asRewardBundle(gson) }
+            runCatching { familyTasksApi.completeOccurrence(occurrenceId).confirmedData().asRewardBundle(gson) }
 
         override suspend fun startOccurrence(occurrenceId: Long): Result<Unit> = runCatching {
-            familyTasksApi.startOccurrence(occurrenceId)
+            familyTasksApi.startOccurrence(occurrenceId).confirmedData()
             Unit
         }
 
         override suspend fun joinOccurrence(occurrenceId: Long): Result<Unit> = runCatching {
-            familyTasksApi.joinOccurrence(occurrenceId)
+            familyTasksApi.joinOccurrence(occurrenceId).confirmedData()
             Unit
         }
 
         override suspend fun rescheduleOccurrence(occurrenceId: Long, dueDate: String): Result<Unit> = runCatching {
-            familyTasksApi.rescheduleOccurrence(occurrenceId, mapOf("due_date" to dueDate))
+            familyTasksApi.rescheduleOccurrence(occurrenceId, mapOf("due_date" to dueDate)).confirmedData()
             Unit
         }
 
         override suspend fun failOccurrence(occurrenceId: Long): Result<Unit> = runCatching {
-            familyTasksApi.failOccurrence(occurrenceId)
+            familyTasksApi.failOccurrence(occurrenceId).confirmedData()
             Unit
         }
 
         override suspend fun validateOccurrence(occurrenceId: Long): Result<Unit> =
             runCatching {
-                familyTasksApi.validateOccurrence(occurrenceId)
+                familyTasksApi.validateOccurrence(occurrenceId).confirmedData()
                 Unit
             }
 
         override suspend fun validateOccurrenceWithReward(occurrenceId: Long): Result<Int> =
             runCatching {
-                familyTasksApi.validateOccurrence(occurrenceId).data
+                familyTasksApi.validateOccurrence(occurrenceId).confirmedData()
                     .asJsonObject?.get("reward_points_awarded_to_me")
                     ?.takeUnless { it.isJsonNull }?.asInt ?: 0
             }
 
         override suspend fun validateOccurrenceWithBundle(occurrenceId: Long): Result<CompletionReward> =
-            runCatching { familyTasksApi.validateOccurrence(occurrenceId).data.asRewardBundle(gson) }
+            runCatching { familyTasksApi.validateOccurrence(occurrenceId).confirmedData().asRewardBundle(gson) }
 
         override suspend fun reopenOccurrence(occurrenceId: Long): Result<Unit> =
             runCatching {
-                familyTasksApi.reopenOccurrence(occurrenceId)
+                familyTasksApi.reopenOccurrence(occurrenceId).confirmedData()
                 Unit
             }
 
@@ -211,6 +212,12 @@ class FamilyTasksRepositoryImpl
 
 internal fun requireUnchangedFamilyActionCategory(existing: String?, requested: String?) {
     check(existing == requested) { "Le type d'une action existante ne peut pas être modifié." }
+}
+
+/** A successful HTTP exchange alone is not an acknowledgement of a business command. */
+private fun <T> ApiEnvelopeDto<T>.confirmedData(): T {
+    check(success) { "L'opération n'a pas été confirmée. Réessayez." }
+    return data
 }
 
 private fun com.google.gson.JsonElement?.asRewardBundle(gson: Gson): CompletionReward {

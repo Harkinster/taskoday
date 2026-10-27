@@ -7,6 +7,7 @@ import com.example.taskoday.domain.model.FamilyTaskMember
 data class ActivityJournalUiState(
     val isLoading: Boolean = true,
     val isParent: Boolean = false,
+    val currentUserId: Long? = null,
     val familyId: Long? = null,
     val events: List<FamilyTaskEvent> = emptyList(),
     val members: List<FamilyTaskMember> = emptyList(),

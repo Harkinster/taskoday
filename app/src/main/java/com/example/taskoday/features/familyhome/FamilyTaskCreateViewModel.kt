@@ -131,7 +131,7 @@ class FamilyTaskCreateViewModel
         fun selectRecentTask(id: Long) {
             val source = _uiState.value.recentTasks.firstOrNull { it.id == id } ?: return
             _uiState.update { state ->
-                runCatching { reuseTaskPrefill(state, source, loadedFamilyId ?: -1L, state.members) }
+                runCatching { reuseTaskPrefill(state, source, loadedFamilyId ?: -1L, state.members).copy(hasUnsavedChanges = true) }
                     .getOrElse { state.copy(errorMessage = it.message) }
             }
         }
@@ -139,24 +139,34 @@ class FamilyTaskCreateViewModel
         fun selectPersonalAssignee(userId: Long) {
             _uiState.update { state ->
                 if (state.actionType.scope == com.example.taskoday.domain.model.FamilyActionScope.HOUSE || state.members.none { it.userId == userId && it.isActive }) state
-                else state.copy(selectedAssigneeUserIds = setOf(userId), prefillWarning = null, requiresAssigneeReview = false, errorMessage = null)
+                else state.copy(selectedAssigneeUserIds = setOf(userId), prefillWarning = null, requiresAssigneeReview = false, errorMessage = null, hasUnsavedChanges = true)
+            }
+        }
+
+        /** Both form layouts use the existing single/multiple assignment rule. */
+        fun selectAssignee(userId: Long) {
+            if (_uiState.value.members.none { it.userId == userId && it.isActive }) return
+            if (_uiState.value.actionType.scope == com.example.taskoday.domain.model.FamilyActionScope.HOUSE) {
+                toggleAssignee(userId)
+            } else {
+                selectPersonalAssignee(userId)
             }
         }
 
         fun onTitleChanged(value: String) {
-            _uiState.update { it.copy(title = value, errorMessage = null) }
+            _uiState.update { it.copy(title = value, errorMessage = null, hasUnsavedChanges = true) }
         }
 
         fun onDescriptionChanged(value: String) {
-            _uiState.update { it.copy(description = value, errorMessage = null) }
+            _uiState.update { it.copy(description = value, errorMessage = null, hasUnsavedChanges = true) }
         }
 
         fun onDateChanged(value: String) {
-            _uiState.update { it.copy(date = value, errorMessage = null) }
+            _uiState.update { it.copy(date = value, errorMessage = null, hasUnsavedChanges = true) }
         }
 
         fun onEndDateChanged(value: String) {
-            _uiState.update { it.copy(endDate = value, errorMessage = null) }
+            _uiState.update { it.copy(endDate = value, errorMessage = null, hasUnsavedChanges = true) }
         }
 
         fun onKindChanged(type: FamilyActionType) {
@@ -166,7 +176,7 @@ class FamilyTaskCreateViewModel
                     actionType = type, category = type.category, recentTasks = emptyList(),
                     date = if (state.date.isBlank() && type.kind != com.example.taskoday.domain.model.FamilyActionKind.MISSION) java.time.LocalDate.now().toString() else state.date,
                     recurrence = if (type.kind == com.example.taskoday.domain.model.FamilyActionKind.ROUTINE) FamilyTaskRecurrence.DAILY else FamilyTaskRecurrence.NONE,
-                    endDate = "", selectedWeekdays = emptySet(), errorMessage = null,
+                    endDate = "", selectedWeekdays = emptySet(), errorMessage = null, hasUnsavedChanges = true,
                 )
             }
             val state = _uiState.value
@@ -178,11 +188,11 @@ class FamilyTaskCreateViewModel
         }
 
         fun onTimeChanged(value: String) {
-            _uiState.update { it.copy(time = value, errorMessage = null) }
+            _uiState.update { it.copy(time = value, errorMessage = null, hasUnsavedChanges = true) }
         }
 
         fun clearTime() {
-            _uiState.update { it.copy(time = "", errorMessage = null) }
+            _uiState.update { it.copy(time = "", errorMessage = null, hasUnsavedChanges = true) }
         }
 
         fun onRecurrenceChanged(value: FamilyTaskRecurrence) {
@@ -197,17 +207,17 @@ class FamilyTaskCreateViewModel
                         } else {
                             emptySet()
                         },
-                    errorMessage = null,
+                    errorMessage = null, hasUnsavedChanges = true,
                 )
             }
         }
 
         fun customizeRecurrence() {
-            _uiState.update { it.copy(isCustomRecurrence = true, recurrence = FamilyTaskRecurrence.DAILY, recurrenceInterval = 1, selectedWeekdays = emptySet(), errorMessage = null) }
+            _uiState.update { it.copy(isCustomRecurrence = true, recurrence = FamilyTaskRecurrence.DAILY, recurrenceInterval = 1, selectedWeekdays = emptySet(), errorMessage = null, hasUnsavedChanges = true) }
         }
 
         fun onRecurrenceIntervalChanged(value: Int) {
-            _uiState.update { it.copy(recurrenceInterval = value.coerceIn(1, 52), errorMessage = null) }
+            _uiState.update { it.copy(recurrenceInterval = value.coerceIn(1, 52), errorMessage = null, hasUnsavedChanges = true) }
         }
 
         fun onCustomRecurrenceUnitChanged(value: CustomRecurrenceUnit) {
@@ -216,7 +226,7 @@ class FamilyTaskCreateViewModel
                     customRecurrenceUnit = value,
                     recurrence = if (value == CustomRecurrenceUnit.DAYS) FamilyTaskRecurrence.DAILY else FamilyTaskRecurrence.SELECTED_WEEKDAYS,
                     selectedWeekdays = if (value == CustomRecurrenceUnit.DAYS) emptySet() else it.selectedWeekdays,
-                    errorMessage = null,
+                    errorMessage = null, hasUnsavedChanges = true,
                 )
             }
         }
@@ -229,12 +239,12 @@ class FamilyTaskCreateViewModel
                     } else {
                         it.selectedWeekdays + day
                     }
-                it.copy(selectedWeekdays = next, errorMessage = null)
+                it.copy(selectedWeekdays = next, errorMessage = null, hasUnsavedChanges = true)
             }
         }
 
         fun selectHouseTask() {
-            _uiState.update { if (it.actionType.scope == com.example.taskoday.domain.model.FamilyActionScope.HOUSE) it.copy(selectedAssigneeUserIds = emptySet(), prefillWarning = null, requiresAssigneeReview = false, errorMessage = null) else it }
+            _uiState.update { if (it.actionType.scope == com.example.taskoday.domain.model.FamilyActionScope.HOUSE) it.copy(selectedAssigneeUserIds = emptySet(), prefillWarning = null, requiresAssigneeReview = false, errorMessage = null, hasUnsavedChanges = true) else it }
         }
 
         fun toggleAssignee(userId: Long) {
@@ -246,25 +256,25 @@ class FamilyTaskCreateViewModel
                     } else {
                         it.selectedAssigneeUserIds + userId
                     }
-                it.copy(selectedAssigneeUserIds = next, prefillWarning = null, requiresAssigneeReview = false, errorMessage = null)
+                it.copy(selectedAssigneeUserIds = next, prefillWarning = null, requiresAssigneeReview = false, errorMessage = null, hasUnsavedChanges = true)
             }
         }
 
         fun onValidationRequiredChanged(value: Boolean) {
-            _uiState.update { it.copy(validationRequired = value, errorMessage = null) }
+            _uiState.update { it.copy(validationRequired = value, errorMessage = null, hasUnsavedChanges = true) }
         }
 
         fun onGamificationEnabledChanged(value: Boolean) {
-            _uiState.update { it.copy(gamificationEnabled = value, errorMessage = null) }
+            _uiState.update { it.copy(gamificationEnabled = value, errorMessage = null, hasUnsavedChanges = true) }
         }
 
         fun onPriorityChanged(value: FamilyTaskPriority) {
-            _uiState.update { it.copy(priority = value, errorMessage = null) }
+            _uiState.update { it.copy(priority = value, errorMessage = null, hasUnsavedChanges = true) }
         }
 
         fun submit() {
             val current = _uiState.value
-            if (current.isSubmitting) return
+            if (current.isSubmitting || current.created || current.isLoadingTask || current.isLoadingMembers) return
             if (current.requiresAssigneeReview) {
                 _uiState.update { it.copy(errorMessage = "Vérifiez et choisissez l'attribution avant de créer.") }
                 return
@@ -303,8 +313,9 @@ class FamilyTaskCreateViewModel
                 return
             }
 
+            // Reserve submission before dispatch so two taps cannot enqueue two creations.
+            _uiState.update { it.copy(isSubmitting = true, errorMessage = null) }
             viewModelScope.launch {
-                _uiState.update { it.copy(isSubmitting = true, errorMessage = null) }
                 val canManage = runCatching { FamilyTaskAccessPolicy.forUser(authRepository.fetchMe()).canManage }
                     .getOrDefault(false)
                 if (!canManage) {
@@ -328,7 +339,7 @@ class FamilyTaskCreateViewModel
                     }
                 result
                     .onSuccess {
-                        _uiState.update { it.copy(isSubmitting = false, created = true) }
+                        _uiState.update { it.copy(isSubmitting = false, created = true, hasUnsavedChanges = false) }
                     }
                     .onFailure { throwable ->
                         _uiState.update {

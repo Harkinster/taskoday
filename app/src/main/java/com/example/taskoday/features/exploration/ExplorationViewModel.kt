@@ -51,6 +51,9 @@ class ExplorationViewModel
 
         private var childProfileIds: Map<Long, Long> = emptyMap()
         private var loadJob: Job? = null
+        private val resumeRefresh = com.example.taskoday.core.util.InitialResumeRefresh()
+
+        fun onScreenResumed() = resumeRefresh.onResume { refresh() }
 
         init {
             refresh()

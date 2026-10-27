@@ -33,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
@@ -204,7 +205,7 @@ fun FantasyButton(
                 .shadow(elevation = if (enabled) 2.dp else 0.dp, shape = shape, clip = false)
                 .clip(shape)
                 .background(fantasyButtonBrush(style, enabled))
-                .clickable(enabled = enabled, onClick = onClick)
+                .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
     val textContent: @Composable () -> Unit = {
         Text(
             text = text,

@@ -20,6 +20,51 @@ data class NestWalletDto(
     @SerializedName("crystals") val crystals: Int,
 )
 
+data class LineageDto(
+    @SerializedName("id") val id: String,
+    @SerializedName("founder_name") val founderName: String,
+    @SerializedName("region_name") val regionName: String,
+    @SerializedName("affinity") val affinity: String,
+)
+
+data class LineageListDto(@SerializedName("lineages") val lineages: List<LineageDto>)
+
+data class PersonalCompanionDto(
+    @SerializedName("dragon_id") val dragonId: Long,
+    @SerializedName("owner_user_id") val ownerUserId: Long,
+    @SerializedName("dragon_key") val dragonKey: String,
+    @SerializedName("lineage_id") val lineageId: String? = null,
+    @SerializedName("lineage_status") val lineageStatus: String,
+    @SerializedName("lineage") val lineage: LineageDto? = null,
+    @SerializedName("display_name") val displayName: String? = null,
+    @SerializedName("stage") val stage: String,
+    @SerializedName("progress") val progress: Int,
+    @SerializedName("active") val active: Boolean,
+)
+
+data class MyCompanionsDto(
+    @SerializedName("companions") val companions: List<PersonalCompanionDto>,
+    @SerializedName("active_companion") val activeCompanion: PersonalCompanionDto? = null,
+    @SerializedName("active_state") val activeState: String,
+)
+
+data class ActivePersonalCompanionDto(@SerializedName("companion") val companion: PersonalCompanionDto? = null)
+
+data class StarterCompanionRequestDto(
+    @SerializedName("lineage_id") val lineageId: String,
+    @SerializedName("display_name") val displayName: String,
+)
+
+data class RenameCompanionRequestDto(@SerializedName("display_name") val displayName: String)
+
+data class StarterCompanionDto(
+    @SerializedName("companion") val companion: PersonalCompanionDto,
+    @SerializedName("created") val created: Boolean,
+    @SerializedName("reused_existing") val reusedExisting: Boolean,
+)
+
+data class CompanionMutationDto(@SerializedName("companion") val companion: PersonalCompanionDto)
+
 data class PersonalRewardSummaryDto(
     @SerializedName("family_id") val familyId: Long,
     @SerializedName("user_id") val userId: Long,

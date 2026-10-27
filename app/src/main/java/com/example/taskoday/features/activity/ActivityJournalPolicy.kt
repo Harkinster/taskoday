@@ -65,3 +65,12 @@ fun FamilyTaskEvent.journalActorLabel(): String = when (eventType) {
 
 fun Instant.journalTimeLabel(zone: ZoneId = ZoneId.systemDefault()): String =
     atZone(zone).format(DateTimeFormatter.ofPattern("dd/MM · HH:mm"))
+
+/** Presentation filter for Exploration; the familial journal retains the complete authorized feed. */
+fun personalJournalEvents(events: List<FamilyTaskEvent>, userId: Long?): List<FamilyTaskEvent> =
+    if (userId == null) emptyList() else events.filter { event ->
+        event.scope == com.example.taskoday.domain.model.FamilyActionScope.PERSONAL &&
+            (event.completedByUserId == userId || userId in event.participantUserIds ||
+                userId in event.contributorUserIds ||
+                (event.actorUserId == userId && event.completedByUserId == null && event.participantUserIds.isEmpty()))
+    }

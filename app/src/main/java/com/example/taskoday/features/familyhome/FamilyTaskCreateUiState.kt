@@ -36,6 +36,7 @@ data class FamilyTaskCreateUiState(
     val isSubmitting: Boolean = false,
     val errorMessage: String? = null,
     val created: Boolean = false,
+    val hasUnsavedChanges: Boolean = false,
 ) {
     val isEditing: Boolean
         get() = taskId != null

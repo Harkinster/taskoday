@@ -13,6 +13,13 @@ import com.example.taskoday.data.remote.dto.NestProgressDto
 import com.example.taskoday.data.remote.dto.OpenCatalogChestDto
 import com.example.taskoday.data.remote.dto.ScrollsDto
 import com.example.taskoday.data.remote.dto.PersonalRewardSummaryDto
+import com.example.taskoday.data.remote.dto.LineageDto
+import com.example.taskoday.data.remote.dto.MyCompanionsDto
+import com.example.taskoday.data.remote.dto.PersonalCompanionDto
+import com.example.taskoday.data.remote.dto.StarterCompanionDto
+import com.example.taskoday.data.remote.dto.StarterCompanionRequestDto
+import com.example.taskoday.data.remote.dto.CompanionMutationDto
+import com.example.taskoday.data.remote.dto.RenameCompanionRequestDto
 import com.example.taskoday.data.remote.gamification.NestApi
 import com.example.taskoday.domain.repository.AuthRepository
 import javax.inject.Inject
@@ -42,11 +49,61 @@ class NestRepository
 
         fun hasRemoteSession(): Boolean = !authRepository.getAccessToken().isNullOrBlank()
 
+        suspend fun currentUserId(): Long = authRepository.fetchMe().id
+
+        suspend fun loadLineages(): Result<List<LineageDto>> =
+            runCatching { nestApi.getLineages().data.lineages }
+
+        suspend fun loadPersonalCompanions(): Result<MyCompanionsDto> =
+            runCatching {
+                val ownerId = authRepository.fetchMe().id
+                val companions = nestApi.getMyCompanions().data
+                val active = nestApi.getMyActiveCompanion().data
+                if (active != null) check(active.ownerUserId == ownerId) { "Compagnon actif rattaché à un autre compte." }
+                if (active != null) check(companions.companions.any { it.dragonId == active.dragonId && it.active }) {
+                    "Le compagnon actif ne correspond pas à la collection personnelle."
+                }
+                if (active == null) check(companions.companions.none { it.active }) {
+                    "Le statut du compagnon actif est incohérent."
+                }
+                companions.copy(activeCompanion = active).also {
+                    check(it.companions.all { companion -> companion.ownerUserId == ownerId }) {
+                        "Compagnon rattaché à un autre compte."
+                    }
+                }
+            }
+
+        suspend fun createStarter(lineageId: String, displayName: String): Result<StarterCompanionDto> =
+            runCatching {
+                val ownerId = authRepository.fetchMe().id
+                nestApi.createStarter(StarterCompanionRequestDto(lineageId, displayName)).data.also {
+                    check(it.companion.ownerUserId == ownerId) { "Compagnon rattaché à un autre compte." }
+                }
+            }
+
+        suspend fun activatePersonalCompanion(dragonId: Long): Result<CompanionMutationDto> =
+            runCatching {
+                val ownerId = authRepository.fetchMe().id
+                nestApi.activateMyCompanion(dragonId).data.also {
+                    check(it.companion.ownerUserId == ownerId) { "Compagnon rattaché à un autre compte." }
+                }
+            }
+
+        suspend fun renamePersonalCompanion(dragonId: Long, displayName: String): Result<CompanionMutationDto> =
+            runCatching {
+                val ownerId = authRepository.fetchMe().id
+                nestApi.renameMyCompanion(dragonId, RenameCompanionRequestDto(displayName)).data.also {
+                    check(it.companion.ownerUserId == ownerId) { "Compagnon rattaché à un autre compte." }
+                }
+            }
+
         suspend fun loadPersonalRewards(): Result<PersonalRewardSummaryDto> = runCatching {
+            val ownerId = authRepository.fetchMe().id
             val familyId = authRepository.getActiveFamilyId()
                 ?: throw IllegalStateException("Aucune famille active pour ce compte.")
             nestApi.getPersonalRewards(familyId).data.also {
                 check(it.familyId == familyId) { "Solde rattaché à une autre famille." }
+                check(it.userId == ownerId) { "Solde rattaché à un autre compte." }
             }
         }
 

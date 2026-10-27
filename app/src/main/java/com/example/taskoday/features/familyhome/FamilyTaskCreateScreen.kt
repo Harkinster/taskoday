@@ -2,6 +2,7 @@ package com.example.taskoday.features.familyhome
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,6 +27,7 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -46,6 +48,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -84,6 +87,23 @@ fun FamilyTaskCreateScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val spacing = MaterialTheme.spacing
+    var showDiscardConfirmation by rememberSaveable { mutableStateOf(false) }
+    val requestBack: () -> Unit = {
+        if (!uiState.isSubmitting) {
+            if (uiState.hasUnsavedChanges && !uiState.created) showDiscardConfirmation = true
+            else onBack()
+        }
+    }
+    BackHandler(enabled = !uiState.created, onBack = requestBack)
+    if (showDiscardConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showDiscardConfirmation = false },
+            title = { Text("Quitter sans enregistrer ?") },
+            text = { Text("Les modifications de cette tâche seront perdues.") },
+            confirmButton = { TextButton(onClick = { showDiscardConfirmation = false; onBack() }) { Text("Quitter") } },
+            dismissButton = { TextButton(onClick = { showDiscardConfirmation = false }) { Text("Continuer la saisie") } },
+        )
+    }
 
     var creationHandled by remember { mutableStateOf(false) }
     LaunchedEffect(uiState.created) {
@@ -99,9 +119,9 @@ fun FamilyTaskCreateScreen(
         bottomBar = {
             if (!uiState.isLoadingTask) {
                 FormBottomBar(
-                    onBack = onBack,
+                    onBack = requestBack,
                     onPrimary = viewModel::submit,
-                    primaryEnabled = !uiState.isSubmitting,
+                    primaryEnabled = !uiState.isSubmitting && !uiState.created && !uiState.isLoadingMembers,
                     primaryLabel = when {
                         uiState.isSubmitting && uiState.isEditing -> "Enregistrement..."
                         uiState.isSubmitting -> "Création..."
@@ -128,7 +148,7 @@ fun FamilyTaskCreateScreen(
                 verticalArrangement = Arrangement.spacedBy(spacing.medium),
             ) {
                 item {
-                    FamilyTaskCreateHeader(isEditing = uiState.isEditing, actionType = uiState.actionType, onBack = onBack)
+                    FamilyTaskCreateHeader(isEditing = uiState.isEditing, actionType = uiState.actionType, onBack = requestBack)
                 }
 
                 if (uiState.isLoadingTask) {
@@ -163,7 +183,7 @@ fun FamilyTaskCreateScreen(
                         }
                     } else {
                         item { FamilyTaskCreateFormCard(uiState, viewModel::onTitleChanged, viewModel::onDescriptionChanged, viewModel::onDateChanged, viewModel::onTimeChanged, viewModel::clearTime) }
-                        item { AssigneesCard(uiState, viewModel::selectHouseTask, viewModel::toggleAssignee) }
+                        item { AssigneesCard(uiState, viewModel::selectHouseTask, viewModel::selectAssignee) }
                         if (uiState.actionType.kind != com.example.taskoday.domain.model.FamilyActionKind.MISSION) {
                             item { RecurrenceCard(uiState, viewModel::onRecurrenceChanged, viewModel::toggleWeekday, viewModel::customizeRecurrence, viewModel::onRecurrenceIntervalChanged, viewModel::onCustomRecurrenceUnitChanged, viewModel::onEndDateChanged) }
                         }
@@ -487,7 +507,9 @@ private fun AssigneesCard(
 ) {
     FamilyTaskCreateCard(title = "Assignation") {
         Text(
-            text = "Choisis un ou plusieurs membres, ou laisse la tâche pour la Maison.",
+            text = if (uiState.actionType.scope == com.example.taskoday.domain.model.FamilyActionScope.HOUSE)
+                "Choisis un ou plusieurs membres, ou laisse la tâche pour la Maison."
+            else "Choisis la personne responsable de cette action personnelle.",
             style = MaterialTheme.typography.bodyMedium,
             color = InkMuted,
         )
@@ -495,12 +517,10 @@ private fun AssigneesCard(
             modifier = Modifier.horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            FilterChip(
-                selected = uiState.isHouseTask,
-                onClick = onSelectHouse,
-                label = { Text("Maison") },
-            )
-            uiState.members.forEach { member ->
+            if (uiState.actionType.scope == com.example.taskoday.domain.model.FamilyActionScope.HOUSE) {
+                FilterChip(selected = uiState.isHouseTask, onClick = onSelectHouse, label = { Text("Maison") })
+            }
+            uiState.members.filter { it.isActive }.forEach { member ->
                 FilterChip(
                     selected = member.userId in uiState.selectedAssigneeUserIds,
                     onClick = { onToggleAssignee(member.userId) },
@@ -518,7 +538,9 @@ private fun AssigneesCard(
             }
         } else if (uiState.members.isEmpty()) {
             Text(
-                text = "Aucun membre chargé. La tâche peut rester non assignée.",
+                text = if (uiState.actionType.scope == com.example.taskoday.domain.model.FamilyActionScope.HOUSE)
+                    "Aucun membre chargé. La tâche peut rester non assignée."
+                else "Aucun membre chargé. Réessaie avant de choisir la personne responsable.",
                 style = MaterialTheme.typography.bodySmall,
                 color = InkMuted,
             )

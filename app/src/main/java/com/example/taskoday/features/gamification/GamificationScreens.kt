@@ -1,5 +1,6 @@
 package com.example.taskoday.features.gamification
 
+import com.example.taskoday.features.taskodayv4.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -7,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -29,6 +31,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.outlined.HourglassEmpty
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -82,6 +87,7 @@ import com.example.taskoday.data.remote.dto.EggDto
 import com.example.taskoday.data.remote.dto.InventoryDto
 import com.example.taskoday.data.remote.dto.InventoryItemDto
 import com.example.taskoday.data.remote.dto.RequiredResourceDto
+import com.example.taskoday.data.remote.dto.PersonalCompanionDto
 
 data class RecentNestReward(
     val actionTitle: String,
@@ -109,22 +115,25 @@ fun NestScreen(
     onOpenScrolls: () -> Unit,
     onOpenProfile: () -> Unit,
 ) {
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.onScreenResumed() }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var visibleRecentReward by remember { mutableStateOf<RecentNestReward?>(null) }
+    var showCompanions by remember { mutableStateOf(false) }
     val nestEggs =
         if (uiState.hasRemoteSession) {
             uiState.eggs?.eggs.orEmpty().map { egg -> egg.toUiItem(uiState.inventory) }
         } else {
             emptyList()
         }
-    val activeDragon =
-        if (uiState.hasRemoteSession) {
-            uiState.dragons?.activeCompanion?.toUiItem()
-        } else {
-            null
-        }
+    val activeDragon = if (uiState.personalCompanionsLoaded) uiState.personalCompanions?.activeCompanion else null
     val activeNestEgg = selectActiveNestEgg(nestEggs)
+    LaunchedEffect(uiState.starterCreated) {
+        if (uiState.starterCreated) {
+            showCompanions = false
+            viewModel.consumeMessage()
+            viewModel.consumeStarterCreated()
+        }
+    }
     LaunchedEffect(recentRewardEventId) {
         if (recentReward == null) return@LaunchedEffect
         if (shouldShowRecentNestReward(recentReward)) {
@@ -138,13 +147,19 @@ fun NestScreen(
         uiState.userMessage?.let { message ->
             item { FantasyStateCard(title = "Information du Nid", message = message, assetResId = NestAssets.interfaceAsset("nid")) }
         }
-        item { NestCreatureStage(dragon = activeDragon, egg = activeNestEgg, onOpenEggs = onOpenEggs) }
         item {
-            NestHubTiles(
-                onOpenInventory = onOpenInventory,
+            NestCreatureStage(
+                companion = activeDragon,
+                egg = activeNestEgg,
+                hasRemoteSession = uiState.hasRemoteSession,
+                companionsLoaded = uiState.personalCompanionsLoaded,
+                companionsLoading = uiState.personalCompanionsLoading,
+                companionCount = uiState.personalCompanions?.companions?.size ?: 0,
+                activeState = uiState.personalCompanions?.activeState,
+                companionMessage = uiState.personalCompanionMessage,
+                onChooseCompanion = { showCompanions = true },
+                onRetryCompanions = viewModel::refresh,
                 onOpenEggs = onOpenEggs,
-                onOpenChests = onOpenChests,
-                onOpenWishes = onOpenWishes,
             )
         }
         item {
@@ -157,6 +172,9 @@ fun NestScreen(
                 onOpenWishes = onOpenWishes,
                 onOpenChests = onOpenChests,
             )
+        }
+        item {
+            NestHubTiles(onOpenInventory, onOpenEggs, onOpenChests, onOpenWishes)
         }
         visibleRecentReward?.let { reward -> item { RecentNestRewardCard(reward = reward, onDismiss = { visibleRecentReward = null }) } }
         if (activeNestEgg != null || activeDragon != null) {
@@ -179,6 +197,21 @@ fun NestScreen(
             onDismiss = viewModel::consumeHatchingCelebration,
         )
     }
+    if (showCompanions) {
+        CompanionSelectionDialog(
+            companions = uiState.personalCompanions?.companions.orEmpty(),
+            activeState = uiState.personalCompanions?.activeState ?: "NONE",
+            lineages = uiState.lineages,
+            isLoadingLineages = uiState.isLoadingLineages,
+            isSubmitting = uiState.isSubmitting,
+            message = uiState.userMessage,
+            onLoadLineages = viewModel::loadLineages,
+            onCreateStarter = viewModel::createStarter,
+            onActivate = viewModel::activatePersonalCompanion,
+            onRename = viewModel::renamePersonalCompanion,
+            onDismiss = { showCompanions = false; viewModel.consumeMessage() },
+        )
+    }
 }
 
 @Composable
@@ -198,7 +231,7 @@ fun InventoryScreen(
             sampleLoot
         }
     GamificationListScreen(
-        title = "Inventaire",
+        title = "Collection",
         subtitle = "Les petits trésors trouvés dans les coffres du Gardien.",
         assetResId = NestAssets.interfaceAsset("inventory_empty"),
         assetDescription = "Inventaire",
@@ -712,11 +745,7 @@ private fun NestIdentityHeader(onOpenProfile: () -> Unit) {
     Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween) {
         Text("Le Nid", style = MaterialTheme.typography.headlineSmall, color = Color.White)
-        Box(Modifier.size(48.dp).clip(CircleShape).background(Color(0xA823493E))
-            .border(1.dp, SoftGold.copy(alpha = 0.78f), CircleShape).clickable(onClick = onOpenProfile),
-            contentAlignment = Alignment.Center) {
-            Icon(Icons.Outlined.Person, contentDescription = "Profil", tint = Color.White, modifier = Modifier.size(26.dp))
-        }
+        FantasyProfileMedallion(onOpenProfile)
     }
 }
 
@@ -725,23 +754,36 @@ private fun NestResourcesPanel(
     hasRemoteSession: Boolean, isLoading: Boolean, points: Int?, flames: Int?, crystals: Int?,
     onOpenWishes: () -> Unit, onOpenChests: () -> Unit,
 ) {
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
-        .background(Color(0xB823493E)).border(1.dp, SoftGold.copy(alpha = 0.64f), RoundedCornerShape(24.dp))
-        .padding(horizontal = 6.dp, vertical = 3.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-        when {
-            !hasRemoteSession -> Text("Connecte-toi pour consulter tes ressources personnelles.",
-                style = MaterialTheme.typography.bodySmall, color = Color.White, modifier = Modifier.padding(10.dp))
-            isLoading || points == null || flames == null || crystals == null -> Text("Chargement des ressources...",
-                style = MaterialTheme.typography.bodySmall, color = Color.White, modifier = Modifier.padding(10.dp))
-            else -> {
-                ResourceBalance("Points", points.toString(), com.example.taskoday.R.drawable.v2_resource_xp,
-                    Color(0xFFFFD66D), Modifier.weight(1f))
-                ResourceBalance("Flammèches", flames.toString(), NestAssets.interfaceAsset("flammeche"),
-                    Color(0xFFFFB36B), Modifier.weight(1f), onOpenWishes)
-                ResourceBalance("Cristaux", crystals.toString(), NestAssets.interfaceAsset("crystal"),
-                    Color(0xFFB9E8FF), Modifier.weight(1f), onOpenChests)
-            }
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        val ready = hasRemoteSession && !isLoading
+        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color(0xC02C2038))
+            .padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Image(painterResource(com.example.taskoday.R.drawable.v2_resource_xp), null, Modifier.size(22.dp))
+            Text(if (ready && points != null) "$points Points" else "Points · …", color = JourneyGold, style = MaterialTheme.typography.titleSmall)
+            Text("Mon parcours Taskoday", color = JourneyParchment, style = MaterialTheme.typography.bodySmall)
         }
+        if (!hasRemoteSession) Text("Connecte-toi pour retrouver tes ressources personnelles.", color = Color.White)
+        else Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            NestResourceDestination("Caverne", "${if (ready) flames?.toString() ?: "…" else "…"} Flammèches",
+                "Réaliser mes souhaits", NestAssets.interfaceAsset("wish_cave"), Color(0xFFFFBD80), Modifier.weight(1f), onOpenWishes)
+            NestResourceDestination("Coffres", "${if (ready) crystals?.toString() ?: "…" else "…"} Cristaux",
+                "Découvrir des trésors", NestAssets.chestAsset("common"), Color(0xFFB9E8FF), Modifier.weight(1f), onOpenChests)
+        }
+    }
+}
+
+@Composable
+private fun NestResourceDestination(title: String, balance: String, purpose: String, icon: Int, tint: Color, modifier: Modifier, onClick: () -> Unit) {
+    Column(modifier.clip(RoundedCornerShape(16.dp)).background(Color(0xD02C2038))
+        .border(1.dp, JourneyGold.copy(alpha = .6f), RoundedCornerShape(16.dp))
+        .clickable(onClick = onClick).padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Image(painterResource(icon), null, Modifier.size(30.dp))
+            Text(title, color = JourneyParchment, style = MaterialTheme.typography.titleSmall)
+        }
+        Text(balance, color = tint, style = MaterialTheme.typography.titleSmall)
+        Text(purpose, color = JourneyParchment, style = MaterialTheme.typography.bodySmall)
     }
 }
 
@@ -760,32 +802,134 @@ private fun ResourceBalance(label: String, value: String, icon: Int, tint: Color
 }
 
 @Composable
-private fun NestCreatureStage(dragon: DragonUiItem?, egg: EggUiItem?, onOpenEggs: () -> Unit) {
-    Box(Modifier.fillMaxWidth().height(326.dp), contentAlignment = Alignment.Center) {
-        if (dragon != null || egg != null) {
-            val art = dragon?.assetResId ?: egg!!.assetResId
-            Image(painterResource(art), contentDescription = dragon?.contentDescription ?: egg?.contentDescription,
+private fun NestCreatureStage(
+    companion: PersonalCompanionDto?,
+    egg: EggUiItem?,
+    hasRemoteSession: Boolean,
+    companionsLoaded: Boolean,
+    companionsLoading: Boolean,
+    companionCount: Int,
+    activeState: String?,
+    companionMessage: String?,
+    onChooseCompanion: () -> Unit,
+    onRetryCompanions: () -> Unit,
+    onOpenEggs: () -> Unit,
+) {
+    Box(Modifier.fillMaxWidth().height(260.dp), contentAlignment = Alignment.Center) {
+        if (companion != null) {
+            val lineageKey = companion.lineageId?.lowercase()
+            val stageKey = companion.stage.lowercase()
+            val safeSprite = companion.lineageStatus == "OFFICIAL" && lineageKey != null &&
+                stageKey in setOf("baby", "young", "medium", "large") &&
+                lineageKey in setOf("sylvyn", "phenor", "lunarys", "pyron", "ambrio", "cristao")
+            if (safeSprite) {
+                Image(
+                    painterResource(NestAssets.dragonAsset(lineageKey!!, stageKey)),
+                    contentDescription = "Dragon personnel ${companion.displayName.orEmpty()}",
+                    modifier = Modifier.fillMaxWidth().height(236.dp).padding(10.dp),
+                    contentScale = ContentScale.Fit,
+                )
+            } else if (companion.lineageStatus == "OFFICIAL" && lineageKey != null) {
+                PersonalLineageMedallion(lineageKey)
+            } else {
+                Image(
+                    painterResource(com.example.taskoday.R.drawable.chronodria_nest_environment_v1),
+                    contentDescription = "Decor neutre du Nid",
+                    modifier = Modifier.fillMaxWidth().height(236.dp),
+                    contentScale = ContentScale.Crop,
+                )
+            }
+            Column(
+                Modifier.align(Alignment.BottomCenter).clip(RoundedCornerShape(16.dp))
+                    .background(Color(0xB823493E)).padding(horizontal = 14.dp, vertical = 6.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(companion.displayName?.takeIf(String::isNotBlank) ?: "Ton compagnon", style = MaterialTheme.typography.titleSmall, color = Color.White, maxLines = 1)
+                val lineageLabel = companion.lineage?.founderName?.let { "Lignee $it" } ?: "Lignee historique inconnue"
+                Text("$lineageLabel · ${personalStageLabel(companion.stage)}", style = MaterialTheme.typography.bodySmall, color = Color.White)
+            }
+            if (companionCount > 1 || companion.displayName.isNullOrBlank()) {
+                FantasyCompactButton(
+                    text = if (companionCount > 1) "Mes dragons" else "Nommer",
+                    onClick = onChooseCompanion,
+                    modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).heightIn(min = 48.dp),
+                )
+            }
+            if (companionCount > 1) {
+                FantasyCompactButton(text = "Changer", onClick = onChooseCompanion,
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp).heightIn(min = 48.dp))
+            }
+        } else if (egg != null) {
+            Image(painterResource(egg.assetResId), contentDescription = egg.contentDescription,
                 modifier = Modifier.fillMaxWidth().height(316.dp).padding(2.dp), contentScale = ContentScale.Fit)
             Column(Modifier.align(Alignment.BottomCenter).clip(RoundedCornerShape(16.dp))
                 .background(Color(0xB823493E)).padding(horizontal = 14.dp, vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(dragon?.title ?: egg!!.title, style = MaterialTheme.typography.titleSmall, color = Color.White, maxLines = 1)
-                Text(dragon?.stage ?: "œuf suivi ? ${egg!!.status}", style = MaterialTheme.typography.bodySmall, color = Color.White)
+                Text(egg.title, style = MaterialTheme.typography.titleSmall, color = Color.White, maxLines = 1)
+                Text("Oeuf suivi ? ${egg.status}", style = MaterialTheme.typography.bodySmall, color = Color.White)
             }
         } else {
-            Image(painter = painterResource(com.example.taskoday.R.drawable.chronodria_nest_empty_state_v1),
-                contentDescription = "Nid vide décoré sans œuf ni compagnon",
-                modifier = Modifier.align(Alignment.Center).fillMaxWidth().height(322.dp).padding(bottom = 44.dp),
-                contentScale = ContentScale.Fit)
+            if (companionsLoaded && companionCount == 0) {
+                Image(painter = painterResource(com.example.taskoday.R.drawable.chronodria_nest_empty_state_v1),
+                    contentDescription = "Nid vide sans oeuf ni compagnon",
+                    modifier = Modifier.align(Alignment.Center).fillMaxWidth().height(322.dp).padding(bottom = 44.dp),
+                    contentScale = ContentScale.Fit)
+            } else {
+                Image(painter = painterResource(com.example.taskoday.R.drawable.chronodria_nest_environment_v1),
+                    contentDescription = "Decor du Nid", modifier = Modifier.align(Alignment.Center).fillMaxWidth().height(300.dp), contentScale = ContentScale.Crop)
+            }
             Column(Modifier.align(Alignment.BottomCenter).padding(horizontal = 16.dp).clip(RoundedCornerShape(18.dp))
                 .background(Color(0xC923493E)).border(1.dp, SoftGold.copy(alpha = 0.62f), RoundedCornerShape(18.dp))
                 .padding(horizontal = 12.dp, vertical = 5.dp), horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(0.dp)) {
-                Text("Ton Nid est prêt à t'accueillir", style = MaterialTheme.typography.labelLarge, color = Color.White)
-                Text("Aucun œuf ni compagnon pour le moment.", style = MaterialTheme.typography.labelSmall, color = Color.White)
-                FantasyCompactButton(text = "Voir les œufs", onClick = onOpenEggs, modifier = Modifier.heightIn(min = 48.dp))
+                val title = when {
+                    !hasRemoteSession -> "Connecte-toi pour retrouver ton Nid"
+                    companionsLoading -> "Nous verifions ton Nid"
+                    !companionsLoaded -> "Ton Nid ne peut pas etre charge"
+                    companionCount > 0 -> "Choisis un compagnon actif"
+                    else -> "Ton Nid est pret a t'accueillir"
+                }
+                Text(title, style = MaterialTheme.typography.labelLarge, color = Color.White)
+                val subtitle = when {
+                    !hasRemoteSession -> "Tes compagnons suivent ton compte personnel."
+                    companionsLoading -> "Un instant..."
+                    !companionsLoaded -> companionMessage ?: "Verifie ta connexion puis reessaie."
+                    companionCount > 0 -> "Tu possedes deja un compagnon; choisis lequel activer."
+                    else -> "Aucun oeuf ni compagnon pour le moment."
+                }
+                Text(subtitle, style = MaterialTheme.typography.labelSmall, color = Color.White)
+                if (hasRemoteSession && companionsLoaded && companionCount == 0) {
+                    FantasyButton(text = "Choisir mon dragon", onClick = onChooseCompanion, modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp))
+                } else if (hasRemoteSession && companionsLoaded && companionCount > 0) {
+                    FantasyButton(text = "Choisir mon compagnon", onClick = onChooseCompanion, modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp))
+                } else if (hasRemoteSession && !companionsLoading && !companionsLoaded) {
+                    FantasyButton(text = "Reessayer", onClick = onRetryCompanions, modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp))
+                }
+                FantasyCompactButton(text = "Voir les oeufs", onClick = onOpenEggs, modifier = Modifier.heightIn(min = 48.dp))
             }
         }
     }
+}
+
+@Composable
+private fun PersonalLineageMedallion(lineageId: String) {
+    val (icon, tint) = when (lineageId) {
+        "fulmio" -> Icons.Outlined.Bolt to Color(0xFFB9E8FF)
+        "chronyx" -> Icons.Outlined.HourglassEmpty to Color(0xFFB5E8DA)
+        else -> Icons.Outlined.AutoAwesome to SoftGold
+    }
+    Box(Modifier.size(180.dp), contentAlignment = Alignment.Center) {
+        Image(painterResource(com.example.taskoday.R.drawable.v4_task_medallion), null, Modifier.fillMaxSize())
+        Icon(icon, "Emblème de la lignée $lineageId", Modifier.size(82.dp), tint = tint)
+    }
+}
+
+private fun personalStageLabel(stage: String): String = when (stage.uppercase()) {
+    "BABY" -> "Bébé"
+    "YOUNG" -> "Jeune"
+    "MEDIUM" -> "Adolescent"
+    "LARGE" -> "Adulte"
+    "LEGENDARY" -> "Légendaire"
+    else -> "Stade inconnu"
 }
 
 @Composable
@@ -795,18 +939,7 @@ private fun NestActiveEggCard(
     onEvolveEgg: () -> Unit,
 ) {
     if (egg == null) {
-        FantasyStateCard(
-            title = "Aucun œuf ne repose encore dans ton Nid.",
-            message = "Continue tes aventures pour en découvrir.",
-            assetResId = NestAssets.interfaceAsset("egg_locked"),
-            assetDescription = "Œuf à découvrir",
-        )
-        FantasyButton(
-            text = "Voir mes œufs",
-            onClick = onOpenEggs,
-            modifier = Modifier.fillMaxWidth(),
-            style = FantasyButtonStyle.Outline,
-        )
+        NestEmptyEggCard(onOpenEggs)
         return
     }
 
@@ -890,6 +1023,20 @@ private fun NestActiveEggCard(
     }
 }
 
+/** Empty state only: egg selection, evolution and rewards stay with the existing ViewModel. */
+@Composable
+internal fun NestEmptyEggCard(onOpenEggs: () -> Unit) {
+    FantasyParchmentCard {
+        Row(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.CenterVertically) {
+            FantasyTaskMedallion(NestAssets.interfaceAsset("egg_locked"),"Œuf à découvrir")
+            Text("Aucun œuf ne repose encore dans ton Nid.",Modifier.weight(1f),
+                style=MaterialTheme.typography.titleSmall,color=JourneyInk,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
+        }
+        Text("Continue tes aventures pour en découvrir.",color=JourneyMuted,style=MaterialTheme.typography.bodyMedium)
+        FantasyFramedButton("Voir mes œufs",onOpenEggs,Modifier.fillMaxWidth())
+    }
+}
+
 @Composable
 private fun EggResourceRequirementRow(resource: EggResourceUiItem) {
     Row(
@@ -931,29 +1078,45 @@ private fun EggResourceRequirementRow(resource: EggResourceUiItem) {
 }
 
 @Composable
-private fun NestHubTiles(
+internal fun NestHubTiles(
     onOpenInventory: () -> Unit, onOpenEggs: () -> Unit,
     onOpenChests: () -> Unit, onOpenWishes: () -> Unit,
 ) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-        NestHubAction("Œufs", NestAssets.interfaceAsset("egg_locked"), Modifier.weight(1f), onOpenEggs)
-        NestHubAction("Collection", NestAssets.interfaceAsset("inventory_empty"), Modifier.weight(1f), onOpenInventory)
-        NestHubAction("Coffres", NestAssets.chestAsset("common"), Modifier.weight(1f), onOpenChests)
-        NestHubAction("Caverne", NestAssets.interfaceAsset("wish_cave"), Modifier.weight(1f), onOpenWishes)
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("Mes découvertes", color = JourneyParchment, style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(Color(0xC02C2038)).padding(horizontal = 10.dp, vertical = 4.dp))
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val textMeasurer = androidx.compose.ui.text.rememberTextMeasurer()
+            val titleWidth = with(androidx.compose.ui.platform.LocalDensity.current) {
+                textMeasurer.measure("Collection", style = MaterialTheme.typography.titleSmall).size.width.toDp()
+            }
+            // Preserve the usual pair of tiles; stack only when the scaled title cannot fit.
+            val minimumTileWidth = titleWidth + 36.dp + 8.dp + 22.dp
+            if (maxWidth < minimumTileWidth * 2 + 8.dp) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    NestHubAction("Œufs", NestAssets.interfaceAsset("egg_locked"), Modifier.fillMaxWidth(), onOpenEggs)
+                    NestHubAction("Collection", NestAssets.interfaceAsset("inventory_empty"), Modifier.fillMaxWidth(), onOpenInventory)
+                }
+            } else {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    NestHubAction("Œufs", NestAssets.interfaceAsset("egg_locked"), Modifier.weight(1f), onOpenEggs)
+                    NestHubAction("Collection", NestAssets.interfaceAsset("inventory_empty"), Modifier.weight(1f), onOpenInventory)
+                }
+            }
+        }
     }
 }
 
 @Composable
 private fun NestHubAction(label: String, assetResId: Int, modifier: Modifier, onClick: () -> Unit) {
-    Column(modifier.heightIn(min = 82.dp).clickable(onClick = onClick).padding(horizontal = 2.dp, vertical = 3.dp),
-        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Box(Modifier.size(46.dp).clip(CircleShape).background(Color(0xA823493E))
-            .border(1.dp, SoftGold.copy(alpha = 0.7f), CircleShape), contentAlignment = Alignment.Center) {
-            Image(painterResource(assetResId), contentDescription = null, modifier = Modifier.size(34.dp), contentScale = ContentScale.Fit)
+    Row(modifier.heightIn(min = 68.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xC023493E))
+        .border(1.dp, JourneyGold.copy(alpha = .55f), RoundedCornerShape(16.dp)).clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onClick)
+        .padding(10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Image(painterResource(assetResId), null, Modifier.size(36.dp), contentScale = ContentScale.Fit)
+        Column(Modifier.weight(1f)) {
+            Text(label, color = Color.White, style = MaterialTheme.typography.titleSmall)
+            Text(if (label == "Œufs") "Faire éclore" else "Mes trésors", color = JourneyParchment, style = MaterialTheme.typography.bodySmall)
         }
-        Text(label, modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(Color(0xB823493E))
-            .padding(horizontal = 5.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall,
-            color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false)
     }
 }
 
@@ -1340,6 +1503,7 @@ private fun NavigationButtons(
 @Composable
 private fun GamificationScaffold(
     backgroundResId: Int? = null,
+    dimBackground: Boolean = false,
     content: LazyListScope.() -> Unit,
 ) {
     Scaffold(containerColor = Color.Transparent, contentWindowInsets = WindowInsets(0, 0, 0, 0)) { innerPadding ->
@@ -1356,6 +1520,7 @@ private fun GamificationScaffold(
             Box(Modifier.fillMaxSize().statusBarsPadding().padding(innerPadding)) {
                 Image(painter = painterResource(backgroundResId), contentDescription = null,
                     modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                if (dimBackground) Box(Modifier.fillMaxSize().background(Color(0xCB21162F)))
                 LazyColumn(
                     modifier = Modifier.fillMaxSize().padding(horizontal = MaterialTheme.spacing.medium),
                     contentPadding = PaddingValues(top = MaterialTheme.spacing.large, bottom = 92.dp),
@@ -1378,17 +1543,15 @@ private fun GamificationListScreen(
     message: String? = null,
     content: LazyListScope.() -> Unit,
 ) {
-    GamificationScaffold {
+    GamificationScaffold(backgroundResId = com.example.taskoday.R.drawable.chronodria_nest_environment_v1, dimBackground = true) {
+        item { FantasyPageHeader(title, "Chronodria · Mes découvertes", onOpenProfile) }
         item {
-            FantasyHeader(
-                title = title,
-                subtitle = subtitle,
-                assetResId = assetResId,
-                assetDescription = assetDescription,
-                onAvatarClick = onOpenProfile,
-                onBackClick = onBackToNest,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Image(painterResource(assetResId), assetDescription, Modifier.size(54.dp))
+                Text(subtitle, color = JourneyParchment, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+            }
         }
+        onBackToNest?.let { back -> item { FantasyButton("‹ Le Nid", back, style = FantasyButtonStyle.Outline) } }
         if (!message.isNullOrBlank()) {
             item {
                 FantasyStateCard(

@@ -1,5 +1,19 @@
 package com.example.taskoday.features.gamification
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import com.example.taskoday.features.taskodayv4.*
+import com.example.taskoday.core.ui.component.fantasy.FantasyScreenBackground
+import com.example.taskoday.core.ui.component.fantasy.NestAssets
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,6 +28,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -48,21 +63,30 @@ fun ResourceUtilityScreen(
             viewModel.consumeMessage()
         }
     }
-    Scaffold(snackbarHost = { SnackbarHost(snackbar) }) { padding ->
+    Scaffold(containerColor = Color.Transparent, contentWindowInsets = WindowInsets(0, 0, 0, 0), snackbarHost = { SnackbarHost(snackbar) }) { padding ->
+        FantasyScreenBackground(Modifier.statusBarsPadding().padding(padding)) {
+        CompositionLocalProvider(LocalContentColor provides JourneyParchment) {
         LazyColumn(
-            Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp),
+            Modifier.fillMaxSize().padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(top = 10.dp, bottom = 24.dp),
         ) {
+            item { FantasyPageHeader(if (initialSection == "chests") "Coffres" else "Caverne", "Chronodria · Mes ressources personnelles", onOpenProfile) }
             item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    OutlinedButton(onClick = onBackToNest) { Text("‹ Le Nid") }
-                    OutlinedButton(onClick = onOpenProfile) { Text("Compte") }
+                FantasySummaryPanel {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Image(painterResource(if (initialSection == "chests") NestAssets.chestAsset("common") else NestAssets.interfaceAsset("wish_cave")),
+                            null, Modifier.size(64.dp))
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            val b = state.balance
+                            Text(if (initialSection == "chests") "${b?.crystals?.toString() ?: "…"} Cristaux" else "${b?.flames?.toString() ?: "…"} Flammèches",
+                                color = JourneyGold, style = MaterialTheme.typography.titleLarge)
+                            Text(if (initialSection == "chests") "Pour découvrir des trésors" else "Pour réaliser mes souhaits", color = JourneyParchment, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
                 }
-                Text(if (initialSection == "chests") "Coffres Chronodria" else "Caverne des souhaits", style = MaterialTheme.typography.headlineSmall)
-                Text("Tes ressources restent personnelles.", style = MaterialTheme.typography.bodyMedium)
-                val b = state.balance
-                if (b != null) Text("${b.flames} Flammèches  ·  ${b.crystals} Cristaux", style = MaterialTheme.typography.titleMedium)
             }
+            item { ChronodriaAction(onClick = onBackToNest, outlined = true) { Text("‹ Le Nid") } }
             if (state.loading) item { Text("Chargement…", Modifier.padding(16.dp)) }
             state.error?.let { message ->
                 item {
@@ -76,12 +100,12 @@ fun ResourceUtilityScreen(
             if (initialSection != "chests") {
                 if (state.isParent) {
                     item {
-                        Card(Modifier.fillMaxWidth()) {
+                        FantasyParchmentCard(Modifier.fillMaxWidth()) {
                             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(if (editingOfferId == null) "Ajouter un souhait" else "Modifier le souhait", style = MaterialTheme.typography.titleMedium)
-                                OutlinedTextField(title, { title = it }, label = { Text("Souhait") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                                OutlinedTextField(cost, { cost = it.filter(Char::isDigit) }, label = { Text("Coût en Flammèches") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                                Button(onClick = {
+                                OutlinedTextField(title, { title = it }, label = { Text("Souhait") }, singleLine = true, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = JourneyInk, unfocusedTextColor = JourneyInk, focusedLabelColor = JourneyInk, unfocusedLabelColor = JourneyMuted, focusedBorderColor = JourneyMuted, unfocusedBorderColor = JourneyMuted), modifier = Modifier.fillMaxWidth())
+                                OutlinedTextField(cost, { cost = it.filter(Char::isDigit) }, label = { Text("Coût en Flammèches") }, singleLine = true, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = JourneyInk, unfocusedTextColor = JourneyInk, focusedLabelColor = JourneyInk, unfocusedLabelColor = JourneyMuted, focusedBorderColor = JourneyMuted, unfocusedBorderColor = JourneyMuted), modifier = Modifier.fillMaxWidth())
+                                ChronodriaAction(onClick = {
                                     val editId = editingOfferId
                                     if (editId == null) viewModel.createOffer(title, cost) else viewModel.updateOffer(editId, title, cost)
                                     title = ""; cost = "1"; editingOfferId = null
@@ -93,16 +117,16 @@ fun ResourceUtilityScreen(
                     }
                 }
                 items(state.offers, key = { "offer-${it.id}" }) { offer ->
-                    Card(Modifier.fillMaxWidth()) {
+                    FantasyParchmentCard(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(offer.title, style = MaterialTheme.typography.titleMedium)
                             offer.description?.takeIf(String::isNotBlank)?.let { Text(it) }
                             Text("${offer.flameCost} Flammèches")
-                            if (state.isParent) Button(onClick = { viewModel.obtain(offer.id) }, enabled = !state.submitting && (state.balance?.flames ?: 0) >= offer.flameCost) { Text("Obtenir") }
-                            else Button(onClick = { viewModel.requestWish(offer.id) }, enabled = !state.submitting) { Text("Demander") }
+                            if (state.isParent) ChronodriaAction(onClick = { viewModel.obtain(offer.id) }, enabled = !state.submitting && (state.balance?.flames ?: 0) >= offer.flameCost) { Text("Obtenir") }
+                            else ChronodriaAction(onClick = { viewModel.requestWish(offer.id) }, enabled = !state.submitting) { Text("Demander") }
                             if (state.isParent) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                OutlinedButton(onClick = { editingOfferId = offer.id; title = offer.title; cost = offer.flameCost.toString() }, enabled = !state.submitting) { Text("Modifier") }
-                                OutlinedButton(onClick = { viewModel.deactivateOffer(offer.id) }, enabled = !state.submitting) { Text("Désactiver") }
+                                ChronodriaAction(outlined = true, onClick = { editingOfferId = offer.id; title = offer.title; cost = offer.flameCost.toString() }, enabled = !state.submitting) { Text("Modifier") }
+                                ChronodriaAction(outlined = true, onClick = { viewModel.deactivateOffer(offer.id) }, enabled = !state.submitting) { Text("Désactiver") }
                             }
                         }
                     }
@@ -110,18 +134,18 @@ fun ResourceUtilityScreen(
                 if (state.offers.isEmpty() && !state.loading && state.error == null) {
                     item { Text("Aucun souhait disponible pour le moment.", modifier = Modifier.padding(vertical = 12.dp)) }
                 }
-                item { Text(if (state.isParent) "Demandes de la famille" else "Mes demandes", style = MaterialTheme.typography.titleLarge) }
+                item { FantasySectionHeading(if (state.isParent) "Demandes de la famille" else "Mes demandes") }
                 items(state.requests, key = { "request-${it.id}" }) { request ->
-                    Card(Modifier.fillMaxWidth()) {
+                    FantasyParchmentCard(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(request.title, style = MaterialTheme.typography.titleMedium)
                             if (state.isParent) Text("Demandé par ${request.requesterName}")
                             Text("${request.flameCost} Flammèches · ${wishRequestStatusLabel(request.status)}")
                             if (state.isParent && request.status == "PENDING") Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Button(onClick = { viewModel.approve(request.id) }, enabled = !state.submitting && (state.balance?.flames ?: Int.MAX_VALUE) >= 0) { Text("Accepter") }
-                                OutlinedButton(onClick = { viewModel.reject(request.id) }, enabled = !state.submitting) { Text("Refuser") }
+                                ChronodriaAction(onClick = { viewModel.approve(request.id) }, enabled = !state.submitting && (state.balance?.flames ?: Int.MAX_VALUE) >= 0) { Text("Accepter") }
+                                ChronodriaAction(outlined = true, onClick = { viewModel.reject(request.id) }, enabled = !state.submitting) { Text("Refuser") }
                             }
-                            if (!state.isParent && request.status == "PENDING") OutlinedButton(onClick = { viewModel.cancel(request.id) }, enabled = !state.submitting) { Text("Annuler la demande") }
+                            if (!state.isParent && request.status == "PENDING") ChronodriaAction(outlined = true, onClick = { viewModel.cancel(request.id) }, enabled = !state.submitting) { Text("Annuler la demande") }
                         }
                     }
                 }
@@ -131,11 +155,11 @@ fun ResourceUtilityScreen(
             } else {
                 items(state.chests?.chests.orEmpty(), key = { it.chestType }) { chest ->
                     val enough = canOpenChest(state.balance?.crystals ?: 0, chest.crystalCost)
-                    Card(Modifier.fillMaxWidth()) {
+                    FantasyParchmentCard(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(chest.title, style = MaterialTheme.typography.titleLarge)
                             Text("${chest.crystalCost} Cristaux · ${chest.dropCount} découverte(s)")
-                            Button(onClick = { viewModel.openChest(chest.chestType) }, enabled = !state.submitting && enough) {
+                            ChronodriaAction(onClick = { viewModel.openChest(chest.chestType) }, enabled = !state.submitting && enough) {
                                 Text(if (enough) "Ouvrir" else "Cristaux insuffisants")
                             }
                         }
@@ -143,17 +167,17 @@ fun ResourceUtilityScreen(
                 }
                 if (state.chestOpens.isNotEmpty()) item { Text("Coffres ouverts récemment", style = MaterialTheme.typography.titleLarge) }
                 items(state.chestOpens, key = { "open-${it.id}" }) { opened ->
-                    Card(Modifier.fillMaxWidth()) {
+                    FantasyParchmentCard(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("Coffre ${chestTypeLabel(opened.chestType)} · ${opened.crystalCost} Cristaux")
                             Text(chestRevealText(opened.drops))
-                            OutlinedButton(onClick = { viewModel.showChestReveal(opened) }) { Text("Voir la découverte") }
+                            ChronodriaAction(outlined = true, onClick = { viewModel.showChestReveal(opened) }) { Text("Voir la découverte") }
                         }
                     }
                 }
-                item { Text("Ma collection", style = MaterialTheme.typography.titleLarge) }
+                item { FantasySectionHeading("Ma collection") }
                 items(state.collection?.items.orEmpty(), key = { it.collectibleKey }) { item ->
-                    Card(Modifier.fillMaxWidth()) { Row(Modifier.padding(14.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                    FantasyParchmentCard(Modifier.fillMaxWidth()) { Row(Modifier.padding(14.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text(item.title); Text("×${item.quantity}")
                     } }
                 }
@@ -166,6 +190,8 @@ fun ResourceUtilityScreen(
             }
             item { androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = 20.dp)) }
         }
+        }
+        }
     }
     state.chestReveal?.let { opened ->
         AlertDialog(
@@ -175,7 +201,7 @@ fun ResourceUtilityScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     opened.drops.forEach { drop ->
                         val totalQuantity = state.collection?.items?.firstOrNull { it.title == drop.title }?.quantity
-                        Card(Modifier.fillMaxWidth()) {
+                        FantasyParchmentCard(Modifier.fillMaxWidth()) {
                             Row(
                                 Modifier.fillMaxWidth().padding(14.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -192,8 +218,24 @@ fun ResourceUtilityScreen(
                 }
             },
             confirmButton = {
-                Button(onClick = viewModel::dismissChestReveal) { Text("Continuer") }
+                ChronodriaAction(onClick = viewModel::dismissChestReveal) { Text("Continuer") }
             },
         )
     }
+}
+
+@Composable
+private fun ChronodriaAction(
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    outlined: Boolean = false,
+    content: @Composable RowScope.() -> Unit,
+) {
+    Button(onClick = onClick, enabled = enabled, modifier = Modifier.heightIn(min = 48.dp),
+        shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, JourneyGold),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (outlined) JourneyParchment else Color(0xFF59316D),
+            contentColor = if (outlined) JourneyInk else JourneyParchment,
+            disabledContainerColor = Color(0xFFE0D5C3), disabledContentColor = Color(0xFF796A72)),
+        content = content)
 }

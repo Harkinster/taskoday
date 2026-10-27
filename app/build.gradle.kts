@@ -14,8 +14,8 @@ android {
         applicationId = "com.harkinster.taskoday"
         minSdk = 24
         targetSdk = 36
-        versionCode = 6
-        versionName = "1.0-beta05"
+        versionCode = 7
+        versionName = "1.0-beta06"
         // Public certificate pinned from the existing signed beta03 APK and confirmed against
         // the configured external keystore. Override only when deliberately rotating the key.
         buildConfigField("String", "UPDATE_SIGNER_SHA256", "\"${providers.gradleProperty("taskodayReleaseSignerSha256").orElse("4783e3e7f20c4bfec5e6b22fb0e3cfcaeb0dfddca3ebc380929c7fb1243a666b").get()}\"")
@@ -53,6 +53,18 @@ android {
     }
 
     buildTypes {
+        debug {
+            // V4 preview/gallery stays isolated from an installed beta package.
+            val localFamilyQa = providers.gradleProperty("taskodayLocalFamilyQa").orNull == "true"
+            applicationIdSuffix = if (localFamilyQa) ".familyqa" else ".v43gallery"
+            if (localFamilyQa) {
+                // Explicit opt-in: genuine local API, separate Android storage.
+                buildConfigField("String", "TASKODAY_BASE_URL", "\"http://10.0.2.2:18765/\"")
+                buildConfigField("String", "UPDATE_MANIFEST_URL", "\"http://10.0.2.2:18765/qa/no-update\"")
+                buildConfigField("String", "UPDATE_SERVER_HOST", "\"10.0.2.2\"")
+                buildConfigField("int", "UPDATE_SERVER_PORT", "18765")
+            }
+        }
         release {
             isMinifyEnabled = false
             signingConfig = signingConfigs.getByName("beta")
