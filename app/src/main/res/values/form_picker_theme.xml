@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Scoped native pickers: preserve Android's calendar/clock and callbacks. -->
+    <style name="Theme.Taskoday.FormPicker" parent="@android:style/Theme.Material.Light.Dialog.Alert">
+        <item name="android:colorAccent">#542870</item>
+        <item name="android:colorBackground">#FFF6E9</item>
+        <item name="android:windowBackground">#FFF6E9</item>
+        <item name="android:textColorPrimary">#35213E</item>
+        <item name="android:textColorSecondary">#726777</item>
+    </style>
+</resources>

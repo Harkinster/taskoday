@@ -1,6 +1,7 @@
 package com.example.taskoday.features.familyhome
 
 import android.app.DatePickerDialog
+import com.example.taskoday.R
 import android.app.TimePickerDialog
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.horizontalScroll
@@ -32,12 +33,12 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.FilterChip
+import com.example.taskoday.core.ui.component.forms.FantasyFormChoice as FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
+import com.example.taskoday.core.ui.component.forms.FantasyFormOutlineButton as OutlinedButton
+import com.example.taskoday.core.ui.component.forms.FantasyFormField as OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -54,6 +55,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -61,7 +63,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.taskoday.core.ui.component.fantasy.FantasyScreenBackground
-import com.example.taskoday.core.ui.component.FormBottomBar
+import com.example.taskoday.core.ui.component.forms.FantasyFormBottomBar as FormBottomBar
 import com.example.taskoday.core.ui.theme.DangerGlow
 import com.example.taskoday.core.ui.theme.InkBrown
 import com.example.taskoday.core.ui.theme.InkMuted
@@ -74,12 +76,30 @@ import com.example.taskoday.domain.model.FamilyTaskMemberRole
 import com.example.taskoday.domain.model.FamilyTaskPriority
 import com.example.taskoday.domain.model.FamilyTaskRecurrence
 import com.example.taskoday.domain.model.FamilyActionType
+import com.example.taskoday.core.ui.component.forms.*
 import java.time.LocalDate
 import java.time.LocalTime
 import java.util.Locale
 
 @Composable
 fun FamilyTaskCreateScreen(
+    viewModel: FamilyTaskCreateViewModel,
+    onBack: () -> Unit,
+    onCreated: () -> Unit,
+    quickMode: Boolean = false,
+) {
+    val focus = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    FantasyFormTheme {
+        FamilyTaskCreateScreenContent(viewModel,
+            onBack = { focus.clearFocus(); keyboard?.hide(); onBack() },
+            onCreated = { focus.clearFocus(); keyboard?.hide(); onCreated() },
+            quickMode = quickMode)
+    }
+}
+
+@Composable
+private fun FamilyTaskCreateScreenContent(
     viewModel: FamilyTaskCreateViewModel,
     onBack: () -> Unit,
     onCreated: () -> Unit,
@@ -203,7 +223,7 @@ fun FamilyTaskCreateScreen(
 }
 
 @Composable
-private fun ActionKindCard(uiState: FamilyTaskCreateUiState, onKindChanged: (FamilyActionType) -> Unit) {
+internal fun ActionKindCard(uiState: FamilyTaskCreateUiState, onKindChanged: (FamilyActionType) -> Unit) {
     FamilyTaskCreateCard(title = if (uiState.actionType.scope == com.example.taskoday.domain.model.FamilyActionScope.HOUSE) "Action Maison" else "Action personnelle") {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FamilyActionType.entries.filter { it.scope == uiState.actionType.scope }.forEach { type ->
@@ -219,9 +239,11 @@ private fun ActionKindCard(uiState: FamilyTaskCreateUiState, onKindChanged: (Fam
                 )
             }
         }
-        if (uiState.actionType.kind == com.example.taskoday.domain.model.FamilyActionKind.QUEST) {
-            Text("Challenge du foyer", style = MaterialTheme.typography.bodySmall, color = InkMuted)
-        }
+        Text(when (uiState.actionType.kind) {
+            com.example.taskoday.domain.model.FamilyActionKind.QUEST -> "Un défi du foyer, à réaliser ensemble."
+            com.example.taskoday.domain.model.FamilyActionKind.ROUTINE -> "Un geste qui revient, selon le rythme choisi."
+            com.example.taskoday.domain.model.FamilyActionKind.MISSION -> "Une action ponctuelle, avec ou sans échéance."
+        }, style = MaterialTheme.typography.bodySmall, color = InkMuted)
     }
 }
 
@@ -266,6 +288,7 @@ private fun QuickTaskForm(
             value = uiState.title,
             onValueChange = onTitleChanged,
             placeholder = { Text("Ex. Ranger sa chambre") },
+            label = { Text("Titre de l’action") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth().focusRequester(requester),
         )
@@ -292,7 +315,7 @@ private fun QuickTaskForm(
             }
         }
         uiState.prefillWarning?.let { warning ->
-            Text(warning, style = MaterialTheme.typography.bodySmall, color = DangerGlow)
+            Text(warning, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
         }
         if (uiState.reusedSourceId != null && uiState.recurrence != FamilyTaskRecurrence.NONE) {
             Text("Cette copie répétera aussi l'action selon la cadence affichée dans Plus d'options.", style = MaterialTheme.typography.bodySmall, color = InkMuted)
@@ -320,6 +343,11 @@ private fun QuickTaskForm(
                 Text(uiState.members.firstOrNull { it.userId in uiState.selectedAssigneeUserIds }?.displayName ?: "Personne indisponible", color = InkMuted)
             }
         }
+        Text(
+            if (uiState.isHouseTask) "Pour la Maison"
+            else "Sélection : " + uiState.members.filter { it.userId in uiState.selectedAssigneeUserIds }.joinToString { it.displayName },
+            style = MaterialTheme.typography.bodySmall, color = FormViolet,
+        )
         Text("Quand ?", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = InkBrown)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             FilterChip(selected = uiState.date == today.toString() && uiState.time.isBlank(), onClick = { selectWhen(QuickTaskWhen.TODAY) }, label = { Text("Aujourd'hui") })
@@ -327,7 +355,7 @@ private fun QuickTaskForm(
             FilterChip(selected = uiState.date == today.toString() && uiState.time == "19:00", onClick = { selectWhen(QuickTaskWhen.EVENING) }, label = { Text("Ce soir · 19 h") })
             FilterChip(selected = false, onClick = {
                 val selected = parseFamilyTaskDateInput(uiState.date) ?: today
-                DatePickerDialog(context, { _, year, month, day -> onDateChanged(LocalDate.of(year, month + 1, day).toString()) }, selected.year, selected.monthValue - 1, selected.dayOfMonth).show()
+                DatePickerDialog(context, R.style.Theme_Taskoday_FormPicker, { _, year, month, day -> onDateChanged(LocalDate.of(year, month + 1, day).toString()) }, selected.year, selected.monthValue - 1, selected.dayOfMonth).show()
             }, label = { Text("Choisir une date") })
             if (uiState.actionType.kind == com.example.taskoday.domain.model.FamilyActionKind.MISSION) {
                 FilterChip(selected = uiState.date.isBlank(), onClick = { onDateChanged(""); onClearTime() }, label = { Text("Sans échéance") })
@@ -338,7 +366,7 @@ private fun QuickTaskForm(
         }
         if (uiState.date.isNotBlank()) TextButton(onClick = {
             val selected = parseFamilyTaskTimeInput(uiState.time) ?: LocalTime.now()
-            TimePickerDialog(context, { _, hour, minute -> onTimeChanged(String.format(Locale.US, "%02d:%02d", hour, minute)) }, selected.hour, selected.minute, true).show()
+            TimePickerDialog(context, R.style.Theme_Taskoday_FormPicker, { _, hour, minute -> onTimeChanged(String.format(Locale.US, "%02d:%02d", hour, minute)) }, selected.hour, selected.minute, true).show()
         }) { Text(if (uiState.time.isBlank()) "+ Ajouter une heure" else "Heure : ${uiState.time}") }
         if (uiState.time.isNotBlank()) TextButton(onClick = onClearTime) { Text("Retirer l'heure") }
         if (uiState.actionType.kind == com.example.taskoday.domain.model.FamilyActionKind.ROUTINE) {
@@ -361,53 +389,19 @@ private fun FamilyTaskCreateHeader(
     actionType: FamilyActionType,
     onBack: () -> Unit,
 ) {
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        colors =
-            CardDefaults.elevatedCardColors(
-                containerColor = ParchmentLight.copy(alpha = 0.98f),
-                contentColor = InkBrown,
-            ),
-    ) {
-        Row(
-            modifier = Modifier.padding(14.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Retour", tint = WoodBrown)
-            }
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Text(
-                    text = if (isEditing) "Modifier l'action" else when (actionType) {
-                        FamilyActionType.HOUSE_QUEST -> "Nouvelle quête Maison"
-                        FamilyActionType.HOUSE_ROUTINE -> "Nouvelle routine Maison"
-                        FamilyActionType.HOUSE_MISSION -> "Nouvelle mission Maison"
-                        FamilyActionType.PERSONAL_ROUTINE -> "Nouvelle routine"
-                        FamilyActionType.PERSONAL_MISSION -> "Nouvelle mission"
-                    },
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = InkBrown,
-                )
-                Text(
-                    text =
-                        if (isEditing) {
-                            "Ajuste l'organisation sans toucher aux occurrences à la main."
-                        } else {
-                            "Organise la journée en quelques choix."
-                        },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = InkMuted,
-                )
-            }
-            Icon(Icons.Outlined.Home, contentDescription = null, tint = WoodBrown, modifier = Modifier.size(28.dp))
-        }
-    }
+    FantasyFormHeader(
+        title = if (isEditing) "Modifier l'action" else when (actionType) {
+            FamilyActionType.HOUSE_QUEST -> "Nouvelle quête Maison"
+            FamilyActionType.HOUSE_ROUTINE -> "Nouvelle routine Maison"
+            FamilyActionType.HOUSE_MISSION -> "Nouvelle mission Maison"
+            FamilyActionType.PERSONAL_ROUTINE -> "Nouvelle routine"
+            FamilyActionType.PERSONAL_MISSION -> "Nouvelle mission"
+        },
+        subtitle = if (actionType.scope == com.example.taskoday.domain.model.FamilyActionScope.HOUSE)
+            "Maison · Organise la journée en quelques choix."
+        else "Parcours personnel · Une action pour une personne.",
+        onBack = onBack,
+    )
 }
 
 @Composable
@@ -443,7 +437,7 @@ private fun FamilyTaskCreateFormCard(
             OutlinedButton(
                 onClick = {
                     DatePickerDialog(
-                        context,
+                        context, R.style.Theme_Taskoday_FormPicker,
                         { _, year, month, dayOfMonth ->
                             onDateChanged(LocalDate.of(year, month + 1, dayOfMonth).toString())
                         },
@@ -460,7 +454,7 @@ private fun FamilyTaskCreateFormCard(
             OutlinedButton(
                 onClick = {
                     TimePickerDialog(
-                        context,
+                        context, R.style.Theme_Taskoday_FormPicker,
                         { _, hourOfDay, minute ->
                             onTimeChanged(String.format(Locale.US, "%02d:%02d", hourOfDay, minute))
                         },
@@ -513,8 +507,8 @@ private fun AssigneesCard(
             style = MaterialTheme.typography.bodyMedium,
             color = InkMuted,
         )
-        Row(
-            modifier = Modifier.horizontalScroll(rememberScrollState()),
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             if (uiState.actionType.scope == com.example.taskoday.domain.model.FamilyActionScope.HOUSE) {
@@ -549,7 +543,7 @@ private fun AssigneesCard(
 }
 
 @Composable
-private fun RecurrenceCard(
+internal fun RecurrenceCard(
     uiState: FamilyTaskCreateUiState,
     onRecurrenceChanged: (FamilyTaskRecurrence) -> Unit,
     onToggleWeekday: (Int) -> Unit,
@@ -587,8 +581,8 @@ private fun RecurrenceCard(
             }
         }
         if (uiState.recurrence == FamilyTaskRecurrence.SELECTED_WEEKDAYS && (!uiState.isCustomRecurrence || uiState.customRecurrenceUnit == CustomRecurrenceUnit.WEEKS)) {
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 familyTaskWeekdays.forEach { (day, label) ->
@@ -605,7 +599,7 @@ private fun RecurrenceCard(
             FilterChip(selected = uiState.endDate.isBlank(), onClick = { onEndDateChanged("") }, label = { Text("Sans date de fin") })
             TextButton(onClick = {
                 val selected = parseFamilyTaskDateInput(uiState.endDate) ?: parseFamilyTaskDateInput(uiState.date) ?: LocalDate.now()
-                DatePickerDialog(context, { _, year, month, day -> onEndDateChanged(LocalDate.of(year, month + 1, day).toString()) }, selected.year, selected.monthValue - 1, selected.dayOfMonth).show()
+                DatePickerDialog(context, R.style.Theme_Taskoday_FormPicker, { _, year, month, day -> onEndDateChanged(LocalDate.of(year, month + 1, day).toString()) }, selected.year, selected.monthValue - 1, selected.dayOfMonth).show()
             }) { Text(if (uiState.endDate.isBlank()) "Jusqu'au..." else "Jusqu'au ${formatFamilyTaskDateLabel(uiState.endDate)}") }
         }
     }
@@ -637,8 +631,8 @@ private fun TaskOptionsCard(
             fontWeight = FontWeight.SemiBold,
             color = InkBrown,
         )
-        Row(
-            modifier = Modifier.horizontalScroll(rememberScrollState()),
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             FamilyTaskPriority.entries
@@ -655,33 +649,8 @@ private fun TaskOptionsCard(
 }
 
 @Composable
-private fun FamilyTaskCreateCard(
-    title: String,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        colors =
-            CardDefaults.elevatedCardColors(
-                containerColor = ParchmentLight.copy(alpha = 0.98f),
-                contentColor = InkBrown,
-            ),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            content = {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = InkBrown,
-                )
-                content()
-            },
-        )
-    }
+private fun FamilyTaskCreateCard(title: String, content: @Composable ColumnScope.() -> Unit) {
+    FantasyFormPanel(title = title, content = content)
 }
 
 @Composable
@@ -722,7 +691,7 @@ private fun ErrorCard(message: String) {
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
         color = ParchmentLight.copy(alpha = 0.98f),
-        contentColor = DangerGlow,
+        contentColor = MaterialTheme.colorScheme.error,
     ) {
         Box(modifier = Modifier.padding(14.dp)) {
             Text(

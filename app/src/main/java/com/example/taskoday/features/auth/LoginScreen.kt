@@ -1,7 +1,5 @@
 package com.example.taskoday.features.auth
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
@@ -14,12 +12,10 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
+import com.example.taskoday.core.ui.component.forms.FantasyFormField as OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -30,21 +26,24 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.taskoday.core.ui.component.fantasy.NeonButton
+import com.example.taskoday.features.taskodayv4.FantasyFramedButton
+import com.example.taskoday.core.ui.component.forms.*
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import com.example.taskoday.R
 import com.example.taskoday.core.ui.component.fantasy.TaskodayWorldBackground
-import com.example.taskoday.core.ui.theme.DangerGlow
-import com.example.taskoday.core.ui.theme.InkBrown
 import com.example.taskoday.core.ui.theme.MagicViolet
-import com.example.taskoday.core.ui.theme.ParchmentCream
-import com.example.taskoday.core.ui.theme.ParchmentLight
 import com.example.taskoday.core.ui.theme.ParchmentShadow
-import com.example.taskoday.core.ui.theme.SoftGold
 import com.example.taskoday.core.ui.theme.TextMuted
 import com.example.taskoday.core.ui.theme.WoodBrownDark
 import com.example.taskoday.core.ui.theme.spacing
@@ -52,6 +51,21 @@ import com.example.taskoday.domain.model.AuthenticatedUser
 
 @Composable
 fun LoginScreen(
+    viewModel: AuthViewModel,
+    onOpenRegisterParent: () -> Unit,
+    onOpenApp: (AuthenticatedUser?, Boolean) -> Unit,
+) {
+    val focus = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    FantasyFormTheme {
+        LoginScreenContent(viewModel,
+            onOpenRegisterParent = { focus.clearFocus(); keyboard?.hide(); onOpenRegisterParent() },
+            onOpenApp = { user, local -> focus.clearFocus(); keyboard?.hide(); onOpenApp(user, local) })
+    }
+}
+
+@Composable
+private fun LoginScreenContent(
     viewModel: AuthViewModel,
     onOpenRegisterParent: () -> Unit,
     onOpenApp: (AuthenticatedUser?, Boolean) -> Unit,
@@ -86,6 +100,8 @@ fun LoginScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 LoginPanel {
+                    Image(painterResource(R.drawable.taskoday_reference_wordmark), "Taskoday",
+                        Modifier.fillMaxWidth().height(72.dp))
                     if (uiState.isCheckingSession) {
                         if (!uiState.canRetrySession) {
                             CircularProgressIndicator(color = MagicViolet, trackColor = ParchmentShadow.copy(alpha = 0.45f))
@@ -93,7 +109,7 @@ fun LoginScreen(
                         Text(
                             text = uiState.errorMessage ?: "Vérification de session...",
                             modifier = Modifier.padding(top = spacing.small),
-                            color = if (uiState.canRetrySession) DangerGlow else TextMuted,
+                            color = if (uiState.canRetrySession) MaterialTheme.colorScheme.error else TextMuted,
                             style = MaterialTheme.typography.bodyMedium,
                         )
                         if (uiState.canRetrySession) {
@@ -106,27 +122,15 @@ fun LoginScreen(
 
                     Text(
                         text = "Bienvenue sur Taskoday",
+                        modifier = Modifier.semantics { heading() },
                         style = MaterialTheme.typography.titleLarge,
                         color = WoodBrownDark,
                     )
                     Text(
-                        text = "Connectez-vous pour organiser les routines de votre enfant.",
+                        text = "Retrouvez votre famille, vos missions et vos compagnons.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextMuted,
                     )
-
-                    val fieldColors =
-                        OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = InkBrown,
-                            unfocusedTextColor = InkBrown,
-                            focusedContainerColor = ParchmentLight.copy(alpha = 0.96f),
-                            unfocusedContainerColor = ParchmentLight.copy(alpha = 0.92f),
-                            focusedBorderColor = SoftGold,
-                            unfocusedBorderColor = ParchmentShadow,
-                            focusedLabelColor = MagicViolet,
-                            unfocusedLabelColor = TextMuted,
-                            cursorColor = MagicViolet,
-                        )
 
                     OutlinedTextField(
                         value = email,
@@ -135,9 +139,8 @@ fun LoginScreen(
                             viewModel.clearError()
                         },
                         label = { Text("Email") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                         singleLine = true,
-                        shape = RoundedCornerShape(14.dp),
-                        colors = fieldColors,
                         modifier = Modifier.fillMaxWidth(),
                     )
 
@@ -148,23 +151,22 @@ fun LoginScreen(
                             viewModel.clearError()
                         },
                         label = { Text("Mot de passe") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                         singleLine = true,
                         visualTransformation = PasswordVisualTransformation(),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = fieldColors,
                         modifier = Modifier.fillMaxWidth(),
                     )
 
                     if (!uiState.errorMessage.isNullOrBlank()) {
                         Text(
                             text = uiState.errorMessage ?: "",
-                            color = DangerGlow,
+                            color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
 
-                    NeonButton(
-                        text = if (uiState.isLoading) "Connexion…" else "Se connecter",
+                    FantasyFramedButton(
+                        label = if (uiState.isLoading) "Connexion…" else "Se connecter",
                         onClick = { viewModel.login(email = email, password = password) },
                         enabled = !uiState.isLoading,
                         modifier = Modifier.fillMaxWidth(),
@@ -176,16 +178,7 @@ fun LoginScreen(
                         colors = ButtonDefaults.textButtonColors(contentColor = MagicViolet),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text("Créer mon compte parent")
-                    }
-
-                    TextButton(
-                        onClick = viewModel::continueInLocalMode,
-                        enabled = !uiState.isLoading,
-                        colors = ButtonDefaults.textButtonColors(contentColor = MagicViolet),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text("Découvrir sans compte")
+                        Text("Créer un compte")
                     }
                 }
             }
@@ -195,29 +188,8 @@ fun LoginScreen(
 
 @Composable
 private fun LoginPanel(content: @Composable ColumnScope.() -> Unit) {
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .shadow(elevation = 12.dp, shape = RoundedCornerShape(26.dp), clip = false)
-                .clip(RoundedCornerShape(26.dp))
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            ParchmentLight.copy(alpha = 0.96f),
-                            ParchmentCream.copy(alpha = 0.94f),
-                            ParchmentLight.copy(alpha = 0.90f),
-                        ),
-                    ),
-                )
-                .border(
-                    width = 1.6.dp,
-                    color = SoftGold.copy(alpha = 0.92f),
-                    shape = RoundedCornerShape(26.dp),
-                )
-                .padding(horizontal = 18.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        content = content,
-    )
+    FantasyFormPanel {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally, content = content)
+    }
 }

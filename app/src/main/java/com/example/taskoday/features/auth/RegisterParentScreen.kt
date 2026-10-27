@@ -7,47 +7,60 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import com.example.taskoday.core.ui.component.forms.FantasyFormField as OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.taskoday.core.ui.theme.spacing
 import com.example.taskoday.core.ui.theme.ParchmentCream
-import com.example.taskoday.core.ui.component.FormBottomBar
+import com.example.taskoday.core.ui.component.forms.FantasyFormBottomBar as FormBottomBar
+import com.example.taskoday.core.ui.component.forms.*
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import com.example.taskoday.domain.model.AuthenticatedUser
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterParentScreen(
     viewModel: AuthViewModel,
     onBackToLogin: () -> Unit,
     onOpenApp: (AuthenticatedUser?, Boolean) -> Unit,
 ) {
+    val focus = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    FantasyFormTheme {
+        RegisterParentScreenContent(viewModel,
+            onBackToLogin = { focus.clearFocus(); keyboard?.hide(); onBackToLogin() },
+            onOpenApp = { user, local -> focus.clearFocus(); keyboard?.hide(); onOpenApp(user, local) })
+    }
+}
+
+@Composable
+private fun RegisterParentScreenContent(
+    viewModel: AuthViewModel,
+    onBackToLogin: () -> Unit,
+    onOpenApp: (AuthenticatedUser?, Boolean) -> Unit,
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val spacing = MaterialTheme.spacing
     val view = LocalView.current
     val window = (view.context as? Activity)?.window
     DisposableEffect(window, view) {
@@ -76,9 +89,12 @@ fun RegisterParentScreen(
     }
 
     Scaffold(
-        // The form uses dark parchment ink; keep a matching readable surface.
         containerColor = RegistrationFormBackground,
-        topBar = { TopAppBar(title = { Text("Créer un compte") }) },
+        topBar = {
+            Column(Modifier.statusBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                FantasyFormHeader("Créer un compte", "Votre première étape dans Taskoday", onBackToLogin)
+            }
+        },
         bottomBar = {
             if (!uiState.isCheckingSession) {
                 FormBottomBar(
@@ -95,215 +111,54 @@ fun RegisterParentScreen(
             }
         },
     ) { innerPadding ->
-        if (uiState.isCheckingSession) {
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                if (!uiState.canRetrySession) {
-                    CircularProgressIndicator()
+        Column(Modifier.fillMaxSize().padding(innerPadding).verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            if (uiState.isCheckingSession) {
+                FantasyFormPanel {
+                    if (!uiState.canRetrySession) CircularProgressIndicator()
+                    Text(uiState.errorMessage ?: "Vérification de session...")
+                    if (uiState.canRetrySession) TextButton(onClick = viewModel::checkExistingSession) { Text("Réessayer") }
                 }
-                Text(
-                    text = uiState.errorMessage ?: "Vérification de session...",
-                    modifier = Modifier.padding(top = spacing.small),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                if (uiState.canRetrySession) {
-                    TextButton(onClick = viewModel::checkExistingSession) {
-                        Text("Réessayer")
-                    }
-                }
-            }
-            return@Scaffold
-        }
-
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(spacing.medium)
-                    .verticalScroll(rememberScrollState())
-                    .padding(bottom = 88.dp),
-            verticalArrangement = Arrangement.spacedBy(spacing.medium),
-        ) {
-            Text(
-                text = "Qui utilisera ce compte ?",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = when (selectedRole) {
-                    RegistrationRole.Parent -> "Créez votre compte, puis créez ou rejoignez une famille."
-                    RegistrationRole.Child -> "Créez votre compte, puis rejoignez votre famille avec le code d’un parent."
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(spacing.small),
-            ) {
-                FilterChip(
-                    selected = selectedRole == RegistrationRole.Parent,
-                    onClick = {
-                        selectedRole = RegistrationRole.Parent
-                        viewModel.clearError()
-                    },
-                    label = { Text("Parent") },
-                )
-                FilterChip(
-                    selected = selectedRole == RegistrationRole.Child,
-                    onClick = {
-                        selectedRole = RegistrationRole.Child
-                        viewModel.clearError()
-                    },
-                    label = { Text("Enfant") },
-                )
-            }
-
-            if (selectedRole == RegistrationRole.Parent) {
-                OutlinedTextField(
-                    value = parentDisplayName,
-                    onValueChange = {
-                        parentDisplayName = it
-                        viewModel.clearError()
-                    },
-                    label = { Text("Prénom ou pseudo *") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-
-                OutlinedTextField(
-                    value = parentBirthDate,
-                    onValueChange = {
-                        parentBirthDate = it
-                        viewModel.clearError()
-                    },
-                    label = { Text("Date de naissance * (YYYY-MM-DD)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-
             } else {
-                OutlinedTextField(
-                    value = childDisplayName,
-                    onValueChange = {
-                        childDisplayName = it
-                        viewModel.clearError()
-                    },
-                    label = { Text("Prénom de l’enfant") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-
-                OutlinedTextField(
-                    value = childBirthDate,
-                    onValueChange = {
-                        childBirthDate = it
-                        viewModel.clearError()
-                    },
-                    label = { Text("Date de naissance (ex. 2018-01-01)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-
-            OutlinedTextField(
-                value = email,
-                onValueChange = {
-                    email = it
-                    viewModel.clearError()
-                },
-                label = { Text("Email") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            OutlinedTextField(
-                value = password,
-                onValueChange = {
-                    password = it
-                    viewModel.clearError()
-                },
-                label = { Text("Mot de passe") },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            if (!uiState.errorMessage.isNullOrBlank()) {
-                Text(
-                    text = uiState.errorMessage ?: "",
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-
-            /* Registration is kept in the persistent bottom action bar. */
-            /*
-            Button(
-                onClick = {
-                    when (selectedRole) {
-                        RegistrationRole.Parent ->
-                            viewModel.registerParent(
-                                displayName = parentDisplayName,
-                                birthDate = parentBirthDate,
-                                email = email,
-                                password = password,
-                            )
-                        RegistrationRole.Child ->
-                            viewModel.registerChild(
-                                email = email,
-                                password = password,
-                                displayName = childDisplayName,
-                                birthDate = childBirthDate,
-                            )
+                FantasyFormPanel(title = "Qui utilisera ce compte ?") {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FantasyFormChoice(selectedRole == RegistrationRole.Parent,
+                            { selectedRole = RegistrationRole.Parent; viewModel.clearError() }, { Text("Parent") })
+                        FantasyFormChoice(selectedRole == RegistrationRole.Child,
+                            { selectedRole = RegistrationRole.Child; viewModel.clearError() }, { Text("Enfant") })
                     }
-                },
-                enabled = !uiState.isLoading,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    if (uiState.isLoading) {
-                        "Création…"
+                    Text(when (selectedRole) {
+                        RegistrationRole.Parent -> "Créez votre compte, puis créez ou rejoignez une famille."
+                        RegistrationRole.Child -> "Créez votre compte, puis rejoignez votre famille avec le code d’un parent."
+                    }, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                }
+                FantasyFormPanel(title = if (selectedRole == RegistrationRole.Parent) "Votre profil" else "Profil de l’enfant") {
+                    if (selectedRole == RegistrationRole.Parent) {
+                        OutlinedTextField(parentDisplayName, { parentDisplayName = it; viewModel.clearError() },
+                            label = { Text("Prénom ou pseudo *") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(parentBirthDate, { parentBirthDate = it; viewModel.clearError() },
+                            label = { Text("Date de naissance * (YYYY-MM-DD)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     } else {
-                        when (selectedRole) {
-                            RegistrationRole.Parent -> "Continuer"
-                            RegistrationRole.Child -> "Continuer"
-                        }
-                    },
-                )
-            }
-            */
-
-            TextButton(
-                onClick = onBackToLogin,
-                enabled = !uiState.isLoading,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("J’ai déjà un compte")
-            }
-
-            TextButton(
-                onClick = viewModel::continueInLocalMode,
-                enabled = !uiState.isLoading,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("Découvrir sans compte")
+                        OutlinedTextField(childDisplayName, { childDisplayName = it; viewModel.clearError() },
+                            label = { Text("Prénom de l’enfant") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(childBirthDate, { childBirthDate = it; viewModel.clearError() },
+                            label = { Text("Date de naissance (ex. 2018-01-01)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    }
+                    OutlinedTextField(email, { email = it; viewModel.clearError() }, label = { Text("Email") },
+                        singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(password, { password = it; viewModel.clearError() }, label = { Text("Mot de passe") },
+                        singleLine = true, visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), modifier = Modifier.fillMaxWidth())
+                    if (!uiState.errorMessage.isNullOrBlank()) Text(uiState.errorMessage.orEmpty(),
+                        color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
+                TextButton(onBackToLogin, enabled = !uiState.isLoading, modifier = Modifier.fillMaxWidth()) { Text("J’ai déjà un compte") }
             }
         }
     }
 }
 
-private enum class RegistrationRole {
-    Parent,
-    Child,
-}
+private enum class RegistrationRole { Parent, Child }
 
 internal val RegistrationFormBackground = ParchmentCream

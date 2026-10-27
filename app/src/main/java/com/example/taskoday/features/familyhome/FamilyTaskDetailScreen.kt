@@ -1,6 +1,7 @@
 package com.example.taskoday.features.familyhome
 
 import android.app.DatePickerDialog
+import com.example.taskoday.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,7 +24,7 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
+import com.example.taskoday.core.ui.component.forms.FantasyFormFilledButton as Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -33,7 +34,7 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import com.example.taskoday.core.ui.component.forms.FantasyFormOutlineButton as OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -67,10 +68,20 @@ import com.example.taskoday.core.ui.theme.spacing
 import com.example.taskoday.domain.model.FamilyTaskAssignee
 import com.example.taskoday.domain.model.FamilyTaskDefinition
 import com.example.taskoday.domain.model.FamilyTaskTodayItem
+import com.example.taskoday.core.ui.component.forms.*
 import java.time.LocalDate
 
 @Composable
 fun FamilyTaskDetailScreen(
+    viewModel: FamilyTaskDetailViewModel,
+    onBack: () -> Unit,
+    onEdit: (Long) -> Unit,
+    onDuplicate: (FamilyTaskDefinition) -> Unit,
+    onDeleted: () -> Unit,
+) = FantasyFormTheme { FamilyTaskDetailScreenContent(viewModel, onBack, onEdit, onDuplicate, onDeleted) }
+
+@Composable
+private fun FamilyTaskDetailScreenContent(
     viewModel: FamilyTaskDetailViewModel,
     onBack: () -> Unit,
     onEdit: (Long) -> Unit,
@@ -131,7 +142,6 @@ fun FamilyTaskDetailScreen(
                                     onClick = viewModel::completeTodayOccurrence,
                                     enabled = !uiState.isValidating,
                                     shape = RoundedCornerShape(8.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = WoodBrown, contentColor = ParchmentLight),
                                     modifier = Modifier.fillMaxWidth(),
                                 ) {
                                     Text(if (uiState.isValidating) "Mise à jour..." else "Terminer")
@@ -143,7 +153,6 @@ fun FamilyTaskDetailScreen(
                                     onClick = viewModel::validateTodayOccurrence,
                                     enabled = !uiState.isValidating,
                                     shape = RoundedCornerShape(8.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = WoodBrown, contentColor = ParchmentLight),
                                     modifier = Modifier.fillMaxWidth(),
                                 ) {
                                     Text(if (uiState.isValidating) "Validation..." else "Valider")
@@ -156,7 +165,7 @@ fun FamilyTaskDetailScreen(
                                         onClick = {
                                             val nextDay = LocalDate.now().plusDays(1)
                                             DatePickerDialog(
-                                                context,
+                                                context, R.style.Theme_Taskoday_FormPicker,
                                                 { _, year, month, day -> viewModel.rescheduleMission(LocalDate.of(year, month + 1, day).toString()) },
                                                 nextDay.year,
                                                 nextDay.monthValue - 1,
@@ -169,7 +178,7 @@ fun FamilyTaskDetailScreen(
                                     Button(
                                         onClick = { showFailMissionConfirmation = true },
                                         enabled = !uiState.isValidating,
-                                        colors = ButtonDefaults.buttonColors(containerColor = SoftRed, contentColor = ParchmentLight),
+                                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error, contentColor = ParchmentLight),
                                         modifier = Modifier.weight(1f),
                                     ) { Text("Ratée") }
                                 }
@@ -226,42 +235,7 @@ fun FamilyTaskDetailScreen(
 
 @Composable
 private fun FamilyTaskDetailHeader(onBack: () -> Unit) {
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        colors =
-            CardDefaults.elevatedCardColors(
-                containerColor = ParchmentLight.copy(alpha = 0.98f),
-                contentColor = InkBrown,
-            ),
-    ) {
-        Row(
-            modifier = Modifier.padding(14.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Retour", tint = WoodBrown)
-            }
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Text(
-                    text = "Gérer la tâche",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = InkBrown,
-                )
-                Text(
-                    text = "Consulte et ajuste la définition familiale.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = InkMuted,
-                )
-            }
-            Icon(Icons.Outlined.Home, contentDescription = null, tint = WoodBrown, modifier = Modifier.size(28.dp))
-        }
-    }
+    FantasyFormHeader("Détail de l’action", "Les informations utiles pour passer à l’action.", onBack)
 }
 
 @Composable
@@ -269,17 +243,9 @@ private fun FamilyTaskDefinitionCard(
     task: FamilyTaskDefinition,
     todayOccurrence: FamilyTaskTodayItem?,
 ) {
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        colors =
-            CardDefaults.elevatedCardColors(
-                containerColor = ParchmentLight.copy(alpha = 0.98f),
-                contentColor = InkBrown,
-            ),
-    ) {
+    FantasyFormPanel() {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier,
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -304,7 +270,7 @@ private fun FamilyTaskDefinitionCard(
             DetailLine(label = "Validation parent", value = task.validationRequired.yesNoLabel())
             DetailLine(label = "Gamification", value = task.gamificationEnabled.yesNoLabel())
             DetailLine(
-                label = "État de l'occurrence",
+                label = "État de l’action",
                 value = todayOccurrence?.let { familyTaskStatusLabel(it.status) } ?: "Aucune occurrence active",
             )
         }
@@ -320,17 +286,9 @@ private fun FamilyTaskDetailActions(
     onDelete: () -> Unit,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        colors =
-            CardDefaults.elevatedCardColors(
-                containerColor = ParchmentLight.copy(alpha = 0.97f),
-                contentColor = InkBrown,
-            ),
-    ) {
+    FantasyFormPanel() {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier,
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Box(modifier = Modifier.align(Alignment.End)) {
@@ -348,7 +306,6 @@ private fun FamilyTaskDetailActions(
                 onClick = { onEdit(task.id) },
                 enabled = !isDeleting,
                 shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = WoodBrown, contentColor = ParchmentLight),
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(Icons.Outlined.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -361,9 +318,9 @@ private fun FamilyTaskDetailActions(
                 shape = RoundedCornerShape(8.dp),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Icon(Icons.Outlined.Delete, contentDescription = null, modifier = Modifier.size(18.dp), tint = SoftRed)
+                Icon(Icons.Outlined.Delete, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(if (isDeleting) "Retrait..." else "Désactiver / Supprimer", color = SoftRed)
+                Text(if (isDeleting) "Retrait..." else "Désactiver / Supprimer", color = MaterialTheme.colorScheme.error)
             }
         }
     }
@@ -407,7 +364,7 @@ private fun DeleteFamilyTaskDialog(
         text = { Text("Retirer cette tâche de l'organisation familiale ?") },
         confirmButton = {
             TextButton(onClick = onConfirm, enabled = !isDeleting) {
-                Text(if (isDeleting) "Retrait..." else "Retirer", color = DangerGlow)
+                Text(if (isDeleting) "Retrait..." else "Retirer", color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {
@@ -424,7 +381,7 @@ private fun ErrorCard(message: String) {
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
         color = ParchmentLight.copy(alpha = 0.98f),
-        contentColor = DangerGlow,
+        contentColor = MaterialTheme.colorScheme.error,
     ) {
         Box(modifier = Modifier.padding(14.dp)) {
             Text(
