@@ -14,8 +14,8 @@ android {
         applicationId = "com.harkinster.taskoday"
         minSdk = 24
         targetSdk = 36
-        versionCode = 7
-        versionName = "1.0-beta06"
+        versionCode = 8
+        versionName = "1.0-beta07"
         // Public certificate pinned from the existing signed beta03 APK and confirmed against
         // the configured external keystore. Override only when deliberately rotating the key.
         buildConfigField("String", "UPDATE_SIGNER_SHA256", "\"${providers.gradleProperty("taskodayReleaseSignerSha256").orElse("4783e3e7f20c4bfec5e6b22fb0e3cfcaeb0dfddca3ebc380929c7fb1243a666b").get()}\"")
