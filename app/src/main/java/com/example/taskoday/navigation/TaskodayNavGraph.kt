@@ -76,7 +76,6 @@ import com.example.taskoday.features.home.HomeScreen
 import com.example.taskoday.features.home.HomeViewModel
 import com.example.taskoday.features.parent.ParentPlanningScreen
 import com.example.taskoday.features.parent.ParentPlanningViewModel
-import com.example.taskoday.features.premium.PremiumScreen
 import com.example.taskoday.features.quests.QuestsScreen
 import com.example.taskoday.features.quests.QuestsViewModel
 import com.example.taskoday.features.settings.SettingsScreen
@@ -138,12 +137,6 @@ fun TaskodayApp() {
             launchSingleTop = true
         }
     }
-    val navigateToPremium: () -> Unit = {
-        navController.navigate(TaskodayDestination.Premium.route) {
-            launchSingleTop = true
-        }
-    }
-
     LaunchedEffect(sessionEventsViewModel, navController) {
         sessionEventsViewModel.unauthorizedEvents.collect {
             localChildMode = false
@@ -709,14 +702,20 @@ fun TaskodayApp() {
                             launchSingleTop = true
                         }
                     },
-                    onOpenPremium = navigateToPremium,
+
                     onOpenHousehold = { navController.navigate(TaskodayDestination.FamilyHousehold.route) },
                     onOpenNotifications = { navController.navigate(TaskodayDestination.FamilyNotifications.route) },
                 )
             }
 
-            composable(TaskodayDestination.Premium.route) {
-                PremiumScreen(onBack = { navController.popBackStack() })
+            // Preserve restored beta07 back stacks without retaining a commercial screen.
+            composable(TaskodayDestination.LegacyPremium.route) {
+                LaunchedEffect(Unit) {
+                    navController.navigate(TaskodayDestination.Settings.route) {
+                        popUpTo(TaskodayDestination.LegacyPremium.route) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
             }
 
             composable(
@@ -737,7 +736,7 @@ fun TaskodayApp() {
                     onBack = { navController.popBackStack() },
                     onCreated = { navController.popBackStack() },
                     initialFormType = initialFormType,
-                    onOpenPremium = navigateToPremium,
+
                 )
             }
             }

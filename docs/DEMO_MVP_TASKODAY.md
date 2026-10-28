@@ -1,5 +1,7 @@
 # Démo MVP Taskoday
 
+> Archive de démonstration : les mentions de limites/Premium ci-dessous décrivent l'ancien MVP. La règle actuelle est [Taskoday gratuit](taskoday/gratuite.md).
+
 ## Comptes de test
 
 - Parent : `parent.test@harkserv.ddns.net`

@@ -2,11 +2,8 @@ package com.example.taskoday.features.parent
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.taskoday.core.plan.TaskodayPlanFeature
-import com.example.taskoday.core.plan.TaskodayPlanPolicy
 import com.example.taskoday.core.util.DateTimeUtils
 import com.example.taskoday.domain.model.DayPart
-import com.example.taskoday.domain.model.ParentPlanUsage
 import com.example.taskoday.domain.model.PlanningFormType
 import com.example.taskoday.domain.repository.ParentPlanningRepository
 import com.example.taskoday.domain.repository.PlanningSyncRepository
@@ -56,18 +53,11 @@ class ParentPlanningViewModel
                             storedChildId?.takeIf { id -> children.any { child -> child.id == id } }
                                 ?: children.singleOrNull()?.id
                         selected?.let { parentPlanningRepository.setSelectedChildId(it) }
-                        val planUsage =
-                            selected
-                                ?.let { childId ->
-                                    runCatching { parentPlanningRepository.fetchPlanUsage(childId) }
-                                        .getOrDefault(ParentPlanUsage())
-                                } ?: ParentPlanUsage()
                         ParentPlanningUiState(
                             isLoading = false,
                             hasParentAccess = true,
                             children = children,
                             selectedChildId = selected,
-                            planUsage = planUsage,
                         )
                     }
                 }.onSuccess { state ->
@@ -85,16 +75,9 @@ class ParentPlanningViewModel
         }
 
         fun selectChild(childId: Long) {
+            if (!_uiState.value.hasParentAccess || _uiState.value.children.none { it.id == childId }) return
             parentPlanningRepository.setSelectedChildId(childId)
             _uiState.update { it.copy(selectedChildId = childId, successMessage = null, errorMessage = null) }
-            viewModelScope.launch {
-                runCatching { parentPlanningRepository.fetchPlanUsage(childId) }
-                    .onSuccess { usage ->
-                        _uiState.update { it.copy(planUsage = usage) }
-                    }.onFailure { throwable ->
-                        _uiState.update { it.copy(errorMessage = throwable.toMessage()) }
-                    }
-            }
         }
 
         fun createRoutine(
@@ -104,13 +87,10 @@ class ParentPlanningViewModel
             selectedWeekdays: Set<Int>,
             points: Int,
         ) {
+            if (!_uiState.value.hasParentAccess || _uiState.value.isSubmitting) return
             val childId = _uiState.value.selectedChildId ?: return
             if (title.isBlank()) {
                 _uiState.update { it.copy(errorMessage = "Le titre de la routine est requis.") }
-                return
-            }
-            if (!TaskodayPlanPolicy.canCreate(TaskodayPlanFeature.Routine, _uiState.value.planUsage.activeRoutines)) {
-                _uiState.update { it.copy(errorMessage = TaskodayPlanPolicy.limitReachedMessage()) }
                 return
             }
             submitAction(PlanningFormType.ROUTINE) {
@@ -133,13 +113,10 @@ class ParentPlanningViewModel
             scheduledDate: LocalDate,
             points: Int,
         ) {
+            if (!_uiState.value.hasParentAccess || _uiState.value.isSubmitting) return
             val childId = _uiState.value.selectedChildId ?: return
             if (title.isBlank()) {
                 _uiState.update { it.copy(errorMessage = "Le titre de la mission est requis.") }
-                return
-            }
-            if (!TaskodayPlanPolicy.canCreate(TaskodayPlanFeature.Mission, _uiState.value.planUsage.activeMissions)) {
-                _uiState.update { it.copy(errorMessage = TaskodayPlanPolicy.limitReachedMessage()) }
                 return
             }
             submitAction(PlanningFormType.MISSION) {
@@ -161,13 +138,10 @@ class ParentPlanningViewModel
             dayPart: DayPart,
             points: Int,
         ) {
+            if (!_uiState.value.hasParentAccess || _uiState.value.isSubmitting) return
             val childId = _uiState.value.selectedChildId ?: return
             if (title.isBlank()) {
                 _uiState.update { it.copy(errorMessage = "Le titre de la quête est requis.") }
-                return
-            }
-            if (!TaskodayPlanPolicy.canCreate(TaskodayPlanFeature.Quest, _uiState.value.planUsage.activeQuests)) {
-                _uiState.update { it.copy(errorMessage = TaskodayPlanPolicy.limitReachedMessage()) }
                 return
             }
             submitAction(PlanningFormType.QUEST) {
@@ -199,18 +173,12 @@ class ParentPlanningViewModel
                 runCatching { action() }
                     .onSuccess { success ->
                         val syncResult = planningSyncRepository.syncDay(DateTimeUtils.startOfDayMillis())
-                        val usage =
-                            _uiState.value.selectedChildId
-                                ?.let { childId ->
-                                    runCatching { parentPlanningRepository.fetchPlanUsage(childId) }.getOrNull()
-                                }
                         _uiState.update {
                             it.copy(
                                 isSubmitting = false,
                                 successMessage = success,
                                 errorMessage = syncResult.errorMessage,
                                 createdFormType = formType,
-                                planUsage = usage ?: it.planUsage,
                             )
                         }
                     }.onFailure { throwable ->

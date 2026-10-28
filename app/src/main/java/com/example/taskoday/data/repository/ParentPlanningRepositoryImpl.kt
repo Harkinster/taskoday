@@ -4,12 +4,9 @@ import com.example.taskoday.data.remote.children.ChildrenApi
 import com.example.taskoday.data.remote.dto.ChildMissionCreateRequestDto
 import com.example.taskoday.data.remote.dto.ChildQuestCreateRequestDto
 import com.example.taskoday.data.remote.dto.ChildRoutineCreateRequestDto
-import com.example.taskoday.data.remote.missions.MissionsApi
 import com.example.taskoday.data.remote.planning.PlanningApi
-import com.example.taskoday.data.remote.quests.QuestsApi
 import com.example.taskoday.domain.model.DayPart
 import com.example.taskoday.domain.model.ParentChild
-import com.example.taskoday.domain.model.ParentPlanUsage
 import com.example.taskoday.domain.repository.AuthRepository
 import com.example.taskoday.domain.repository.ParentPlanningRepository
 import java.time.LocalDate
@@ -22,9 +19,9 @@ class ParentPlanningRepositoryImpl
     constructor(
         private val authRepository: AuthRepository,
         private val childrenApi: ChildrenApi,
-        private val missionsApi: MissionsApi,
+
         private val planningApi: PlanningApi,
-        private val questsApi: QuestsApi,
+
     ) : ParentPlanningRepository {
         override suspend fun isCurrentUserParent(): Boolean {
             val user = authRepository.fetchMe()
@@ -44,24 +41,6 @@ class ParentPlanningRepositoryImpl
 
         override fun setSelectedChildId(childId: Long) {
             authRepository.setActiveChildId(childId)
-        }
-
-        override suspend fun fetchPlanUsage(childId: Long): ParentPlanUsage {
-            val activeRoutines = childrenApi.getRoutines(childId).data.count { routine -> routine.isActive }
-            val activeMissions =
-                missionsApi.getMissions(childId).data.count { mission ->
-                    mission.isActive != false && mission.isCompleted != true && !mission.status.isCompletedStatus()
-                }
-            val activeQuests =
-                questsApi.getQuests(childId).data.count { quest ->
-                    quest.isActive != false && quest.isCompleted != true && !quest.status.isCompletedStatus()
-                }
-
-            return ParentPlanUsage(
-                activeRoutines = activeRoutines,
-                activeMissions = activeMissions,
-                activeQuests = activeQuests,
-            )
         }
 
         override suspend fun createRoutine(
@@ -135,7 +114,3 @@ class ParentPlanningRepositoryImpl
             )
         }
     }
-
-private fun String?.isCompletedStatus(): Boolean =
-    equals("completed", ignoreCase = true) ||
-        equals("done", ignoreCase = true)

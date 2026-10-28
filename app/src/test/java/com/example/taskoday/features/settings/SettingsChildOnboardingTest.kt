@@ -223,14 +223,16 @@ class SettingsChildOnboardingTest {
         } finally { Dispatchers.resetMain() }
     }
 
-    @Test fun `existing free plan child limit prevents account creation`() = runTest {
+    @Test fun `parent can create another child beyond the former free limit`() = runTest {
         Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
         try {
             val fixture = Fixture(existingChildren = 1)
             val vm = fixture.viewModel()
             vm.createChild("QA New", "new@example.test", "2016-01-01", "ValidPass26!")
-            assertTrue(fixture.events.isEmpty())
-            assertTrue(vm.uiState.value.childManagementErrorMessage.orEmpty().contains("Limite"))
+            assertTrue(fixture.events.contains("attach:7"))
+            assertEquals(2, vm.uiState.value.pairedChildren.size)
+            assertNotNull(vm.uiState.value.childManagementSuccessMessage)
+            assertNull(vm.uiState.value.childManagementErrorMessage)
         } finally { Dispatchers.resetMain() }
     }
 
@@ -244,8 +246,9 @@ class SettingsChildOnboardingTest {
             assertEquals(2, vm.uiState.value.pairedChildren.size)
             assertTrue(vm.uiState.value.isChildrenListReady)
             vm.createChild("QA New", "new@example.test", "2016-01-01", "ValidPass26!")
-            assertTrue(fixture.events.isEmpty())
-            assertNotNull(vm.uiState.value.childManagementErrorMessage)
+            assertTrue(fixture.events.contains("attach:7"))
+            assertEquals(3, vm.uiState.value.pairedChildren.size)
+            assertNotNull(vm.uiState.value.childManagementSuccessMessage)
         } finally { Dispatchers.resetMain() }
     }
 
@@ -297,11 +300,8 @@ class SettingsChildOnboardingTest {
             val children = object : ChildrenRepository by unused() {
                 override suspend fun fetchChildren(): List<ParentChild> {
                     if (attached) events += "refresh"
-                    return if (attached) {
-                        listOf(ParentChild(30L, "QA New", "new@example.test"))
-                    } else {
-                        if (familyId == 7L) (1..existingChildren).map { ParentChild(it.toLong(), "Existing $it", "existing$it@example.test") } else emptyList()
-                    }
+                    val existing = if (familyId == 7L) (1..existingChildren).map { ParentChild(it.toLong(), "Existing $it", "existing$it@example.test") } else emptyList()
+                    return existing + if (attached) listOf(ParentChild(30L, "QA New", "new@example.test")) else emptyList()
                 }
             }
             val onboarding = object : ChildOnboardingRepository {

@@ -1,5 +1,7 @@
 # Guide de test bêta privée Taskoday
 
+> Guide historique : les références à Premium ne s'appliquent plus au développement courant. Voir [Taskoday gratuit](taskoday/gratuite.md).
+
 ## 1. Présentation
 
 Taskoday est une application Android familiale qui aide un parent à créer des routines, missions, quêtes et souhaits pour son enfant. L'enfant avance dans ses actions du jour, gagne des récompenses virtuelles et fait progresser son Nid.

@@ -2,7 +2,6 @@ package com.example.taskoday.domain.repository
 
 import com.example.taskoday.domain.model.DayPart
 import com.example.taskoday.domain.model.ParentChild
-import com.example.taskoday.domain.model.ParentPlanUsage
 import java.time.LocalDate
 
 interface ParentPlanningRepository {
@@ -14,7 +13,6 @@ interface ParentPlanningRepository {
 
     fun setSelectedChildId(childId: Long)
 
-    suspend fun fetchPlanUsage(childId: Long): ParentPlanUsage
 
     suspend fun createRoutine(
         childId: Long,

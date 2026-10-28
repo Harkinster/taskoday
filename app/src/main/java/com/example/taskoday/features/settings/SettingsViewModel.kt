@@ -2,8 +2,6 @@ package com.example.taskoday.features.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.taskoday.core.plan.TaskodayPlanFeature
-import com.example.taskoday.core.plan.TaskodayPlanPolicy
 import com.example.taskoday.domain.model.AuthenticatedUser
 import com.example.taskoday.domain.model.ChildProfile
 import com.example.taskoday.domain.model.ChildProfileDashboard
@@ -195,15 +193,6 @@ class SettingsViewModel
                 _uiState.update { it.copy(childManagementErrorMessage = "Termine d’abord l’association du compte enfant déjà créé.") }
                 return
             }
-            if (!TaskodayPlanPolicy.canCreate(TaskodayPlanFeature.Child, _uiState.value.pairedChildren.size)) {
-                _uiState.update {
-                    it.copy(
-                        childManagementSuccessMessage = null,
-                        childManagementErrorMessage = TaskodayPlanPolicy.limitReachedMessage(),
-                    )
-                }
-                return
-            }
             if (_uiState.value.isChildManagementBusy) return
             if (!_uiState.value.isChildrenListReady) {
                 _uiState.update { it.copy(childManagementErrorMessage = "Attends le chargement des enfants de cette famille.") }
@@ -235,10 +224,6 @@ class SettingsViewModel
                 }
 
                 runCatching {
-                    val currentChildren = childrenRepository.fetchChildren()
-                    if (!TaskodayPlanPolicy.canCreate(TaskodayPlanFeature.Child, currentChildren.size)) {
-                        throw ChildLimitReachedException()
-                    }
                     val childSession = pendingChildSession
                         ?: registerOrRecoverChild(trimmedName, birthDate.trim(), trimmedEmail, password, familyId).also {
                             pendingChildSession = it
@@ -708,7 +693,6 @@ class SettingsViewModel
 
 private const val XP_PER_LEVEL: Int = 1000
 private val PARENT_PIN_REGEX = Regex("\\d{4}")
-private class ChildLimitReachedException : IllegalStateException()
 
 internal fun validateAccountEmail(email: String): String? =
     if (email.isBlank() || !Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$").matches(email)) {
@@ -864,7 +848,7 @@ private fun Throwable?.toPairingMessage(): String =
 
 private fun Throwable.toChildManagementMessage(): String =
     when (this) {
-        is ChildLimitReachedException -> TaskodayPlanPolicy.limitReachedMessage()
+
         is HttpException ->
             when (code()) {
                 400 -> "Informations enfant ou code d’association invalides."

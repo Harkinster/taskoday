@@ -36,8 +36,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.taskoday.core.plan.TaskodayPlanFeature
-import com.example.taskoday.core.plan.TaskodayPlanPolicy
 import com.example.taskoday.core.ui.component.fantasy.FantasyButton
 import com.example.taskoday.core.ui.component.fantasy.FantasyButtonStyle
 import com.example.taskoday.core.ui.component.fantasy.FantasyCard
@@ -73,7 +71,7 @@ fun ShopScreen(
     isLocalChildMode: Boolean = false,
     onOpenProfile: () -> Unit,
     onBackToNest: () -> Unit,
-    onOpenPremium: () -> Unit = {},
+
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val spacing = MaterialTheme.spacing
@@ -173,7 +171,7 @@ fun ShopScreen(
                         item {
                             ParentRewardEditor(
                                 reward = rewardBeingEdited,
-                                activeWishesCount = uiState.rewards.count { it.isActive },
+
                                 isSubmitting = uiState.isSubmitting,
                                 onCreate = viewModel::createReward,
                                 onUpdate = { rewardId, title, description, costScales, isActive ->
@@ -187,7 +185,7 @@ fun ShopScreen(
                                     )
                                 },
                                 onCancelEdit = { rewardBeingEdited = null },
-                                onOpenPremium = onOpenPremium,
+
                             )
                         }
                     }
@@ -544,14 +542,14 @@ private fun WishTemplateCard(
 }
 
 @Composable
-private fun ParentRewardEditor(
+internal fun ParentRewardEditor(
     reward: Reward?,
-    activeWishesCount: Int,
+
     isSubmitting: Boolean,
     onCreate: (String, String?, Int, Boolean) -> Unit,
     onUpdate: (Long, String, String?, Int, Boolean) -> Unit,
     onCancelEdit: () -> Unit,
-    onOpenPremium: () -> Unit,
+
 ) {
     val spacing = MaterialTheme.spacing
     val isEditing = reward != null
@@ -560,11 +558,6 @@ private fun ParentRewardEditor(
     var costText by rememberSaveable(reward?.id) { mutableStateOf(reward?.cost?.toString().orEmpty()) }
     var isActive by rememberSaveable(reward?.id) { mutableStateOf(reward?.isActive ?: true) }
     val parsedCost = costText.toIntOrNull() ?: 0
-    val activeWishLimitReached =
-        !isEditing &&
-            isActive &&
-            !TaskodayPlanPolicy.canCreate(TaskodayPlanFeature.Wish, activeWishesCount)
-
     FantasyCard(modifier = Modifier.fillMaxWidth(), tone = FantasyTone.Violet) {
         Text(
             text = if (isEditing) "Modifier le Souhait" else "Nouveau Souhait",
@@ -573,7 +566,7 @@ private fun ParentRewardEditor(
         )
         if (!isEditing) {
             WishTemplateIdeas(
-                enabled = !isSubmitting && !activeWishLimitReached,
+                enabled = !isSubmitting,
                 onSelect = { template ->
                     title = template.title
                     description = template.description
@@ -626,24 +619,6 @@ private fun ParentRewardEditor(
                 )
             }
         }
-        Text(
-            text = TaskodayPlanPolicy.usageLabel(TaskodayPlanFeature.Wish, activeWishesCount),
-            style = MaterialTheme.typography.bodySmall,
-            color = if (activeWishLimitReached) DangerGlow else InkMuted,
-        )
-        if (activeWishLimitReached) {
-            Text(
-                text = TaskodayPlanPolicy.limitReachedMessage(),
-                style = MaterialTheme.typography.bodySmall,
-                color = DangerGlow,
-            )
-            FantasyButton(
-                text = "Voir Premium",
-                onClick = onOpenPremium,
-                modifier = Modifier.fillMaxWidth(),
-                style = FantasyButtonStyle.Outline,
-            )
-        }
         FantasyButton(
             text =
                 when {
@@ -662,7 +637,7 @@ private fun ParentRewardEditor(
                     isActive = true
                 }
             },
-            enabled = !isSubmitting && !activeWishLimitReached && title.isNotBlank() && parsedCost > 0,
+            enabled = !isSubmitting && title.isNotBlank() && parsedCost > 0,
             modifier =
                 Modifier
                     .fillMaxWidth()

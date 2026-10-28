@@ -1,5 +1,7 @@
 # Taskoday MVP Demo
 
+> Notes de release historiques conservées. Les anciens plafonds commerciaux sont remplacés dans le développement courant par [Taskoday gratuit](taskoday/gratuite.md).
+
 Date : 2026-07-08
 
 Version APK actuelle :

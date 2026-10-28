@@ -2,8 +2,6 @@ package com.example.taskoday.features.shop
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.taskoday.core.plan.TaskodayPlanFeature
-import com.example.taskoday.core.plan.TaskodayPlanPolicy
 import com.example.taskoday.data.repository.NestRepository
 import com.example.taskoday.data.repository.toRemoteUserMessage
 import com.example.taskoday.domain.model.PointsSourceType
@@ -207,11 +205,7 @@ class ShopViewModel
             isActive: Boolean = true,
         ) {
             val currentState = _uiState.value
-            if (currentState.isSubmitting) return
-            if (isActive && !TaskodayPlanPolicy.canCreate(TaskodayPlanFeature.Wish, currentState.rewards.count { it.isActive })) {
-                _uiState.update { it.copy(userMessage = TaskodayPlanPolicy.limitReachedMessage()) }
-                return
-            }
+            if (!currentState.isParent || currentState.isSubmitting) return
             viewModelScope.launch {
                 _uiState.update { it.copy(isSubmitting = true) }
                 rewardRepository

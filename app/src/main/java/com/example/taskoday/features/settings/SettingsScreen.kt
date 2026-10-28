@@ -55,8 +55,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.taskoday.core.plan.TaskodayPlanFeature
-import com.example.taskoday.core.plan.TaskodayPlanPolicy
 import com.example.taskoday.core.ui.component.fantasy.FantasyScreenBackground
 import com.example.taskoday.core.ui.component.fantasy.NeonButton
 import com.example.taskoday.core.ui.component.fantasy.NeonButtonStyle
@@ -87,7 +85,7 @@ fun SettingsScreen(
     onEnterLocalChildMode: () -> Unit = {},
     onExitLocalChildMode: () -> Unit = {},
     onLogoutConfirmed: () -> Unit = {},
-    onOpenPremium: () -> Unit = {},
+
     onOpenHousehold: () -> Unit = {},
     onOpenNotifications: () -> Unit = {},
 ) {
@@ -200,7 +198,7 @@ fun SettingsScreen(
                             onClearMessages = viewModel::clearChildManagementMessages,
                             onEnterLocalChildMode = onEnterLocalChildMode,
                             hasParentPin = uiState.hasParentPin,
-                            onOpenPremium = onOpenPremium,
+
                         )
                     }
 
@@ -274,29 +272,6 @@ fun SettingsScreen(
                                 title = "Couleurs dynamiques",
                                 checked = uiState.useDynamicColors,
                                 onCheckedChange = viewModel::setDynamicColors,
-                            )
-                        }
-                    }
-                }
-
-                if (uiState.isParentUser && !isLocalChildMode) {
-                    item {
-                        NeonCard(tone = NeonTone.Cyan) {
-                            Text(
-                                text = "Premium Taskoday",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = StarWhite,
-                            )
-                            Text(
-                                text = "Voir les limites gratuites et ce que Premium préparera.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextMuted,
-                            )
-                            NeonButton(
-                                text = "Voir Premium",
-                                onClick = onOpenPremium,
-                                modifier = Modifier.fillMaxWidth(),
-                                style = NeonButtonStyle.Outline,
                             )
                         }
                     }
@@ -785,7 +760,7 @@ private fun ParentPinTextField(
 }
 
 @Composable
-private fun ActiveChildCard(
+internal fun ActiveChildCard(
     uiState: SettingsUiState,
     onSelectChild: (Long) -> Unit,
     onCreateChild: (String, String, String, String) -> Unit,
@@ -793,10 +768,10 @@ private fun ActiveChildCard(
     onClearMessages: () -> Unit,
     onEnterLocalChildMode: () -> Unit,
     hasParentPin: Boolean,
-    onOpenPremium: () -> Unit,
+
 ) {
     val activeChild = uiState.pairedChildren.firstOrNull { child -> child.id == uiState.activeChildId }
-    val childLimitReached = !TaskodayPlanPolicy.canCreate(TaskodayPlanFeature.Child, uiState.pairedChildren.size)
+
     var showCreateChildDialog by rememberSaveable { mutableStateOf(false) }
     var editingChildId by rememberSaveable { mutableStateOf<Long?>(null) }
     var editingChildName by rememberSaveable { mutableStateOf("") }
@@ -855,25 +830,6 @@ private fun ActiveChildCard(
             }
         }
 
-        if (uiState.isChildrenListReady) Text(
-            text = TaskodayPlanPolicy.usageLabel(TaskodayPlanFeature.Child, uiState.pairedChildren.size),
-            style = MaterialTheme.typography.bodySmall,
-            color = if (childLimitReached) MaterialTheme.colorScheme.error else TextMuted,
-        )
-        if (uiState.isChildrenListReady && childLimitReached) {
-            Text(
-                text = TaskodayPlanPolicy.limitReachedMessage(),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-            )
-            NeonButton(
-                text = "Voir Premium",
-                onClick = onOpenPremium,
-                modifier = Modifier.fillMaxWidth(),
-                style = NeonButtonStyle.Outline,
-            )
-        }
-
         NeonButton(
             text =
                 if (uiState.isChildManagementBusy) {
@@ -887,7 +843,7 @@ private fun ActiveChildCard(
                 onClearMessages()
                 showCreateChildDialog = true
             },
-            enabled = uiState.isChildrenListReady && !uiState.isChildManagementBusy && !childLimitReached,
+            enabled = uiState.isChildrenListReady && !uiState.isChildManagementBusy,
             modifier = Modifier.fillMaxWidth(),
         )
 
