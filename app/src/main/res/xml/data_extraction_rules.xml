@@ -5,15 +5,17 @@
 -->
 <data-extraction-rules>
     <cloud-backup>
+        <exclude domain="sharedpref" path="taskoday_notification_session.xml"/>
+        <exclude domain="sharedpref" path="taskoday_notification_ledger.xml"/>
+        <exclude domain="sharedpref" path="taskoday_account_notifications.xml"/>
         <!-- TODO: Use <include> and <exclude> to control what is backed up.
         <include .../>
         <exclude .../>
         -->
     </cloud-backup>
-    <!--
     <device-transfer>
-        <include .../>
-        <exclude .../>
+        <exclude domain="sharedpref" path="taskoday_notification_session.xml"/>
+        <exclude domain="sharedpref" path="taskoday_notification_ledger.xml"/>
+        <exclude domain="sharedpref" path="taskoday_account_notifications.xml"/>
     </device-transfer>
-    -->
 </data-extraction-rules>

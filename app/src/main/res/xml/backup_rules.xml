@@ -6,6 +6,9 @@
    See https://developer.android.com/about/versions/12/backup-restore
 -->
 <full-backup-content>
+    <exclude domain="sharedpref" path="taskoday_notification_session.xml"/>
+    <exclude domain="sharedpref" path="taskoday_notification_ledger.xml"/>
+    <exclude domain="sharedpref" path="taskoday_account_notifications.xml"/>
     <!--
    <include domain="sharedpref" path="."/>
    <exclude domain="sharedpref" path="device.xml"/>

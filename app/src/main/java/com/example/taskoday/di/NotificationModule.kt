@@ -11,10 +11,19 @@ import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
+import com.example.taskoday.features.notifications.*
 
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class NotificationModule {
+    @Binds @Singleton
+    abstract fun bindNotificationGate(impl: SharedPreferencesNotificationSessionGate): NotificationSessionGate
+    @Binds @Singleton
+    abstract fun bindNotificationLedger(impl: SharedPreferencesAccountNoticeLedger): AccountNoticeLedger
+    @Binds @Singleton
+    abstract fun bindNotificationSource(impl: ApiNotificationSnapshotSource): NotificationSnapshotSource
+    @Binds @Singleton
+    abstract fun bindAccountPublisher(impl: AndroidAccountNotificationPublisher): AccountNotificationPublisher
     @Binds
     @Singleton
     abstract fun bindFamilyNotificationPreferences(impl: SharedPreferencesFamilyNotificationPreferences): FamilyNotificationPreferences

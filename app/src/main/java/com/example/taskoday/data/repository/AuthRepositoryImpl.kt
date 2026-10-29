@@ -24,6 +24,7 @@ class AuthRepositoryImpl
         private val childrenApi: ChildrenApi,
         private val tokenStorage: TokenStorage,
         private val authSessionClient: AuthSessionClient,
+        private val notificationRuntime: com.example.taskoday.features.notifications.NotificationRuntime? = null,
     ) : AuthRepository {
         override suspend fun registerParent(
             displayName: String,
@@ -41,6 +42,7 @@ class AuthRepositoryImpl
                     ),
                 )
             return response.toDomain().also {
+                notificationRuntime?.invalidate()
                 tokenStorage.save(response)
                 tokenStorage.clearActiveChildId()
                 tokenStorage.clearActiveFamilyId()
@@ -64,6 +66,7 @@ class AuthRepositoryImpl
                     ),
                 )
             return response.toDomain().also {
+                notificationRuntime?.invalidate()
                 tokenStorage.save(response)
                 tokenStorage.clearActiveChildId()
                 tokenStorage.clearActiveFamilyId()
@@ -79,13 +82,23 @@ class AuthRepositoryImpl
                     ),
                 )
             return response.toDomain().also {
+                notificationRuntime?.invalidate()
                 tokenStorage.save(response)
                 tokenStorage.clearActiveChildId()
                 tokenStorage.clearActiveFamilyId()
             }
         }
 
-        override suspend fun fetchMe(): AuthenticatedUser = authApi.me().toDomain()
+        override suspend fun fetchMe(): AuthenticatedUser {
+            val requestToken = tokenStorage.getAccessToken()
+            val me = authApi.me().toDomain()
+            // A late response from an old account must never own notification settings.
+            if (!requestToken.isNullOrBlank() && requestToken == tokenStorage.getAccessToken()) {
+                val family = tokenStorage.getActiveFamilyId()?.takeIf { it in me.familyIds } ?: me.familyIds.singleOrNull()
+                notificationRuntime?.bind(me.id,me.role.equals("PARENT",true),family)
+            }
+            return me
+        }
 
         override fun getAccessToken(): String? = tokenStorage.getAccessToken()
 

@@ -19,12 +19,20 @@ import java.io.File
 /** Authenticated real app, genuine local backend; never runs against production. */
 class UiV411NavigationPerformanceTest {
     @get:Rule val ui=createEmptyComposeRule()
+    private fun requireQaBackend() {
+        check(BuildConfig.APPLICATION_ID.endsWith(".familyqa"))
+        val expected=InstrumentationRegistry.getArguments().getString("qaBaseUrl") ?: "http://10.0.2.2:18765/"
+        check(expected in (18765..18769).map {"http://10.0.2.2:$it/"})
+        check(BuildConfig.TASKODAY_BASE_URL==expected)
+        val connection=java.net.URL(expected+"qa/isolation").openConnection().apply {connectTimeout=5000;readTimeout=5000}
+        val marker=connection.getInputStream().bufferedReader().use {JSONObject(it.readText())}
+        check(marker.getString("kind")=="TASKODAY_LOCAL_FAMILY_QA" && !marker.getBoolean("production"))
+    }
     private fun hasText(value:String,substring:Boolean=false)=
         ui.onAllNodesWithText(value,substring=substring).fetchSemanticsNodes().isNotEmpty()
 
     @Test fun real_parent_navigation_including_create_has_minimum_touch_areas() {
-        check(BuildConfig.APPLICATION_ID.endsWith(".familyqa"))
-        check(BuildConfig.TASKODAY_BASE_URL=="http://10.0.2.2:18765/")
+        requireQaBackend()
         val areas=JSONArray()
         ActivityScenario.launch(MainActivity::class.java).use {
             ui.waitUntil(45_000) {hasText("Ma Maison")}
@@ -44,8 +52,7 @@ class UiV411NavigationPerformanceTest {
     }
 
     @Test fun measure_real_parent_navigation_and_memory_after_repeated_visits() {
-        check(BuildConfig.APPLICATION_ID.endsWith(".familyqa"))
-        check(BuildConfig.TASKODAY_BASE_URL=="http://10.0.2.2:18765/")
+        requireQaBackend()
         val args=InstrumentationRegistry.getArguments()
         val companion=args.getString("qaCompanion") ?: "Eclair QA"
         val observations=JSONArray()

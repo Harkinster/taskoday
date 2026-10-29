@@ -1,40 +1,15 @@
 package com.example.taskoday.features.notifications
 
 import android.content.Context
-import dagger.hilt.EntryPoint
-import dagger.hilt.InstallIn
-import dagger.hilt.android.EntryPointAccessors
-import dagger.hilt.components.SingletonComponent
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import dagger.hilt.android.EntryPointAccessors
 
-class FamilyDailySummaryWorker
-    constructor(
-        appContext: Context,
-        params: WorkerParameters,
-    ) : CoroutineWorker(appContext, params) {
-        override suspend fun doWork(): Result {
-            val entryPoint =
-                EntryPointAccessors.fromApplication(
-                    applicationContext,
-                    FamilyDailySummaryWorkerEntryPoint::class.java,
-                )
-            val preferences = entryPoint.familyNotificationPreferences()
-            val settings = preferences.getSettings()
-            val result = entryPoint.familyDailySummaryRunner().run(settings)
-            if (result.shouldScheduleNext && preferences.getSettings().dailySummaryEnabled) {
-                entryPoint.familyNotificationScheduler().scheduleNextDailySummary()
-            }
-            return Result.success()
-        }
+/** Compatibility for an old persisted WorkSpec; new work uses the account-scoped worker. */
+class FamilyDailySummaryWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context,params) {
+    override suspend fun doWork(): Result {
+        val entry = EntryPointAccessors.fromApplication(applicationContext,AccountNotificationEntryPoint::class.java)
+        val scope = entry.notificationRuntime().gate.current() ?: return Result.success()
+        return if(entry.accountNotificationRunner().run(scope)==NotificationRunResult.RETRY)Result.retry() else Result.success()
     }
-
-@EntryPoint
-@InstallIn(SingletonComponent::class)
-interface FamilyDailySummaryWorkerEntryPoint {
-    fun familyNotificationPreferences(): FamilyNotificationPreferences
-
-    fun familyDailySummaryRunner(): FamilyDailySummaryRunner
-
-    fun familyNotificationScheduler(): FamilyNotificationScheduler
 }

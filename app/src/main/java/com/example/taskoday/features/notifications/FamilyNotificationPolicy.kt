@@ -10,6 +10,15 @@ data class FamilyNotificationSettings(
     val dailySummaryEnabled: Boolean = false,
     val hour: Int = DEFAULT_DAILY_SUMMARY_HOUR,
     val minute: Int = DEFAULT_DAILY_SUMMARY_MINUTE,
+    val enabled: Boolean = false,
+    val personalDue: Boolean = true,
+    val validationNeeded: Boolean = true,
+    val missionDecision: Boolean = true,
+    val importantOverdue: Boolean = true,
+    val quietEnabled: Boolean = true,
+    val quietStartMinute: Int = 22 * 60,
+    val quietEndMinute: Int = 8 * 60,
+    val enabledSinceMs: Long = 0,
 )
 
 data class FamilyDailySummaryNotificationContent(

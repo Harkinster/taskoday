@@ -236,11 +236,11 @@ fun SettingsScreen(
                                     onClick = onOpenHousehold,
                                 )
                             }
-                            if (uiState.isParentUser) {
+                            if (uiState.profileEmail.isNotBlank()) {
                                 ProfileActionRow(
                                     icon = Icons.Outlined.Notifications,
                                     title = "Notifications",
-                                    subtitle = "Resume quotidien des taches du foyer.",
+                                    subtitle = "Rappels et tranquillité pour ce compte.",
                                     onClick = onOpenNotifications,
                                 )
                             }

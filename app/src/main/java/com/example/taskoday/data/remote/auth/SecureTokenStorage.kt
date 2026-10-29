@@ -13,6 +13,7 @@ class SecureTokenStorage
     @Inject
     constructor(
         @ApplicationContext private val context: Context,
+        private val notificationRuntime: com.example.taskoday.features.notifications.NotificationRuntime,
     ) : TokenStorage {
         private val preferences: SharedPreferences? by lazy { createPreferences(context) }
 
@@ -68,11 +69,14 @@ class SecureTokenStorage
         }
 
         override fun saveActiveFamilyId(familyId: Long) {
+            val changed = getActiveFamilyId() != familyId
             preferences?.edit()?.putLong(KEY_ACTIVE_FAMILY_ID, familyId)?.apply()
+            if (changed) notificationRuntime.familyChanged(familyId)
         }
 
         override fun clearActiveFamilyId() {
             preferences?.edit()?.remove(KEY_ACTIVE_FAMILY_ID)?.apply()
+            notificationRuntime.familyChanged(null)
         }
 
         override fun hasParentPin(): Boolean = !preferences?.getString(KEY_PARENT_PIN, null).isNullOrBlank()
@@ -88,6 +92,7 @@ class SecureTokenStorage
 
         @Synchronized
         override fun clear() {
+            notificationRuntime.invalidate()
             val preferences = preferences ?: return
             preferences
                 .edit()

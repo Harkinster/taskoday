@@ -375,7 +375,7 @@ fun TaskodayApp() {
             }
 
             composable(TaskodayDestination.FamilyNotifications.route) {
-                if (!ParentDestinationAccess(quickAddUiState.isLoading, quickAddUiState.canOpenQuickAdd, activeChildRole, localChildMode) { navController.popBackStack() }) return@composable
+                if (!HouseholdDestinationAccess(quickAddUiState.isLoading, quickAddUiState.hasRemoteSession, localChildMode) { navController.popBackStack() }) return@composable
                 val viewModel: FamilyNotificationsViewModel = hiltViewModel()
                 FamilyNotificationsScreen(
                     viewModel = viewModel,
